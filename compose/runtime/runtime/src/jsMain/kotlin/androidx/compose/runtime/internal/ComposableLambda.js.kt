@@ -100,19 +100,19 @@ internal actual class ComposableLambdaImpl actual constructor(
         }
     }
 
-    override operator fun invoke(c: Composer, changed: Int): Any? {
-        val c = c.startRestartGroup(key)
+    override operator fun invoke(p1: Composer, p2: Int): Any? {
+        val c = p1.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(0) else sameBits(0)
+        val dirty = p2 or if (c.changed(this)) differentBits(0) else sameBits(0)
         val result = (_block as (c: Composer, changed: Int) -> Any?)(c, dirty)
         c.endRestartGroup()?.updateScope(this::invoke)
         return result
     }
 
-    override operator fun invoke(p1: Any?, c: Composer, changed: Int): Any? {
-        val c = c.startRestartGroup(key)
+    override operator fun invoke(p1: Any?, p2: Composer, p3: Int): Any? {
+        val c = p2.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(1) else sameBits(1)
+        val dirty = p3 or if (c.changed(this)) differentBits(1) else sameBits(1)
         val result = (
             _block as (
                 p1: Any?,
@@ -124,28 +124,28 @@ internal actual class ComposableLambdaImpl actual constructor(
             c,
             dirty
         )
-        c.endRestartGroup()?.updateScope { nc, _ -> this(p1, nc, changed or 0b1) }
+        c.endRestartGroup()?.updateScope { nc, _ -> this(p1, nc, p3 or 0b1) }
         return result
     }
 
-    override operator fun invoke(p1: Any?, p2: Any?, c: Composer, changed: Int): Any? {
-        val c = c.startRestartGroup(key)
+    override operator fun invoke(p1: Any?, p2: Any?, p3: Composer, p4: Int): Any? {
+        val c = p3.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(2) else sameBits(2)
+        val dirty = p4 or if (c.changed(this)) differentBits(2) else sameBits(2)
         val result = (_block as (p1: Any?, p2: Any?, c: Composer, changed: Int) -> Any?)(
             p1,
             p2,
             c,
             dirty
         )
-        c.endRestartGroup()?.updateScope { nc, _ -> this(p1, p2, nc, changed or 0b1) }
+        c.endRestartGroup()?.updateScope { nc, _ -> this(p1, p2, nc, p4 or 0b1) }
         return result
     }
 
-    override operator fun invoke(p1: Any?, p2: Any?, p3: Any?, c: Composer, changed: Int): Any? {
-        val c = c.startRestartGroup(key)
+    override operator fun invoke(p1: Any?, p2: Any?, p3: Any?, p4: Composer, p5: Int): Any? {
+        val c = p4.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(3) else sameBits(3)
+        val dirty = p5 or if (c.changed(this)) differentBits(3) else sameBits(3)
         val result = (
             _block as (
                 p1: Any?,
@@ -161,7 +161,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             c,
             dirty
         )
-        c.endRestartGroup()?.updateScope { nc, _ -> this(p1, p2, p3, nc, changed or 0b1) }
+        c.endRestartGroup()?.updateScope { nc, _ -> this(p1, p2, p3, nc, p5 or 0b1) }
         return result
     }
 
@@ -170,12 +170,12 @@ internal actual class ComposableLambdaImpl actual constructor(
         p2: Any?,
         p3: Any?,
         p4: Any?,
-        c: Composer,
-        changed: Int
+        p5: Composer,
+        p6: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p5.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(4) else sameBits(4)
+        val dirty = p6 or if (c.changed(this)) differentBits(4) else sameBits(4)
         val result = (
             _block as (
                 p1: Any?,
@@ -194,7 +194,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
-            this(p1, p2, p3, p4, nc, changed or 0b1)
+            this(p1, p2, p3, p4, nc, p6 or 0b1)
         }
         return result
     }
@@ -205,12 +205,12 @@ internal actual class ComposableLambdaImpl actual constructor(
         p3: Any?,
         p4: Any?,
         p5: Any?,
-        c: Composer,
-        changed: Int
+        p6: Composer,
+        p7: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p6.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(5) else sameBits(5)
+        val dirty = p7 or if (c.changed(this)) differentBits(5) else sameBits(5)
         val result = (
             _block as (
                 p1: Any?,
@@ -231,7 +231,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
-            this(p1, p2, p3, p4, p5, nc, changed or 0b1)
+            this(p1, p2, p3, p4, p5, nc, p7 or 0b1)
         }
         return result
     }
@@ -243,12 +243,12 @@ internal actual class ComposableLambdaImpl actual constructor(
         p4: Any?,
         p5: Any?,
         p6: Any?,
-        c: Composer,
-        changed: Int
+        p7: Composer,
+        p8: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p7.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(6) else sameBits(6)
+        val dirty = p8 or if (c.changed(this)) differentBits(6) else sameBits(6)
         val result = (
             _block as (
                 p1: Any?,
@@ -271,7 +271,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
-            this(p1, p2, p3, p4, p5, p6, nc, changed or 0b1)
+            this(p1, p2, p3, p4, p5, p6, nc, p8 or 0b1)
         }
         return result
     }
@@ -284,12 +284,12 @@ internal actual class ComposableLambdaImpl actual constructor(
         p5: Any?,
         p6: Any?,
         p7: Any?,
-        c: Composer,
-        changed: Int
+        p8: Composer,
+        p9: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p8.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(7) else sameBits(7)
+        val dirty = p9 or if (c.changed(this)) differentBits(7) else sameBits(7)
         val result = (
             _block as (
                 p1: Any?,
@@ -314,7 +314,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
-            this(p1, p2, p3, p4, p5, p6, p7, nc, changed or 0b1)
+            this(p1, p2, p3, p4, p5, p6, p7, nc, p9 or 0b1)
         }
         return result
     }
@@ -328,12 +328,12 @@ internal actual class ComposableLambdaImpl actual constructor(
         p6: Any?,
         p7: Any?,
         p8: Any?,
-        c: Composer,
-        changed: Int
+        p9: Composer,
+        p10: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p9.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(8) else sameBits(8)
+        val dirty = p10 or if (c.changed(this)) differentBits(8) else sameBits(8)
         val result = (
             _block as (
                 p1: Any?,
@@ -360,7 +360,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
-            this(p1, p2, p3, p4, p5, p6, p7, p8, nc, changed or 0b1)
+            this(p1, p2, p3, p4, p5, p6, p7, p8, nc, p10 or 0b1)
         }
         return result
     }
@@ -375,12 +375,12 @@ internal actual class ComposableLambdaImpl actual constructor(
         p7: Any?,
         p8: Any?,
         p9: Any?,
-        c: Composer,
-        changed: Int
+        p10: Composer,
+        p11: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p10.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed or if (c.changed(this)) differentBits(9) else sameBits(9)
+        val dirty = p11 or if (c.changed(this)) differentBits(9) else sameBits(9)
         val result = (
             _block as (
                 p1: Any?,
@@ -409,7 +409,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
-            this(p1, p2, p3, p4, p5, p6, p7, p8, p9, nc, changed or 0b1)
+            this(p1, p2, p3, p4, p5, p6, p7, p8, p9, nc, p11 or 0b1)
         }
         return result
     }
@@ -425,13 +425,13 @@ internal actual class ComposableLambdaImpl actual constructor(
         p8: Any?,
         p9: Any?,
         p10: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p11: Composer,
+        p12: Int,
+        p13: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p11.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed1 or if (c.changed(this)) differentBits(10) else sameBits(10)
+        val dirty = p13 or if (c.changed(this)) differentBits(10) else sameBits(10)
         val result = (
             _block as (
                 p1: Any?,
@@ -460,11 +460,11 @@ internal actual class ComposableLambdaImpl actual constructor(
             p9,
             p10,
             c,
-            changed,
+            p12,
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
-            this(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, nc, changed or 0b1, changed)
+            this(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, nc, p12 or 0b1, p12)
         }
         return result
     }
@@ -481,13 +481,13 @@ internal actual class ComposableLambdaImpl actual constructor(
         p9: Any?,
         p10: Any?,
         p11: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p12: Composer,
+        p13: Int,
+        p14: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p12.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed1 or if (c.changed(this)) differentBits(11) else sameBits(11)
+        val dirty = p14 or if (c.changed(this)) differentBits(11) else sameBits(11)
         val result = (
             _block as (
                 p1: Any?,
@@ -518,11 +518,11 @@ internal actual class ComposableLambdaImpl actual constructor(
             p10,
             p11,
             c,
-            changed,
+            p13,
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
-            this(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, nc, changed or 0b1, changed1)
+            this(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, nc, p13 or 0b1, p14)
         }
         return result
     }
@@ -540,13 +540,13 @@ internal actual class ComposableLambdaImpl actual constructor(
         p10: Any?,
         p11: Any?,
         p12: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p13: Composer,
+        p14: Int,
+        p15: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p13.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed1 or if (c.changed(this)) differentBits(12) else sameBits(12)
+        val dirty = p15 or if (c.changed(this)) differentBits(12) else sameBits(12)
         val result = (
             _block as (
                 p1: Any?,
@@ -579,11 +579,11 @@ internal actual class ComposableLambdaImpl actual constructor(
             p11,
             p12,
             c,
-            changed,
+            p14,
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
-            this(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, nc, changed or 0b1, changed1)
+            this(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, nc, p14 or 0b1, p15)
         }
         return result
     }
@@ -602,13 +602,13 @@ internal actual class ComposableLambdaImpl actual constructor(
         p11: Any?,
         p12: Any?,
         p13: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p14: Composer,
+        p15: Int,
+        p16: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p14.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed1 or if (c.changed(this)) differentBits(13) else sameBits(13)
+        val dirty = p16 or if (c.changed(this)) differentBits(13) else sameBits(13)
         val result = (
             _block as (
                 p1: Any?,
@@ -643,7 +643,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             p12,
             p13,
             c,
-            changed,
+            p15,
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
@@ -662,8 +662,8 @@ internal actual class ComposableLambdaImpl actual constructor(
                 p12,
                 p13,
                 nc,
-                changed or 0b1,
-                changed1
+                p15 or 0b1,
+                p16
             )
         }
         return result
@@ -684,13 +684,13 @@ internal actual class ComposableLambdaImpl actual constructor(
         p12: Any?,
         p13: Any?,
         p14: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p15: Composer,
+        p16: Int,
+        p17: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p15.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed1 or if (c.changed(this)) differentBits(14) else sameBits(14)
+        val dirty = p17 or if (c.changed(this)) differentBits(14) else sameBits(14)
         val result = (
             _block as (
                 p1: Any?,
@@ -727,7 +727,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             p13,
             p14,
             c,
-            changed,
+            p16,
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
@@ -747,8 +747,8 @@ internal actual class ComposableLambdaImpl actual constructor(
                 p13,
                 p14,
                 nc,
-                changed or 0b1,
-                changed1
+                p16 or 0b1,
+                p17
             )
         }
         return result
@@ -770,13 +770,13 @@ internal actual class ComposableLambdaImpl actual constructor(
         p13: Any?,
         p14: Any?,
         p15: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p16: Composer,
+        p17: Int,
+        p18: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p16.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed1 or if (c.changed(this)) differentBits(15) else sameBits(15)
+        val dirty = p18 or if (c.changed(this)) differentBits(15) else sameBits(15)
         val result = (
             _block as (
                 p1: Any?,
@@ -815,7 +815,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             p14,
             p15,
             c,
-            changed,
+            p17,
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
@@ -836,8 +836,8 @@ internal actual class ComposableLambdaImpl actual constructor(
                 p14,
                 p15,
                 nc,
-                changed or 0b1,
-                changed1
+                p17 or 0b1,
+                p18
             )
         }
         return result
@@ -860,13 +860,13 @@ internal actual class ComposableLambdaImpl actual constructor(
         p14: Any?,
         p15: Any?,
         p16: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p17: Composer,
+        p18: Int,
+        p19: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p17.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed1 or if (c.changed(this)) differentBits(16) else sameBits(16)
+        val dirty = p19 or if (c.changed(this)) differentBits(16) else sameBits(16)
         val result = (
             _block as (
                 p1: Any?,
@@ -907,7 +907,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             p15,
             p16,
             c,
-            changed,
+            p18,
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
@@ -929,8 +929,8 @@ internal actual class ComposableLambdaImpl actual constructor(
                 p15,
                 p16,
                 nc,
-                changed or 0b1,
-                changed1
+                p18 or 0b1,
+                p19
             )
         }
         return result
@@ -954,13 +954,13 @@ internal actual class ComposableLambdaImpl actual constructor(
         p15: Any?,
         p16: Any?,
         p17: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p18: Composer,
+        p19: Int,
+        p20: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p18.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed1 or if (c.changed(this)) differentBits(17) else sameBits(17)
+        val dirty = p20 or if (c.changed(this)) differentBits(17) else sameBits(17)
         val result = (
             _block as (
                 p1: Any?,
@@ -1003,7 +1003,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             p16,
             p17,
             c,
-            changed,
+            p19,
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
@@ -1026,8 +1026,8 @@ internal actual class ComposableLambdaImpl actual constructor(
                 p16,
                 p17,
                 nc,
-                changed or 0b1,
-                changed1
+                p19 or 0b1,
+                p20
             )
         }
         return result
@@ -1052,13 +1052,13 @@ internal actual class ComposableLambdaImpl actual constructor(
         p16: Any?,
         p17: Any?,
         p18: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p19: Composer,
+        p20: Int,
+        p21: Int
     ): Any? {
-        val c = c.startRestartGroup(key)
+        val c = p19.startRestartGroup(key)
         trackRead(c)
-        val dirty = changed1 or if (c.changed(this)) differentBits(18) else sameBits(18)
+        val dirty = p21 or if (c.changed(this)) differentBits(18) else sameBits(18)
         val result = (
             _block as (
                 p1: Any?,
@@ -1103,7 +1103,7 @@ internal actual class ComposableLambdaImpl actual constructor(
             p17,
             p18,
             c,
-            changed,
+            p20,
             dirty
         )
         c.endRestartGroup()?.updateScope { nc, _ ->
@@ -1127,8 +1127,8 @@ internal actual class ComposableLambdaImpl actual constructor(
                 p17,
                 p18,
                 nc,
-                changed or 0b1,
-                changed1
+                p20 or 0b1,
+                p21
             )
         }
         return result
@@ -1138,21 +1138,21 @@ internal actual class ComposableLambdaImpl actual constructor(
 @ComposeCompilerApi
 @Stable
 actual interface ComposableLambda {
-    actual operator fun invoke(c: Composer, changed: Int): Any?
+    actual operator fun invoke(p1: Composer, p2: Int): Any?
 
-    actual operator fun invoke(p1: Any?, c: Composer, changed: Int): Any?
+    actual operator fun invoke(p1: Any?, p2: Composer, p3: Int): Any?
 
-    actual operator fun invoke(p1: Any?, p2: Any?, c: Composer, changed: Int): Any?
+    actual operator fun invoke(p1: Any?, p2: Any?, p3: Composer, p4: Int): Any?
 
-    actual operator fun invoke(p1: Any?, p2: Any?, p3: Any?, c: Composer, changed: Int): Any?
+    actual operator fun invoke(p1: Any?, p2: Any?, p3: Any?, p4: Composer, p5: Int): Any?
 
     actual operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
         p4: Any?,
-        c: Composer,
-        changed: Int
+        p5: Composer,
+        p6: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1161,8 +1161,8 @@ actual interface ComposableLambda {
         p3: Any?,
         p4: Any?,
         p5: Any?,
-        c: Composer,
-        changed: Int
+        p6: Composer,
+        p7: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1172,8 +1172,8 @@ actual interface ComposableLambda {
         p4: Any?,
         p5: Any?,
         p6: Any?,
-        c: Composer,
-        changed: Int
+        p7: Composer,
+        p8: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1184,8 +1184,8 @@ actual interface ComposableLambda {
         p5: Any?,
         p6: Any?,
         p7: Any?,
-        c: Composer,
-        changed: Int
+        p8: Composer,
+        p9: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1197,8 +1197,8 @@ actual interface ComposableLambda {
         p6: Any?,
         p7: Any?,
         p8: Any?,
-        c: Composer,
-        changed: Int
+        p9: Composer,
+        p10: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1211,8 +1211,8 @@ actual interface ComposableLambda {
         p7: Any?,
         p8: Any?,
         p9: Any?,
-        c: Composer,
-        changed: Int
+        p10: Composer,
+        p11: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1226,9 +1226,9 @@ actual interface ComposableLambda {
         p8: Any?,
         p9: Any?,
         p10: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p11: Composer,
+        p12: Int,
+        p13: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1243,9 +1243,9 @@ actual interface ComposableLambda {
         p9: Any?,
         p10: Any?,
         p11: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p12: Composer,
+        p13: Int,
+        p14: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1261,9 +1261,9 @@ actual interface ComposableLambda {
         p10: Any?,
         p11: Any?,
         p12: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p13: Composer,
+        p14: Int,
+        p15: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1280,9 +1280,9 @@ actual interface ComposableLambda {
         p11: Any?,
         p12: Any?,
         p13: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p14: Composer,
+        p15: Int,
+        p16: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1300,9 +1300,9 @@ actual interface ComposableLambda {
         p12: Any?,
         p13: Any?,
         p14: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p15: Composer,
+        p16: Int,
+        p17: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1321,9 +1321,9 @@ actual interface ComposableLambda {
         p13: Any?,
         p14: Any?,
         p15: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p16: Composer,
+        p17: Int,
+        p18: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1343,9 +1343,9 @@ actual interface ComposableLambda {
         p14: Any?,
         p15: Any?,
         p16: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p17: Composer,
+        p18: Int,
+        p19: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1366,9 +1366,9 @@ actual interface ComposableLambda {
         p15: Any?,
         p16: Any?,
         p17: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p18: Composer,
+        p19: Int,
+        p20: Int
     ): Any?
 
     actual operator fun invoke(
@@ -1390,8 +1390,8 @@ actual interface ComposableLambda {
         p16: Any?,
         p17: Any?,
         p18: Any?,
-        c: Composer,
-        changed: Int,
-        changed1: Int
+        p19: Composer,
+        p20: Int,
+        p21: Int
     ): Any?
 }
