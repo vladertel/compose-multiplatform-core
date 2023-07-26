@@ -27,12 +27,6 @@ import androidx.compose.runtime.snapshots.fastGroupBy
 import androidx.compose.runtime.snapshots.fastMap
 import androidx.compose.runtime.snapshots.fastMapNotNull
 import androidx.compose.runtime.tooling.CompositionData
-import androidx.compose.runtime.external.kotlinx.collections.immutable.persistentSetOf
-import androidx.compose.runtime.snapshots.fastAny
-import androidx.compose.runtime.snapshots.fastGroupBy
-import androidx.compose.util.SynchronizedObject
-import androidx.compose.util.createSynchronizedObject
-import androidx.compose.util.synchronized
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext

@@ -220,7 +220,7 @@ internal fun CoreTextField(
         orientation,
         saver = TextFieldScrollerPosition.Saver
     ) { TextFieldScrollerPosition(orientation) }
-    if (scrollerPosition.orientation != orientation){
+    if (scrollerPosition.orientation != orientation) {
         throw IllegalArgumentException(
             "Mismatching scroller orientation; " + (
                 if (orientation == Orientation.Vertical)
