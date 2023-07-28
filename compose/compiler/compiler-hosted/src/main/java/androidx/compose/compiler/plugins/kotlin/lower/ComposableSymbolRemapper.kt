@@ -17,13 +17,21 @@
 package androidx.compose.compiler.plugins.kotlin.lower
 
 import androidx.compose.compiler.plugins.kotlin.k1.hasComposableAnnotation
+import androidx.compose.compiler.plugins.kotlin.k2.ComposableFunction
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.backend.jvm.functionByName
 import org.jetbrains.kotlin.descriptors.ClassConstructorDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.ParameterDescriptor
 import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
+import org.jetbrains.kotlin.fir.lazy.Fir2IrLazyClass
+import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.descriptors.IrBasedDeclarationDescriptor
+import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.DescriptorsRemapper
+import org.jetbrains.kotlin.ir.util.classId
 import org.jetbrains.kotlin.types.KotlinType
 
 /**
@@ -47,7 +55,9 @@ import org.jetbrains.kotlin.types.KotlinType
  * This is K1 specific. In K2, descriptors are only there for backwards compatibility and
  * always reflect the IR.
  */
-class ComposableSymbolRemapper : DeepCopySymbolRemapper(
+class ComposableSymbolRemapper(
+    private val context: IrPluginContext
+) : DeepCopySymbolRemapper(
     object : DescriptorsRemapper {
         override fun remapDeclaredConstructor(
             descriptor: ClassConstructorDescriptor
@@ -91,4 +101,39 @@ class ComposableSymbolRemapper : DeepCopySymbolRemapper(
             hasComposableAnnotation() ||
                 arguments.any { it.type.hasComposableAnnotation() }
     }
-)
+) {
+
+    private val composableFunctionFqNamePrefix = "androidx/compose/runtime/internal/ComposableFunction"
+//    override fun getReferencedClass(symbol: IrClassSymbol): IrClassSymbol {
+//        val classIdStr = symbol.owner.classId?.asString()
+//        if (classIdStr?.startsWith(composableFunctionFqNamePrefix) == true) {
+//            val arity = classIdStr.substring(classIdStr.length).toIntOrNull() ?: 0
+//            return context.function(arity)
+//        }
+//        return super.getReferencedClass(symbol)
+//    }
+
+    override fun getReferencedSimpleFunction(symbol: IrSimpleFunctionSymbol): IrSimpleFunctionSymbol {
+        val funParent = (symbol.owner.parent as? IrClass)
+        val classIdStr = funParent?.classId?.asString()
+
+        if (classIdStr?.startsWith(composableFunctionFqNamePrefix) == true) {
+            val arity = classIdStr.substring(classIdStr.length).toIntOrNull() ?: 0
+            return try {
+                println(symbol.signature)
+                context.function(arity).functionByName(symbol.owner.name.asString())
+            } catch (e: Throwable) {
+                super.getReferencedSimpleFunction(symbol)
+            }
+        }
+
+//        if (symbol.signature?.toString()?.startsWith( "androidx.compose.runtime.internal/ComposableFunction0.hashCode") == true) {
+//            return context.function(0).functionByName("hashCode")
+//        }
+//        if (symbol.signature?.toString()?.startsWith( "androidx.compose.runtime.internal/ComposableFunction1.hashCode") == true) {
+//            return context.function(1).functionByName("hashCode")
+//        }
+        return super.getReferencedSimpleFunction(symbol)
+        // (symbol.owner.parent as? org.jetbrains.kotlin.ir.declarations.IrClass).kotlinFqName
+    }
+}

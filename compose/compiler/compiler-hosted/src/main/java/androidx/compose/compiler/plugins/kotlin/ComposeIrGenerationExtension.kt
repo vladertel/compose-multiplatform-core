@@ -16,21 +16,7 @@
 
 package androidx.compose.compiler.plugins.kotlin
 
-import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.ComposableFunInterfaceLowering
-import androidx.compose.compiler.plugins.kotlin.lower.ComposableFunctionBodyTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.ComposableLambdaAnnotator
-import androidx.compose.compiler.plugins.kotlin.lower.ComposableSymbolRemapper
-import androidx.compose.compiler.plugins.kotlin.lower.ComposableTargetAnnotationsTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.ComposerIntrinsicTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.ComposerLambdaMemoization
-import androidx.compose.compiler.plugins.kotlin.lower.ComposerParamTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.CopyDefaultValuesFromExpectLowering
-import androidx.compose.compiler.plugins.kotlin.lower.DurableFunctionKeyTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.DurableKeyVisitor
-import androidx.compose.compiler.plugins.kotlin.lower.KlibAssignableParamTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.LiveLiteralTransformer
-import androidx.compose.compiler.plugins.kotlin.lower.WrapJsComposableLambdaLowering
+import androidx.compose.compiler.plugins.kotlin.lower.*
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.CreateDecoysTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.RecordDecoySignaturesTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.SubstituteDecoyCallsTransformer
@@ -44,6 +30,18 @@ import org.jetbrains.kotlin.backend.common.serialization.signature.PublicIdSigna
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsGlobalDeclarationTable
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerIr
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.declarations.IrTypeParametersContainer
+import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
+import org.jetbrains.kotlin.ir.types.IrSimpleType
+import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.IrTypeArgument
+import org.jetbrains.kotlin.ir.types.IrTypeProjection
+import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
+import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
+import org.jetbrains.kotlin.ir.util.DeepCopyIrTreeWithSymbols
+import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
+import org.jetbrains.kotlin.ir.util.TypeRemapper
+import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.platform.isJs
 import org.jetbrains.kotlin.platform.isWasm
@@ -78,7 +76,7 @@ class ComposeIrGenerationExtension(
             validateIr(moduleFragment, pluginContext.irBuiltIns)
 
         // create a symbol remapper to be used across all transforms
-        val symbolRemapper = ComposableSymbolRemapper()
+        val symbolRemapper = ComposableSymbolRemapper(pluginContext)
 
         if (useK2) {
             moduleFragment.acceptVoid(ComposableLambdaAnnotator(pluginContext))
@@ -241,6 +239,46 @@ class ComposeIrGenerationExtension(
         }
         if (reportsDestination != null) {
             metrics.saveReportsTo(reportsDestination)
+        }
+
+        if (decoysEnabled && false) {
+            val symbolRemapper = DeepCopySymbolRemapper()
+            val typeRemapper = object : TypeRemapper {
+                override fun enterScope(irTypeParametersContainer: IrTypeParametersContainer) {}
+
+                override fun leaveScope() {}
+
+                private fun remapTypeArgument(typeArgument: IrTypeArgument): IrTypeArgument =
+                    if (typeArgument is IrTypeProjection)
+                        makeTypeProjection(this.remapType(typeArgument.type), typeArgument.variance)
+                    else
+                        typeArgument
+
+                override fun remapType(type: IrType): IrType {
+                    if (type !is IrSimpleType) return type
+                    if (type.isSyntheticComposableFunction()) {
+                        val oldIrArguments = type.arguments
+                        val functionCls = pluginContext.function(oldIrArguments.size)
+
+                        return IrSimpleTypeImpl(
+                            null,
+                            functionCls,
+                            type.nullability,
+                            oldIrArguments.map { remapTypeArgument(it) },
+                            type.annotations,
+//                                .filter { !it.isComposableAnnotation() }.map {
+//                                it.transform(deepCopy, null) as IrConstructorCall
+//                            },
+                            null
+                        )
+                    }
+                    return type
+                }
+            }
+            moduleFragment.acceptVoid(symbolRemapper)
+            val dc = DeepCopyIrTreeWithSymbols(symbolRemapper, typeRemapper)
+            moduleFragment.transformChildren(dc, null)
+            moduleFragment.patchDeclarationParents()
         }
 
         // Verify that our transformations didn't break something

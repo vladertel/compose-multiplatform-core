@@ -384,13 +384,29 @@ class ComposerTypeRemapper(
     override fun remapType(type: IrType): IrType {
         if (type !is IrSimpleType) return type
         if (!type.isComposableFunction()) return underlyingRemapType(type)
+        val isDecoy = scopeStack.peek()?.isDecoy() == true
         // do not convert types for decoys
-        if (scopeStack.peek()?.isDecoy() == true) {
-            return underlyingRemapType(type)
-        }
+//        if (scopeStack.peek()?.isDecoy() == true) {
+//            return underlyingRemapType(type)
+//        }
 
         val oldIrArguments = type.arguments
         val realParams = oldIrArguments.size - 1
+
+        if (isDecoy) {
+            return IrSimpleTypeImpl(
+                null,
+                context.function(realParams),
+                type.nullability,
+                oldIrArguments.map { remapTypeArgument(it) },
+                type.annotations.filter { !it.isComposableAnnotation() }.map {
+                    it.transform(deepCopy, null) as IrConstructorCall
+                },
+                null
+            )
+        }
+
+
         var extraArgs = listOf(
             // composer param
             makeTypeProjection(
@@ -408,7 +424,13 @@ class ComposerTypeRemapper(
                 oldIrArguments.last()
 
         val newArgSize = oldIrArguments.size - 1 + extraArgs.size
-        val functionCls = context.function(newArgSize)
+
+        val functionCls = if (isDecoy) {
+            context.function(realParams)
+//            context.function(newArgSize)
+        } else {
+            context.function(newArgSize)
+        }
 
         return IrSimpleTypeImpl(
             null,
