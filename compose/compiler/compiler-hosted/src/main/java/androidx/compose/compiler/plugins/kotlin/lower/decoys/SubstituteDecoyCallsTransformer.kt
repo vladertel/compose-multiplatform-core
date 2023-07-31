@@ -250,10 +250,13 @@ class SubstituteDecoyCallsTransformer(
                 else
                     typeArgument
 
+            private fun IrType.isComposableFunction(): Boolean {
+                return isSyntheticComposableFunction() || (isFunction() && hasComposableAnnotation())
+            }
+
             override fun remapType(type: IrType): IrType {
                 if (type !is IrSimpleType) return type
-                if (!type.isFunction()) return type
-                if (!type.isComposable()) return type
+                if (!type.isComposableFunction()) return type
 
                 val oldIrArguments = type.arguments
                 val realParams = oldIrArguments.size - 1

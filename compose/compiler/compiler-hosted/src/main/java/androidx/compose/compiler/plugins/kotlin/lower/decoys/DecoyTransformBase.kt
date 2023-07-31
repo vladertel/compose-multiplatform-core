@@ -29,6 +29,7 @@ import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationContainer
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrTypeParametersContainer
+import org.jetbrains.kotlin.ir.declarations.lazy.IrLazyFunctionBase
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -56,6 +57,12 @@ internal interface DecoyTransformBase {
             ?: signatureBuilder.composeSignatureForDeclaration(this, false)
 
         return signature.getSignatureId()
+    }
+
+    fun IrFunction.composeSignatureId(): Long {
+        if (this is IrLazyFunctionBase) return getSignatureId()
+        return signatureBuilder.composeSignatureForDeclaration(this, false)
+            .getSignatureId()
     }
 
     private fun IdSignature.getSignatureId(): Long {
@@ -91,7 +98,7 @@ internal interface DecoyTransformBase {
     @OptIn(ObsoleteDescriptorBasedAPI::class)
     fun IrFunction.getComposableForDecoy(): IrFunctionSymbol {
         val implementationName = getDecoyTargetName()
-        val signatureId = getSignatureId()
+        val signatureId = composeSignatureId()//getSignatureId()
         val implementation = (parent as? IrDeclarationContainer)?.declarations
             ?.filterIsInstance<IrFunction>()
             ?.firstOrNull {
