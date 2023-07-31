@@ -38,7 +38,10 @@ import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.IrTypeArgument
+import org.jetbrains.kotlin.ir.types.IrTypeProjection
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
+import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
@@ -217,30 +220,13 @@ class CreateDecoysTransformer(
         newFunction.body = original.moveBodyTo(newFunction)
             ?.copyWithNewTypeParams(original, newFunction)
 
-        original.remapTypes(object : TypeRemapper {
-            override fun enterScope(irTypeParametersContainer: IrTypeParametersContainer) {}
-            override fun leaveScope() {}
+        // we need to clean the original body before types remapping.
+        // also see fun IrFunction.stubBody
+        original.body = null
 
-            override fun remapType(type: IrType): IrType {
-                if (type !is IrSimpleType) return type
-                if (type.isSyntheticComposableFunction()) {
-                    val oldIrArguments = type.arguments
-                    val functionCls = context.function(oldIrArguments.size - 1)
-                    return IrSimpleTypeImpl(
-                        null,
-                        functionCls,
-                        type.nullability,
-                        oldIrArguments,//.map { remapTypeArgument(it) },
-                        type.annotations,
-//                            .filter { !it.isComposableAnnotation() }.map {
-//                            it.transform(deepCopy, null) as IrConstructorCall
-//                        },
-                        null
-                    )
-                }
-                return type
-            }
-        })
+        // we have to remap original types (in parameters) to get rid of ComposableFunctionX references.
+        // this way the `original` will produce a correct signature stored in DecoyImplementation annotation
+        original.remapComposableFunctionReferences()
 
         newFunction.addDecoyImplementationAnnotation(newName.asString(), original.getSignatureId())
 
@@ -252,6 +238,36 @@ class CreateDecoysTransformer(
         }
 
         return newFunction
+    }
+
+    private fun IrFunction.remapComposableFunctionReferences() {
+        this.remapTypes(object : TypeRemapper {
+            override fun enterScope(irTypeParametersContainer: IrTypeParametersContainer) {}
+            override fun leaveScope() {}
+
+            private fun remapTypeArgument(typeArgument: IrTypeArgument): IrTypeArgument =
+                if (typeArgument is IrTypeProjection)
+                    makeTypeProjection(this.remapType(typeArgument.type), typeArgument.variance)
+                else
+                    typeArgument
+
+            override fun remapType(type: IrType): IrType {
+                if (type !is IrSimpleType) return type
+                if (type.isSyntheticComposableFunction()) {
+                    val oldIrArguments = type.arguments
+                    val functionCls = context.function(oldIrArguments.size - 1)
+                    return IrSimpleTypeImpl(
+                        null,
+                        functionCls,
+                        type.nullability,
+                        oldIrArguments.map { remapTypeArgument(it) },
+                        type.annotations,
+                        null
+                    )
+                }
+                return type
+            }
+        })
     }
 
     /**
