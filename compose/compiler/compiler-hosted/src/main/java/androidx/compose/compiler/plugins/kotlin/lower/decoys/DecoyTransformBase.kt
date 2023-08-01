@@ -102,8 +102,8 @@ internal interface DecoyTransformBase {
         val implementation = (parent as? IrDeclarationContainer)?.declarations
             ?.filterIsInstance<IrFunction>()
             ?.firstOrNull {
-                it.getDecoyImplementationName() == implementationName
-                    && it.getDecoyImplementationId() == signatureId
+                it.getDecoyImplementationName() == implementationName &&
+                    it.getDecoyImplementationId() == signatureId
             }
 
         if (implementation != null) {

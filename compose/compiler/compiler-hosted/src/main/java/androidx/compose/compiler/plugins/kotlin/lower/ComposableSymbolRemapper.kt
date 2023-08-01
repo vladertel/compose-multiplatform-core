@@ -104,36 +104,18 @@ class ComposableSymbolRemapper(
 ) {
 
     private val composableFunctionFqNamePrefix = "androidx/compose/runtime/internal/ComposableFunction"
-//    override fun getReferencedClass(symbol: IrClassSymbol): IrClassSymbol {
-//        val classIdStr = symbol.owner.classId?.asString()
-//        if (classIdStr?.startsWith(composableFunctionFqNamePrefix) == true) {
-//            val arity = classIdStr.substring(classIdStr.length).toIntOrNull() ?: 0
-//            return context.function(arity)
-//        }
-//        return super.getReferencedClass(symbol)
-//    }
 
+    // IR contains calls such as ComposableFunction0.hashCode, ComposableFunction0.equals, etc.
+    // ComposerTypeRemapper remaps only types, but call symbols remain the same.
+    // We have to replace those symbols with corresponding FunctionN calls
     override fun getReferencedSimpleFunction(symbol: IrSimpleFunctionSymbol): IrSimpleFunctionSymbol {
         val funParent = (symbol.owner.parent as? IrClass)
         val classIdStr = funParent?.classId?.asString()
 
         if (classIdStr?.startsWith(composableFunctionFqNamePrefix) == true) {
             val arity = classIdStr.substring(classIdStr.length).toIntOrNull() ?: 0
-            return try {
-                println(symbol.signature)
-                context.function(arity).functionByName(symbol.owner.name.asString())
-            } catch (e: Throwable) {
-                super.getReferencedSimpleFunction(symbol)
-            }
+            return context.function(arity).functionByName(symbol.owner.name.asString())
         }
-
-//        if (symbol.signature?.toString()?.startsWith( "androidx.compose.runtime.internal/ComposableFunction0.hashCode") == true) {
-//            return context.function(0).functionByName("hashCode")
-//        }
-//        if (symbol.signature?.toString()?.startsWith( "androidx.compose.runtime.internal/ComposableFunction1.hashCode") == true) {
-//            return context.function(1).functionByName("hashCode")
-//        }
         return super.getReferencedSimpleFunction(symbol)
-        // (symbol.owner.parent as? org.jetbrains.kotlin.ir.declarations.IrClass).kotlinFqName
     }
 }

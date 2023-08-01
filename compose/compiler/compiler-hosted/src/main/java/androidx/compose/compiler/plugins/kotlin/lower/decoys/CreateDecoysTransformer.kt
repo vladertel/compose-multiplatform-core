@@ -220,7 +220,7 @@ class CreateDecoysTransformer(
         newFunction.body = original.moveBodyTo(newFunction)
             ?.copyWithNewTypeParams(original, newFunction)
 
-        // we need to clean the original body before types remapping.
+        // we need to clean the original body before types remapping (to not remap body, it's moved to a new function).
         // also see fun IrFunction.stubBody
         original.body = null
 

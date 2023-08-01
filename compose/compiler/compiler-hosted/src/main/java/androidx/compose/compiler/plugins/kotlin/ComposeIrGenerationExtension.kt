@@ -241,46 +241,6 @@ class ComposeIrGenerationExtension(
             metrics.saveReportsTo(reportsDestination)
         }
 
-        if (decoysEnabled && false) {
-            val symbolRemapper = DeepCopySymbolRemapper()
-            val typeRemapper = object : TypeRemapper {
-                override fun enterScope(irTypeParametersContainer: IrTypeParametersContainer) {}
-
-                override fun leaveScope() {}
-
-                private fun remapTypeArgument(typeArgument: IrTypeArgument): IrTypeArgument =
-                    if (typeArgument is IrTypeProjection)
-                        makeTypeProjection(this.remapType(typeArgument.type), typeArgument.variance)
-                    else
-                        typeArgument
-
-                override fun remapType(type: IrType): IrType {
-                    if (type !is IrSimpleType) return type
-                    if (type.isSyntheticComposableFunction()) {
-                        val oldIrArguments = type.arguments
-                        val functionCls = pluginContext.function(oldIrArguments.size)
-
-                        return IrSimpleTypeImpl(
-                            null,
-                            functionCls,
-                            type.nullability,
-                            oldIrArguments.map { remapTypeArgument(it) },
-                            type.annotations,
-//                                .filter { !it.isComposableAnnotation() }.map {
-//                                it.transform(deepCopy, null) as IrConstructorCall
-//                            },
-                            null
-                        )
-                    }
-                    return type
-                }
-            }
-            moduleFragment.acceptVoid(symbolRemapper)
-            val dc = DeepCopyIrTreeWithSymbols(symbolRemapper, typeRemapper)
-            moduleFragment.transformChildren(dc, null)
-            moduleFragment.patchDeclarationParents()
-        }
-
         // Verify that our transformations didn't break something
         if (validateIr)
             validateIr(moduleFragment, pluginContext.irBuiltIns)

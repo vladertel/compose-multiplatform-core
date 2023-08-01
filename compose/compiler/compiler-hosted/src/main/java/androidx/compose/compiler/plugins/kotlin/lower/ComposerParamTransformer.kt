@@ -75,6 +75,7 @@ import org.jetbrains.kotlin.ir.util.isVararg
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.util.primaryConstructor
 import org.jetbrains.kotlin.ir.util.remapTypeParameters
+import org.jetbrains.kotlin.ir.util.remapTypes
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
@@ -131,6 +132,15 @@ class ComposerParamTransformer(
         // just go through and patch all of the parents to make sure things are properly wired
         // up.
         module.patchDeclarationParents()
+
+        if (!decoysEnabled) {
+            module.transformChildrenVoid(object : IrElementTransformerVoid() {
+                override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
+                    declaration.overriddenSymbols.forEach { it.owner.remapTypes(typeRemapper) }
+                    return super.visitSimpleFunction(declaration)
+                }
+            })
+        }
     }
 
     private val transformedFunctions: MutableMap<IrSimpleFunction, IrSimpleFunction> =
