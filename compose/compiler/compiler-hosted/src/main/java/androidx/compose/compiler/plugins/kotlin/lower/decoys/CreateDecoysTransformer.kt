@@ -228,7 +228,7 @@ class CreateDecoysTransformer(
         // this way the `original` will produce a correct signature stored in DecoyImplementation annotation
         original.remapComposableFunctionReferences()
 
-        newFunction.addDecoyImplementationAnnotation(newName.asString(), original.composeSignatureId())
+        newFunction.addDecoyImplementationAnnotation(newName.asString(), original.getSignatureId())
 
         newFunction.valueParameters.forEach {
             it.defaultValue?.transformDefaultValue(

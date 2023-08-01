@@ -53,16 +53,12 @@ internal interface DecoyTransformBase {
     val signatureBuilder: IdSignatureSerializer
 
     fun IrFunction.getSignatureId(): Long {
-        val signature = symbol.signature
-            ?: signatureBuilder.composeSignatureForDeclaration(this, false)
-
-        return signature.getSignatureId()
-    }
-
-    fun IrFunction.composeSignatureId(): Long {
-        if (this is IrLazyFunctionBase) return getSignatureId()
-        return signatureBuilder.composeSignatureForDeclaration(this, false)
-            .getSignatureId()
+        return if (this is IrLazyFunctionBase) {
+            symbol.signature ?: signatureBuilder.composeSignatureForDeclaration(this, false)
+        } else {
+            // types may have been remapped, so `symbol.signature` is outdated.
+            signatureBuilder.composeSignatureForDeclaration(this, false)
+        }.getSignatureId()
     }
 
     private fun IdSignature.getSignatureId(): Long {
@@ -98,7 +94,7 @@ internal interface DecoyTransformBase {
     @OptIn(ObsoleteDescriptorBasedAPI::class)
     fun IrFunction.getComposableForDecoy(): IrFunctionSymbol {
         val implementationName = getDecoyTargetName()
-        val signatureId = composeSignatureId()//getSignatureId()
+        val signatureId = getSignatureId()
         val implementation = (parent as? IrDeclarationContainer)?.declarations
             ?.filterIsInstance<IrFunction>()
             ?.firstOrNull {
