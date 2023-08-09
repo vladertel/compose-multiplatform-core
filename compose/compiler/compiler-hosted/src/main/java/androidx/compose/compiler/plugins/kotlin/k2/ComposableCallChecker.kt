@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousInitializer
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousObject
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirFunction
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.FirPropertyAccessor
@@ -68,6 +69,11 @@ object ComposableFunctionCallChecker : FirFunctionCallChecker() {
     ) {
         val calleeFunction = expression.calleeReference.toResolvedCallableSymbol()
             ?: return
+        if (calleeFunction.origin == FirDeclarationOrigin.SamConstructor) {
+            // Because of https://youtrack.jetbrains.com/issue/KT-47708
+            // https://github.com/JetBrains/kotlin/commit/6f17a8713c9fb37643c8dc6e5639823aa938de56
+            return
+        }
         if (calleeFunction.isComposable(context.session)) {
             checkComposableCall(expression, calleeFunction, context, reporter)
         } else if (calleeFunction.callableId.isInvoke()) {
