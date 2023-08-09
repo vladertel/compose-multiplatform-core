@@ -69,11 +69,11 @@ object ComposableFunctionCallChecker : FirFunctionCallChecker() {
     ) {
         val calleeFunction = expression.calleeReference.toResolvedCallableSymbol()
             ?: return
-        if (calleeFunction.origin == FirDeclarationOrigin.SamConstructor) {
-            // Because of https://youtrack.jetbrains.com/issue/KT-47708
-            // https://github.com/JetBrains/kotlin/commit/6f17a8713c9fb37643c8dc6e5639823aa938de56
-            return
-        }
+
+        // K2 propagates annotation from the fun interface method to the constructor.
+        // https://youtrack.jetbrains.com/issue/KT-47708.
+        if (calleeFunction.origin == FirDeclarationOrigin.SamConstructor) return
+
         if (calleeFunction.isComposable(context.session)) {
             checkComposableCall(expression, calleeFunction, context, reporter)
         } else if (calleeFunction.callableId.isInvoke()) {
