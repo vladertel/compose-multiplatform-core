@@ -205,6 +205,6 @@ internal class FocusOrderToProperties(
     }
 }
 
-fun interface InvokeOnFocusProperties {
+internal fun interface InvokeOnFocusProperties {
     fun invoke(focusProperties: FocusProperties)
 }
