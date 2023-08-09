@@ -208,14 +208,14 @@ private fun rememberRowHeightSums(
     }
 }
 
-private fun interface LazyGridSlotCalculation {
+private fun interface LazyGridSlotsCalculation {
     fun invoke(density: Density, constraints: Constraints): LazyGridSlots
 }
 
 /** measurement cache to avoid recalculating row/column sizes on each scroll. */
 private class GridSlotCache(
     private val calculation: Density.(Constraints) -> LazyGridSlots
-) : LazyGridSlotCalculation {
+) : LazyGridSlotsCalculation {
     private var cachedConstraints = Constraints()
     private var cachedDensity: Float = 0f
     private var cachedSizes: LazyGridSlots? = null
