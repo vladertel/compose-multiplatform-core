@@ -36,8 +36,9 @@ val NativeModalWithNaviationExample = Screen.Example("Native modal with navigati
 private fun NativeModalWithNavigation() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val viewController = LocalUIViewController.current
+
         Button(onClick = {
-            viewController.get()?.presentViewController(
+            viewController.presentViewController(
                 UINavigationController(
                     rootViewController = ComposeUIViewController {
                         NativeNavigationPage()
@@ -58,7 +59,7 @@ private fun NativeNavigationPage() {
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Button(onClick = {
-            viewController.get()?.navigationController?.pushViewController(
+            viewController.navigationController?.pushViewController(
                 ComposeUIViewController {
                     NativeNavigationPage()
                 }, true

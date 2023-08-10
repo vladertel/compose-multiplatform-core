@@ -47,6 +47,6 @@ import platform.UIKit.UIViewController
  * }
  * ```
  */
-val LocalUIViewController = staticCompositionLocalOf<WeakReference<UIViewController>> {
+val LocalUIViewController = staticCompositionLocalOf<UIViewController> {
     error("CompositionLocal UIViewController not provided")
 }
