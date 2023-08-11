@@ -82,7 +82,7 @@ fun ComposeUIViewController(
         setContent(content)
     }
 
-private data class AttachedComposeContext(
+private class AttachedComposeContext(
     val composeLayer: ComposeLayer,
     val skiaLayer: org.jetbrains.skiko.SkiaLayer,
     val view: SkikoUIView,
