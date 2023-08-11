@@ -35,11 +35,16 @@ import androidx.compose.ui.unit.toDpRect
 import org.jetbrains.skia.Point
 import org.jetbrains.skiko.*
 
+expect fun skikoViewMarker(): Any
+expect fun composeLayerMarker(): Any
+
+
 internal class ComposeLayer(
     internal val layer: SkiaLayer,
     platform: Platform,
     private val input: SkikoInput,
 ) {
+    private val marker = composeLayerMarker()
     private var isDisposed = false
 
     // Should be set to an actual value by ComposeWindow implementation
@@ -47,6 +52,7 @@ internal class ComposeLayer(
 
     inner class ComponentImpl : SkikoView {
         override val input = this@ComposeLayer.input
+        private val marker = skikoViewMarker()
 
         override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
             scene.render(canvas, nanoTime)
@@ -126,7 +132,7 @@ internal class ComposeLayer(
 
     fun dispose() {
         check(!isDisposed)
-        this.layer.detach()
+        layer.detach()
         scene.close()
         _initContent = null
         isDisposed = true
@@ -164,6 +170,7 @@ internal class ComposeLayer(
                 content = content
             )
         }
+
         initContent()
     }
 
