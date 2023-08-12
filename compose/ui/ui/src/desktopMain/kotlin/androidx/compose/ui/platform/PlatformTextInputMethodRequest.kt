@@ -24,6 +24,7 @@ import java.awt.im.InputMethodRequests
  * Represents a request to open a desktop text input session via
  * `PlatformTextInputModifierNode.textInputSession`.
  */
+@AllowDifferentMembersInActual
 actual interface PlatformTextInputMethodRequest {
     /**
      * The [InputMethodListener] that will be registered via [Component.addInputMethodListener]

@@ -48,6 +48,7 @@ import androidx.collection.internal.idealLongArraySize
  * capacity of 0, the sparse array will be initialized with a light-weight representation not
  * requiring any additional array allocations.
  */
+@AllowDifferentMembersInActual // Cloneable is JVM specific
 public actual open class LongSparseArray<E>
 @JvmOverloads public actual constructor(
     initialCapacity: Int

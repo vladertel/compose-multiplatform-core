@@ -19,6 +19,7 @@ package androidx.compose.ui.platform
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 
+@AllowDifferentMembersInActual
 actual interface PlatformTextInputSession {
     /**
      * The [View] this input session is bound to. This view should be used to obtain and interact

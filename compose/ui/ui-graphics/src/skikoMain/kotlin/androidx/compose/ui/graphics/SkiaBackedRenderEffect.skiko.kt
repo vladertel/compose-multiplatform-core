@@ -31,6 +31,7 @@ fun ImageFilter.asComposeRenderEffect(): RenderEffect =
  * visual effect. A [RenderEffect] can be configured on a [GraphicsLayerScope]
  * and will be applied when drawn.
  */
+@AllowDifferentMembersInActual
 @Immutable
 actual sealed class RenderEffect actual constructor() {
 

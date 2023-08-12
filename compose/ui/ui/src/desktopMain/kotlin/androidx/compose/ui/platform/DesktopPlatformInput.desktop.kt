@@ -39,6 +39,7 @@ import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 
+@AllowDifferentMembersInActual
 internal actual interface PlatformInputComponent {
     fun enableInput(inputMethodRequests: InputMethodRequests)
 
