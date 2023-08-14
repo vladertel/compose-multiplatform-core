@@ -113,7 +113,11 @@ class SubstituteDecoyCallsTransformer(
         if (declaration.isDecoy()) {
             return super.visitSimpleFunction(declaration)
         }
+        remapOverriddenSymbols(declaration)
+        return super.visitSimpleFunction(declaration)
+    }
 
+    private fun remapOverriddenSymbols(declaration: IrSimpleFunction) {
         val newOverriddenSymbols = declaration.overriddenSymbols.map {
             // It can be an overridden symbol from another module, so access it via `decoyOwner`
             val maybeDecoy = it.decoyOwner
@@ -121,11 +125,12 @@ class SubstituteDecoyCallsTransformer(
                 maybeDecoy.getComposableForDecoy() as IrSimpleFunctionSymbol
             } else {
                 it
+            }.also {
+                remapOverriddenSymbols(it.owner)
             }
         }
 
         declaration.overriddenSymbols = newOverriddenSymbols
-        return super.visitSimpleFunction(declaration)
     }
 
     override fun visitConstructorCall(expression: IrConstructorCall): IrExpression {

@@ -132,18 +132,6 @@ class ComposerParamTransformer(
         // just go through and patch all of the parents to make sure things are properly wired
         // up.
         module.patchDeclarationParents()
-
-        if (!decoysEnabled) {
-            // overridden symbols still contain ComposableFunctionN references (in types) - leads to unbound symbols.
-            // So we have to remap them too after IR has been transformed, parents are set and all symbols are bound.
-            // Note: decoys transformation do types remapping for overridden too separately.
-            module.transformChildrenVoid(object : IrElementTransformerVoid() {
-                override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
-                    declaration.overriddenSymbols.forEach { it.owner.remapTypes(typeRemapper) }
-                    return super.visitSimpleFunction(declaration)
-                }
-            })
-        }
     }
 
     private val transformedFunctions: MutableMap<IrSimpleFunction, IrSimpleFunction> =

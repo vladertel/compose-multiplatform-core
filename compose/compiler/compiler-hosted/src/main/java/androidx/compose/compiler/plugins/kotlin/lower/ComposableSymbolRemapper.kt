@@ -55,9 +55,7 @@ import org.jetbrains.kotlin.types.KotlinType
  * This is K1 specific. In K2, descriptors are only there for backwards compatibility and
  * always reflect the IR.
  */
-class ComposableSymbolRemapper(
-    private val context: IrPluginContext
-) : DeepCopySymbolRemapper(
+class ComposableSymbolRemapper : DeepCopySymbolRemapper(
     object : DescriptorsRemapper {
         override fun remapDeclaredConstructor(
             descriptor: ClassConstructorDescriptor
@@ -101,21 +99,4 @@ class ComposableSymbolRemapper(
             hasComposableAnnotation() ||
                 arguments.any { it.type.hasComposableAnnotation() }
     }
-) {
-
-    private val composableFunctionFqNamePrefix = "androidx/compose/runtime/internal/ComposableFunction"
-
-    // IR contains calls such as ComposableFunction0.hashCode, ComposableFunction0.equals, etc.
-    // ComposerTypeRemapper remaps only types, but call symbols remain the same.
-    // We have to replace those symbols with corresponding FunctionN calls
-    override fun getReferencedSimpleFunction(symbol: IrSimpleFunctionSymbol): IrSimpleFunctionSymbol {
-        val funParent = (symbol.owner.parent as? IrClass)
-        val classIdStr = funParent?.classId?.asString()
-
-        if (classIdStr?.startsWith(composableFunctionFqNamePrefix) == true) {
-            val arity = classIdStr.substring(classIdStr.length).toIntOrNull() ?: 0
-            return context.function(arity).functionByName(symbol.owner.name.asString())
-        }
-        return super.getReferencedSimpleFunction(symbol)
-    }
-}
+) {}
