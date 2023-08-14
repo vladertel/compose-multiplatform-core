@@ -102,7 +102,7 @@ private fun memoizeIdentityHashCode(instance: Any?): Int {
     return value
 }
 
-actual annotation class TestOnly
+//actual annotation class TestOnly
 
 actual val DefaultMonotonicFrameClock: MonotonicFrameClock = MonotonicClockImpl()
 

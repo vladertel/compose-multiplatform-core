@@ -69,7 +69,7 @@ internal expect class WeakReference<T : Any>(reference: T) {
     AnnotationTarget.PROPERTY_GETTER,
     AnnotationTarget.PROPERTY_SETTER
 )
-expect annotation class TestOnly()
+annotation class TestOnly()
 
 @Target(
     AnnotationTarget.FUNCTION,

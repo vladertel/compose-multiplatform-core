@@ -76,7 +76,7 @@ internal actual class WeakReference<T : Any> actual constructor(reference: T) {
 actual fun identityHashCode(instance: Any?): Int =
     instance.identityHashCode()
 
-actual annotation class TestOnly
+//actual annotation class TestOnly
 
 actual typealias CompositionContextLocal = kotlin.native.concurrent.ThreadLocal
 

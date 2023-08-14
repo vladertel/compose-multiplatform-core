@@ -35,12 +35,11 @@ internal actual fun loadTypeface(font: Font): SkTypeface {
     }
 }
 
-internal actual fun currentPlatform(): Platform = TODO() // Platform.Unknown
-//when (hostOs) {
-//    OS.Android -> Platform.Android
-//    OS.Ios -> Platform.IOS
-//    OS.MacOS -> Platform.MacOS
-//    OS.Linux -> Platform.Linux
-//    OS.Windows -> Platform.Windows
-//    else -> Platform.Unknown
-//}
+internal actual fun currentPlatform(): Platform = when (hostOs) {
+    OS.Android -> Platform.Android
+    OS.Ios -> Platform.IOS
+    OS.MacOS -> Platform.MacOS
+    OS.Linux -> Platform.Linux
+    OS.Windows -> Platform.Windows
+    else -> Platform.Unknown
+}

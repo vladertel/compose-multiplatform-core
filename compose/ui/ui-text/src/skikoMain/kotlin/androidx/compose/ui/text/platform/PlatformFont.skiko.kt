@@ -22,6 +22,7 @@ import androidx.compose.ui.text.ExpireAfterAccessCache
 import androidx.compose.ui.text.WeakKeysCache
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.font.Typeface
+import kotlin.jvm.JvmInline
 import org.jetbrains.skia.FontMgr
 import org.jetbrains.skia.paragraph.FontCollection
 import org.jetbrains.skia.paragraph.TypefaceFontProvider
@@ -209,6 +210,12 @@ internal enum class Platform {
     TvOS,
     WatchOS,
     Android, // use case: a web app running in Chrome Android
+    ;
+
+    // TODO: empty companion object is a workaround for K2 issue
+    companion object {
+
+    }
 }
 
 internal expect fun currentPlatform(): Platform
@@ -256,5 +263,7 @@ internal val GenericFontFamiliesMapping: Map<String, List<String>> by lazy {
                 FontFamily.Monospace.name to listOf("Consolas"),
                 FontFamily.Cursive.name to listOf("Comic Sans MS")
             )
+
+        else -> { error("asd") }
     }
 }
