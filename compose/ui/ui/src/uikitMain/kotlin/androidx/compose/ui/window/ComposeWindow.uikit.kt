@@ -86,8 +86,7 @@ private class AttachedComposeContext(
     val composeLayer: ComposeLayer,
     val skiaLayer: org.jetbrains.skiko.SkiaLayer,
     val view: SkikoUIView,
-    val inputTraits: SkikoUITextInputTraits,
-    val platform: Platform
+    val inputTraits: SkikoUITextInputTraits
 ) {
     fun dispose() {
         composeLayer.dispose()
@@ -483,7 +482,7 @@ internal actual class ComposeWindow : UIViewController {
         )
 
         attachedComposeContext =
-            AttachedComposeContext(composeLayer, skiaLayer, skikoUIView, inputTraits, platform)
+            AttachedComposeContext(composeLayer, skiaLayer, skikoUIView, inputTraits)
     }
 
     private fun getViewFrameSize(): IntSize {
