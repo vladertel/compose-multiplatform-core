@@ -125,13 +125,13 @@ class CopyDefaultValuesFromExpectLowering(
         symbolTable.referenceFunction(descriptor.findActualForExpect()).owner as T
 
     private fun IrProperty.findActualForExpected(): IrProperty =
-        symbolTable.referenceProperty(descriptor.findActualForExpect()).owner
+        symbolTable.referenceProperty(signature = this.symbol.signature!!).owner
 
     private fun IrClass.findActualForExpected(): IrClass =
-        symbolTable.referenceClass(descriptor.findActualForExpect()).owner
+        symbolTable.referenceClass(signature = this.symbol.signature!!).owner
 
     private fun IrEnumEntry.findActualForExpected(): IrEnumEntry =
-        symbolTable.referenceEnumEntry(descriptor.findActualForExpect()).owner
+        symbolTable.referenceEnumEntry(signature = this.symbol.signature!!).owner
 
     private inline fun <reified T : MemberDescriptor> T.findActualForExpect(): T {
         if (!this.isExpect) error(this)
