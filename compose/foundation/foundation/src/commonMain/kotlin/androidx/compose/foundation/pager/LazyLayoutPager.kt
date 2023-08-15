@@ -20,7 +20,7 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clipScrollableContainer
-import androidx.compose.foundation.gestures.BringIntoViewScroller
+import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -75,8 +75,8 @@ internal fun Pager(
     flingBehavior: SnapFlingBehavior,
     /** Whether scrolling via the user gestures is allowed. */
     userScrollEnabled: Boolean,
-    /** Number of pages to layout before and after the visible pages */
-    beyondBoundsPageCount: Int = 0,
+    /** Number of pages to compose and layout before and after the visible pages */
+    beyondBoundsPageCount: Int = PagerDefaults.BeyondBoundsPageCount,
     /** Space between pages */
     pageSpacing: Dp = 0.dp,
     /** Allows to change how to calculate the Page size */
@@ -123,25 +123,18 @@ internal fun Pager(
         PagerWrapperFlingBehavior(flingBehavior, state)
     }
 
-    val pagerSemantics = if (userScrollEnabled) {
-        Modifier.pagerSemantics(state, orientation == Orientation.Vertical)
-    } else {
-        Modifier
-    }
-
     val semanticState = rememberPagerSemanticState(
         state,
         reverseLayout,
         orientation == Orientation.Vertical
     )
 
-    val pagerBringIntoViewScroller = remember(state) { PagerBringIntoViewScroller(state) }
+    val pagerBringIntoViewSpec = remember(state) { PagerBringIntoViewSpec(state) }
 
     LazyLayout(
         modifier = modifier
             .then(state.remeasurementModifier)
             .then(state.awaitLayoutModifier)
-            .then(pagerSemantics)
             .lazyLayoutSemantics(
                 itemProviderLambda = pagerItemProvider,
                 state = semanticState,
@@ -169,7 +162,7 @@ internal fun Pager(
                 state = state,
                 overscrollEffect = overscrollEffect,
                 enabled = userScrollEnabled,
-                bringIntoViewScroller = pagerBringIntoViewScroller
+                bringIntoViewSpec = pagerBringIntoViewSpec
             )
             .dragDirectionDetector(state)
             .nestedScroll(pageNestedScrollConnection),
@@ -289,7 +282,7 @@ private fun Modifier.dragDirectionDetector(state: PagerState) =
     }
 
 @OptIn(ExperimentalFoundationApi::class)
-private class PagerBringIntoViewScroller(val pagerState: PagerState) : BringIntoViewScroller {
+private class PagerBringIntoViewSpec(val pagerState: PagerState) : BringIntoViewSpec {
 
     override val scrollAnimationSpec: AnimationSpec<Float> = spring()
 

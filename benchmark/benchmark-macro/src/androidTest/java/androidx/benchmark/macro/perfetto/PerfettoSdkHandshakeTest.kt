@@ -43,13 +43,12 @@ import java.util.regex.Pattern
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
 
-private const val tracingPerfettoVersion = "1.0.0-beta01" // TODO(224510255): get by 'reflection'
+private const val tracingPerfettoVersion = "1.0.0-beta02" // TODO(224510255): get by 'reflection'
 private const val minSupportedSdk = Build.VERSION_CODES.R // TODO(234351579): Support API < 30
 
 @RunWith(Parameterized::class)
@@ -216,14 +215,10 @@ class PerfettoSdkHandshakeTest(private val testConfig: TestConfig) {
         }
     }
 
-    // TODO(283953019): enable alongside StartupTracingInitializer (pending performance testing)
-    @Ignore
     @Test
     fun test_handshake_framework_cold_start_persistent() =
         test_handshake_framework_cold_start(persistent = true)
 
-    // TODO(283953019): enable alongside StartupTracingInitializer (pending performance testing)
-    @Ignore
     @Test
     fun test_handshake_framework_cold_start_non_persistent() =
         test_handshake_framework_cold_start(persistent = false)
@@ -277,8 +272,6 @@ class PerfettoSdkHandshakeTest(private val testConfig: TestConfig) {
         }
     }
 
-    // TODO(283953019): enable alongside StartupTracingInitializer (pending performance testing)
-    @Ignore
     /**
      * Tests [androidx.benchmark.perfetto.PerfettoCapture.enableAndroidxTracingPerfetto] as
      * opposed to [androidx.tracing.perfetto.handshake.PerfettoSdkHandshake.enableTracingColdStart]
@@ -326,14 +319,10 @@ class PerfettoSdkHandshakeTest(private val testConfig: TestConfig) {
         }
     }
 
-    // TODO(283953019): enable alongside StartupTracingInitializer (pending performance testing)
-    @Ignore
     @Test
     fun test_handshake_framework_cold_start_disable_persistent() =
         test_handshake_framework_cold_start_disable(persistent = true)
 
-    // TODO(283953019): enable alongside StartupTracingInitializer (pending performance testing)
-    @Ignore
     @Test
     fun test_handshake_framework_cold_start_disable_non_persistent() =
         test_handshake_framework_cold_start_disable(persistent = true)

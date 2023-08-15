@@ -20,6 +20,7 @@ import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
@@ -30,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.filters.SdkSuppress
@@ -70,7 +72,7 @@ class IconButtonScreenshotTest {
     }
 
     @Test
-    fun filled_icon_button_disabled() = verifyScreenshot("icon_button_disabled") {
+    fun filled_icon_button_disabled() = verifyScreenshot {
         sampleFilledIconButton(enabled = false, isCompact = false)
     }
 
@@ -80,7 +82,7 @@ class IconButtonScreenshotTest {
     }
 
     @Test
-    fun filled_tonal_icon_button_disabled() = verifyScreenshot("icon_button_disabled") {
+    fun filled_tonal_icon_button_disabled() = verifyScreenshot {
         sampleFilledTonalIconButton(enabled = false, isCompact = false)
     }
 
@@ -110,7 +112,7 @@ class IconButtonScreenshotTest {
     }
 
     @Test
-    fun filled_compact_icon_button_disabled() = verifyScreenshot("compact_icon_button_disabled") {
+    fun filled_compact_icon_button_disabled() = verifyScreenshot {
         sampleFilledIconButton(enabled = false, isCompact = true)
     }
 
@@ -121,7 +123,7 @@ class IconButtonScreenshotTest {
 
     @Test
     fun filled_tonal_compact_icon_button_disabled() =
-        verifyScreenshot("compact_icon_button_disabled") {
+        verifyScreenshot {
             sampleFilledTonalIconButton(enabled = false, isCompact = true)
         }
 
@@ -143,6 +145,11 @@ class IconButtonScreenshotTest {
     @Test
     fun compact_icon_button_disabled() = verifyScreenshot {
         sampleIconButton(enabled = false, isCompact = true)
+    }
+
+    @Test
+    fun icon_button_with_offset() = verifyScreenshot {
+        sampleIconButton(enabled = true, isCompact = false, modifier = Modifier.offset(10.dp))
     }
 
     @Composable
@@ -212,9 +219,13 @@ class IconButtonScreenshotTest {
     }
 
     @Composable
-    private fun sampleIconButton(enabled: Boolean, isCompact: Boolean) {
+    private fun sampleIconButton(
+        enabled: Boolean,
+        isCompact: Boolean,
+        modifier: Modifier = Modifier
+    ) {
         IconButton(
-            onClick = {}, enabled = enabled, modifier = Modifier
+            onClick = {}, enabled = enabled, modifier = modifier
                 .testTag(TEST_TAG)
                 .then(
                     if (isCompact)

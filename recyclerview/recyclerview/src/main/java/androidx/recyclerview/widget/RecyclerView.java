@@ -72,6 +72,7 @@ import androidx.annotation.VisibleForTesting;
 import androidx.core.os.TraceCompat;
 import androidx.core.util.Preconditions;
 import androidx.core.view.AccessibilityDelegateCompat;
+import androidx.core.view.DifferentialMotionFlingHelper;
 import androidx.core.view.InputDeviceCompat;
 import androidx.core.view.MotionEventCompat;
 import androidx.core.view.NestedScrollingChild2;
@@ -2008,7 +2009,13 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
             return true;
         }
 
-        if (getLayoutManager().canScrollVertically()) {
+        LayoutManager layoutManager = getLayoutManager();
+        // If there is no layout manager, then there is nothing to handle key events for.
+        if (layoutManager == null) {
+            return false;
+        }
+
+        if (layoutManager.canScrollVertically()) {
             final int keyCode = event.getKeyCode();
             switch (keyCode) {
                 case KeyEvent.KEYCODE_PAGE_DOWN:
@@ -2023,7 +2030,7 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
 
                 case KeyEvent.KEYCODE_MOVE_HOME:
                 case KeyEvent.KEYCODE_MOVE_END:
-                    final boolean isReversed = getLayoutManager().isLayoutReversed();
+                    final boolean isReversed = layoutManager.isLayoutReversed();
 
                     final int targetOffset;
                     if (keyCode == KeyEvent.KEYCODE_MOVE_HOME) {
@@ -2035,7 +2042,7 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
                     smoothScrollToPosition(targetOffset);
                     return true;
             }
-        } else if (getLayoutManager().canScrollHorizontally()) {
+        } else if (layoutManager.canScrollHorizontally()) {
             final int keyCode = event.getKeyCode();
             switch (keyCode) {
                 case KeyEvent.KEYCODE_PAGE_DOWN:
@@ -2050,7 +2057,7 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
 
                 case KeyEvent.KEYCODE_MOVE_HOME:
                 case KeyEvent.KEYCODE_MOVE_END:
-                    final boolean isReversed = getLayoutManager().isLayoutReversed();
+                    final boolean isReversed = layoutManager.isLayoutReversed();
 
                     final int targetOffset;
                     if (keyCode == KeyEvent.KEYCODE_MOVE_HOME) {
@@ -7164,15 +7171,19 @@ public class RecyclerView extends ViewGroup implements ScrollingView,
                 holder.clearReturnedFromScrapFlag();
             }
             recycleViewHolderInternal(holder);
-            // In most cases we dont need call endAnimation() because when view is detached,
-            // ViewPropertyAnimation will end. But if the animation is based on ObjectAnimator or
-            // if the ItemAnimator uses "pending runnable" and the ViewPropertyAnimation has not
-            // started yet, the ItemAnimatior on the view may not be cleared.
-            // In b/73552923, the View is removed by scroll pass while it's waiting in
-            // the "pending moving" list of DefaultItemAnimator and DefaultItemAnimator later in
-            // a post runnable, incorrectly performs postDelayed() on the detached view.
-            // To fix the issue, we issue endAnimation() here to make sure animation of this view
-            // finishes.
+            // If the ViewHolder is running ItemAnimator, we want the recycleView() in scroll pass
+            // to stop the ItemAnimator and put ViewHolder back in cache or Pool.
+            // There are three situations:
+            // 1. If the custom Adapter clears ViewPropertyAnimator in view detach like the
+            //    leanback (TV) app does, the ItemAnimator is likely to be stopped and
+            //    recycleViewHolderInternal will succeed.
+            // 2. If the custom Adapter clears ViewPropertyAnimator, but the ItemAnimator uses
+            //    "pending runnable" and ViewPropertyAnimator has not started yet, the ItemAnimator
+            //    on the view will not be cleared. See b/73552923.
+            // 3. If the custom Adapter does not clear ViewPropertyAnimator in view detach, the
+            //    ItemAnimator will not be cleared.
+            // Since both 2&3 lead to failure of recycleViewHolderInternal(), we just explicitly end
+            // the ItemAnimator, the callback of ItemAnimator.endAnimations() will recycle the View.
             //
             // Note the order: we must call endAnimation() after recycleViewHolderInternal()
             // to avoid recycle twice. If ViewHolder isRecyclable is false,

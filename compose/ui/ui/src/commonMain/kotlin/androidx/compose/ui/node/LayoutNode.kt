@@ -735,6 +735,13 @@ internal class LayoutNode(
         get() = measurePassDelegate.isPlaced
 
     /**
+     * Whether or not this [LayoutNode] was placed by its parent. The node can still be considered
+     * not placed if some of the modifiers on it not placed the placeable.
+     */
+    val isPlacedByParent: Boolean
+        get() = measurePassDelegate.isPlacedByParent
+
+    /**
      * The order in which this node was placed by its parent during the previous `layoutChildren`.
      * Before the placement the order is set to [NotPlacedPlaceOrder] to all the children. Then
      * every placed node assigns this variable to [parent]s MeasurePassDelegate's
@@ -1325,6 +1332,7 @@ internal class LayoutNode(
     override fun onReuse() {
         require(isAttached) { "onReuse is only expected on attached node" }
         interopViewFactoryHolder?.onReuse()
+        subcompositionsState?.onReuse()
         if (deactivated) {
             deactivated = false
             // we don't need to reset state as it was done when deactivated
@@ -1339,12 +1347,14 @@ internal class LayoutNode(
 
     override fun onDeactivate() {
         interopViewFactoryHolder?.onDeactivate()
+        subcompositionsState?.onDeactivate()
         deactivated = true
         resetModifierState()
     }
 
     override fun onRelease() {
         interopViewFactoryHolder?.onRelease()
+        subcompositionsState?.onRelease()
         forEachCoordinatorIncludingInner { it.onRelease() }
     }
 

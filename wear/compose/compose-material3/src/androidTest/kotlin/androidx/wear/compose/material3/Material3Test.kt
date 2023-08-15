@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.runtime.Composable
+import androidx.compose.testutils.assertAgainstGolden
 import androidx.compose.testutils.assertContainsColor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,8 +43,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.assertTouchWidthIsEqualTo
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -53,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.isUnspecified
 import androidx.compose.ui.unit.toSize
+import androidx.test.screenshot.AndroidXScreenshotTestRule
 import kotlin.math.abs
 import org.junit.Assert
 
@@ -144,6 +148,20 @@ internal fun ComposeContentTestRule.verifyTapSize(
     onNodeWithTag(TEST_TAG)
         .assertTouchHeightIsEqualTo(expectedSize)
         .assertTouchWidthIsEqualTo(expectedSize)
+}
+
+internal fun ComposeContentTestRule.verifyActualSize(
+    expectedSize: Dp,
+    content: @Composable (modifier: Modifier) -> Unit
+) {
+    setContentWithTheme {
+        content(Modifier.testTag(TEST_TAG))
+    }
+    waitForIdle()
+
+    onNodeWithTag(TEST_TAG)
+        .assertHeightIsEqualTo(expectedSize)
+        .assertWidthIsEqualTo(expectedSize)
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -277,6 +295,27 @@ internal fun Dp.assertIsEqualTo(expected: Dp, subject: String, tolerance: Dp = D
             "Actual $subject is $this, expected $expected (tolerance: $tolerance)"
         )
     }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+internal fun ComposeContentTestRule.verifyScreenshot(
+    methodName: String,
+    screenshotRule: AndroidXScreenshotTestRule,
+    testTag: String = TEST_TAG,
+    content: @Composable () -> Unit
+) {
+    setContentWithTheme {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            content()
+        }
+    }
+
+    onNodeWithTag(testTag).captureToImage()
+        .assertAgainstGolden(screenshotRule, methodName)
 }
 
 private fun ImageBitmap.histogram(): MutableMap<Color, Long> {

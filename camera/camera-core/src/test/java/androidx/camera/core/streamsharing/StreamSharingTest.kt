@@ -16,6 +16,8 @@
 
 package androidx.camera.core.streamsharing
 
+import android.graphics.ImageFormat
+import android.graphics.SurfaceTexture
 import android.os.Build
 import android.os.Looper.getMainLooper
 import android.util.Size
@@ -24,11 +26,14 @@ import androidx.camera.core.CameraEffect
 import androidx.camera.core.CameraEffect.IMAGE_CAPTURE
 import androidx.camera.core.CameraEffect.PREVIEW
 import androidx.camera.core.CameraEffect.VIDEO_CAPTURE
+import androidx.camera.core.CameraSelector.LENS_FACING_FRONT
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.impl.CameraCaptureCallback
 import androidx.camera.core.impl.CameraCaptureResult
+import androidx.camera.core.impl.DeferrableSurface
 import androidx.camera.core.impl.MutableOptionsBundle
 import androidx.camera.core.impl.SessionConfig
 import androidx.camera.core.impl.StreamSpec
@@ -37,17 +42,20 @@ import androidx.camera.core.impl.UseCaseConfigFactory
 import androidx.camera.core.impl.UseCaseConfigFactory.CaptureType
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.directExecutor
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor
+import androidx.camera.core.impl.utils.futures.Futures
 import androidx.camera.core.internal.TargetConfig.OPTION_TARGET_CLASS
 import androidx.camera.core.internal.TargetConfig.OPTION_TARGET_NAME
 import androidx.camera.core.processing.DefaultSurfaceProcessor
 import androidx.camera.testing.fakes.FakeCamera
-import androidx.camera.testing.fakes.FakeCameraCaptureResult
-import androidx.camera.testing.fakes.FakeSurfaceEffect
-import androidx.camera.testing.fakes.FakeSurfaceProcessorInternal
-import androidx.camera.testing.fakes.FakeUseCase
-import androidx.camera.testing.fakes.FakeUseCaseConfig
-import androidx.camera.testing.fakes.FakeUseCaseConfigFactory
+import androidx.camera.testing.fakes.FakeCameraInfoInternal
+import androidx.camera.testing.impl.fakes.FakeCameraCaptureResult
+import androidx.camera.testing.impl.fakes.FakeSurfaceEffect
+import androidx.camera.testing.impl.fakes.FakeSurfaceProcessorInternal
+import androidx.camera.testing.impl.fakes.FakeUseCase
+import androidx.camera.testing.impl.fakes.FakeUseCaseConfig
+import androidx.camera.testing.impl.fakes.FakeUseCaseConfigFactory
 import com.google.common.truth.Truth.assertThat
+import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -68,6 +76,10 @@ import org.robolectric.annotation.internal.DoNotInstrument
 @Config(minSdk = Build.VERSION_CODES.LOLLIPOP)
 class StreamSharingTest {
 
+    companion object {
+        private const val SENSOR_ROTATION = 270
+    }
+
     private val child1 = FakeUseCase(
         FakeUseCaseConfig.Builder().setSurfaceOccupancyPriority(1).useCaseConfig
     )
@@ -76,6 +88,8 @@ class StreamSharingTest {
     )
     private val useCaseConfigFactory = FakeUseCaseConfigFactory()
     private val camera = FakeCamera()
+    private val frontCamera =
+        FakeCamera(null, FakeCameraInfoInternal(SENSOR_ROTATION, LENS_FACING_FRONT))
     private lateinit var streamSharing: StreamSharing
     private val size = Size(800, 600)
     private lateinit var defaultConfig: UseCaseConfig<*>
@@ -153,7 +167,7 @@ class StreamSharingTest {
     @Test
     fun hasEffect_createEffectNode() {
         // Arrange: set an effect on StreamSharing.
-        streamSharing.bindToCamera(camera, null, defaultConfig)
+        streamSharing.bindToCamera(frontCamera, null, defaultConfig)
         streamSharing.effect = effect
         // Act: create pipeline
         streamSharing.onSuggestedStreamSpecUpdated(StreamSpec.builder(size).build())
@@ -162,8 +176,17 @@ class StreamSharingTest {
         assertThat(effectProcessor.surfaceRequest).isNotNull()
         assertThat(effectProcessor.surfaceOutputs).isNotEmpty()
         assertThat(sharingProcessor.surfaceRequest).isNotNull()
+        // Assert: effect implementation receives correct transformation.
+        var transformationInfo: SurfaceRequest.TransformationInfo? = null
+        effectProcessor.surfaceRequest!!.setTransformationInfoListener(mainThreadExecutor()) {
+            transformationInfo = it
+        }
+        shadowOf(getMainLooper()).idle()
+        assertThat(transformationInfo).isNotNull()
+        assertThat(transformationInfo!!.rotationDegrees).isEqualTo(SENSOR_ROTATION)
+        assertThat(transformationInfo!!.mirroring).isTrue()
         // Act: unbind StreamSharing.
-        streamSharing.unbindFromCamera(camera)
+        streamSharing.unbindFromCamera(frontCamera)
         shadowOf(getMainLooper()).idle()
         // Assert: the processors received signals to release the Surfaces.
         assertThat(effectProcessor.isInputSurfaceReleased).isTrue()
@@ -260,6 +283,17 @@ class StreamSharingTest {
         return deferredResult
     }
 
+    private fun FakeUseCase.setSurfaceOnSessionConfig(surface: Surface) {
+        this.setSessionConfigSupplier {
+            SessionConfig.Builder()
+                .addSurface(object : DeferrableSurface(size, ImageFormat.PRIVATE) {
+                    override fun provideSurface(): ListenableFuture<Surface> {
+                        return Futures.immediateFuture(surface)
+                    }
+                }).build()
+        }
+    }
+
     @Test
     fun updateStreamSpec_propagatesToChildren() {
         // Arrange: bind StreamSharing to the camera.
@@ -297,17 +331,43 @@ class StreamSharingTest {
         streamSharing.onSuggestedStreamSpecUpdated(StreamSpec.builder(size).build())
         val cameraEdge = streamSharing.cameraEdge
         val node = streamSharing.sharingNode
+        // Arrange: given children new Surfaces.
+        val surfaceTexture1 = SurfaceTexture(0)
+        val surface1 = Surface(surfaceTexture1)
+        child1.notifyActiveForTesting()
+        child1.setSurfaceOnSessionConfig(surface1)
+        val surfaceTexture2 = SurfaceTexture(0)
+        val surface2 = Surface(surfaceTexture2)
+        child2.notifyActiveForTesting()
+        child2.setSurfaceOnSessionConfig(surface2)
 
         // Act: send error to StreamSharing
         val sessionConfig = streamSharing.sessionConfig
         sessionConfig.errorListeners.single()
             .onError(sessionConfig, SessionConfig.SessionError.SESSION_ERROR_SURFACE_NEEDS_RESET)
+        shadowOf(getMainLooper()).idle()
 
         // Assert: StreamSharing and children pipeline are recreated.
         assertThat(streamSharing.cameraEdge).isNotSameInstanceAs(cameraEdge)
         assertThat(streamSharing.sharingNode).isNotSameInstanceAs(node)
         assertThat(child1.pipelineCreationCount).isEqualTo(2)
         assertThat(child2.pipelineCreationCount).isEqualTo(2)
+        shadowOf(getMainLooper()).idle()
+        // Assert: child Surface are propagated to StreamSharing.
+        val child1Surface =
+            streamSharing.virtualCamera.mChildrenEdges[child1]!!.deferrableSurfaceForTesting.surface
+        assertThat(child1Surface.isDone).isTrue()
+        assertThat(child1Surface.get()).isEqualTo(surface1)
+        val child2Surface =
+            streamSharing.virtualCamera.mChildrenEdges[child2]!!.deferrableSurfaceForTesting.surface
+        assertThat(child2Surface.isDone).isTrue()
+        assertThat(child2Surface.get()).isEqualTo(surface2)
+
+        // Cleanup.
+        surfaceTexture1.release()
+        surface1.release()
+        surfaceTexture2.release()
+        surface2.release()
     }
 
     @Test

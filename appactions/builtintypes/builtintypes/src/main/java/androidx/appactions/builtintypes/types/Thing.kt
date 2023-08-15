@@ -41,7 +41,7 @@ import kotlin.jvm.JvmStatic
 @Document(name = "bit:Thing")
 public interface Thing {
   /** Represents the AppSearch document's namespace. */
-  @get:Document.Namespace public val namespace: String?
+  @get:Document.Namespace public val namespace: String
 
   /**
    * A sub property of description. A short description of the item used to disambiguate from other,
@@ -58,7 +58,7 @@ public interface Thing {
    *
    * See https://schema.org/identifier for more context.
    */
-  @get:Document.Id public val identifier: String?
+  @get:Document.Id public val identifier: String
 
   /**
    * The name of the item.
@@ -71,7 +71,7 @@ public interface Thing {
   public fun toBuilder(): Builder<*>
 
   public companion object {
-    /** Returns a default implementation of [Builder] with no properties set. */
+    /** Returns a default implementation of [Builder]. */
     @JvmStatic @Document.BuilderProducer public fun Builder(): Builder<*> = ThingImpl.Builder()
   }
 
@@ -87,7 +87,7 @@ public interface Thing {
     public fun build(): Thing
 
     /** Sets the `namespace`. */
-    public fun setNamespace(namespace: String?): Self
+    public fun setNamespace(namespace: String): Self
 
     /** Sets the `disambiguatingDescription` to [String]. */
     public fun setDisambiguatingDescription(text: String): Self =
@@ -99,7 +99,7 @@ public interface Thing {
     ): Self
 
     /** Sets the `identifier`. */
-    public fun setIdentifier(text: String?): Self
+    public fun setIdentifier(text: String): Self
 
     /** Sets the `name` to [String]. */
     public fun setName(text: String): Self = setName(Name(text))
@@ -114,6 +114,10 @@ public interface Thing {
  *
  * Allows for extension like:
  * ```kt
+ * @Document(
+ *   name = "MyThing",
+ *   parent = [Thing::class],
+ * )
  * class MyThing internal constructor(
  *   thing: Thing,
  *   val foo: String,
@@ -122,6 +126,8 @@ public interface Thing {
  *   MyThing,
  *   MyThing.Builder
  * >(thing) {
+ *
+ *   // No need to implement equals(), hashCode(), toString() or toBuilder()
  *
  *   override val selfTypeName =
  *     "MyThing"
@@ -148,9 +154,9 @@ public interface Thing {
 public abstract class AbstractThing<
   Self : AbstractThing<Self, Builder>, Builder : AbstractThing.Builder<Builder, Self>>
 internal constructor(
-  public final override val namespace: String?,
+  public final override val namespace: String,
   public final override val disambiguatingDescription: DisambiguatingDescription?,
-  public final override val identifier: String?,
+  public final override val identifier: String,
   public final override val name: Name?,
 ) : Thing {
   /**
@@ -199,14 +205,14 @@ internal constructor(
 
   public final override fun toString(): String {
     val attributes = mutableMapOf<String, String>()
-    if (namespace != null) {
+    if (namespace.isNotEmpty()) {
       attributes["namespace"] = namespace
     }
     if (disambiguatingDescription != null) {
       attributes["disambiguatingDescription"] =
         disambiguatingDescription.toString(includeWrapperName = false)
     }
-    if (identifier != null) {
+    if (identifier.isNotEmpty()) {
       attributes["identifier"] = identifier
     }
     if (name != null) {
@@ -228,10 +234,13 @@ internal constructor(
    *     MyThing.Builder>(...) {
    *
    *   class Builder
-   *   : Builder<
+   *   : AbstractThing.Builder<
    *       Builder,
    *       MyThing
    *   >() {
+   *
+   *     // No need to implement equals(), hashCode(), toString() or build()
+   *
    *     private var foo: String? = null
    *     private val bars = mutableListOf<Int>()
    *
@@ -285,11 +294,11 @@ internal constructor(
      */
     @get:Suppress("GetterOnBuilder") protected abstract val additionalProperties: Map<String, Any?>
 
-    private var namespace: String? = null
+    private var namespace: String = ""
 
     private var disambiguatingDescription: DisambiguatingDescription? = null
 
-    private var identifier: String? = null
+    private var identifier: String = ""
 
     private var name: Name? = null
 
@@ -306,7 +315,7 @@ internal constructor(
     public final override fun build(): Built =
       buildFromThing(ThingImpl(namespace, disambiguatingDescription, identifier, name))
 
-    public final override fun setNamespace(namespace: String?): Self {
+    public final override fun setNamespace(namespace: String): Self {
       this.namespace = namespace
       return this as Self
     }
@@ -318,7 +327,7 @@ internal constructor(
       return this as Self
     }
 
-    public final override fun setIdentifier(text: String?): Self {
+    public final override fun setIdentifier(text: String): Self {
       this.identifier = text
       return this as Self
     }
@@ -348,15 +357,15 @@ internal constructor(
     @Suppress("BuilderSetStyle")
     public final override fun toString(): String {
       val attributes = mutableMapOf<String, String>()
-      if (namespace != null) {
-        attributes["namespace"] = namespace!!
+      if (namespace.isNotEmpty()) {
+        attributes["namespace"] = namespace
       }
       if (disambiguatingDescription != null) {
         attributes["disambiguatingDescription"] =
           disambiguatingDescription!!.toString(includeWrapperName = false)
       }
-      if (identifier != null) {
-        attributes["identifier"] = identifier!!
+      if (identifier.isNotEmpty()) {
+        attributes["identifier"] = identifier
       }
       if (name != null) {
         attributes["name"] = name!!.toString(includeWrapperName = false)
@@ -377,9 +386,9 @@ private class ThingImpl : AbstractThing<ThingImpl, ThingImpl.Builder> {
     get() = emptyMap()
 
   public constructor(
-    namespace: String?,
+    namespace: String,
     disambiguatingDescription: DisambiguatingDescription?,
-    identifier: String?,
+    identifier: String,
     name: Name?,
   ) : super(namespace, disambiguatingDescription, identifier, name)
 

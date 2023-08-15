@@ -196,7 +196,6 @@ private class GapBuffer(initBuffer: CharArray, initGapStart: Int, initGapEnd: In
  * is requested, this class flush the buffer and create new String, then start new gap buffer.
  *
  * @param text The initial text
- * @suppress
  */
 internal class PartialGapBuffer(text: CharSequence) {
     internal companion object {
@@ -243,7 +242,7 @@ internal class PartialGapBuffer(text: CharSequence) {
             val rightCopyCount = minOf(this.text.length - end, SURROUNDING_SIZE)
 
             // Copy left surrounding
-            this.text.toString().toCharArray(charArray, 0, start - leftCopyCount, start)
+            this.text.toCharArray(charArray, 0, start - leftCopyCount, start)
 
             // Copy right surrounding
             this.text.toCharArray(
@@ -304,5 +303,12 @@ internal class PartialGapBuffer(text: CharSequence) {
         b.append(sb)
         sb.append(text, bufEnd, text.length)
         return sb.toString()
+    }
+
+    /**
+     * Compares the contents of this buffer with the contents of [other].
+     */
+    fun contentEquals(other: CharSequence): Boolean {
+        return toString() == other.toString()
     }
 }

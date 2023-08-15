@@ -23,7 +23,7 @@ class ConfigBuilder {
     var appApkName: String? = null
     var appApkSha256: String? = null
     lateinit var applicationId: String
-    var isBenchmark: Boolean = false
+    var isMicrobenchmark: Boolean = false
     var isPostsubmit: Boolean = true
     lateinit var minSdk: String
     val tags = mutableListOf<String>()
@@ -40,7 +40,8 @@ class ConfigBuilder {
 
     fun applicationId(applicationId: String) = apply { this.applicationId = applicationId }
 
-    fun isBenchmark(isBenchmark: Boolean) = apply { this.isBenchmark = isBenchmark }
+    fun isMicrobenchmark(isMicrobenchmark: Boolean) =
+        apply { this.isMicrobenchmark = isMicrobenchmark }
 
     fun isPostsubmit(isPostsubmit: Boolean) = apply { this.isPostsubmit = isPostsubmit }
 
@@ -59,7 +60,7 @@ class ConfigBuilder {
     fun buildJson(): String {
         val gson = GsonBuilder().setPrettyPrinting().create()
         val instrumentationArgs =
-            if (isBenchmark && !isPostsubmit) {
+            if (isMicrobenchmark && !isPostsubmit) {
                 listOf(
                     InstrumentationArg("notAnnotation", "androidx.test.filters.FlakyTest"),
                     InstrumentationArg("androidx.benchmark.dryRunMode.enable", "true"),
@@ -91,12 +92,11 @@ class ConfigBuilder {
         sb.append(MODULE_METADATA_TAG_OPTION.replace("APPLICATION_ID", applicationId))
             .append(WIFI_DISABLE_OPTION)
             .append(FLAKY_TEST_OPTION)
-        if (isBenchmark) {
-            sb.append(benchmarkPostInstallCommandOption(applicationId))
+        if (isMicrobenchmark) {
             if (isPostsubmit) {
-                sb.append(BENCHMARK_POSTSUBMIT_OPTIONS)
+                sb.append(MICROBENCHMARK_POSTSUBMIT_OPTIONS)
             } else {
-                sb.append(BENCHMARK_PRESUBMIT_OPTION)
+                sb.append(MICROBENCHMARK_PRESUBMIT_OPTION)
             }
         }
         sb.append(SETUP_INCLUDE)
@@ -105,7 +105,11 @@ class ConfigBuilder {
         if (!appApkName.isNullOrEmpty())
             sb.append(APK_INSTALL_OPTION.replace("APK_NAME", appApkName!!))
         sb.append(TARGET_PREPARER_CLOSE)
-            .append(TEST_BLOCK_OPEN)
+        // Post install commands after SuiteApkInstaller is declared
+        if (isMicrobenchmark) {
+            sb.append(benchmarkPostInstallCommandOption(applicationId))
+        }
+        sb.append(TEST_BLOCK_OPEN)
             .append(RUNNER_OPTION.replace("TEST_RUNNER", testRunner))
             .append(PACKAGE_OPTION.replace("APPLICATION_ID", applicationId))
             .append(TEST_BLOCK_CLOSE)
@@ -236,7 +240,10 @@ private val WIFI_DISABLE_OPTION =
 
 private fun benchmarkPostInstallCommandOption(packageName: String) =
     """
-    <option name="app-setup:post-install-cmd" value="${benchmarkPostInstallCommand(packageName)}" />
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+    <option name="run-command" value="${benchmarkPostInstallCommand(packageName)}" />
+    <option name="run-command-timeout" value="240000" />
+    </target_preparer>
 
 """.trimIndent()
 
@@ -307,17 +314,17 @@ private val PACKAGE_OPTION =
 """
         .trimIndent()
 
-private val BENCHMARK_PRESUBMIT_OPTION =
+private val MICROBENCHMARK_PRESUBMIT_OPTION =
     """
     <option name="instrumentation-arg" key="androidx.benchmark.dryRunMode.enable" value="true" />
 
 """
         .trimIndent()
 
-private val BENCHMARK_POSTSUBMIT_OPTIONS =
+private val MICROBENCHMARK_POSTSUBMIT_OPTIONS =
     """
-    <option name="instrumentation-arg" key="androidx.benchmark.output.enable" value="true" />
     <option name="instrumentation-arg" key="listener" value="androidx.benchmark.junit4.InstrumentationResultsRunListener" />
+    <option name="instrumentation-arg" key="listener" value="androidx.benchmark.junit4.SideEffectRunListener" />
 
 """
         .trimIndent()

@@ -20,17 +20,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.TouchInjectionScope
 import androidx.compose.ui.test.assertLeftPositionInRootIsEqualTo
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.unit.dp
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.launch
 import org.junit.Rule
 import org.junit.Test
 
@@ -51,32 +55,6 @@ class SwipeToRevealTest {
     }
 
     @Test
-    fun supports_testTag_onAction() {
-        rule.setContent {
-            swipeToRevealWithDefaults(
-                action = {
-                    getAction(modifier = Modifier.testTag(TEST_TAG))
-                }
-            )
-        }
-
-        rule.onNodeWithTag(testTag = TEST_TAG).assertExists()
-    }
-
-    @Test
-    fun supports_testTag_onAdditionalAction() {
-        rule.setContent {
-            swipeToRevealWithDefaults(
-                additionalAction = {
-                    getAction(modifier = Modifier.testTag(TEST_TAG))
-                }
-            )
-        }
-
-        rule.onNodeWithTag(testTag = TEST_TAG).assertExists()
-    }
-
-    @Test
     fun onStartWithDefaultState_keepsContentToRight() {
         rule.setContent {
             swipeToRevealWithDefaults(
@@ -85,6 +63,49 @@ class SwipeToRevealTest {
         }
 
         rule.onNodeWithTag(TEST_TAG).assertLeftPositionInRootIsEqualTo(0.dp)
+    }
+
+    @Test
+    fun onZeroOffset_doesNotDrawActions() {
+        rule.setContent {
+            swipeToRevealWithDefaults(
+                primaryAction = { actionContent(modifier = Modifier.testTag(TEST_TAG)) }
+            )
+        }
+
+        rule.onNodeWithTag(TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun onRevealing_drawsAction() {
+        rule.setContent {
+            swipeToRevealWithDefaults(
+                state = rememberRevealState(initialValue = RevealValue.Revealing),
+                primaryAction = { actionContent(modifier = Modifier.testTag(TEST_TAG)) }
+            )
+        }
+
+        rule.onNodeWithTag(TEST_TAG).assertExists()
+    }
+
+    @Test
+    fun onSwipe_drawsAction() {
+        val s2rTag = "S2RTag"
+        rule.setContent {
+            swipeToRevealWithDefaults(
+                modifier = Modifier.testTag(s2rTag),
+                primaryAction = { actionContent(modifier = Modifier.testTag(TEST_TAG)) }
+            )
+        }
+
+        rule.onNodeWithTag(s2rTag).performTouchInput {
+            down(center)
+            // Move the pointer by quarter of the screen width, don't move up the pointer
+            moveBy(delta = Offset(x = -(centerX / 4), y = 0f))
+        }
+
+        rule.waitForIdle()
+        rule.onNodeWithTag(TEST_TAG).assertExists()
     }
 
     @Test
@@ -116,6 +137,78 @@ class SwipeToRevealTest {
         )
     }
 
+    @Test
+    fun onSecondaryActionClick_setsLastClickAction() = verifyLastClickAction(
+        expectedClickType = RevealActionType.SecondaryAction,
+        initialRevealValue = RevealValue.Revealing,
+        secondaryActionModifier = Modifier.testTag(TEST_TAG)
+    )
+
+    @Test
+    fun onPrimaryActionClick_setsLastClickAction() = verifyLastClickAction(
+        expectedClickType = RevealActionType.PrimaryAction,
+        initialRevealValue = RevealValue.Revealing,
+        primaryActionModifier = Modifier.testTag(TEST_TAG)
+    )
+
+    @Test
+    fun onUndoActionClick_setsLastClickAction() = verifyLastClickAction(
+        expectedClickType = RevealActionType.UndoAction,
+        initialRevealValue = RevealValue.Revealed,
+        undoActionModifier = Modifier.testTag(TEST_TAG)
+    )
+
+    private fun verifyLastClickAction(
+        expectedClickType: RevealActionType,
+        initialRevealValue: RevealValue,
+        primaryActionModifier: Modifier = Modifier,
+        secondaryActionModifier: Modifier = Modifier,
+        undoActionModifier: Modifier = Modifier,
+    ) {
+        lateinit var revealState: RevealState
+        rule.setContent {
+            revealState = rememberRevealState(initialRevealValue)
+            val coroutineScope = rememberCoroutineScope()
+            swipeToRevealWithDefaults(
+                state = revealState,
+                primaryAction = {
+                    actionContent(
+                        modifier = primaryActionModifier.clickable {
+                            coroutineScope.launch {
+                                revealState.snapTo(RevealValue.Covered)
+                                revealState.lastActionType = RevealActionType.PrimaryAction
+                            }
+                        }
+                    )
+                },
+                secondaryAction = {
+                    actionContent(
+                        modifier = secondaryActionModifier.clickable {
+                            coroutineScope.launch {
+                                revealState.snapTo(RevealValue.Covered)
+                                revealState.lastActionType = RevealActionType.SecondaryAction
+                            }
+                        }
+                    )
+                },
+                undoAction = {
+                    actionContent(
+                        modifier = undoActionModifier.clickable {
+                            coroutineScope.launch {
+                                revealState.animateTo(RevealValue.Covered)
+                                revealState.lastActionType = RevealActionType.UndoAction
+                            }
+                        }
+                    )
+                }
+            )
+        }
+        rule.onNodeWithTag(TEST_TAG).performClick()
+        rule.runOnIdle {
+            assertEquals(expectedClickType, revealState.lastActionType)
+        }
+    }
+
     private fun verifyGesture(
         revealValue: RevealValue,
         gesture: TouchInjectionScope.() -> Unit
@@ -138,18 +231,18 @@ class SwipeToRevealTest {
 
     @Composable
     private fun swipeToRevealWithDefaults(
-        action: @Composable RevealScope.() -> Unit = { getAction() },
+        primaryAction: @Composable RevealScope.() -> Unit = { getAction() },
         state: RevealState = rememberRevealState(),
         modifier: Modifier = Modifier,
-        additionalAction: (@Composable RevealScope.() -> Unit)? = null,
+        secondaryAction: (@Composable RevealScope.() -> Unit)? = null,
         undoAction: (@Composable RevealScope.() -> Unit)? = null,
         content: @Composable () -> Unit = { getBoxContent() }
     ) {
         SwipeToReveal(
-            action = action,
+            primaryAction = primaryAction,
             state = state,
             modifier = modifier,
-            additionalAction = additionalAction,
+            secondaryAction = secondaryAction,
             undoAction = undoAction,
             content = content
         )
@@ -160,14 +253,16 @@ class SwipeToRevealTest {
         onClick: () -> Unit = {},
         modifier: Modifier = Modifier
     ) {
-        Box(modifier = modifier.size(width = 200.dp, height = 50.dp).clickable { onClick() }) {}
+        Box(modifier = modifier
+            .size(width = 200.dp, height = 50.dp)
+            .clickable { onClick() }) {}
     }
 
     @Composable
     private fun actionContent(
         modifier: Modifier = Modifier
     ) {
-       Box(modifier = modifier) {}
+       Box(modifier = modifier.size(50.dp)) {}
     }
 
     @Composable

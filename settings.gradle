@@ -26,9 +26,11 @@ buildscript {
     repos.addMavenRepositories(repositories)
 
     dependencies {
-        classpath("com.gradle:gradle-enterprise-gradle-plugin:3.13")
-        classpath("com.gradle:common-custom-user-data-gradle-plugin:1.10")
-        classpath("androidx.build.gradle.gcpbuildcache:gcpbuildcache:1.0.0-beta01")
+        // upgrade okio for gcpbuildcache that is compatible with the wire plugin used by androidx
+        classpath("com.squareup.okio:okio:3.3.0")
+        classpath("com.gradle:gradle-enterprise-gradle-plugin:3.14.1")
+        classpath("com.gradle:common-custom-user-data-gradle-plugin:1.11.1")
+        classpath("androidx.build.gradle.gcpbuildcache:gcpbuildcache:1.0.0-beta04")
     }
 }
 
@@ -115,6 +117,9 @@ switch (cacheSetting) {
             remote(GcpBuildCache) {
                 projectId = "androidx-ge"
                 bucketName = "androidx-gradle-remote-cache"
+                messageOnAuthenticationFailure = "Your GCP Credentials have expired.\n" +
+                        "Please regenerate credentials following the steps below and try again:\n" +
+                        "gcloud auth application-default login --project androidx-ge"
                 push = (BUILD_NUMBER != null && !BUILD_NUMBER.startsWith("P"))
             }
         }
@@ -667,6 +672,7 @@ includeProject(":constraintlayout:constraintlayout-compose-lint", [BuildType.COM
 includeProject(":constraintlayout:constraintlayout-compose:integration-tests:demos", [BuildType.COMPOSE])
 includeProject(":constraintlayout:constraintlayout-compose:integration-tests:macrobenchmark", [BuildType.COMPOSE])
 includeProject(":constraintlayout:constraintlayout-compose:integration-tests:macrobenchmark-target", [BuildType.COMPOSE])
+includeProject(":constraintlayout:constraintlayout-compose:integration-tests:compose-benchmark", [BuildType.COMPOSE])
 includeProject(":constraintlayout:constraintlayout", [BuildType.MAIN])
 includeProject(":constraintlayout:constraintlayout-core", [BuildType.MAIN, BuildType.COMPOSE])
 includeProject(":contentpager:contentpager", [BuildType.MAIN])
@@ -684,8 +690,11 @@ includeProject(":core:core-ktx", [BuildType.MAIN, BuildType.GLANCE, BuildType.ME
 includeProject(":core:core-location-altitude", [BuildType.MAIN])
 includeProject(":core:core-location-altitude-proto", [BuildType.MAIN])
 includeProject(":core:core-performance", [BuildType.MAIN])
+includeProject(":core:core-performance:integration-tests:testapp", [BuildType.MAIN])
+includeProject(":core:core-performance:integration-tests:testlib", [BuildType.MAIN])
 includeProject(":core:core-performance-testing", [BuildType.MAIN])
 includeProject(":core:core-performance-play-services", [BuildType.MAIN])
+includeProject(":core:core-performance-play-services:integration-tests:testapp", [BuildType.MAIN])
 includeProject(":core:core-performance:core-performance-samples", "core/core-performance/samples", [BuildType.MAIN])
 includeProject(":core:core-remoteviews", [BuildType.MAIN, BuildType.GLANCE])
 includeProject(":core:core-remoteviews:integration-tests:demos", [BuildType.MAIN, BuildType.GLANCE])
@@ -768,6 +777,7 @@ includeProject(":glance:glance-material", [BuildType.GLANCE])
 includeProject(":glance:glance-material3", [BuildType.GLANCE])
 includeProject(":glance:glance-template", [BuildType.GLANCE])
 includeProject(":glance:glance-template:integration-tests:template-demos", [BuildType.GLANCE])
+includeProject(":glance:glance-testing", [BuildType.GLANCE])
 includeProject(":glance:glance-wear-tiles:integration-tests:demos", [BuildType.GLANCE])
 includeProject(":glance:glance-wear-tiles:integration-tests:template-demos", [BuildType.GLANCE])
 includeProject(":glance:glance-wear-tiles", [BuildType.GLANCE])
@@ -900,6 +910,10 @@ includeProject(":privacysandbox:ads:ads-adservices-java", [BuildType.MAIN])
 includeProject(":privacysandbox:plugins:plugins-privacysandbox-library", [BuildType.MAIN])
 includeProject(":privacysandbox:sdkruntime:sdkruntime-client", [BuildType.MAIN])
 includeProject(":privacysandbox:sdkruntime:sdkruntime-core", [BuildType.MAIN])
+includeProject(":privacysandbox:sdkruntime:test-sdks:current", [BuildType.MAIN])
+includeProject(":privacysandbox:sdkruntime:test-sdks:v1", [BuildType.MAIN])
+includeProject(":privacysandbox:sdkruntime:test-sdks:v2", [BuildType.MAIN])
+includeProject(":privacysandbox:sdkruntime:test-sdks:v4", [BuildType.MAIN])
 includeProject(":privacysandbox:tools:tools", [BuildType.MAIN])
 includeProject(":privacysandbox:tools:tools-apicompiler", [BuildType.MAIN])
 includeProject(":privacysandbox:tools:tools-apigenerator", [BuildType.MAIN])
@@ -972,6 +986,7 @@ includeProject(":slice:slice-remotecallback", [BuildType.MAIN])
 includeProject(":slice:slice-test", [BuildType.MAIN])
 includeProject(":slice:slice-view", [BuildType.MAIN])
 includeProject(":slidingpanelayout:slidingpanelayout", [BuildType.MAIN, BuildType.FLAN])
+includeProject(":slidingpanelayout:slidingpanelayout-testapp", [BuildType.MAIN])
 includeProject(":sqlite:integration-tests:inspection-room-testapp", [BuildType.MAIN])
 includeProject(":sqlite:integration-tests:inspection-sqldelight-testapp", [BuildType.MAIN])
 includeProject(":sqlite:sqlite", [BuildType.MAIN, BuildType.COMPOSE])
@@ -1020,6 +1035,7 @@ includeProject(":wear:protolayout:protolayout", [BuildType.MAIN, BuildType.WEAR]
 includeProject(":wear:protolayout:protolayout-expression", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:protolayout:protolayout-expression-pipeline", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:protolayout:protolayout-material", [BuildType.MAIN, BuildType.WEAR])
+includeProject(":wear:protolayout:protolayout-material-core", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:protolayout:protolayout-proto", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:protolayout:protolayout-renderer", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:wear", [BuildType.MAIN, BuildType.WEAR])
@@ -1051,12 +1067,14 @@ includeProject(":wear:wear-ongoing", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:wear-phone-interactions", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:wear-remote-interactions", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:wear-samples-ambient", [BuildType.MAIN, BuildType.WEAR])
+includeProject(":wear:wear-tooling-preview", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:tiles:tiles", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:tiles:tiles-material", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:tiles:tiles-proto", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:tiles:tiles-renderer", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:tiles:tiles-testing", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:tiles:tiles-tooling", [BuildType.MAIN, BuildType.WEAR])
+includeProject(":wear:tiles:tiles-tooling-preview", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:watchface:watchface", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:watchface:watchface-complications", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:watchface:watchface-complications-permission-dialogs-sample", [BuildType.MAIN, BuildType.WEAR])

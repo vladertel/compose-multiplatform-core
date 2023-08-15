@@ -437,9 +437,9 @@ public abstract class WatchFaceService : WallpaperService() {
             }
     }
 
-    /** The context used to resolve resources. Unlocks future work. */
-    protected open val resourcesContext: Context
-        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) get() = this
+    /** Returns the context used to resolve resources. */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    protected open fun getResourcesContext(runtimePackage: String): Context = this
 
     /**
      * Returns the id of the XmlSchemaAndComplicationSlotsDefinition XML resource or 0 if it can't
@@ -1320,7 +1320,12 @@ public abstract class WatchFaceService : WallpaperService() {
         internal var immutableSystemStateDone = false
         internal var immutableChinHeightDone = false
         internal var systemHasSentWatchUiState = false
-        internal var resourceOnlyWatchFacePackageName: String? = headlessComponentName?.packageName
+        internal var resourceOnlyWatchFacePackageName: String? =
+            if (this@WatchFaceService is WatchFaceRuntimeService) {
+                headlessComponentName?.packageName
+            } else {
+                null
+            }
 
         private var asyncWatchFaceConstructionPending = false
 
@@ -2103,7 +2108,10 @@ public abstract class WatchFaceService : WallpaperService() {
                 setWatchUiState(params.watchUiState, fromSysUi = false)
                 initialUserStyle = params.userStyle
 
-                resourceOnlyWatchFacePackageName = params.auxiliaryComponentPackageName
+                // For a resource only watch face, the auxiliaryComponentPackageName will be null.
+                if (this@WatchFaceService is WatchFaceRuntimeService) {
+                    resourceOnlyWatchFacePackageName = params.auxiliaryComponentPackageName
+                }
 
                 mutableWatchState.watchFaceInstanceId.value = sanitizeWatchFaceId(params.instanceId)
                 val watchState = mutableWatchState.asWatchState()
@@ -2636,7 +2644,7 @@ public abstract class WatchFaceService : WallpaperService() {
                 for (styleSetting in schema.userStyleSettings) {
                     estimatedBytes +=
                         styleSetting.estimateWireSizeInBytesAndValidateIconDimensions(
-                            resourcesContext,
+                            getResourcesContext(getComponentName().packageName),
                             MAX_REASONABLE_SCHEMA_ICON_WIDTH,
                             MAX_REASONABLE_SCHEMA_ICON_HEIGHT,
                         )

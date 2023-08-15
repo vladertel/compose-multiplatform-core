@@ -37,7 +37,12 @@ object DeviceInfo {
         Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic") ||
         "google_sdk" == Build.PRODUCT
 
+    val typeLabel = if (isEmulator) "emulator" else "device"
+
     val isEngBuild = Build.FINGERPRINT.contains(":eng/")
+    private val isUserdebugBuild = Build.FINGERPRINT.contains(":userdebug/")
+
+    val profileableEnforced = !isEngBuild && !isUserdebugBuild
 
     val isRooted = Build.FINGERPRINT.contains(":userdebug/") ||
         arrayOf(
@@ -77,6 +82,14 @@ object DeviceInfo {
      * current conditions.
      */
     val errors: List<ConfigurationError>
+
+    /**
+     * Tracks whether the virtual kernel files have been properly configured on this OS build.
+     *
+     * If not, only recourse is to try a different device.
+     */
+    val misconfiguredForTracing = !File("/sys/kernel/tracing/trace_marker").exists() &&
+        !File("/sys/kernel/debug/tracing/trace_marker").exists()
 
     init {
         val context = InstrumentationRegistry.getInstrumentation().targetContext

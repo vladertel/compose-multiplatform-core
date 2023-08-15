@@ -2834,10 +2834,16 @@ public final class LayoutElementBuilders {
              * Sets the style of font to use (size, bold etc). If not specified, defaults to the
              * platform's default body font.
              *
+             * DynamicColor is not supported for SpanText.
+             *
              * @since 1.0
              */
             @NonNull
             public Builder setFontStyle(@NonNull FontStyle fontStyle) {
+                ColorProp colorProp = fontStyle.getColor();
+                if (colorProp != null && colorProp.getDynamicValue() != null) {
+                    throw new IllegalArgumentException("SpanText does not support DynamicColor.");
+                }
                 mImpl.setFontStyle(fontStyle.toProto());
                 mFingerprint.recordPropertyUpdate(
                         2, checkNotNull(fontStyle.getFingerprint()).aggregateValueAsInt());
@@ -4065,16 +4071,6 @@ public final class LayoutElementBuilders {
         }
 
         /**
-         * This is a No-Op as using constraints for dynamic AnchorAngle has no effect.
-         *
-         * @since 1.2
-         */
-        @Nullable
-        public AngularLayoutConstraint getLayoutConstraintsForDynamicAnchorAngle() {
-            throw new UnsupportedOperationException("This method is No-Op. Do not use!");
-        }
-
-        /**
          * Gets how to align the contents of this container relative to anchor_angle. If not
          * defined, defaults to ARC_ANCHOR_CENTER.
          *
@@ -4210,17 +4206,6 @@ public final class LayoutElementBuilders {
                 mImpl.setAnchorAngle(anchorAngle.toProto());
                 mFingerprint.recordPropertyUpdate(
                         2, checkNotNull(anchorAngle.getFingerprint()).aggregateValueAsInt());
-                return this;
-            }
-
-            /**
-             * This is a No-Op as using constraints for dynamic AnchorAngle has no effect.
-             *
-             * @since 1.2
-             */
-            @NonNull
-            public Builder setLayoutConstraintsForDynamicAnchorAngle(
-                    @NonNull DimensionBuilders.AngularLayoutConstraint angularLayoutConstraint) {
                 return this;
             }
 

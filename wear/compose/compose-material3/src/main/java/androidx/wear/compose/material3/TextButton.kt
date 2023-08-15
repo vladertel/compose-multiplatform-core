@@ -39,8 +39,7 @@ import androidx.compose.ui.unit.dp
  * to ensure that the recommended minimum touch target size is available.
  *
  * The recommended [TextButton] sizes are [TextButtonDefaults.DefaultButtonSize],
- * [TextButtonDefaults.LargeButtonSize], [TextButtonDefaults.SmallButtonSize] and
- * [TextButtonDefaults.ExtraSmallButtonSize].
+ * [TextButtonDefaults.LargeButtonSize] and [TextButtonDefaults.SmallButtonSize].
  *
  * The default [TextButton] has no border and a transparent background for low emphasis actions.
  * For actions that require high emphasis, set [colors] to
@@ -95,7 +94,7 @@ fun TextButton(
         buttonSize = TextButtonDefaults.DefaultButtonSize,
         content = provideScopeContent(
             colors.contentColor(enabled = enabled),
-            MaterialTheme.typography.buttonMedium,
+            MaterialTheme.typography.labelMedium,
             content
         )
     )
@@ -109,8 +108,7 @@ fun TextButton(
  * Set the size of the [TextToggleButton] with Modifier.[touchTargetAwareSize]
  * to ensure that the background padding will correctly reach the edge of the minimum touch target.
  * The recommended text button sizes are [TextButtonDefaults.DefaultButtonSize],
- * [TextButtonDefaults.LargeButtonSize], [TextButtonDefaults.SmallButtonSize] and
- * [TextButtonDefaults.ExtraSmallButtonSize].
+ * [TextButtonDefaults.LargeButtonSize] and [TextButtonDefaults.SmallButtonSize].
  *
  * [TextToggleButton] can be enabled or disabled. A disabled button will not respond to
  * click events. When enabled, the checked and unchecked events are propagated by [onCheckedChange].
@@ -135,7 +133,7 @@ fun TextButton(
  * @param content The text to be drawn inside the toggle button.
  */
 @Composable
-public fun TextToggleButton(
+fun TextToggleButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -160,7 +158,7 @@ public fun TextToggleButton(
         shape = shape,
         content = provideScopeContent(
             colors.contentColor(enabled = enabled, checked = checked),
-            MaterialTheme.typography.buttonMedium,
+            MaterialTheme.typography.labelMedium,
             content
         )
     )
@@ -194,7 +192,10 @@ object TextButtonDefaults {
     ): TextButtonColors {
         return textButtonColors(
             containerColor = containerColor,
-            contentColor = contentColor
+            contentColor = contentColor,
+            disabledContainerColor = MaterialTheme.colorScheme.onSurface.toDisabledColor(
+                disabledAlpha = DisabledContainerAlpha
+            ),
         )
     }
 
@@ -217,7 +218,10 @@ object TextButtonDefaults {
     ): TextButtonColors {
         return textButtonColors(
             containerColor = containerColor,
-            contentColor = contentColor
+            contentColor = contentColor,
+            disabledContainerColor = MaterialTheme.colorScheme.onSurface.toDisabledColor(
+                disabledAlpha = DisabledContainerAlpha
+            ),
         )
     }
 
@@ -256,9 +260,7 @@ object TextButtonDefaults {
     fun textButtonColors(
         containerColor: Color = Color.Transparent,
         contentColor: Color = MaterialTheme.colorScheme.onBackground,
-        disabledContainerColor: Color = MaterialTheme.colorScheme.onSurface.toDisabledColor(
-            disabledAlpha = DisabledBorderAndContainerAlpha
-        ),
+        disabledContainerColor: Color = Color.Transparent,
         disabledContentColor: Color = MaterialTheme.colorScheme.onSurface.toDisabledColor()
     ): TextButtonColors = TextButtonColors(
         containerColor = containerColor,
@@ -291,7 +293,7 @@ object TextButtonDefaults {
      * unchecked and not enabled
      */
     @Composable
-    public fun textToggleButtonColors(
+    fun textToggleButtonColors(
         checkedContainerColor: Color = MaterialTheme.colorScheme.primary,
         checkedContentColor: Color = MaterialTheme.colorScheme.onPrimary,
         uncheckedContainerColor: Color = MaterialTheme.colorScheme.surface,
@@ -312,12 +314,6 @@ object TextButtonDefaults {
             disabledUncheckedContentColor = disabledUncheckedContentColor,
         )
     }
-
-    /**
-     * The recommended background size of an extra small, compact button.
-     * It is recommended to apply this size using [Modifier.touchTargetAwareSize].
-     */
-    val ExtraSmallButtonSize = 32.dp
 
     /**
      * The recommended size for a small button.

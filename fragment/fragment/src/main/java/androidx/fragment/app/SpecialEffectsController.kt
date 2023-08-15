@@ -240,10 +240,38 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
                         "SpecialEffectsController: Executing pending operations"
                     )
                 }
-                for (operation in newPendingOperations) {
-                    operation.onStart()
+                collectEffects(newPendingOperations, operationDirectionIsPop)
+                var seekable = true
+                var transitioning = true
+                newPendingOperations.forEach { operation ->
+                    seekable = operation.effects.filter { effect ->
+                        // We don't want noOpEffects changing our seeking
+                        effect !is DefaultSpecialEffectsController.NoOpEffect
+                    }.all { effect ->
+                        effect.isSeekingSupported
+                    }
+                    if (operation.effects.all {
+                            it is DefaultSpecialEffectsController.NoOpEffect
+                    }) {
+                        seekable = false
+                    }
+                    if (!operation.fragment.mTransitioning) {
+                        transitioning = false
+                    }
                 }
-                executeOperations(newPendingOperations, operationDirectionIsPop)
+
+                if (!transitioning) {
+                    processStart(newPendingOperations)
+                    commitEffects(newPendingOperations)
+                } else {
+                    if (seekable) {
+                        processStart(newPendingOperations)
+                        for (i in newPendingOperations.indices) {
+                            val operation = newPendingOperations[i]
+                            applyContainerChangesToOperation(operation)
+                        }
+                    }
+                }
                 operationDirectionIsPop = false
                 if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
                     Log.v(
@@ -252,6 +280,13 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
                     )
                 }
             }
+        }
+    }
+
+    internal fun applyContainerChangesToOperation(operation: Operation) {
+        if (operation.isAwaitingContainerChanges) {
+            operation.finalState.applyState(operation.fragment.requireView())
+            operation.isAwaitingContainerChanges = false
         }
     }
 
@@ -265,9 +300,7 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
         val attachedToWindow = ViewCompat.isAttachedToWindow(container)
         synchronized(pendingOperations) {
             updateFinalState()
-            for (operation in pendingOperations) {
-                operation.onStart()
-            }
+            processStart(pendingOperations)
 
             // First cancel running operations
             val runningOperations = runningOperations.toMutableList()
@@ -320,16 +353,14 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
     }
 
     /**
-     * Execute all of the given operations.
+     * Collect all of the given operations.
      *
      * If there are no special effects for a given operation, the SpecialEffectsController
      * should call [Operation.complete]. Otherwise, a
      * [CancellationSignal] representing each special effect should be added via
      * [Operation.markStartedSpecialEffect], calling
      * [Operation.completeSpecialEffect] when that specific
-     * special effect finishes. When the last started special effect is completed,
-     * [Operation.completeSpecialEffect] will call
-     * [Operation.complete] automatically.
+     * special effect finishes.
      *
      * It is **strongly recommended** that each [CancellationSignal] added with
      * [Operation.markStartedSpecialEffect] listen for cancellation,
@@ -340,10 +371,43 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
      * This can be used to control the direction of any special effects if they
      * are not symmetric.
      */
-    abstract fun executeOperations(
-        operations: List<@JvmSuppressWildcards Operation>,
-        isPop: Boolean
-    )
+    abstract fun collectEffects(operations: List<@JvmSuppressWildcards Operation>, isPop: Boolean)
+
+    /**
+     * Commit all of the given operations.
+     *
+     * This commits all of the effects of the operations. When the last started special effect is
+     * completed, [Operation.completeSpecialEffect] will call [Operation.complete] automatically.
+     *
+     * @param operations the list of operations to execute in order.
+     */
+    internal open fun commitEffects(operations: List<@JvmSuppressWildcards Operation>) {
+        val set = operations.flatMap { it.effects }.toSet().toList()
+
+        // Commit all of the Animation, Animator, Transition and NoOp Effects we have collected
+        for (i in set.indices) {
+            val effect = set[i]
+            effect.onCommit(container)
+        }
+
+        for (i in operations.indices) {
+            val operation = operations[i]
+            applyContainerChangesToOperation(operation)
+        }
+    }
+
+    private fun processStart(operations: List<@JvmSuppressWildcards Operation>) {
+        for (i in operations.indices) {
+            val operation = operations[i]
+            operation.onStart()
+        }
+        val set = operations.flatMap { it.effects }.toSet().toList()
+        // Start all of the Animation, Animator, Transition and NoOp Effects we have collected
+        for (j in set.indices) {
+            val effect = set[j]
+            effect.performStart(container)
+        }
+    }
 
     fun processProgress(backEvent: BackEventCompat) {
         if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
@@ -352,8 +416,11 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
                 "SpecialEffectsController: Processing Progress ${backEvent.progress}"
             )
         }
-        runningOperations.forEach { operation ->
-            operation.backInProgressListener?.invoke(backEvent)
+
+        val set = runningOperations.flatMap { it.effects }.toSet().toList()
+        for (j in set.indices) {
+            val effect = set[j]
+            effect.onProgress(backEvent, container)
         }
     }
 
@@ -364,15 +431,14 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
                 "SpecialEffectsController: Completing Back "
             )
         }
-        runningOperations.forEach { operation ->
-            operation.backOnCompleteListener?.invoke()
-        }
+        processStart(runningOperations)
+        commitEffects(runningOperations)
     }
 
     /**
      * Class representing an ongoing special effects operation.
      *
-     * @see executeOperations
+     * @see collectEffects
      */
     internal open class Operation(
         /**
@@ -516,10 +582,6 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
 
         private val completionListeners = mutableListOf<Runnable>()
         private val specialEffectsSignals = mutableSetOf<CancellationSignal>()
-        var backInProgressListener: ((BackEventCompat) -> Unit)? = null
-            private set
-        var backOnCompleteListener: (() -> Unit)? = null
-            private set
         var isCanceled = false
             private set
         var isComplete = false
@@ -529,6 +591,8 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
 
         var isStarted = false
             private set
+
+        var isAwaitingContainerChanges = true
 
         val effects = mutableListOf<Effect>()
 
@@ -618,20 +682,6 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
             completionListeners.add(listener)
         }
 
-        fun addBackProgressCallbacks(
-            onProgress: (BackEventCompat) -> Unit,
-            onComplete: () -> Unit
-        ) {
-            if (FragmentManager.isLoggingEnabled(Log.DEBUG)) {
-                Log.d(
-                    FragmentManager.TAG,
-                    "SpecialEffectsController: Adding back progress callbacks for operation $this"
-                )
-            }
-            backInProgressListener = onProgress
-            backOnCompleteListener = onComplete
-        }
-
         /**
          * Callback for when the operation is about to start.
          */
@@ -646,7 +696,6 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
          * @param signal A CancellationSignal that can be used to cancel this special effect.
          */
         fun markStartedSpecialEffect(signal: CancellationSignal) {
-            onStart()
             specialEffectsSignals.add(signal)
         }
 
@@ -680,8 +729,6 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
                 )
             }
             isComplete = true
-            backInProgressListener = null
-            backOnCompleteListener = null
             completionListeners.forEach { listener ->
                 listener.run()
             }
@@ -751,7 +798,20 @@ internal abstract class SpecialEffectsController(val container: ViewGroup) {
     }
 
     internal open class Effect {
+        open val isSeekingSupported = false
+
+        private var isStarted = false
+
+        fun performStart(container: ViewGroup) {
+            if (!isStarted) {
+                onStart(container)
+            }
+            isStarted = true
+        }
+
         open fun onStart(container: ViewGroup) { }
+
+        open fun onProgress(backEvent: BackEventCompat, container: ViewGroup) { }
 
         open fun onCommit(container: ViewGroup) { }
 

@@ -16,10 +16,12 @@
 
 package com.example.androidx.mediarouting.activities.systemrouting;
 
-import android.Manifest;
+import static android.Manifest.permission.BLUETOOTH_CONNECT;
+import static android.Manifest.permission.BLUETOOTH_SCAN;
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -51,8 +53,16 @@ public final class SystemRoutingActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_BLUETOOTH_CONNECT = 4199;
 
+    @NonNull
     private final SystemRoutesAdapter mSystemRoutesAdapter = new SystemRoutesAdapter();
+    @NonNull
     private final List<SystemRoutesSource> mSystemRoutesSources = new ArrayList<>();
+    @NonNull
+    private final SystemRoutesSourceCallback mSystemRoutesSourceCallback =
+            new SystemRoutesSourceCallback();
+
+    @NonNull
+    private SwipeRefreshLayout mSwipeRefreshLayout;
 
     /**
      * Creates and launches an intent to start current activity.
@@ -68,16 +78,12 @@ public final class SystemRoutingActivity extends AppCompatActivity {
         setContentView(R.layout.activity_system_routing);
 
         RecyclerView recyclerView = findViewById(R.id.recycler_view);
-        SwipeRefreshLayout swipeRefreshLayout = findViewById(R.id.pull_to_refresh_layout);
+        mSwipeRefreshLayout = findViewById(R.id.pull_to_refresh_layout);
 
         recyclerView.setAdapter(mSystemRoutesAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        swipeRefreshLayout.setOnRefreshListener(
-                () -> {
-                    refreshSystemRoutesList();
-                    swipeRefreshLayout.setRefreshing(false);
-                });
+        mSwipeRefreshLayout.setOnRefreshListener(this::refreshSystemRoutesList);
 
         if (hasBluetoothPermission()) {
             initializeSystemRoutesSources();
@@ -88,13 +94,22 @@ public final class SystemRoutingActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        for (SystemRoutesSource source: mSystemRoutesSources) {
+            source.stop();
+        }
+
+        super.onDestroy();
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
             @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == REQUEST_CODE_BLUETOOTH_CONNECT
                 && grantResults.length > 0) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (grantResults[0] == PERMISSION_GRANTED) {
                 onBluetoothPermissionGranted();
             } else {
                 onBluetoothPermissionDenied();
@@ -103,23 +118,25 @@ public final class SystemRoutingActivity extends AppCompatActivity {
     }
 
     private void refreshSystemRoutesList() {
-        List<SystemRouteItem> systemRoutes = new ArrayList<>();
+        List<SystemRoutesAdapterItem> systemRoutesSourceItems = new ArrayList<>();
         for (SystemRoutesSource source : mSystemRoutesSources) {
-            systemRoutes.addAll(source.fetchRoutes());
+            systemRoutesSourceItems.add(source.getSourceItem());
+            systemRoutesSourceItems.addAll(source.fetchSourceRouteItems());
         }
-        mSystemRoutesAdapter.setItems(systemRoutes);
+        mSystemRoutesAdapter.setItems(systemRoutesSourceItems);
+        mSwipeRefreshLayout.setRefreshing(false);
     }
 
     private boolean hasBluetoothPermission() {
-        return ContextCompat.checkSelfPermission(
-                        /* context= */ this, Manifest.permission.BLUETOOTH_CONNECT)
-                == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(/* context= */ this, BLUETOOTH_CONNECT)
+                == PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(/* context= */ this, BLUETOOTH_SCAN)
+                == PERMISSION_GRANTED;
     }
 
     private void requestBluetoothPermission() {
         ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.BLUETOOTH_CONNECT},
-                REQUEST_CODE_BLUETOOTH_CONNECT);
+                new String[]{BLUETOOTH_CONNECT, BLUETOOTH_SCAN}, REQUEST_CODE_BLUETOOTH_CONNECT);
     }
 
     private void onBluetoothPermissionGranted() {
@@ -153,6 +170,23 @@ public final class SystemRoutingActivity extends AppCompatActivity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             mSystemRoutesSources.add(AudioManagerSystemRoutesSource.create(/* context= */ this));
+        }
+
+        for (SystemRoutesSource source: mSystemRoutesSources) {
+            source.setOnRoutesChangedListener(mSystemRoutesSourceCallback);
+            source.start();
+        }
+    }
+
+    private class SystemRoutesSourceCallback implements SystemRoutesSource.OnRoutesChangedListener {
+        @Override
+        public void onRouteAdded(@NonNull SystemRouteItem routeItem) {
+            refreshSystemRoutesList();
+        }
+
+        @Override
+        public void onRouteRemoved(@NonNull SystemRouteItem routeItem) {
+            refreshSystemRoutesList();
         }
     }
 }

@@ -61,7 +61,7 @@ public interface Person : Thing {
   public override fun toBuilder(): Builder<*>
 
   public companion object {
-    /** Returns a default implementation of [Builder] with no properties set. */
+    /** Returns a default implementation of [Builder]. */
     @JvmStatic @Document.BuilderProducer public fun Builder(): Builder<*> = PersonImpl.Builder()
   }
 
@@ -88,6 +88,10 @@ public interface Person : Thing {
  *
  * Allows for extension like:
  * ```kt
+ * @Document(
+ *   name = "MyPerson",
+ *   parent = [Person::class],
+ * )
  * class MyPerson internal constructor(
  *   person: Person,
  *   val foo: String,
@@ -96,6 +100,8 @@ public interface Person : Thing {
  *   MyPerson,
  *   MyPerson.Builder
  * >(person) {
+ *
+ *   // No need to implement equals(), hashCode(), toString() or toBuilder()
  *
  *   override val selfTypeName =
  *     "MyPerson"
@@ -122,11 +128,11 @@ public interface Person : Thing {
 public abstract class AbstractPerson<
   Self : AbstractPerson<Self, Builder>, Builder : AbstractPerson.Builder<Builder, Self>>
 internal constructor(
-  public final override val namespace: String?,
+  public final override val namespace: String,
   public final override val email: String?,
   public final override val telephoneNumber: String?,
   public final override val disambiguatingDescription: DisambiguatingDescription?,
-  public final override val identifier: String?,
+  public final override val identifier: String,
   public final override val name: Name?,
 ) : Person {
   /**
@@ -194,7 +200,7 @@ internal constructor(
 
   public final override fun toString(): String {
     val attributes = mutableMapOf<String, String>()
-    if (namespace != null) {
+    if (namespace.isNotEmpty()) {
       attributes["namespace"] = namespace
     }
     if (email != null) {
@@ -207,7 +213,7 @@ internal constructor(
       attributes["disambiguatingDescription"] =
         disambiguatingDescription.toString(includeWrapperName = false)
     }
-    if (identifier != null) {
+    if (identifier.isNotEmpty()) {
       attributes["identifier"] = identifier
     }
     if (name != null) {
@@ -229,10 +235,13 @@ internal constructor(
    *     MyPerson.Builder>(...) {
    *
    *   class Builder
-   *   : Builder<
+   *   : AbstractPerson.Builder<
    *       Builder,
    *       MyPerson
    *   >() {
+   *
+   *     // No need to implement equals(), hashCode(), toString() or build()
+   *
    *     private var foo: String? = null
    *     private val bars = mutableListOf<Int>()
    *
@@ -286,7 +295,7 @@ internal constructor(
      */
     @get:Suppress("GetterOnBuilder") protected abstract val additionalProperties: Map<String, Any?>
 
-    private var namespace: String? = null
+    private var namespace: String = ""
 
     private var email: String? = null
 
@@ -294,7 +303,7 @@ internal constructor(
 
     private var disambiguatingDescription: DisambiguatingDescription? = null
 
-    private var identifier: String? = null
+    private var identifier: String = ""
 
     private var name: Name? = null
 
@@ -313,7 +322,7 @@ internal constructor(
         PersonImpl(namespace, email, telephoneNumber, disambiguatingDescription, identifier, name)
       )
 
-    public final override fun setNamespace(namespace: String?): Self {
+    public final override fun setNamespace(namespace: String): Self {
       this.namespace = namespace
       return this as Self
     }
@@ -335,7 +344,7 @@ internal constructor(
       return this as Self
     }
 
-    public final override fun setIdentifier(text: String?): Self {
+    public final override fun setIdentifier(text: String): Self {
       this.identifier = text
       return this as Self
     }
@@ -375,8 +384,8 @@ internal constructor(
     @Suppress("BuilderSetStyle")
     public final override fun toString(): String {
       val attributes = mutableMapOf<String, String>()
-      if (namespace != null) {
-        attributes["namespace"] = namespace!!
+      if (namespace.isNotEmpty()) {
+        attributes["namespace"] = namespace
       }
       if (email != null) {
         attributes["email"] = email!!
@@ -388,8 +397,8 @@ internal constructor(
         attributes["disambiguatingDescription"] =
           disambiguatingDescription!!.toString(includeWrapperName = false)
       }
-      if (identifier != null) {
-        attributes["identifier"] = identifier!!
+      if (identifier.isNotEmpty()) {
+        attributes["identifier"] = identifier
       }
       if (name != null) {
         attributes["name"] = name!!.toString(includeWrapperName = false)
@@ -410,11 +419,11 @@ private class PersonImpl : AbstractPerson<PersonImpl, PersonImpl.Builder> {
     get() = emptyMap()
 
   public constructor(
-    namespace: String?,
+    namespace: String,
     email: String?,
     telephoneNumber: String?,
     disambiguatingDescription: DisambiguatingDescription?,
-    identifier: String?,
+    identifier: String,
     name: Name?,
   ) : super(namespace, email, telephoneNumber, disambiguatingDescription, identifier, name)
 

@@ -114,6 +114,48 @@ internal class BasicTextField2ImmIntegrationTest {
     }
 
     @Test
+    fun stopsBeingTextEditor_whenChangedToReadOnly() {
+        val state = TextFieldState()
+        var readOnly by mutableStateOf(false)
+        rule.setContent {
+            hostView = LocalView.current
+            BasicTextField2(state, Modifier.testTag(Tag), readOnly = readOnly)
+        }
+        requestFocus(Tag)
+        rule.runOnIdle {
+            assertThat(hostView.onCheckIsTextEditor()).isTrue()
+        }
+
+        readOnly = true
+
+        rule.runOnIdle {
+            assertThat(hostView.onCheckIsTextEditor()).isFalse()
+            assertThat(hostView.onCreateInputConnection(EditorInfo())).isNull()
+        }
+    }
+
+    @Test
+    fun stopsBeingTextEditor_whenChangedToDisabled() {
+        val state = TextFieldState()
+        var enabled by mutableStateOf(true)
+        rule.setContent {
+            hostView = LocalView.current
+            BasicTextField2(state, Modifier.testTag(Tag), enabled = enabled)
+        }
+        requestFocus(Tag)
+        rule.runOnIdle {
+            assertThat(hostView.onCheckIsTextEditor()).isTrue()
+        }
+
+        enabled = false
+
+        rule.runOnIdle {
+            assertThat(hostView.onCheckIsTextEditor()).isFalse()
+            assertThat(hostView.onCreateInputConnection(EditorInfo())).isNull()
+        }
+    }
+
+    @Test
     fun staysTextEditor_whenFocusTransferred() {
         val state1 = TextFieldState()
         val state2 = TextFieldState()
@@ -207,6 +249,9 @@ internal class BasicTextField2ImmIntegrationTest {
             connection.commitText("hello", 1)
 
             assertThat(state.text.toString()).isEqualTo("helloworld")
+        }
+
+        rule.runOnIdle {
             imm.expectCall("restartInput")
             imm.expectNoMoreCalls()
         }
@@ -255,6 +300,9 @@ internal class BasicTextField2ImmIntegrationTest {
         rule.runOnIdle {
             imm.resetCalls()
             inputConnection!!.setComposingText("hello", 1)
+        }
+
+        rule.runOnIdle {
             imm.expectCall("updateSelection(0, 5, 0, 5)")
             imm.expectNoMoreCalls()
         }
@@ -274,7 +322,9 @@ internal class BasicTextField2ImmIntegrationTest {
                 append("hello")
                 placeCursorBeforeCharAt(0)
             }
+        }
 
+        rule.runOnIdle {
             imm.expectCall("restartInput")
             imm.expectNoMoreCalls()
         }
@@ -293,7 +343,9 @@ internal class BasicTextField2ImmIntegrationTest {
             state.edit {
                 placeCursorAtEnd()
             }
+        }
 
+        rule.runOnIdle {
             imm.expectCall("updateSelection(5, 5, -1, -1)")
             imm.expectNoMoreCalls()
         }
@@ -313,7 +365,9 @@ internal class BasicTextField2ImmIntegrationTest {
                 append("hello")
                 placeCursorAtEnd()
             }
+        }
 
+        rule.runOnIdle {
             imm.expectCall("updateSelection(5, 5, -1, -1)")
             imm.expectCall("restartInput")
             imm.expectNoMoreCalls()

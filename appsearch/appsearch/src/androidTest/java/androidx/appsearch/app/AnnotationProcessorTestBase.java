@@ -159,8 +159,6 @@ public abstract class AnnotationProcessorTestBase {
         boolean[] mArrUnboxBoolean; // 2b
         @Document.BytesProperty
         byte[][] mArrUnboxByteArr;  // 2b
-        @Document.BytesProperty
-        Byte[] mBoxByteArr;         // 2a
         @Document.StringProperty
         String[] mArrString;        // 2b
         @Document.DocumentProperty
@@ -211,7 +209,6 @@ public abstract class AnnotationProcessorTestBase {
             assertThat(otherGift.mArrBoxLong).isEqualTo(this.mArrBoxLong);
             assertThat(otherGift.mArrBoxInteger).isEqualTo(this.mArrBoxInteger);
             assertThat(otherGift.mArrString).isEqualTo(this.mArrString);
-            assertThat(otherGift.mBoxByteArr).isEqualTo(this.mBoxByteArr);
             assertThat(otherGift.mArrUnboxBoolean).isEqualTo(this.mArrUnboxBoolean);
             assertThat(otherGift.mArrUnboxByteArr).isEqualTo(this.mArrUnboxByteArr);
             assertThat(otherGift.mArrUnboxDouble).isEqualTo(this.mArrUnboxDouble);
@@ -265,7 +262,6 @@ public abstract class AnnotationProcessorTestBase {
             gift.mArrBoxInteger = new Integer[]{4, 5};
             gift.mArrBoxLong = new Long[]{6L, 7L};
             gift.mArrString = new String[]{"cat", "dog"};
-            gift.mBoxByteArr = new Byte[]{8, 9};
             gift.mArrUnboxBoolean = new boolean[]{false, true};
             gift.mArrUnboxByteArr = new byte[][]{{0, 1}, {2, 3}};
             gift.mArrUnboxDouble = new double[]{1.0, 0.0};
@@ -339,8 +335,9 @@ public abstract class AnnotationProcessorTestBase {
     public void testAnnotationProcessor() throws Exception {
         //TODO(b/156296904) add test for int, float, GenericDocument, and class with
         // @Document annotation
-        mSession.setSchemaAsync(
-                new SetSchemaRequest.Builder().addDocumentClasses(Card.class, Gift.class).build())
+        mSession.setSchemaAsync(new SetSchemaRequest.Builder()
+                        .addDocumentClasses(Card.class, Gift.class)
+                        .build())
                 .get();
 
         // Create a Gift object and assign values.
@@ -1128,6 +1125,112 @@ public abstract class AnnotationProcessorTestBase {
         assertThat(newOrganization.getNamespace()).isEqualTo("namespace");
         assertThat(newOrganization.getCreationTimestamp()).isEqualTo(3000);
         assertThat(newOrganization.getOrganizationDescription()).isEqualTo("organization_dec");
+    }
+
+    @Document(name = "Person", parent = InterfaceRoot.class)
+    interface Person extends InterfaceRoot {
+        @Document.StringProperty
+        String getFirstName();
+
+        @Document.StringProperty
+        String getLastName();
+
+        @Document.BuilderProducer
+        class Builder {
+            String mId;
+            String mNamespace;
+            long mCreationTimestamp;
+            String mFirstName;
+            String mLastName;
+
+            Builder(String id, String namespace) {
+                mId = id;
+                mNamespace = namespace;
+            }
+
+            public Person build() {
+                return new PersonImpl(mId, mNamespace, mCreationTimestamp, mFirstName, mLastName);
+            }
+
+            public Builder setCreationTimestamp(long creationTimestamp) {
+                mCreationTimestamp = creationTimestamp;
+                return this;
+            }
+
+            public Builder setFirstName(String firstName) {
+                mFirstName = firstName;
+                return this;
+            }
+
+            // Void return type should work.
+            public void setLastName(String lastName) {
+                mLastName = lastName;
+            }
+        }
+    }
+
+    static class PersonImpl implements Person {
+        String mId;
+        String mNamespace;
+        long mCreationTimestamp;
+        String mFirstName;
+        String mLastName;
+
+        PersonImpl(String id, String namespace, long creationTimestamp, String firstName,
+                String lastName) {
+            mId = id;
+            mNamespace = namespace;
+            mCreationTimestamp = creationTimestamp;
+            mFirstName = firstName;
+            mLastName = lastName;
+        }
+
+        public String getId() {
+            return mId;
+        }
+
+        public String getNamespace() {
+            return mNamespace;
+        }
+
+        public long getCreationTimestamp() {
+            return mCreationTimestamp;
+        }
+
+        public String getFirstName() {
+            return mFirstName;
+        }
+
+        public String getLastName() {
+            return mLastName;
+        }
+    }
+
+    @Test
+    public void testGenericDocumentConversion_BuilderConstructor() throws Exception {
+        // Create Person document
+        Person.Builder personBuilder = new Person.Builder("id", "namespace")
+                .setCreationTimestamp(3000)
+                .setFirstName("first");
+        personBuilder.setLastName("last");
+        Person person = personBuilder.build();
+
+        // Test the conversion from person to GenericDocument
+        GenericDocument genericDocument = GenericDocument.fromDocumentClass(person);
+        assertThat(genericDocument.getId()).isEqualTo("id");
+        assertThat(genericDocument.getNamespace()).isEqualTo("namespace");
+        assertThat(genericDocument.getCreationTimestampMillis()).isEqualTo(3000);
+        assertThat(genericDocument.getSchemaType()).isEqualTo("Person");
+        assertThat(genericDocument.getPropertyString("firstName")).isEqualTo("first");
+        assertThat(genericDocument.getPropertyString("lastName")).isEqualTo("last");
+
+        // Test the conversion from GenericDocument to person
+        Person newPerson = genericDocument.toDocumentClass(Person.class);
+        assertThat(newPerson.getId()).isEqualTo("id");
+        assertThat(newPerson.getNamespace()).isEqualTo("namespace");
+        assertThat(newPerson.getCreationTimestamp()).isEqualTo(3000);
+        assertThat(newPerson.getFirstName()).isEqualTo("first");
+        assertThat(newPerson.getLastName()).isEqualTo("last");
     }
 
     @Test

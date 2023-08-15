@@ -17,8 +17,10 @@
 package androidx.compose.foundation.pager
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
@@ -29,6 +31,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.unit.dp
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.launch
@@ -270,7 +273,8 @@ class PagerTest(val config: ParamConfig) : BasePagerTest(config) {
             ) {
                 Spacer(
                     Modifier
-                        .fillMaxSize())
+                        .fillMaxSize()
+                )
             }
         }
 
@@ -291,6 +295,50 @@ class PagerTest(val config: ParamConfig) : BasePagerTest(config) {
         rule.runOnIdle {
             assertThat(pagerState.currentPage).isEqualTo(1)
         }
+    }
+
+    @Test
+    fun pagerStateChange_flingBehaviorShouldRecreate() {
+        var previousFlingBehavior: SnapFlingBehavior? = null
+        var latestFlingBehavior: SnapFlingBehavior? = null
+        val stateHolder = mutableStateOf(PagerStateImpl(0, 0.0f) { 10 })
+        rule.setContent {
+            HorizontalOrVerticalPager(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag(PagerTestTag),
+                state = stateHolder.value,
+                pageSize = PageSize.Fill,
+                flingBehavior = PagerDefaults.flingBehavior(state = stateHolder.value).also {
+                    latestFlingBehavior = it
+                    if (previousFlingBehavior == null) {
+                        previousFlingBehavior = it
+                    }
+                }
+            ) {
+                Page(index = it)
+            }
+        }
+
+        rule.runOnIdle {
+            stateHolder.value = PagerStateImpl(0, 0.0f) { 20 }
+        }
+
+        rule.waitForIdle()
+        assertThat(previousFlingBehavior).isNotEqualTo(latestFlingBehavior)
+    }
+
+    @Test
+    fun pagerCreation_sumOfPageSizeIsSmallerThanPager_makeSurePagesAreAlignedToStartTop() {
+        // arrange and act
+        createPager(
+            modifier = Modifier.size(500.dp),
+            pageSize = { PageSize.Fixed(100.dp) },
+            pageCount = { 3 })
+
+        confirmPageIsInCorrectPosition(0, pageToVerifyPosition = 0)
+        confirmPageIsInCorrectPosition(0, pageToVerifyPosition = 1)
+        confirmPageIsInCorrectPosition(0, pageToVerifyPosition = 2)
     }
 
     companion object {

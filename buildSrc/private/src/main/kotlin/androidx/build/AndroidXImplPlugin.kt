@@ -35,6 +35,7 @@ import androidx.build.testConfiguration.TestModule
 import androidx.build.testConfiguration.addAppApkToTestConfigGeneration
 import androidx.build.testConfiguration.configureTestConfigGeneration
 import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.variant.AndroidComponentsExtension
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import com.android.build.api.variant.HasAndroidTest
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
@@ -60,6 +61,9 @@ import org.gradle.api.JavaVersion.VERSION_1_8
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.CacheableRule
+import org.gradle.api.artifacts.ComponentMetadataContext
+import org.gradle.api.artifacts.ComponentMetadataRule
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.component.SoftwareComponentFactory
 import org.gradle.api.file.DuplicatesStrategy
@@ -81,6 +85,7 @@ import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.extra
 import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.getByType
+import org.gradle.kotlin.dsl.withModule
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
@@ -124,6 +129,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
         }
 
+        project.configureLint()
         project.configureKtlint()
         project.configureKotlinVersion()
 
@@ -162,6 +168,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 project.validatePublishedMultiplatformHasDefault()
             }
         }
+        project.disallowAccidentalAndroidDependenciesInKmpProject(kmpExtension)
     }
 
     private fun Project.registerProjectOrArtifact() {
@@ -294,20 +301,16 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
     private fun Project.configureKotlinVersion() {
         val kotlinVersionStringProvider = androidXConfiguration.kotlinBomVersion
 
-        // Resolve Kotlin versions to the target version or higher.
+        // Resolve unspecified Kotlin versions to the target version.
         configurations.all { configuration ->
             configuration.resolutionStrategy { strategy ->
                 strategy.eachDependency { details ->
                     if (details.requested.group == "org.jetbrains.kotlin") {
-                        val requestedVersion =
-                            if (details.requested.version.isNullOrEmpty()) {
-                                null
-                            } else {
-                                Version(details.requested.version!!)
-                            }
-                        val bomVersion = kotlinVersionStringProvider.get()
-                        if (requestedVersion == null || requestedVersion < Version(bomVersion)) {
-                            details.useVersion(bomVersion)
+                        if (
+                            details.requested.group == "org.jetbrains.kotlin" &&
+                            details.requested.version == null
+                        ) {
+                            details.useVersion(kotlinVersionStringProvider.get())
                         }
                     }
                 }
@@ -330,6 +333,35 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         afterEvaluate { evaluatedProject ->
             evaluatedProject.kotlinExtensionOrNull?.let { kotlinExtension ->
                 kotlinExtension.coreLibrariesVersion = kotlinVersionStringProvider.get()
+            }
+        }
+
+        // Resolve classpath conflicts caused by kotlin-stdlib-jdk7 and -jdk8 artifacts by amending
+        // the kotlin-stdlib artifact metadata to add same-version constraints.
+        project.dependencies {
+            components { componentMetadata ->
+                componentMetadata.withModule<KotlinStdlibDependenciesRule>(
+                    "org.jetbrains.kotlin:kotlin-stdlib"
+                )
+            }
+        }
+    }
+
+    @CacheableRule
+    internal abstract class KotlinStdlibDependenciesRule : ComponentMetadataRule {
+        override fun execute(context: ComponentMetadataContext) {
+            val module = context.details.id
+            val version = module.version
+            context.details.allVariants { variantMetadata ->
+                variantMetadata.withDependencyConstraints { constraintsMetadata ->
+                    val reason = "${module.name} is in atomic group ${module.group}"
+                    constraintsMetadata.add("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$version") {
+                        it.because(reason)
+                    }
+                    constraintsMetadata.add("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$version") {
+                        it.because(reason)
+                    }
+                }
             }
         }
     }
@@ -400,7 +432,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
             project.configureKmpTests()
             project.configureSourceJarForMultiplatform()
-            project.configureLintForMultiplatform(extension)
 
             // Disable any source JAR task(s) added by KotlinMultiplatformPlugin.
             // https://youtrack.jetbrains.com/issue/KT-55881
@@ -427,13 +458,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             onVariants {
                 it.configureTests()
                 it.artRewritingWorkaround()
-            }
-            finalizeDsl {
-                project.configureAndroidProjectForLint(
-                    it.lint,
-                    androidXExtension,
-                    isLibrary = false
-                )
             }
         }
     }
@@ -506,8 +530,11 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 }
             }
 
+        val libraryAndroidComponentsExtension =
+            project.extensions.getByType<LibraryAndroidComponentsExtension>()
+
         // Remove the android:targetSdkVersion element from the manifest used for AARs.
-        project.extensions.getByType<LibraryAndroidComponentsExtension>().onVariants { variant ->
+        libraryAndroidComponentsExtension.onVariants { variant ->
             project.tasks
                 .register(
                     variant.name + "AarManifestTransformer",
@@ -528,7 +555,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             publishing { singleVariant(DEFAULT_PUBLISH_CONFIG) }
         }
 
-        project.extensions.getByType<LibraryAndroidComponentsExtension>().apply {
+        libraryAndroidComponentsExtension.apply {
             beforeVariants(selector().withBuildType("release")) { variant ->
                 variant.enableUnitTest = false
             }
@@ -536,14 +563,11 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 it.configureTests()
                 it.artRewritingWorkaround()
             }
-            finalizeDsl {
-                project.configureAndroidProjectForLint(it.lint, androidXExtension, isLibrary = true)
-            }
         }
 
         project.configurePublicResourcesStub(libraryExtension)
         project.configureSourceJarForAndroid(libraryExtension)
-        project.configureVersionFileWriter(libraryExtension, androidXExtension)
+        project.configureVersionFileWriter(libraryAndroidComponentsExtension, androidXExtension)
         project.configureJavaCompilationWarnings(androidXExtension)
 
         project.configureDependencyVerification(androidXExtension) { taskProvider ->
@@ -613,10 +637,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
         }
 
-        // Standard lint, docs, and Metalava configuration for AndroidX projects.
-        if (project.multiplatformExtension == null) {
-            project.configureNonAndroidProjectForLint(extension)
-        }
         val apiTaskConfig =
             if (project.multiplatformExtension != null) {
                 KmpApiTaskConfig
@@ -767,6 +787,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         // AGP warns if we use project.buildDir (or subdirs) for CMake's generated
         // build files (ninja build files, CMakeCache.txt, etc.). Use a staging directory that
         // lives alongside the project's buildDir.
+        @Suppress("DEPRECATION")
         externalNativeBuild.cmake.buildStagingDirectory =
             File(project.buildDir, "../nativeBuildStaging")
     }
@@ -931,13 +952,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             return
         }
         project.afterEvaluate {
-            if (project.hasKotlinNativeTarget().get()) {
-                // KMP plugin cannot handle constraints properly for native targets
-                // b/274786186, YT: KT-57531
-                // It is expected to be fixed in Kotlin 1.9 after which, we should remove this check
-                return@afterEvaluate
-            }
-
             // make sure that the project has a group
             val projectGroup = extension.mavenGroup ?: return@afterEvaluate
             // make sure that this group is configured to use a single version
@@ -1105,6 +1119,11 @@ private fun Project.addToProjectMap(extension: AndroidXExtension) {
     }
 }
 
+val Project.androidExtension: AndroidComponentsExtension<*, *, *>
+    get() = extensions.findByType<LibraryAndroidComponentsExtension>()
+        ?: extensions.findByType<ApplicationAndroidComponentsExtension>()
+        ?: throw IllegalArgumentException("Failed to find any registered Android extension")
+
 val Project.multiplatformExtension
     get() = extensions.findByType(KotlinMultiplatformExtension::class.java)
 
@@ -1221,11 +1240,38 @@ fun Project.validateMultiplatformPluginHasNotBeenApplied() {
     }
 }
 
+/**
+ * Verifies we don't accidentially write "implementation" instead of "commonMainImplementation"
+ */
+fun Project.disallowAccidentalAndroidDependenciesInKmpProject(
+    kmpExtension: AndroidXMultiplatformExtension
+) {
+    project.afterEvaluate {
+        if (kmpExtension.supportedPlatforms.isNotEmpty()) {
+            val androidConfiguration = project.configurations.findByName("implementation")
+            if (androidConfiguration != null) {
+               if (
+                   androidConfiguration.dependencies.isNotEmpty() ||
+                   androidConfiguration.dependencyConstraints.isNotEmpty()
+               ) {
+                   throw GradleException(
+                       "The 'implementation' Configuration should not be used in a " +
+                       "multiplatform project: this Configuration is declared by the " +
+                       "Android plugin rather than the kmp plugin. Did you mean " +
+                       "'commonMainImplementation'?")
+                }
+            }
+        }
+    }
+}
+
 /** Verifies that ProjectParser computes the correct values for this project */
 fun Project.validateProjectParser(extension: AndroidXExtension) {
     // If configuration fails, we don't want to validate the ProjectParser
     // (otherwise it could report a confusing, unnecessary error)
     project.gradle.taskGraph.whenReady {
+        if (!extension.runProjectParser) return@whenReady
+
         val parsed = project.parse()
         check(extension.type == parsed.libraryType) {
             "ProjectParser incorrectly computed libraryType = ${parsed.libraryType} " +
@@ -1270,9 +1316,5 @@ fun AndroidXExtension.validateMavenVersion() {
         )
     }
 }
-
-/** Removes the line and column attributes from the [baseline]. */
-fun removeLineAndColumnAttributes(baseline: String): String =
-    baseline.replace("\\s*(line|column)=\"\\d+?\"".toRegex(), "")
 
 const val PROJECT_OR_ARTIFACT_EXT_NAME = "projectOrArtifact"

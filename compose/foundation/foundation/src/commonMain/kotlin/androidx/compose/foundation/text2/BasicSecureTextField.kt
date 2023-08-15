@@ -20,9 +20,12 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyCommand
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.platformDefaultKeyMapping
 import androidx.compose.foundation.text2.input.CodepointTransformation
 import androidx.compose.foundation.text2.input.TextEditFilter
 import androidx.compose.foundation.text2.input.TextFieldBuffer
@@ -33,6 +36,7 @@ import androidx.compose.foundation.text2.input.TextObfuscationMode
 import androidx.compose.foundation.text2.input.mask
 import androidx.compose.foundation.text2.input.then
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -40,9 +44,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.TextToolbar
+import androidx.compose.ui.platform.TextToolbarStatus
+import androidx.compose.ui.semantics.copyText
+import androidx.compose.ui.semantics.cutText
 import androidx.compose.ui.semantics.password
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
@@ -128,7 +139,7 @@ fun BasicSecureTextField(
     interactionSource: MutableInteractionSource? = null,
     cursorBrush: Brush = SolidColor(Color.Black),
     scrollState: ScrollState = rememberScrollState(),
-    onTextLayout: Density.(TextLayoutResult) -> Unit = {},
+    onTextLayout: Density.(getResult: () -> TextLayoutResult?) -> Unit = {},
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
         @Composable { innerTextField -> innerTextField() }
 ) {
@@ -156,13 +167,15 @@ fun BasicSecureTextField(
             CodepointTransformation.mask('\u2022')
         }
 
-        else -> {
-            CodepointTransformation.None
-        }
+        else -> null
     }
 
     val secureTextFieldModifier = modifier
-        .semantics(mergeDescendants = true) { password() }
+        .semantics(mergeDescendants = true) {
+            password()
+            copyText { false }
+            cutText { false }
+        }
         .then(
             if (revealLastTypedEnabled) {
                 secureTextFieldController.focusChangeModifier
@@ -171,31 +184,33 @@ fun BasicSecureTextField(
             }
         )
 
-    BasicTextField2(
-        state = state,
-        modifier = secureTextFieldModifier,
-        enabled = enabled,
-        readOnly = false,
-        filter = if (revealLastTypedEnabled) {
-            filter?.then(secureTextFieldController.passwordRevealFilter)
-                ?: secureTextFieldController.passwordRevealFilter
-        } else filter,
-        textStyle = textStyle,
-        interactionSource = interactionSource,
-        cursorBrush = cursorBrush,
-        lineLimits = TextFieldLineLimits.SingleLine,
-        scrollState = scrollState,
-        keyboardOptions = KeyboardOptions(
-            autoCorrect = false,
-            keyboardType = keyboardType,
-            imeAction = imeAction
-        ),
-        keyboardActions = onSubmit?.let { KeyboardActions(onSubmit = it) }
-            ?: KeyboardActions.Default,
-        onTextLayout = onTextLayout,
-        codepointTransformation = codepointTransformation,
-        decorationBox = decorationBox,
-    )
+    DisableCutCopy {
+        BasicTextField2(
+            state = state,
+            modifier = secureTextFieldModifier,
+            enabled = enabled,
+            readOnly = false,
+            filter = if (revealLastTypedEnabled) {
+                filter?.then(secureTextFieldController.passwordRevealFilter)
+                    ?: secureTextFieldController.passwordRevealFilter
+            } else filter,
+            textStyle = textStyle,
+            interactionSource = interactionSource,
+            cursorBrush = cursorBrush,
+            lineLimits = TextFieldLineLimits.SingleLine,
+            scrollState = scrollState,
+            keyboardOptions = KeyboardOptions(
+                autoCorrect = false,
+                keyboardType = keyboardType,
+                imeAction = imeAction
+            ),
+            keyboardActions = onSubmit?.let { KeyboardActions(onSubmit = it) }
+                ?: KeyboardActions.Default,
+            onTextLayout = onTextLayout,
+            codepointTransformation = codepointTransformation,
+            decorationBox = decorationBox,
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -304,3 +319,50 @@ private fun KeyboardActions(onSubmit: (ImeAction) -> Boolean) = KeyboardActions(
     onSearch = { if (!onSubmit(ImeAction.Search)) defaultKeyboardAction(ImeAction.Search) },
     onSend = { if (!onSubmit(ImeAction.Send)) defaultKeyboardAction(ImeAction.Send) },
 )
+
+/**
+ * Overrides the TextToolbar and keyboard shortcuts to never allow copy or cut options by the
+ * composables inside [content].
+ */
+@Composable
+private fun DisableCutCopy(
+    content: @Composable () -> Unit
+) {
+    val currentToolbar = LocalTextToolbar.current
+    val copyDisabledToolbar = remember(currentToolbar) {
+        object : TextToolbar {
+            override fun showMenu(
+                rect: Rect,
+                onCopyRequested: (() -> Unit)?,
+                onPasteRequested: (() -> Unit)?,
+                onCutRequested: (() -> Unit)?,
+                onSelectAllRequested: (() -> Unit)?
+            ) {
+                currentToolbar.showMenu(
+                    rect = rect,
+                    onPasteRequested = onPasteRequested,
+                    onSelectAllRequested = onSelectAllRequested,
+                    onCopyRequested = null,
+                    onCutRequested = null
+                )
+            }
+
+            override fun hide() {
+                currentToolbar.hide()
+            }
+
+            override val status: TextToolbarStatus
+                get() = currentToolbar.status
+        }
+    }
+    CompositionLocalProvider(LocalTextToolbar provides copyDisabledToolbar) {
+        Box(modifier = Modifier.onPreviewKeyEvent { keyEvent ->
+            // BasicTextField2 uses this static mapping
+            val command = platformDefaultKeyMapping.map(keyEvent)
+            // do not propagate copy and cut operations
+            command == KeyCommand.COPY || command == KeyCommand.CUT
+        }) {
+            content()
+        }
+    }
+}
