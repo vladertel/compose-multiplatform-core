@@ -20,6 +20,7 @@ import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
 import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
 import androidx.compose.compiler.plugins.kotlin.lower.AbstractComposeLowering
 import androidx.compose.compiler.plugins.kotlin.lower.includeFileNameInExceptionTrace
+import androidx.compose.compiler.plugins.kotlin.lower.isSyntheticComposableFunction
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
 import org.jetbrains.kotlin.descriptors.Modality
@@ -37,6 +38,8 @@ import org.jetbrains.kotlin.ir.util.isEnumClass
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.util.isLocal
 import org.jetbrains.kotlin.ir.util.parentAsClass
+import org.jetbrains.kotlin.ir.util.parentClassOrNull
+import org.jetbrains.kotlin.ir.util.defaultType
 
 abstract class AbstractDecoysLowering(
     pluginContext: IrPluginContext,
@@ -76,7 +79,9 @@ abstract class AbstractDecoysLowering(
         return !isLocalFunction() &&
             !isEnumConstructor() &&
             (hasComposableAnnotation() || hasComposableParameter()) &&
-            !isSAM()
+            !isSAM() &&
+            !(parentClassOrNull?.defaultType?.isSyntheticComposableFunction() ?: false)
+
     }
 
     private fun IrFunction.isLocalFunction(): Boolean =
