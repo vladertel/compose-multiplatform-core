@@ -1,10 +1,10 @@
 // Signature format: 4.0
 package androidx.core.performance.testing {
 
-  public final class FakeDevicePerformanceSupplier implements androidx.core.performance.DevicePerformanceSupplier {
-    ctor public FakeDevicePerformanceSupplier(int mediaPerformanceClass);
-    method public kotlinx.coroutines.flow.Flow<java.lang.Integer> getMediaPerformanceClassFlow();
-    property public kotlinx.coroutines.flow.Flow<java.lang.Integer> mediaPerformanceClassFlow;
+  public final class FakeDevicePerformance implements androidx.core.performance.DevicePerformance {
+    ctor public FakeDevicePerformance(int mediaPerformanceClass);
+    method public int getMediaPerformanceClass();
+    property public int mediaPerformanceClass;
   }
 
 }

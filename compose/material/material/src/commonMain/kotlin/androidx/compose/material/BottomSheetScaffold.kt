@@ -241,8 +241,6 @@ class BottomSheetState @Deprecated(
             "the BottomSheetScaffold composable?"
     }
 
-    internal val lastVelocity: Float get() = anchoredDraggableState.lastVelocity
-
     companion object {
 
         /**
@@ -437,11 +435,9 @@ fun BottomSheetScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     // b/278692145 Remove this once deprecated methods without density are removed
-    if (scaffoldState.bottomSheetState.density == null) {
-        val density = LocalDensity.current
-        SideEffect {
-            scaffoldState.bottomSheetState.density = density
-        }
+    val density = LocalDensity.current
+    SideEffect {
+        scaffoldState.bottomSheetState.density = density
     }
 
     val peekHeightPx = with(LocalDensity.current) { sheetPeekHeight.toPx() }
@@ -613,7 +609,6 @@ private fun BottomSheetScaffoldLayout(
         val sheetPlaceables = subcompose(BottomSheetScaffoldLayoutSlot.Sheet) {
             bottomSheet(layoutHeight)
         }.map { it.measure(looseConstraints) }
-        val sheetOffsetY = sheetOffset().roundToInt()
 
         val topBarPlaceables = topBar?.let {
             subcompose(BottomSheetScaffoldLayoutSlot.TopBar, topBar)
@@ -631,26 +626,32 @@ private fun BottomSheetScaffoldLayout(
         }
         val fabWidth = fabPlaceable?.fastMaxBy { it.width }?.width ?: 0
         val fabHeight = fabPlaceable?.fastMaxBy { it.height }?.height ?: 0
-        val fabOffsetX = when (floatingActionButtonPosition) {
-            FabPosition.Start -> FabSpacing.roundToPx()
-            FabPosition.Center -> (layoutWidth - fabWidth) / 2
-            else -> layoutWidth - fabWidth - FabSpacing.roundToPx()
-        }
-        // In case sheet peek height < (FAB height / 2), give the FAB some minimum space
-        val fabOffsetY = if (sheetPeekHeight.toPx() < fabHeight / 2) {
-            sheetOffsetY - fabHeight - FabSpacing.roundToPx()
-        } else sheetOffsetY - (fabHeight / 2)
 
         val snackbarPlaceables = subcompose(BottomSheetScaffoldLayoutSlot.Snackbar, snackbarHost)
             .map { it.measure(looseConstraints) }
         val snackbarWidth = snackbarPlaceables.fastMaxBy { it.width }?.width ?: 0
         val snackbarHeight = snackbarPlaceables.fastMaxBy { it.height }?.height ?: 0
-        val snackbarOffsetX = (layoutWidth - snackbarWidth) / 2
-        val snackbarOffsetY = when (sheetState.currentValue) {
-            Collapsed -> fabOffsetY - snackbarHeight
-            Expanded -> layoutHeight - snackbarHeight
-        }
+
         layout(layoutWidth, layoutHeight) {
+            val sheetOffsetY = sheetOffset().roundToInt()
+
+            val fabOffsetX = when (floatingActionButtonPosition) {
+                FabPosition.Start -> FabSpacing.roundToPx()
+                FabPosition.Center -> (layoutWidth - fabWidth) / 2
+                else -> layoutWidth - fabWidth - FabSpacing.roundToPx()
+            }
+
+            // In case sheet peek height < (FAB height / 2), give the FAB some minimum space
+            val fabOffsetY = if (sheetPeekHeight.toPx() < fabHeight / 2) {
+                sheetOffsetY - fabHeight - FabSpacing.roundToPx()
+            } else sheetOffsetY - (fabHeight / 2)
+
+            val snackbarOffsetX = (layoutWidth - snackbarWidth) / 2
+            val snackbarOffsetY = when (sheetState.currentValue) {
+                Collapsed -> fabOffsetY - snackbarHeight
+                Expanded -> layoutHeight - snackbarHeight
+            }
+
             // Placement order is important for elevation
             bodyPlaceables.fastForEach { it.placeRelative(0, topBarHeight) }
             topBarPlaceables?.fastForEach { it.placeRelative(0, 0) }

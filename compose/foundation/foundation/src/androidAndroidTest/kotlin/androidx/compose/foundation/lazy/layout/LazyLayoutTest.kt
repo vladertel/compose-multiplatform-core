@@ -19,6 +19,7 @@ package androidx.compose.foundation.lazy.layout
 import android.os.Parcelable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -31,6 +32,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.Remeasurement
+import androidx.compose.ui.layout.RemeasurementModifier
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
@@ -163,7 +166,7 @@ class LazyLayoutTest {
             LazyLayout(itemProvider) {
                 val constraints = Constraints.fixed(100, 100)
                 val items = mutableListOf<Placeable>()
-                repeat(itemProvider.itemCount) { index ->
+                repeat(itemProvider().itemCount) { index ->
                     items.addAll(measure(index, constraints))
                 }
                 layout(100, 100) {
@@ -204,7 +207,7 @@ class LazyLayoutTest {
             LazyLayout(itemProvider) {
                 val constraints = Constraints.fixed(100, 100)
                 val items = mutableListOf<Placeable>()
-                repeat(itemProvider.itemCount) { index ->
+                repeat(itemProvider().itemCount) { index ->
                     items.addAll(measure(index, constraints))
                 }
                 layout(100, 100) {
@@ -463,7 +466,7 @@ class LazyLayoutTest {
             override fun getKey(index: Int) = stateList[index]
         }
         rule.setContent {
-            LazyLayout(itemProvider) { constraint ->
+            LazyLayout({ itemProvider }) { constraint ->
                 measure(0, constraint)
                 layout(100, 100) {}
             }
@@ -480,11 +483,60 @@ class LazyLayoutTest {
         }
     }
 
+    @Test
+    fun subcomposeNodeContentIsResetWhenReused() {
+        var indexToCompose by mutableStateOf(0)
+        var remeasurement: Remeasurement? = null
+        val itemProvider = itemProvider({ 3 }) {
+            BoxWithConstraints(
+                Modifier.testTag("Box $it")
+            ) {
+                Box(Modifier.testTag("$it"))
+            }
+        }
+
+        rule.setContent {
+            LazyLayout(
+                itemProvider = itemProvider,
+                modifier = object : RemeasurementModifier {
+                    @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+                    override fun onRemeasurementAvailable(value: Remeasurement) {
+                        remeasurement = value
+                    }
+                }
+            ) { constraints ->
+                val node = measure(indexToCompose, constraints).first()
+                layout(node.width, node.height) {
+                    node.place(0, 0)
+                }
+            }
+        }
+
+        rule.runOnIdle {
+            indexToCompose = 1
+            remeasurement?.forceRemeasure()
+            indexToCompose = 2
+            remeasurement?.forceRemeasure()
+        }
+
+        rule.onNodeWithTag("Box 0")
+            .assertDoesNotExist()
+
+        rule.onNodeWithTag("0")
+            .assertDoesNotExist()
+
+        rule.onNodeWithTag("Box 2")
+            .assertExists()
+
+        rule.onNodeWithTag("2")
+            .assertExists()
+    }
+
     private fun itemProvider(
         itemCount: () -> Int,
         itemContent: @Composable (Int) -> Unit
-    ): LazyLayoutItemProvider {
-        return object : LazyLayoutItemProvider {
+    ): () -> LazyLayoutItemProvider {
+        val provider = object : LazyLayoutItemProvider {
             @Composable
             override fun Item(index: Int, key: Any) {
                 itemContent(index)
@@ -492,5 +544,6 @@ class LazyLayoutTest {
 
             override val itemCount: Int get() = itemCount()
         }
+        return { provider }
     }
 }

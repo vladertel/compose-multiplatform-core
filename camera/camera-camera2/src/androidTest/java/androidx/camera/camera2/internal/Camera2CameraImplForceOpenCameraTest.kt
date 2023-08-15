@@ -32,9 +32,9 @@ import androidx.camera.core.impl.CameraInternal.State
 import androidx.camera.core.impl.CameraStateRegistry
 import androidx.camera.core.impl.Observable.Observer
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
-import androidx.camera.testing.CameraUtil
-import androidx.camera.testing.CameraUtil.PreTestCameraIdList
-import androidx.camera.testing.fakes.FakeCameraCoordinator
+import androidx.camera.testing.impl.CameraUtil
+import androidx.camera.testing.impl.CameraUtil.PreTestCameraIdList
+import androidx.camera.testing.impl.fakes.FakeCameraCoordinator
 import androidx.core.os.HandlerCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -168,7 +168,8 @@ class Camera2CameraImplForceOpenCameraTest {
             cameraRegistry,
             cameraExecutor,
             cameraHandler,
-            DisplayInfoManager.getInstance(ApplicationProvider.getApplicationContext())
+            DisplayInfoManager.getInstance(ApplicationProvider.getApplicationContext()),
+            -1L
         )
 
         // Open the camera

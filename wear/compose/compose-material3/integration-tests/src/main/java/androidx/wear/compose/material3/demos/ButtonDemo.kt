@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonColors
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.ChildButton
 import androidx.wear.compose.material3.FilledTonalButton
@@ -251,10 +251,10 @@ fun MultilineButtonDemo() {
             MultilineButton(enabled = false)
         }
         item {
-            MultilineButton(enabled = true, icon = { StandardIcon() })
+            MultilineButton(enabled = true, icon = { StandardIcon(ButtonDefaults.IconSize) })
         }
         item {
-            MultilineButton(enabled = false, icon = { StandardIcon() })
+            MultilineButton(enabled = false, icon = { StandardIcon(ButtonDefaults.IconSize) })
         }
         item {
             ListHeader {
@@ -268,10 +268,10 @@ fun MultilineButtonDemo() {
             Multiline3SlotButton(enabled = false)
         }
         item {
-            Multiline3SlotButton(enabled = true, icon = { StandardIcon() })
+            Multiline3SlotButton(enabled = true, icon = { StandardIcon(ButtonDefaults.IconSize) })
         }
         item {
-            Multiline3SlotButton(enabled = false, icon = { StandardIcon() })
+            Multiline3SlotButton(enabled = false, icon = { StandardIcon(ButtonDefaults.IconSize) })
         }
     }
 }
@@ -310,13 +310,17 @@ fun AvatarButtonDemo() {
 @Composable
 private fun AvatarButton(enabled: Boolean) =
     MultilineButton(
-        enabled = enabled, icon = { AvatarIcon() }, label = { Text("Primary text") }
+        enabled = enabled,
+        colors = ButtonDefaults.filledTonalButtonColors(),
+        icon = { AvatarIcon() },
+        label = { Text("Primary text") }
     )
 
 @Composable
 private fun Avatar3SlotButton(enabled: Boolean) =
     Multiline3SlotButton(
         enabled = enabled,
+        colors = ButtonDefaults.filledTonalButtonColors(),
         icon = { AvatarIcon() },
         label = { Text("Primary text") },
         secondaryLabel = { Text("Secondary label") }
@@ -325,6 +329,7 @@ private fun Avatar3SlotButton(enabled: Boolean) =
 @Composable
 private fun MultilineButton(
     enabled: Boolean,
+    colors: ButtonColors = ButtonDefaults.filledButtonColors(),
     icon: (@Composable BoxScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit = {
         Text(
@@ -338,13 +343,15 @@ private fun MultilineButton(
         onClick = { /* Do something */ },
         icon = icon,
         label = label,
-        enabled = enabled
+        enabled = enabled,
+        colors = colors,
     )
 }
 
 @Composable
 private fun Multiline3SlotButton(
     enabled: Boolean,
+    colors: ButtonColors = ButtonDefaults.filledButtonColors(),
     icon: (@Composable BoxScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit = {
         Text(
@@ -366,24 +373,7 @@ private fun Multiline3SlotButton(
         icon = icon,
         label = label,
         secondaryLabel = secondaryLabel,
-        enabled = enabled
-    )
-}
-
-@Composable
-private fun StandardIcon() {
-    Icon(
-        Icons.Filled.Favorite,
-        contentDescription = "Favorite icon",
-        modifier = Modifier.size(ButtonDefaults.IconSize)
-    )
-}
-
-@Composable
-private fun AvatarIcon() {
-    Icon(
-        Icons.Filled.AccountCircle,
-        contentDescription = "Account",
-        modifier = Modifier.size(ButtonDefaults.LargeIconSize)
+        enabled = enabled,
+        colors = colors,
     )
 }

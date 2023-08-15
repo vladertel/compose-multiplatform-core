@@ -55,7 +55,7 @@ public interface Timer : Thing {
   public override fun toBuilder(): Builder<*>
 
   public companion object {
-    /** Returns a default implementation of [Builder] with no properties set. */
+    /** Returns a default implementation of [Builder]. */
     @JvmStatic @Document.BuilderProducer public fun Builder(): Builder<*> = TimerImpl.Builder()
   }
 
@@ -79,6 +79,10 @@ public interface Timer : Thing {
  *
  * Allows for extension like:
  * ```kt
+ * @Document(
+ *   name = "MyTimer",
+ *   parent = [Timer::class],
+ * )
  * class MyTimer internal constructor(
  *   timer: Timer,
  *   val foo: String,
@@ -87,6 +91,8 @@ public interface Timer : Thing {
  *   MyTimer,
  *   MyTimer.Builder
  * >(timer) {
+ *
+ *   // No need to implement equals(), hashCode(), toString() or toBuilder()
  *
  *   override val selfTypeName =
  *     "MyTimer"
@@ -113,10 +119,10 @@ public interface Timer : Thing {
 public abstract class AbstractTimer<
   Self : AbstractTimer<Self, Builder>, Builder : AbstractTimer.Builder<Builder, Self>>
 internal constructor(
-  public final override val namespace: String?,
+  public final override val namespace: String,
   public final override val duration: Duration?,
   public final override val disambiguatingDescription: DisambiguatingDescription?,
-  public final override val identifier: String?,
+  public final override val identifier: String,
   public final override val name: Name?,
 ) : Timer {
   /**
@@ -180,7 +186,7 @@ internal constructor(
 
   public final override fun toString(): String {
     val attributes = mutableMapOf<String, String>()
-    if (namespace != null) {
+    if (namespace.isNotEmpty()) {
       attributes["namespace"] = namespace
     }
     if (duration != null) {
@@ -190,7 +196,7 @@ internal constructor(
       attributes["disambiguatingDescription"] =
         disambiguatingDescription.toString(includeWrapperName = false)
     }
-    if (identifier != null) {
+    if (identifier.isNotEmpty()) {
       attributes["identifier"] = identifier
     }
     if (name != null) {
@@ -212,10 +218,13 @@ internal constructor(
    *     MyTimer.Builder>(...) {
    *
    *   class Builder
-   *   : Builder<
+   *   : AbstractTimer.Builder<
    *       Builder,
    *       MyTimer
    *   >() {
+   *
+   *     // No need to implement equals(), hashCode(), toString() or build()
+   *
    *     private var foo: String? = null
    *     private val bars = mutableListOf<Int>()
    *
@@ -269,13 +278,13 @@ internal constructor(
      */
     @get:Suppress("GetterOnBuilder") protected abstract val additionalProperties: Map<String, Any?>
 
-    private var namespace: String? = null
+    private var namespace: String = ""
 
     private var duration: Duration? = null
 
     private var disambiguatingDescription: DisambiguatingDescription? = null
 
-    private var identifier: String? = null
+    private var identifier: String = ""
 
     private var name: Name? = null
 
@@ -292,7 +301,7 @@ internal constructor(
     public final override fun build(): Built =
       buildFromTimer(TimerImpl(namespace, duration, disambiguatingDescription, identifier, name))
 
-    public final override fun setNamespace(namespace: String?): Self {
+    public final override fun setNamespace(namespace: String): Self {
       this.namespace = namespace
       return this as Self
     }
@@ -309,7 +318,7 @@ internal constructor(
       return this as Self
     }
 
-    public final override fun setIdentifier(text: String?): Self {
+    public final override fun setIdentifier(text: String): Self {
       this.identifier = text
       return this as Self
     }
@@ -347,8 +356,8 @@ internal constructor(
     @Suppress("BuilderSetStyle")
     public final override fun toString(): String {
       val attributes = mutableMapOf<String, String>()
-      if (namespace != null) {
-        attributes["namespace"] = namespace!!
+      if (namespace.isNotEmpty()) {
+        attributes["namespace"] = namespace
       }
       if (duration != null) {
         attributes["duration"] = duration!!.toString()
@@ -357,8 +366,8 @@ internal constructor(
         attributes["disambiguatingDescription"] =
           disambiguatingDescription!!.toString(includeWrapperName = false)
       }
-      if (identifier != null) {
-        attributes["identifier"] = identifier!!
+      if (identifier.isNotEmpty()) {
+        attributes["identifier"] = identifier
       }
       if (name != null) {
         attributes["name"] = name!!.toString(includeWrapperName = false)
@@ -379,10 +388,10 @@ private class TimerImpl : AbstractTimer<TimerImpl, TimerImpl.Builder> {
     get() = emptyMap()
 
   public constructor(
-    namespace: String?,
+    namespace: String,
     duration: Duration?,
     disambiguatingDescription: DisambiguatingDescription?,
-    identifier: String?,
+    identifier: String,
     name: Name?,
   ) : super(namespace, duration, disambiguatingDescription, identifier, name)
 

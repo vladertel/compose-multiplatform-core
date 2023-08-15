@@ -874,7 +874,9 @@ package androidx.car.app.messaging {
 package androidx.car.app.messaging.model {
 
   @SuppressCompatibility @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.ExperimentalCarApi @androidx.car.app.annotations.RequiresCarApi(7) public class CarMessage {
-    method public androidx.car.app.model.CarText getBody();
+    method public androidx.car.app.model.CarText? getBody();
+    method public String? getMultimediaMimeType();
+    method public android.net.Uri? getMultimediaUri();
     method public long getReceivedTimeEpochMillis();
     method public androidx.core.app.Person? getSender();
     method public boolean isRead();
@@ -883,7 +885,9 @@ package androidx.car.app.messaging.model {
   public static final class CarMessage.Builder {
     ctor public CarMessage.Builder();
     method public androidx.car.app.messaging.model.CarMessage build();
-    method public androidx.car.app.messaging.model.CarMessage.Builder setBody(androidx.car.app.model.CarText);
+    method public androidx.car.app.messaging.model.CarMessage.Builder setBody(androidx.car.app.model.CarText?);
+    method public androidx.car.app.messaging.model.CarMessage.Builder setMultimediaMimeType(String?);
+    method public androidx.car.app.messaging.model.CarMessage.Builder setMultimediaUri(android.net.Uri?);
     method public androidx.car.app.messaging.model.CarMessage.Builder setRead(boolean);
     method public androidx.car.app.messaging.model.CarMessage.Builder setReceivedTimeEpochMillis(long);
     method public androidx.car.app.messaging.model.CarMessage.Builder setSender(androidx.core.app.Person?);
@@ -900,6 +904,7 @@ package androidx.car.app.messaging.model {
   }
 
   @SuppressCompatibility @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.ExperimentalCarApi @androidx.car.app.annotations.RequiresCarApi(7) public class ConversationItem implements androidx.car.app.model.Item {
+    method public java.util.List<androidx.car.app.model.Action!> getActions();
     method public androidx.car.app.messaging.model.ConversationCallbackDelegate getConversationCallbackDelegate();
     method public androidx.car.app.model.CarIcon? getIcon();
     method public String getId();
@@ -912,6 +917,7 @@ package androidx.car.app.messaging.model {
   public static final class ConversationItem.Builder {
     ctor public ConversationItem.Builder();
     ctor public ConversationItem.Builder(androidx.car.app.messaging.model.ConversationItem);
+    method public androidx.car.app.messaging.model.ConversationItem.Builder addAction(androidx.car.app.model.Action);
     method public androidx.car.app.messaging.model.ConversationItem build();
     method public androidx.car.app.messaging.model.ConversationItem.Builder setConversationCallback(androidx.car.app.messaging.model.ConversationCallback);
     method public androidx.car.app.messaging.model.ConversationItem.Builder setGroupConversation(boolean);
@@ -1049,11 +1055,13 @@ package androidx.car.app.model {
     field public static final androidx.car.app.model.CarIcon ALERT;
     field public static final androidx.car.app.model.CarIcon APP_ICON;
     field public static final androidx.car.app.model.CarIcon BACK;
+    field @androidx.car.app.annotations.RequiresCarApi(7) public static final androidx.car.app.model.CarIcon COMPOSE_MESSAGE;
     field public static final androidx.car.app.model.CarIcon ERROR;
     field @androidx.car.app.annotations.RequiresCarApi(2) public static final androidx.car.app.model.CarIcon PAN;
     field public static final int TYPE_ALERT = 4; // 0x4
     field public static final int TYPE_APP_ICON = 5; // 0x5
     field public static final int TYPE_BACK = 3; // 0x3
+    field public static final int TYPE_COMPOSE_MESSAGE = 8; // 0x8
     field public static final int TYPE_CUSTOM = 1; // 0x1
     field public static final int TYPE_ERROR = 6; // 0x6
     field public static final int TYPE_PAN = 7; // 0x7
@@ -1860,8 +1868,9 @@ package androidx.car.app.navigation.model {
 
   @SuppressCompatibility @androidx.car.app.annotations.CarProtocol @androidx.car.app.annotations.ExperimentalCarApi @androidx.car.app.annotations.RequiresCarApi(7) public final class MapWithContentTemplate implements androidx.car.app.model.Template {
     method public androidx.car.app.model.ActionStrip? getActionStrip();
-    method public androidx.car.app.model.Template getContentTemplate();
+    method public androidx.car.app.model.Template? getContentTemplate();
     method public androidx.car.app.navigation.model.MapController? getMapController();
+    method public boolean isLoading();
   }
 
   public static final class MapWithContentTemplate.Builder {
@@ -1869,6 +1878,7 @@ package androidx.car.app.navigation.model {
     method public androidx.car.app.navigation.model.MapWithContentTemplate build();
     method public androidx.car.app.navigation.model.MapWithContentTemplate.Builder setActionStrip(androidx.car.app.model.ActionStrip);
     method public androidx.car.app.navigation.model.MapWithContentTemplate.Builder setContentTemplate(androidx.car.app.model.Template);
+    method public androidx.car.app.navigation.model.MapWithContentTemplate.Builder setLoading(boolean);
     method public androidx.car.app.navigation.model.MapWithContentTemplate.Builder setMapController(androidx.car.app.navigation.model.MapController);
   }
 

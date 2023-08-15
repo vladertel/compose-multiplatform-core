@@ -16,7 +16,7 @@
 
 package androidx.bluetooth
 
-import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothDevice as FwkDevice
 import android.bluetooth.BluetoothGatt.GATT_READ_NOT_PERMITTED
 import android.bluetooth.BluetoothGatt.GATT_SUCCESS
 import android.bluetooth.BluetoothGatt.GATT_WRITE_NOT_PERMITTED
@@ -25,14 +25,14 @@ import androidx.annotation.RestrictTo
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 interface GattServerRequest {
     class ReadCharacteristicRequest internal constructor(
-        private val serverImpl: GattServerImpl,
-        internal val device: BluetoothDevice,
+        private val server: GattServer,
+        internal val device: FwkDevice,
         private val requestId: Int,
         val offset: Int,
         val characteristic: GattCharacteristic
     ) : GattServerRequest {
         fun sendResponse(success: Boolean, value: ByteArray?) {
-            serverImpl.sendResponse(
+            server.sendResponse(
                 device,
                 requestId,
                 if (success) GATT_SUCCESS else GATT_READ_NOT_PERMITTED,
@@ -43,8 +43,8 @@ interface GattServerRequest {
     }
 
     class WriteCharacteristicRequest internal constructor(
-        private val serverImpl: GattServerImpl,
-        internal val device: BluetoothDevice,
+        private val server: GattServer,
+        internal val device: FwkDevice,
         private val requestId: Int,
         val characteristic: GattCharacteristic,
         val isPreparedWrite: Boolean,
@@ -53,7 +53,7 @@ interface GattServerRequest {
         val value: ByteArray?
     ) : GattServerRequest {
         fun sendResponse(success: Boolean) {
-            serverImpl.sendResponse(
+            server.sendResponse(
                 device,
                 requestId,
                 if (success) GATT_SUCCESS else GATT_WRITE_NOT_PERMITTED,

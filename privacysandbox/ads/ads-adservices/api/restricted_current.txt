@@ -100,18 +100,11 @@ package androidx.privacysandbox.ads.adservices.appsetid {
 package androidx.privacysandbox.ads.adservices.common {
 
   public final class AdData {
-    ctor public AdData(optional android.net.Uri renderUri, optional String metadata);
+    ctor public AdData(android.net.Uri renderUri, String metadata);
     method public String getMetadata();
     method public android.net.Uri getRenderUri();
     property public final String metadata;
     property public final android.net.Uri renderUri;
-  }
-
-  @RequiresApi(android.os.Build.VERSION_CODES.TIRAMISU) public static final class AdData.Builder {
-    ctor public AdData.Builder();
-    method public androidx.privacysandbox.ads.adservices.common.AdData build();
-    method public androidx.privacysandbox.ads.adservices.common.AdData.Builder setMetadata(String metadata);
-    method public androidx.privacysandbox.ads.adservices.common.AdData.Builder setRenderUri(android.net.Uri renderUri);
   }
 
   public final class AdSelectionSignals {
@@ -124,6 +117,12 @@ package androidx.privacysandbox.ads.adservices.common {
     ctor public AdTechIdentifier(String identifier);
     method public String getIdentifier();
     property public final String identifier;
+  }
+
+  public sealed interface ExperimentalFeatures {
+  }
+
+  @SuppressCompatibility @kotlin.RequiresOptIn(message="This API is experimental.", level=kotlin.RequiresOptIn.Level.WARNING) public static @interface ExperimentalFeatures.RegisterSourceOptIn {
   }
 
 }
@@ -192,18 +191,11 @@ package androidx.privacysandbox.ads.adservices.customaudience {
   }
 
   public final class TrustedBiddingData {
-    ctor public TrustedBiddingData(optional android.net.Uri trustedBiddingUri, optional java.util.List<java.lang.String> trustedBiddingKeys);
+    ctor public TrustedBiddingData(android.net.Uri trustedBiddingUri, java.util.List<java.lang.String> trustedBiddingKeys);
     method public java.util.List<java.lang.String> getTrustedBiddingKeys();
     method public android.net.Uri getTrustedBiddingUri();
     property public final java.util.List<java.lang.String> trustedBiddingKeys;
     property public final android.net.Uri trustedBiddingUri;
-  }
-
-  @RequiresApi(android.os.Build.VERSION_CODES.TIRAMISU) public static final class TrustedBiddingData.Builder {
-    ctor public TrustedBiddingData.Builder();
-    method public androidx.privacysandbox.ads.adservices.customaudience.TrustedBiddingData build();
-    method public androidx.privacysandbox.ads.adservices.customaudience.TrustedBiddingData.Builder setTrustedBiddingKeys(java.util.List<java.lang.String> trustedBiddingKeys);
-    method public androidx.privacysandbox.ads.adservices.customaudience.TrustedBiddingData.Builder setTrustedBiddingUri(android.net.Uri trustedBiddingUri);
   }
 
 }
@@ -249,6 +241,7 @@ package androidx.privacysandbox.ads.adservices.measurement {
     method @RequiresPermission(android.adservices.common.AdServicesPermissions.ACCESS_ADSERVICES_ATTRIBUTION) public abstract suspend Object? getMeasurementApiStatus(kotlin.coroutines.Continuation<? super java.lang.Integer>);
     method public static final androidx.privacysandbox.ads.adservices.measurement.MeasurementManager? obtain(android.content.Context context);
     method @RequiresPermission(android.adservices.common.AdServicesPermissions.ACCESS_ADSERVICES_ATTRIBUTION) public abstract suspend Object? registerSource(android.net.Uri attributionSource, android.view.InputEvent? inputEvent, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+    method @SuppressCompatibility @RequiresPermission(android.adservices.common.AdServicesPermissions.ACCESS_ADSERVICES_ATTRIBUTION) @androidx.privacysandbox.ads.adservices.common.ExperimentalFeatures.RegisterSourceOptIn public abstract suspend Object? registerSource(androidx.privacysandbox.ads.adservices.measurement.SourceRegistrationRequest request, kotlin.coroutines.Continuation<? super kotlin.Unit>);
     method @RequiresPermission(android.adservices.common.AdServicesPermissions.ACCESS_ADSERVICES_ATTRIBUTION) public abstract suspend Object? registerTrigger(android.net.Uri trigger, kotlin.coroutines.Continuation<? super kotlin.Unit>);
     method @RequiresPermission(android.adservices.common.AdServicesPermissions.ACCESS_ADSERVICES_ATTRIBUTION) public abstract suspend Object? registerWebSource(androidx.privacysandbox.ads.adservices.measurement.WebSourceRegistrationRequest request, kotlin.coroutines.Continuation<? super kotlin.Unit>);
     method @RequiresPermission(android.adservices.common.AdServicesPermissions.ACCESS_ADSERVICES_ATTRIBUTION) public abstract suspend Object? registerWebTrigger(androidx.privacysandbox.ads.adservices.measurement.WebTriggerRegistrationRequest request, kotlin.coroutines.Continuation<? super kotlin.Unit>);
@@ -259,6 +252,20 @@ package androidx.privacysandbox.ads.adservices.measurement {
 
   public static final class MeasurementManager.Companion {
     method public androidx.privacysandbox.ads.adservices.measurement.MeasurementManager? obtain(android.content.Context context);
+  }
+
+  @SuppressCompatibility @androidx.privacysandbox.ads.adservices.common.ExperimentalFeatures.RegisterSourceOptIn public final class SourceRegistrationRequest {
+    ctor public SourceRegistrationRequest(java.util.List<? extends android.net.Uri> registrationUris, optional android.view.InputEvent? inputEvent);
+    method public android.view.InputEvent? getInputEvent();
+    method public java.util.List<android.net.Uri> getRegistrationUris();
+    property public final android.view.InputEvent? inputEvent;
+    property public final java.util.List<android.net.Uri> registrationUris;
+  }
+
+  public static final class SourceRegistrationRequest.Builder {
+    ctor public SourceRegistrationRequest.Builder(java.util.List<? extends android.net.Uri> registrationUris);
+    method public androidx.privacysandbox.ads.adservices.measurement.SourceRegistrationRequest build();
+    method public androidx.privacysandbox.ads.adservices.measurement.SourceRegistrationRequest.Builder setInputEvent(android.view.InputEvent inputEvent);
   }
 
   @RequiresApi(android.os.Build.VERSION_CODES.TIRAMISU) public final class WebSourceParams {

@@ -92,6 +92,101 @@ class XAnnotationTest(
     }
 
     @Test
+    fun typeParameterAnnotationsOnFunction() {
+        val kotlinSource = Source.kotlin(
+            "foo.bar.Subject.kt",
+            """
+            package foo.bar
+            import kotlin.collections.*
+
+            @Target(AnnotationTarget.TYPE)
+            annotation class SomeAnnotation(val value: String)
+
+            class Subject {
+                fun myFunction(): Map<@SomeAnnotation("someString") Int, Int> {
+                    return emptyMap()
+                }
+            }
+            """.trimIndent()
+        )
+        val javaSource = Source.java(
+            "foo.bar.Subject",
+            """
+            package foo.bar;
+            import java.lang.annotation.ElementType;
+            import java.lang.annotation.Target;
+            import java.util.Map;
+            import java.util.HashMap;
+
+            @Target(ElementType.TYPE_USE)
+            @interface SomeAnnotation {
+                String value();
+            }
+
+            class Subject {
+                Map<@SomeAnnotation("someString") Integer, Integer> myFunction() {
+                    return new HashMap<>();
+                }
+            }
+            """.trimIndent()
+        )
+
+        listOf(javaSource, kotlinSource).forEach { source ->
+            runTest(
+                sources = listOf(source)
+            ) { invocation ->
+                if (!invocation.isKsp) return@runTest
+                val subject = invocation.processingEnv.requireTypeElement(
+                    "foo.bar.Subject")
+                val method = subject.getMethodByJvmName("myFunction")
+                val firstArg = method.returnType.typeArguments.first()
+                val annotation = firstArg.getAllAnnotations().first()
+                assertThat(
+                    annotation.name
+                ).isEqualTo("SomeAnnotation")
+
+                assertThat(
+                    annotation.annotationValues.first().value
+                ).isEqualTo("someString")
+            }
+        }
+    }
+
+    @Test
+    fun testJvmNameAnnotationValue() {
+        val kotlinSrc = Source.kotlin(
+            "MyAnnotation.kt",
+            """
+            @Target(AnnotationTarget.CLASS)
+            annotation class MyAnnotation(
+                @get:JvmName("stringParameter")
+                val stringParam: String,
+                val intParam: Int,
+                @get:JvmName("longParameter")
+                val longParam: Long
+            )
+            """.trimIndent()
+        )
+        val javaSrc = Source.java(
+            "Foo",
+            """
+            @MyAnnotation(stringParameter = "1", intParam = 2, longParameter = 3)
+            public class Foo {}
+            """.trimIndent()
+        )
+        runTest(sources = listOf(javaSrc, kotlinSrc)) { invocation ->
+            val typeElement = invocation.processingEnv.requireTypeElement("Foo")
+            val annotation =
+                typeElement.getAllAnnotations().single { it.qualifiedName == "MyAnnotation" }
+            assertThat(
+                annotation.annotationValues.map { it.value }
+            ).containsExactly(
+                "1", 2, 3.toLong()
+            ).inOrder()
+        }
+    }
+
+    @Test
     fun readsAnnotationsDeclaredInSources() {
         val source = Source.kotlin(
             "MyClass.kt",
@@ -612,6 +707,20 @@ class XAnnotationTest(
                     invocation.processingEnv.requireTypeElement(it)
                 }.forEach { typeElement ->
                     val annotation = typeElement.requireAnnotation<JavaAnnotationWithDefaults>()
+
+                    assertThat(annotation.defaultValues.map { it.name })
+                        .containsExactly(
+                            "stringVal",
+                            "stringArrayVal",
+                            "typeVal",
+                            "typeArrayVal",
+                            "intVal",
+                            "intArrayVal",
+                            "enumVal",
+                            "enumArrayVal",
+                            "otherAnnotationVal",
+                            "otherAnnotationArrayVal"
+                        ).inOrder()
 
                     assertThat(annotation.get<Int>("intVal"))
                         .isEqualTo(3)

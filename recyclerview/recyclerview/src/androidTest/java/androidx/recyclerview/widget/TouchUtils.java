@@ -173,7 +173,9 @@ class TouchUtils {
     /** Creates a {@link MotionEvent} with provided input and motion values. */
     static MotionEvent createMotionEvent(
             int inputDeviceId, int inputSource, int axis, int axisValue) {
-        MotionEvent.PointerProperties[] pointerProperties = {new MotionEvent.PointerProperties()};
+        MotionEvent.PointerProperties props = new MotionEvent.PointerProperties();
+        props.id = 0;
+        MotionEvent.PointerProperties[] pointerProperties = {props};
         MotionEvent.PointerCoords coords = new MotionEvent.PointerCoords();
         coords.setAxisValue(axis, axisValue);
         MotionEvent.PointerCoords[] pointerCoords = {coords};
@@ -319,6 +321,11 @@ class TouchUtils {
             event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, x, y, 0);
             inst.sendPointerSync(event);
         }
+
+        // Dwell at the end, because this is a drag, not a fling
+        eventTime += 500;
+        event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, x, y, 0);
+        inst.sendPointerSync(event);
         eventTime++;
         event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_UP, x, y, 0);
         inst.sendPointerSync(event);

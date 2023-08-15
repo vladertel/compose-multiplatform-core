@@ -24,14 +24,16 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.io.FileUtil
 import java.io.File
 import java.net.URLClassLoader
+import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
 import org.jetbrains.kotlin.cli.jvm.config.configureJdkClasspathRoots
 import org.jetbrains.kotlin.codegen.GeneratedClassLoader
-import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import org.jetbrains.kotlin.compiler.plugin.registerExtensionsForTest
-import org.jetbrains.kotlin.config.CommonConfigurationKeys
+import org.jetbrains.kotlin.config.ApiVersion
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.JVMConfigurationKeys
+import org.jetbrains.kotlin.config.LanguageVersion
+import org.jetbrains.kotlin.config.LanguageVersionSettingsImpl
+import org.jetbrains.kotlin.config.languageVersionSettings
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.junit.After
 import org.junit.BeforeClass
@@ -105,15 +107,19 @@ abstract class AbstractCompilerTest(val useFir: Boolean) {
 
     protected open fun CompilerConfiguration.updateConfiguration() {}
 
-    @OptIn(ExperimentalCompilerApi::class)
     private fun createCompilerFacade(
         additionalPaths: List<File> = listOf(),
         registerExtensions: (Project.(CompilerConfiguration) -> Unit)? = null
     ) = KotlinCompilerFacade.create(
         testRootDisposable,
         updateConfiguration = {
+            val languageVersion =
+                if (useFir) LanguageVersion.KOTLIN_2_0 else LanguageVersion.KOTLIN_1_9
+            languageVersionSettings = LanguageVersionSettingsImpl(
+                languageVersion,
+                ApiVersion.createByLanguageVersion(languageVersion),
+            )
             updateConfiguration()
-            put(CommonConfigurationKeys.USE_FIR, useFir)
             addJvmClasspathRoots(additionalPaths)
             addJvmClasspathRoots(defaultClassPathRoots)
             if (!getBoolean(JVMConfigurationKeys.NO_JDK) &&
@@ -124,11 +130,11 @@ abstract class AbstractCompilerTest(val useFir: Boolean) {
             configureJdkClasspathRoots()
         },
         registerExtensions = registerExtensions ?: { configuration ->
-            registerExtensionsForTest(this, configuration) {
-                with(ComposePluginRegistrar()) {
-                    registerExtensions(it)
-                }
-            }
+            ComposePluginRegistrar.registerCommonExtensions(this)
+            IrGenerationExtension.registerExtension(
+                this,
+                ComposePluginRegistrar.createComposeIrExtension(configuration)
+            )
         }
     )
 

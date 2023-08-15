@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
+import android.telecom.DisconnectCause
 import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.util.Log
@@ -117,6 +118,7 @@ abstract class BaseTelecomTest {
             ManagedConnectionService.mPendingConnectionRequests.clear()
         }
         MockInCallService.destroyAllCalls()
+        TestUtils.runShellCommand(TestUtils.COMMAND_CLEANUP_STUCK_CALLS)
     }
 
     private fun isInCallFromTelDumpsys(telecomDumpsysString: String): Pair<Boolean, String> {
@@ -146,11 +148,16 @@ abstract class BaseTelecomTest {
         setCallback: Boolean = true,
         assertBlock: CallControlScope.() -> (Unit)
     ) {
+        Log.i(TestUtils.LOG_TAG, "assertWithinTimeout_addCall")
+        var callControlScope: CallControlScope? = null
         try {
             withTimeout(TestUtils.WAIT_ON_ASSERTS_TO_FINISH_TIMEOUT) {
                 mCallsManager.addCall(attributes) {
+                    callControlScope = this
                     if (setCallback) {
                         setCallback(TestUtils.mCallControlCallbacksImpl)
+                        Log.i(TestUtils.LOG_TAG, "assertWithinTimeout_addCall: setCallback " +
+                            "to ${TestUtils.mCallControlCallbacksImpl}")
                     }
                     assertBlock()
                 }
@@ -161,6 +168,7 @@ abstract class BaseTelecomTest {
         } catch (timeout: TimeoutCancellationException) {
             Log.i(TestUtils.LOG_TAG, "assertWithinTimeout: reached timeout; dumping telecom")
             TestUtils.dumpTelecom()
+            callControlScope?.disconnect(DisconnectCause(DisconnectCause.LOCAL, "timeout in test"))
             Assert.fail(TestUtils.VERIFICATION_TIMEOUT_MSG)
         }
     }

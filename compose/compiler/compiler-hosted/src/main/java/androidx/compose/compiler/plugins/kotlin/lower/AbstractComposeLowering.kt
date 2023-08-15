@@ -70,6 +70,7 @@ import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.expressions.IrMemberAccessExpression
 import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
+import org.jetbrains.kotlin.ir.expressions.IrTypeOperatorCall
 import org.jetbrains.kotlin.ir.expressions.IrVararg
 import org.jetbrains.kotlin.ir.expressions.impl.IrBlockImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrBranchImpl
@@ -541,6 +542,19 @@ abstract class AbstractComposeLowering(
         )
     }
 
+    protected fun irReturnVar(
+        target: IrReturnTargetSymbol,
+        value: IrVariable,
+    ): IrExpression {
+        return IrReturnImpl(
+            value.initializer?.startOffset ?: UNDEFINED_OFFSET,
+            value.initializer?.endOffset ?: UNDEFINED_OFFSET,
+            value.type,
+            target,
+            irGet(value)
+        )
+    }
+
     protected fun irEqual(lhs: IrExpression, rhs: IrExpression): IrExpression {
         return irCall(
             this.context.irBuiltIns.eqeqeqSymbol,
@@ -886,7 +900,8 @@ abstract class AbstractComposeLowering(
                     else -> false
                 }
             }
-            is IrFunctionExpression ->
+            is IrFunctionExpression,
+            is IrTypeOperatorCall ->
                 context.irTrace[ComposeWritableSlices.IS_STATIC_FUNCTION_EXPRESSION, this] ?: false
             is IrGetField ->
                 // K2 sometimes produces `IrGetField` for reads from constant properties

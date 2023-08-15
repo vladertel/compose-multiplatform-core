@@ -38,9 +38,9 @@ import androidx.camera.core.impl.utils.executor.CameraXExecutors.directExecutor
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor
 import androidx.camera.testing.fakes.FakeCamera
 import androidx.camera.testing.fakes.FakeCameraControl
-import androidx.camera.testing.fakes.FakeLifecycleOwner
-import androidx.camera.testing.fakes.FakeSurfaceEffect
-import androidx.camera.testing.fakes.FakeSurfaceProcessor
+import androidx.camera.testing.impl.fakes.FakeLifecycleOwner
+import androidx.camera.testing.impl.fakes.FakeSurfaceEffect
+import androidx.camera.testing.impl.fakes.FakeSurfaceProcessor
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
 import androidx.camera.view.CameraController.COORDINATE_SYSTEM_VIEW_REFERENCED
@@ -69,6 +69,8 @@ class CameraControllerTest {
         const val ZOOM_RATIO = .5F
         const val TORCH_ENABLED = true
     }
+
+    private val previewViewTransform = Matrix().also { it.postRotate(90F) }
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private lateinit var controller: LifecycleCameraController
@@ -147,6 +149,26 @@ class CameraControllerTest {
         assertThat(linearZoomFuture.isDone).isTrue()
         assertThat(zoomRatioFuture.isDone).isTrue()
         assertThat(torchFuture.isDone).isTrue()
+    }
+
+    @Test
+    fun unbindController_canSetPendingValueAgain() {
+        // Arrange: set pending values
+        var linearZoomFuture = controller.setLinearZoom(LINEAR_ZOOM)
+
+        // Act: complete initialization.
+        completeCameraInitialization()
+        // Assert: pending value is set.
+        assertThat(fakeCameraControl.linearZoom).isEqualTo(LINEAR_ZOOM)
+        assertThat(linearZoomFuture.isDone).isTrue()
+
+        // Act: unbind controller, set pending value again and rebind.
+        controller.unbind()
+        linearZoomFuture = controller.setLinearZoom(1F)
+        controller.bindToLifecycle(FakeLifecycleOwner())
+        // Assert: pending value is set to new value.
+        assertThat(fakeCameraControl.linearZoom).isEqualTo(1F)
+        assertThat(linearZoomFuture.isDone).isTrue()
     }
 
     @Test
@@ -231,14 +253,15 @@ class CameraControllerTest {
 
     @Test
     fun viewTransform_valueIsPassedToAnalyzer() {
-        val previewTransform = Matrix()
+        // Non-null value passed to analyzer.
         assertThat(
             getPreviewTransformPassedToAnalyzer(
                 COORDINATE_SYSTEM_VIEW_REFERENCED,
-                previewTransform
+                previewViewTransform
             )
-        ).isEqualTo(previewTransform)
+        ).isEqualTo(previewViewTransform)
 
+        // Null value passed to analyzer.
         assertThat(
             getPreviewTransformPassedToAnalyzer(
                 COORDINATE_SYSTEM_VIEW_REFERENCED,
@@ -249,19 +272,21 @@ class CameraControllerTest {
 
     @Test
     fun originalTransform_valueIsNotPassedToAnalyzer() {
+        // Value not passed to analyzer. Analyzer still has it's original value which is identity
+        // matrix.
         assertThat(
             getPreviewTransformPassedToAnalyzer(
                 COORDINATE_SYSTEM_ORIGINAL,
-                Matrix()
-            )
-        ).isNull()
+                previewViewTransform
+            )!!.isIdentity
+        ).isTrue()
     }
 
     private fun getPreviewTransformPassedToAnalyzer(
         coordinateSystem: Int,
         previewTransform: Matrix?
     ): Matrix? {
-        var matrix: Matrix? = null
+        var matrix: Matrix? = Matrix()
         val analyzer = object : ImageAnalysis.Analyzer {
             override fun analyze(image: ImageProxy) {
                 // no-op
