@@ -68,7 +68,7 @@ internal actual class WeakReference<T : Any> actual constructor(reference: T) :
 internal actual class SnapshotContextElementImpl actual constructor(
     private val snapshot: Snapshot
 ) : SnapshotContextElement, ThreadContextElement<Snapshot?> {
-    override val key: CoroutineContext.Key<*>
+    actual override val key: CoroutineContext.Key<*>
         get() = SnapshotContextElement
 
     override fun updateThreadContext(context: CoroutineContext): Snapshot? =

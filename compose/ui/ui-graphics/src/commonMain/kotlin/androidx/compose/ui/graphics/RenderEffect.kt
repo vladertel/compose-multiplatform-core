@@ -60,7 +60,9 @@ expect class BlurEffect(
     radiusX: Float,
     radiusY: Float = radiusX,
     edgeTreatment: TileMode = TileMode.Clamp
-) : RenderEffect
+) : RenderEffect {
+    override fun isSupported(): Boolean
+}
 
 /**
  * Create an [OffsetEffect] that implicitly offsets the contents of the [GraphicsLayerScope] it is
@@ -77,4 +79,6 @@ fun OffsetEffect(offsetX: Float, offsetY: Float) = OffsetEffect(null, Offset(off
 expect class OffsetEffect(
     renderEffect: RenderEffect?,
     offset: Offset
-) : RenderEffect
+) : RenderEffect {
+    override fun isSupported(): Boolean
+}

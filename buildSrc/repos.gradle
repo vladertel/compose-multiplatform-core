@@ -59,6 +59,9 @@ def addMavenRepositories(RepositoryHandler handler) {
     }
     def isJBFork = true
     if (isJBFork) {
+        handler.maven {
+            url("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/dev/")
+        }
         handler.mavenLocal()
         handler.mavenCentral()
         handler.google()

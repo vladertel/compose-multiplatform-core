@@ -139,8 +139,15 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
             project.tasks.withType(KotlinJsCompile::class.java).configureEach { compile ->
                 compile.kotlinOptions.freeCompilerArgs += listOf(
-                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true"
+                    "-P", "plugin:androidx.compose.compiler.plugins.kotlin:generateDecoys=true",
+                    "-Xklib-enable-signature-clash-checks=false",
                 )
+            }
+            project.tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile>().configureEach {
+                it.kotlinOptions {
+                    freeCompilerArgs += "-opt-in=kotlinx.cinterop.ExperimentalForeignApi"
+                    freeCompilerArgs += "-opt-in=kotlin.experimental.ExperimentalNativeApi"
+                }
             }
         }
 
@@ -359,17 +366,19 @@ private fun configureComposeCompilerPlugin(
         val configuration = project.configurations.create(COMPILER_PLUGIN_CONFIGURATION)
         // Add Compose compiler plugin to kotlinPlugin configuration, making sure it works
         // for Playground builds as well
-        project.dependencies.add(
-            COMPILER_PLUGIN_CONFIGURATION,
-            if (ProjectLayoutType.isPlayground(project)) {
-                AndroidXPlaygroundRootImplPlugin.projectOrArtifact(
-                    project.rootProject,
-                    ":compose:compiler:compiler"
-                )
-            } else {
-                project.rootProject.resolveProject(":compose:compiler:compiler")
-            }
-        )
+        project.dependencies.add(COMPILER_PLUGIN_CONFIGURATION, "org.jetbrains.compose.compiler:compiler:0.0.0-1.9.20-dev-9349")
+//        project.dependencies.add(COMPILER_PLUGIN_CONFIGURATION, "org.jetbrains.compose.compiler:compiler:1.5.0")
+//        project.dependencies.add(
+//            COMPILER_PLUGIN_CONFIGURATION,
+//            if (ProjectLayoutType.isPlayground(project)) {
+//                AndroidXPlaygroundRootImplPlugin.projectOrArtifact(
+//                    project.rootProject,
+//                    ":compose:compiler:compiler"
+//                )
+//            } else {
+//                project.rootProject.resolveProject(":compose:compiler:compiler")
+//            }
+//        )
         val kotlinPlugin = configuration.incoming.artifactView { view ->
             view.attributes { attributes ->
                 attributes.attribute(
@@ -402,6 +411,7 @@ private fun configureComposeCompilerPlugin(
             // It used to be configured with `onlyIf` in upstream too.
             compile.onlyIf {
                 compile.kotlinOptions.freeCompilerArgs += "-Xplugin=${kotlinPlugin.first()}"
+                compile.kotlinOptions.freeCompilerArgs += listOf("-P", "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=true")
 
                 if (enableMetricsProvider.orNull == "true") {
                     val metricsDest = File(libraryMetricsDirectory, "compose")
