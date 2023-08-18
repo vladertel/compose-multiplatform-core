@@ -100,7 +100,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         }
     }
 
-    override operator fun invoke(c: Composer, changed: Int): Any? {
+    actual override operator fun invoke(c: Composer, changed: Int): Any? {
         val c = c.startRestartGroup(key)
         trackRead(c)
         val dirty = changed or if (c.changed(this)) differentBits(0) else sameBits(0)
@@ -109,7 +109,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(p1: Any?, c: Composer, changed: Int): Any? {
+    actual override operator fun invoke(p1: Any?, c: Composer, changed: Int): Any? {
         val c = c.startRestartGroup(key)
         trackRead(c)
         val dirty = changed or if (c.changed(this)) differentBits(1) else sameBits(1)
@@ -128,7 +128,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(p1: Any?, p2: Any?, c: Composer, changed: Int): Any? {
+    actual override operator fun invoke(p1: Any?, p2: Any?, c: Composer, changed: Int): Any? {
         val c = c.startRestartGroup(key)
         trackRead(c)
         val dirty = changed or if (c.changed(this)) differentBits(2) else sameBits(2)
@@ -142,7 +142,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(p1: Any?, p2: Any?, p3: Any?, c: Composer, changed: Int): Any? {
+    actual override operator fun invoke(p1: Any?, p2: Any?, p3: Any?, c: Composer, changed: Int): Any? {
         val c = c.startRestartGroup(key)
         trackRead(c)
         val dirty = changed or if (c.changed(this)) differentBits(3) else sameBits(3)
@@ -165,7 +165,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -199,7 +199,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -236,7 +236,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -276,7 +276,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -319,7 +319,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -365,7 +365,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -414,7 +414,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -469,7 +469,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -527,7 +527,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -588,7 +588,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -669,7 +669,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -754,7 +754,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -843,7 +843,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -936,7 +936,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
@@ -1033,7 +1033,7 @@ internal actual class ComposableLambdaImpl actual constructor(
         return result
     }
 
-    override operator fun invoke(
+    actual override operator fun invoke(
         p1: Any?,
         p2: Any?,
         p3: Any?,
