@@ -112,7 +112,7 @@ internal actual class SnapshotContextElementImpl actual constructor(
         error("provide SnapshotContextElementImpl when coroutines lib has necessary APIs")
     }
 
-    override val key: CoroutineContext.Key<*>
+    actual override val key: CoroutineContext.Key<*>
         get() = SnapshotContextElement
 }
 
