@@ -32,7 +32,6 @@ import platform.UIKit.*
 import platform.darwin.NSInteger
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.native.ref.WeakReference
 import org.jetbrains.skia.Surface
 import org.jetbrains.skiko.SkikoInputModifiers
 import org.jetbrains.skiko.SkikoKey
