@@ -66,6 +66,7 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
     var delegate: SkikoUIViewDelegate? = null
     var input: IOSSkikoInput? = null
+    var inputTraits: SkikoUITextInputTraits = object : SkikoUITextInputTraits {}
 
     /**
      * Indicates that renderer should wait until the issued command buffer is scheduled for execution, so it can
@@ -83,7 +84,6 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         MTLCreateSystemDefaultDevice() ?: throw IllegalStateException("Metal is not supported on this system")
     private val _metalLayer: CAMetalLayer get() = layer as CAMetalLayer
     private var _pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true }
-    private var _skikoUITextInputTrains: SkikoUITextInputTraits = object : SkikoUITextInputTraits {}
     private var _inputDelegate: UITextInputDelegateProtocol? = null
     private var _currentTextMenuActions: TextActions? = null
     private lateinit var _redrawer: MetalRedrawer
@@ -122,10 +122,8 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     constructor(
         frame: CValue<CGRect> = CGRectNull.readValue(),
         pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true },
-        skikoUITextInputTrains: SkikoUITextInputTraits
     ) : super(frame) {
         _pointInside = pointInside
-        _skikoUITextInputTrains = skikoUITextInputTrains
 
         _redrawer = MetalRedrawer(
             _metalLayer,
@@ -579,16 +577,16 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
             else -> false
         }
 
-    override fun keyboardType(): UIKeyboardType = _skikoUITextInputTrains.keyboardType()
-    override fun keyboardAppearance(): UIKeyboardAppearance = _skikoUITextInputTrains.keyboardAppearance()
-    override fun returnKeyType(): UIReturnKeyType = _skikoUITextInputTrains.returnKeyType()
-    override fun textContentType(): UITextContentType? = _skikoUITextInputTrains.textContentType()
-    override fun isSecureTextEntry(): Boolean = _skikoUITextInputTrains.isSecureTextEntry()
-    override fun enablesReturnKeyAutomatically(): Boolean = _skikoUITextInputTrains.enablesReturnKeyAutomatically()
+    override fun keyboardType(): UIKeyboardType = inputTraits.keyboardType()
+    override fun keyboardAppearance(): UIKeyboardAppearance = inputTraits.keyboardAppearance()
+    override fun returnKeyType(): UIReturnKeyType = inputTraits.returnKeyType()
+    override fun textContentType(): UITextContentType? = inputTraits.textContentType()
+    override fun isSecureTextEntry(): Boolean = inputTraits.isSecureTextEntry()
+    override fun enablesReturnKeyAutomatically(): Boolean = inputTraits.enablesReturnKeyAutomatically()
     override fun autocapitalizationType(): UITextAutocapitalizationType =
-        _skikoUITextInputTrains.autocapitalizationType()
+        inputTraits.autocapitalizationType()
 
-    override fun autocorrectionType(): UITextAutocorrectionType = _skikoUITextInputTrains.autocorrectionType()
+    override fun autocorrectionType(): UITextAutocorrectionType = inputTraits.autocorrectionType()
 
     override fun dictationRecognitionFailed() {
         //todo may be useful

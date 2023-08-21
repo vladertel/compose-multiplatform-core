@@ -388,7 +388,6 @@ internal actual class ComposeWindow : UIViewController {
                     !composeLayer.hitInteropView(point, isTouchEvent = true)
                 }
             },
-            skikoUITextInputTrains = DelegateSkikoUITextInputTraits { attachedComposeContext?.inputTraits }
         )
 
         skikoUIView.translatesAutoresizingMaskIntoConstraints = false
@@ -420,6 +419,7 @@ internal actual class ComposeWindow : UIViewController {
             selectionWillChange = { skikoUIView.selectionWillChange() },
             selectionDidChange = { skikoUIView.selectionDidChange() },
         )
+
         val inputTraits = inputServices.skikoUITextInputTraits
 
         val platform = object : Platform by Platform.Empty {
@@ -482,6 +482,7 @@ internal actual class ComposeWindow : UIViewController {
         )
 
         skikoUIView.input = inputServices.skikoInput
+        skikoUIView.inputTraits = inputTraits
         skikoUIView.delegate = object : SkikoUIViewDelegate {
             override fun onKeyboardEvent(event: SkikoKeyboardEvent) {
                 composeLayer.scene.sendKeyEvent(KeyEvent(event))
