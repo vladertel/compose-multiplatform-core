@@ -229,14 +229,15 @@ internal actual class ComposeWindow : UIViewController {
         }
 
         private fun updateViewBounds(offsetX: Double = 0.0, offsetY: Double = 0.0) {
-            val (width, height) = getViewFrameSize()
             view.layer.setBounds(
-                CGRectMake(
-                    x = offsetX,
-                    y = offsetY,
-                    width = width.toDouble(),
-                    height = height.toDouble()
-                )
+                view.frame.useContents {
+                    CGRectMake(
+                        x = offsetX,
+                        y = offsetY,
+                        width = size.width,
+                        height = size.height
+                    )
+                }
             )
         }
     }
@@ -288,13 +289,21 @@ internal actual class ComposeWindow : UIViewController {
 
         val composeLayer = attachedComposeContext.composeLayer
 
-        val (width, height) = getViewFrameSize()
-        val scale = density.density
-
         composeLayer.density = density
         composeLayer.scene.also {
             it.density = density
-            it.constraints = Constraints(maxWidth = (width * scale).roundToInt(), maxHeight = (height * scale).roundToInt())
+            it.constraints = view.frame.useContents {
+                val scale = density.density
+
+                val calculate = { value: Double ->
+                    (value * scale.toDouble()).roundToInt()
+                }
+
+                Constraints(
+                    maxWidth = calculate(size.width),
+                    maxHeight = calculate(size.height)
+                )
+            }
             attachedComposeContext.view.needRedraw()
         }
     }
@@ -524,11 +533,6 @@ internal actual class ComposeWindow : UIViewController {
 
         attachedComposeContext =
             AttachedComposeContext(composeLayer, skikoUIView, inputTraits, platform)
-    }
-
-    private fun getViewFrameSize(): IntSize {
-        val (width, height) = view.frame().useContents { this.size.width to this.size.height }
-        return IntSize(width.toInt(), height.toInt())
     }
 }
 
