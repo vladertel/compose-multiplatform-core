@@ -108,17 +108,6 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         }
     }
 
-    // merging two constructors might cause a binary incompatibility, which will result in a unclear linking error,
-    // if a project using newer compose depends on an older compose transitively
-    // https://youtrack.jetbrains.com/issue/KT-60399
-    @Suppress("UNUSED") // public API
-    constructor(
-        skiaLayer: IOSSkiaLayer,
-        frame: CValue<CGRect> = CGRectNull.readValue(),
-        pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true }
-    ) : this(skiaLayer, frame, pointInside, skikoUITextInputTrains = object :
-        SkikoUITextInputTraits {})
-
     constructor(
         skiaLayer: IOSSkiaLayer,
         frame: CValue<CGRect> = CGRectNull.readValue(),
