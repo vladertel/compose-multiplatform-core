@@ -41,86 +41,25 @@ import org.jetbrains.skiko.currentNanoTime
 
 // TODO: refactor candidate on iOS, proxies everything and doesn't contain any logic
 internal class IOSComposeLayer(
-    internal val layer: IOSSkiaLayer,
     platform: Platform,
-    private val input: IOSSkikoInput,
+    // Should be set to an actual value by ComposeWindow implementation
+    var density: Density,
+    needRedraw: () -> Unit
 ) {
     private var isDisposed = false
 
-    // Should be set to an actual value by ComposeWindow implementation
-    private var density = Density(1f)
-
-    inner class ComponentImpl : IOSSkikoView {
-        override val input = this@IOSComposeLayer.input
-
-        override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
-            scene.render(canvas, nanoTime)
-        }
-
-        override fun onKeyboardEvent(event: SkikoKeyboardEvent) {
-            if (isDisposed) return
-            scene.sendKeyEvent(KeyEvent(event))
-        }
-
-        @OptIn(ExperimentalComposeUiApi::class)
-        override fun onPointerEvent(event: SkikoPointerEvent) {
-            onPointerEventWithMultitouch(event)
-        }
-
-        @OptIn(ExperimentalComposeUiApi::class)
-        private fun onPointerEventWithMultitouch(event: SkikoPointerEvent) {
-            val scale = density.density
-
-            scene.sendPointerEvent(
-                eventType = event.kind.toCompose(),
-                pointers = event.pointers.map {
-                    ComposeScene.Pointer(
-                        id = PointerId(it.id),
-                        position = Offset(
-                            x = it.x.toFloat() * scale,
-                            y = it.y.toFloat() * scale
-                        ),
-                        pressed = it.pressed,
-                        type = it.device.toCompose(),
-                        pressure = it.pressure.toFloat(),
-                    )
-                },
-                timeMillis = event.timestamp,
-                nativeEvent = event
-            )
-        }
-    }
-
-    private val view = ComponentImpl()
-
-    init {
-        layer.skikoView = view
-    }
-
-    private val scene = ComposeScene(
+    val scene = ComposeScene(
         coroutineContext = getMainDispatcher(),
         platform = platform,
         density = density,
-        invalidate = layer::needRedraw,
+        invalidate = needRedraw,
     )
-
-    fun setDensity(newDensity: Density) {
-        density = newDensity
-        scene.density = newDensity
-    }
 
     fun dispose() {
         check(!isDisposed)
-        layer.detach()
         scene.close()
         _initContent = null
         isDisposed = true
-    }
-
-    fun setSize(width: Int, height: Int) {
-        scene.constraints = Constraints(maxWidth = width, maxHeight = height)
-
-        layer.needRedraw()
     }
 
     fun getActiveFocusRect(): DpRect? {
