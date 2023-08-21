@@ -409,7 +409,7 @@ internal actual class ComposeWindow : UIViewController {
                     override val doubleTapTimeoutMillis: Long get() = 300
                     override val doubleTapMinTimeMillis: Long get() = 40
 
-                    // this value is originating from iOS 16 drag behavior reverse-engenering
+                    // this value is originating from iOS 16 drag behavior reverse engineering
                     override val touchSlop: Float get() = with(density) { 10.dp.toPx() }
                 }
             override val textToolbar = object : TextToolbar {
