@@ -85,7 +85,7 @@ private class AttachedComposeContext(
 ) {
     fun dispose() {
         composeLayer.dispose()
-        view.removeFromSuperview()
+        view.dispose()
     }
 }
 

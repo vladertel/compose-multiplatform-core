@@ -188,8 +188,9 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         _currentTextMenuActions?.selectAll?.invoke()
     }
 
-    internal fun detach() {
+    fun dispose() {
         _redrawer.dispose()
+        removeFromSuperview()
     }
 
     fun load(): SkikoUIView {
