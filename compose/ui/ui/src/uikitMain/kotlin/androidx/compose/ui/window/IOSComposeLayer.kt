@@ -64,12 +64,7 @@ internal class IOSComposeLayer(
 
         @OptIn(ExperimentalComposeUiApi::class)
         override fun onPointerEvent(event: SkikoPointerEvent) {
-            if (supportsMultitouch) {
-                onPointerEventWithMultitouch(event)
-            } else {
-                // macos and web don't work properly when using onPointerEventWithMultitouch
-                onPointerEventNoMultitouch(event)
-            }
+            onPointerEventWithMultitouch(event)
         }
 
         @OptIn(ExperimentalComposeUiApi::class)
@@ -91,21 +86,6 @@ internal class IOSComposeLayer(
                     )
                 },
                 timeMillis = event.timestamp,
-                nativeEvent = event
-            )
-        }
-
-        private fun onPointerEventNoMultitouch(event: SkikoPointerEvent) {
-            val scale = density.density
-            scene.sendPointerEvent(
-                eventType = event.kind.toCompose(),
-                scrollDelta = event.getScrollDelta(),
-                position = Offset(
-                    x = event.x.toFloat() * scale,
-                    y = event.y.toFloat() * scale
-                ),
-                timeMillis = currentMillis(),
-                type = PointerType.Mouse,
                 nativeEvent = event
             )
         }
