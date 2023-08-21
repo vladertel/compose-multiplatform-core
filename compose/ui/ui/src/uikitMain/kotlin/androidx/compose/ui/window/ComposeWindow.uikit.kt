@@ -368,7 +368,7 @@ internal actual class ComposeWindow : UIViewController {
                 }
             },
             skikoUITextInputTrains = DelegateSkikoUITextInputTraits { attachedComposeContext?.inputTraits }
-        ).load()
+        )
 
         skikoUIView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(skikoUIView)

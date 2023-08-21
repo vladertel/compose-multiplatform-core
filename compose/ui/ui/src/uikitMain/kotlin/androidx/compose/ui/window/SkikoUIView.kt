@@ -193,11 +193,6 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         removeFromSuperview()
     }
 
-    fun load(): SkikoUIView {
-        // TODO: redundant, remove in next refactor pass
-        return this
-    }
-
     override fun didMoveToWindow() {
         super.didMoveToWindow()
 
