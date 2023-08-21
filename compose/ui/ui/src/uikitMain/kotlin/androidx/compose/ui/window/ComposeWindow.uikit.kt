@@ -503,7 +503,6 @@ internal actual class ComposeWindow : UIViewController {
             override fun draw(surface: Surface) {
                 composeLayer.scene.render(surface.canvas, currentNanoTime())
             }
-
         }
 
         composeLayer.setContent(
