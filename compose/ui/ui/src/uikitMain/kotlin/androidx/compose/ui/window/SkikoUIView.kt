@@ -112,8 +112,7 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         skiaLayer: IOSSkiaLayer,
         frame: CValue<CGRect> = CGRectNull.readValue(),
         pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true },
-        skikoUITextInputTrains: SkikoUITextInputTraits,
-        drawCompletionCallback: () -> Unit = { }
+        skikoUITextInputTrains: SkikoUITextInputTraits
     ) : super(frame) {
         _skiaLayer = skiaLayer
         _pointInside = pointInside
