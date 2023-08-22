@@ -29,8 +29,6 @@ import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.darwin.*
 import kotlin.math.roundToInt
-import platform.Metal.MTLCaptureManager
-import platform.Metal.MTLCaptureScopeProtocol
 
 private class DisplayLinkConditions(
     val setPausedCallback: (Boolean) -> Unit
@@ -119,8 +117,6 @@ private class ApplicationStateListener(
 private enum class DrawReason {
     DISPLAY_LINK_CALLBACK, SYNC_WITH_UIKIT
 }
-
-private var avoidFirst = true
 
 internal class MetalRedrawer(
     private val metalLayer: CAMetalLayer,

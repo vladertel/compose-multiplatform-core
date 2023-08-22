@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.ui.platform.IOSSkikoInput
 import androidx.compose.ui.platform.SkikoUITextInputTraits
 import androidx.compose.ui.platform.TextActions
 import kotlinx.cinterop.*
@@ -127,8 +126,8 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
         _redrawer = MetalRedrawer(
             _metalLayer,
-            drawCallback = {
-                delegate?.draw(it)
+            drawCallback = { surface: Surface ->
+                delegate?.draw(surface)
             },
         )
     }

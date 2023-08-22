@@ -291,20 +291,14 @@ internal actual class ComposeWindow : UIViewController {
     }
 
     private fun updateLayout(context: AttachedComposeContext) {
-        context.scene.also {
-            it.density = density
-            it.constraints = view.frame.useContents {
-                val scale = density.density
+        context.scene.density = density
+        context.scene.constraints = view.frame.useContents {
+            val scale = density.density
 
-                val pixelsFromDps = { value: Double ->
-                    (value * scale.toDouble()).roundToInt()
-                }
-
-                Constraints(
-                    maxWidth = pixelsFromDps(size.width),
-                    maxHeight = pixelsFromDps(size.height)
-                )
-            }
+            Constraints(
+                maxWidth = (size.width * scale).roundToInt(),
+                maxHeight = (size.height * scale).roundToInt()
+            )
         }
 
         context.view.needRedraw()
@@ -534,7 +528,6 @@ internal actual class ComposeWindow : UIViewController {
                 }
             },
         )
-
 
         attachedComposeContext =
             AttachedComposeContext(scene, skikoUIView).also {
