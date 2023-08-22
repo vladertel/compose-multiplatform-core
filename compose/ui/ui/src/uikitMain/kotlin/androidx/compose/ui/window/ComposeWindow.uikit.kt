@@ -540,6 +540,8 @@ internal actual class ComposeWindow : UIViewController {
             AttachedComposeContext(scene, skikoUIView).also {
                 updateLayout(it)
             }
+
+        skikoUIView.drawSynchronously()
     }
 }
 
