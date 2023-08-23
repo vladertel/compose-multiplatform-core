@@ -22,6 +22,7 @@ import java.awt.event.KeyEvent.KEY_LOCATION_UNKNOWN
 import java.awt.event.KeyEvent.KEY_PRESSED
 import java.awt.event.KeyEvent.KEY_RELEASED
 import java.awt.event.KeyEvent.VK_UNDEFINED
+import javax.swing.KeyStroke
 
 /**
  * The native desktop [KeyEvent][KeyEventAwt].
@@ -33,9 +34,39 @@ actual typealias NativeKeyEvent = Any
  */
 actual val KeyEvent.key: Key
     get() = Key(
-        awtEventOrNull?.keyCode ?: VK_UNDEFINED,
+        awtEventOrNull?.keyStroke?.keyCode ?: VK_UNDEFINED,
         awtEventOrNull?.keyLocationForCompose ?: KEY_LOCATION_STANDARD
     )
+
+/**
+ * Workaround for the [issue](https://github.com/JetBrains/compose-multiplatform/issues/3497).
+ *
+ * OpenJDK starting from 18 changed [java.awt.event.KeyEvent.keyCode] behavior,
+ * so [java.awt.event.KeyEvent.extendedKeyCode] is returned from [java.awt.event.KeyEvent.keyCode]
+ * for non-US locales.
+ *
+ * The workaround is to build [KeyStroke] and then get [KeyStroke.keyCode]
+ * This is the way how we can convert [java.awt.event.KeyEvent.extendedKeyCode] to [java.awt.event.KeyEvent.keyCode]
+ *
+ * See [OpenJDK commit](https://github.com/openjdk/jdk/commit/47e7a42594f1c36f71cdf4d383080bf8d616b7e7)
+ */
+private val java.awt.event.KeyEvent.keyStroke: KeyStroke
+    get() =
+        if (id == java.awt.event.KeyEvent.KEY_TYPED) {
+            KeyStroke.getKeyStroke(keyChar)
+        } else {
+            if (extendedKeyCode != VK_UNDEFINED) {
+                KeyStroke.getKeyStroke(
+                    extendedKeyCode, modifiersEx,
+                    id != KEY_PRESSED
+                )
+            } else {
+                KeyStroke.getKeyStroke(
+                    keyCode, modifiersEx,
+                    id != KEY_PRESSED
+                )
+            }
+        }
 
 private val java.awt.event.KeyEvent.keyLocationForCompose get() =
     if (keyLocation == KEY_LOCATION_UNKNOWN) KEY_LOCATION_STANDARD else keyLocation
