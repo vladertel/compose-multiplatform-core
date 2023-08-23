@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.protobufGradlePluginz) // needed to compile inspection plugin
     implementation(libs.kotlinPoet) // needed to compile material-icon-generator
     implementation(libs.xmlpull) // needed to compile material-icon-generator
+    implementation(libs.kotlinCoroutinesCore)
 
     implementation(libs.protobuf) // needed to compile baseline-profile gradle plugins
     implementation(libs.agpTestingPlatformCoreProto) // needed to compile baseline-profile gradle plugins

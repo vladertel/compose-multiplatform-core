@@ -31,7 +31,7 @@ import org.gradle.api.publish.maven.internal.dependencies.MavenDependencyInterna
 import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
 import org.gradle.api.attributes.Usage
 import org.jetbrains.kotlin.konan.target.KonanTarget
-
+import kotlinx.coroutines.launch
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
 
 open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
@@ -223,6 +223,16 @@ private val KotlinTarget.kotlinComponents: Iterable<KotlinTargetComponent>
         .single { it.name == "kotlinComponents" }
         .get(this) as Iterable<KotlinTargetComponent>
 
+@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+private typealias SetOfKotlinUsageContextFuture =
+    org.jetbrains.kotlin.gradle.utils.Future<Set<DefaultKotlinUsageContext>>
+
+@Suppress("unchecked_cast")
+private val KotlinSoftwareComponent._usages: SetOfKotlinUsageContextFuture
+    get() = this::class.java.superclass.getDeclaredField("_usages")
+        .also { it.isAccessible = true }
+        .get(this) as SetOfKotlinUsageContextFuture
+
 
 @Suppress("unchecked_cast")
 private fun Project.publishAndroidxReference(target: KotlinTarget) {
@@ -289,13 +299,17 @@ private fun Project.publishAndroidxReference(target: KotlinTarget) {
                 val rootComponent : KotlinSoftwareComponent = target.project.components.withType(KotlinSoftwareComponent::class.java)
                     .getByName("kotlin")
 
-//                (rootComponent.usages as MutableSet).add(
-//                    DefaultKotlinUsageContext(
-//                        multiplatformExtension.metadata().compilations.getByName("main"),
-//                        KotlinUsageContext.MavenScope.COMPILE,
-//                        configurationName
-//                    )
-//                )
+                kotlinx.coroutines.GlobalScope.launch {
+                    val newUsage = DefaultKotlinUsageContext(
+                        multiplatformExtension.metadata().compilations.getByName("main"),
+                        KotlinUsageContext.MavenScope.COMPILE,
+                        configurationName
+                    )
+
+                    @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+                    val set = rootComponent._usages.await() as MutableSet
+                    set.add(newUsage)
+                }
             }
         }
     }
