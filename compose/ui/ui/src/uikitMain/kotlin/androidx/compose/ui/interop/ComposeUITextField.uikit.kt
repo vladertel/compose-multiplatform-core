@@ -40,7 +40,7 @@ fun ComposeUITextField(value: String, onValueChange: (String) -> Unit, modifier:
         },
         modifier = modifier,
         update = { textField ->
-            interopContext.addAction {
+            interopContext.deferAction {
                 textField.text = value
             }
         }

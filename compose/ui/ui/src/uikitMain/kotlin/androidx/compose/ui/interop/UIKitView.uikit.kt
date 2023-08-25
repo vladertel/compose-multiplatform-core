@@ -47,7 +47,6 @@ import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
 import platform.UIKit.UIColor
 import platform.UIKit.UIView
-import platform.UIKit.backgroundColor
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
@@ -95,12 +94,12 @@ fun <T : UIView> UIKitView(
             if (rectInPixels != newRectInPixels) {
                 val rect = newRectInPixels / density
 
-                interopContext.addAction {
+                interopContext.deferAction {
                     componentInfo.container.setFrame(rect.toCGRect())
                 }
 
                 if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
-                    interopContext.addAction {
+                    interopContext.deferAction {
                         onResize(
                             componentInfo.component,
                             CGRectMake(0.0, 0.0, rect.width.toDouble(), rect.height.toDouble()),
@@ -124,7 +123,7 @@ fun <T : UIView> UIKitView(
         componentInfo.component = factory()
         componentInfo.updater = Updater(componentInfo.component, update)
 
-        interopContext.addAction {
+        interopContext.deferAction {
             componentInfo.container = UIView().apply {
                 addSubview(componentInfo.component)
             }
@@ -132,7 +131,7 @@ fun <T : UIView> UIKitView(
         }
 
         onDispose {
-            interopContext.addAction {
+            interopContext.deferAction {
                 componentInfo.container.removeFromSuperview()
                 componentInfo.updater.dispose()
                 onRelease(componentInfo.component)
@@ -141,7 +140,7 @@ fun <T : UIView> UIKitView(
     }
 
     LaunchedEffect(background) {
-        interopContext.addAction {
+        interopContext.deferAction {
             if (background == Color.Unspecified) {
                 componentInfo.container.backgroundColor = root.backgroundColor
             } else {

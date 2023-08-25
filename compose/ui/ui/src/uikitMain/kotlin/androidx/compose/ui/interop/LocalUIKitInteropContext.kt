@@ -33,7 +33,7 @@ class UIKitInteropContext(
     /**
      * Add lambda to a list of commands which will be executed later in the same CATransaction, when the next rendered Compose frame is presented
      */
-    fun addAction(action: () -> Unit) = lock.doLocked {
+    fun deferAction(action: () -> Unit) = lock.doLocked {
         requestRedraw()
 
         actions.add(action)
