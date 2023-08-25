@@ -123,6 +123,7 @@ private enum class DrawReason {
 internal class MetalRedrawer(
     private val metalLayer: CAMetalLayer,
     private val drawCallback: (Surface) -> Unit,
+    private val retrieveCATransactionCommands: () -> List<() -> Unit>,
 
     // Used for tests, access to NSRunLoop crashes in test environment
     addDisplayLinkToRunLoop: ((CADisplayLink) -> Unit)? = null,
@@ -139,8 +140,6 @@ internal class MetalRedrawer(
 
     // Semaphore for preventing command buffers count more than swapchain size to be scheduled/executed at the same time
     private val inflightSemaphore = dispatch_semaphore_create(metalLayer.maximumDrawableCount.toLong())
-
-    var retrieveCATransactionCommands: (() -> List<() -> Unit>)? = null
 
     var maximumFramesPerSecond: NSInteger
         get() = caDisplayLink?.preferredFramesPerSecond ?: 0
@@ -287,7 +286,7 @@ internal class MetalRedrawer(
             drawCallback(surface)
             surface.flushAndSubmit()
 
-            val caTransactionCommands = retrieveCATransactionCommands?.invoke() ?: listOf()
+            val caTransactionCommands = retrieveCATransactionCommands()
             metalLayer.presentsWithTransaction = caTransactionCommands.isNotEmpty()
 
             val commandBuffer = queue.commandBuffer()!!

@@ -46,7 +46,11 @@ import org.jetbrains.skiko.SkikoPointerEventKind
 internal interface SkikoUIViewDelegate {
     fun onKeyboardEvent(event: SkikoKeyboardEvent)
 
+    fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean
+
     fun onPointerEvent(event: SkikoPointerEvent)
+
+    fun retrieveCATransactionCommands(): List<() -> Unit>
 
     fun draw(surface: Surface)
 }
@@ -71,7 +75,6 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     private val _device: MTLDeviceProtocol =
         MTLCreateSystemDefaultDevice() ?: throw IllegalStateException("Metal is not supported on this system")
     private val _metalLayer: CAMetalLayer get() = layer as CAMetalLayer
-    private var _pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true }
     private var _inputDelegate: UITextInputDelegateProtocol? = null
     private var _currentTextMenuActions: TextActions? = null
     private val _redrawer: MetalRedrawer = MetalRedrawer(
@@ -79,6 +82,9 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         drawCallback = { surface: Surface ->
             delegate?.draw(surface)
         },
+        retrieveCATransactionCommands = {
+            delegate?.retrieveCATransactionCommands() ?: listOf()
+        }
     )
 
     /*
@@ -93,6 +99,8 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
             _redrawer.needsProactiveDisplayLink = needHighFrequencyPolling
         }
+
+    constructor() : super(frame = CGRectZero.readValue())
 
     init {
         multipleTouchEnabled = true
@@ -110,15 +118,6 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
             }
             it.framebufferOnly = false
         }
-    }
-
-    constructor(
-        frame: CValue<CGRect> = CGRectNull.readValue(),
-        pointInside: (Point, UIEvent?) -> Boolean,
-        retrieveCATransactionCommands: () -> List<() -> Unit>
-    ) : super(frame) {
-        _pointInside = pointInside
-        _redrawer.retrieveCATransactionCommands = retrieveCATransactionCommands
     }
 
     fun needRedraw() = _redrawer.needRedraw()
@@ -276,10 +275,9 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     /**
      * https://developer.apple.com/documentation/uikit/uiview/1622533-point
      */
-    override fun pointInside(point: CValue<CGPoint>, withEvent: UIEvent?): Boolean {
-        val skiaPoint: Point = point.useContents { Point(x.toFloat(), y.toFloat()) }
-        return _pointInside(skiaPoint, withEvent)
-    }
+    override fun pointInside(point: CValue<CGPoint>, withEvent: UIEvent?): Boolean =
+        delegate?.pointInside(point, withEvent) ?: super.pointInside(point, withEvent)
+
 
     override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
         super.touchesBegan(touches, withEvent)

@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
 import androidx.compose.ui.unit.*
 import kotlin.math.roundToInt
+import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.useContents
@@ -46,6 +47,7 @@ import org.jetbrains.skia.Surface
 import org.jetbrains.skiko.SkikoKeyboardEvent
 import org.jetbrains.skiko.SkikoPointerEvent
 import org.jetbrains.skiko.currentNanoTime
+import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGPointMake
 import platform.CoreGraphics.CGRectMake
 import platform.Foundation.*
@@ -379,18 +381,7 @@ internal actual class ComposeWindow : UIViewController {
             return // already attached
         }
 
-        val skikoUIView = SkikoUIView(
-            pointInside = { point, _ ->
-                val hitsInteropView = attachedComposeContext?.scene?.mainOwner?.hitInteropView(
-                    pointerPosition = Offset(point.x * density.density, point.y * density.density),
-                    isTouchEvent = true,
-                ) ?: false
-
-                !hitsInteropView
-            },
-
-            retrieveCATransactionCommands = interopContext::getActionsAndClear
-        )
+        val skikoUIView = SkikoUIView()
 
         skikoUIView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(skikoUIView)
@@ -491,6 +482,16 @@ internal actual class ComposeWindow : UIViewController {
                 scene.sendKeyEvent(KeyEvent(event))
             }
 
+            override fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean =
+                point.useContents {
+                    val hitsInteropView = attachedComposeContext?.scene?.mainOwner?.hitInteropView(
+                        pointerPosition = Offset((x * density.density).toFloat(), (y * density.density).toFloat()),
+                        isTouchEvent = true,
+                    ) ?: false
+
+                    !hitsInteropView
+                }
+
             override fun onPointerEvent(event: SkikoPointerEvent) {
                 val scale = density.density
 
@@ -512,6 +513,9 @@ internal actual class ComposeWindow : UIViewController {
                     nativeEvent = event
                 )
             }
+
+            override fun retrieveCATransactionCommands(): List<() -> Unit> =
+                interopContext.getActionsAndClear()
 
             override fun draw(surface: Surface) {
                 scene.render(surface.canvas, currentNanoTime())
