@@ -18,7 +18,6 @@ package androidx.compose.ui.interop
 
 import androidx.compose.runtime.staticCompositionLocalOf
 import platform.Foundation.NSLock
-import platform.Foundation.NSThread
 
 /**
  * Class which can be used to add actions related to UIKit objects to be executed in sync with compose rendering,
@@ -42,11 +41,9 @@ class UIKitInteropContext(
     }
 
     /**
-     * Return a copy of the list of [actions] and clear it
+     * Return a copy of the list of [actions] and clear it.
      */
     internal fun getActionsAndClear(): List<() -> Unit> {
-        check(NSThread.isMainThread)
-
         return lock.doLocked {
             val result = actions.toList()
             actions.clear()
