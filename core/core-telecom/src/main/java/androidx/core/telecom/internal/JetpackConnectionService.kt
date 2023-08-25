@@ -20,6 +20,7 @@ import android.os.ParcelUuid
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import android.telecom.ConnectionService
+import android.telecom.DisconnectCause
 import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.telecom.VideoProfile
@@ -40,7 +41,12 @@ internal class JetpackConnectionService : ConnectionService() {
         val callAttributes: CallAttributesCompat,
         val callChannel: CallChannels,
         val coroutineContext: CoroutineContext,
-        val completableDeferred: CompletableDeferred<CallSessionLegacy>?
+        val completableDeferred: CompletableDeferred<CallSessionLegacy>?,
+        val onAnswer: suspend (callType: Int) -> Boolean,
+        val onDisconnect: suspend (disconnectCause: DisconnectCause) -> Boolean,
+        val onSetActive: suspend () -> Boolean,
+        val onSetInactive: suspend () -> Boolean,
+        val execution: CompletableDeferred<Unit>
     )
 
     companion object {
@@ -141,7 +147,12 @@ internal class JetpackConnectionService : ConnectionService() {
         val jetpackConnection = CallSessionLegacy(
             ParcelUuid.fromString(UUID.randomUUID().toString()),
             targetRequest.callChannel,
-            targetRequest.coroutineContext
+            targetRequest.coroutineContext,
+            targetRequest.onAnswer,
+            targetRequest.onDisconnect,
+            targetRequest.onSetActive,
+            targetRequest.onSetInactive,
+            targetRequest.execution
         )
 
         // set display name

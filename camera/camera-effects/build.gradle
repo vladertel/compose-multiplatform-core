@@ -23,10 +23,23 @@ plugins {
 }
 dependencies {
     api(project(":camera:camera-core"))
-
     implementation(libs.autoValueAnnotations)
 
     annotationProcessor(libs.autoValue)
+
+    androidTestImplementation(libs.multidex)
+    androidTestImplementation(libs.testExtJunit)
+    androidTestImplementation(libs.testCore)
+    androidTestImplementation(libs.testRunner)
+    androidTestImplementation(libs.testRules)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(project(":camera:camera-testing")) {
+        // Ensure camera-testing does not pull in androidx.test dependencies
+        exclude(group:"androidx.test")
+    }
+    androidTestImplementation(libs.kotlinStdlib)
+    androidTestImplementation(libs.kotlinCoroutinesAndroid)
+    androidTestImplementation("androidx.concurrent:concurrent-futures-ktx:1.1.0")
 }
 android {
     defaultConfig {

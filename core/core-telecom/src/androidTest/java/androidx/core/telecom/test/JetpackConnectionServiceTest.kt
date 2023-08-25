@@ -31,6 +31,7 @@ import androidx.core.telecom.test.utils.TestUtils.TEST_PHONE_NUMBER_9001
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -123,7 +124,12 @@ class JetpackConnectionServiceTest : BaseTelecomTest() {
         ConnectionRequest {
         // wrap in PendingRequest
         val pr = JetpackConnectionService.PendingConnectionRequest(
-            callAttributesCompat, callChannels, mWorkerContext, null
+            callAttributesCompat, callChannels, mWorkerContext, null,
+            TestUtils.mOnAnswerLambda,
+            TestUtils.mOnDisconnectLambda,
+            TestUtils.mOnSetActiveLambda,
+            TestUtils.mOnSetInActiveLambda,
+            CompletableDeferred()
         )
         // add to the list of pendingRequests
         JetpackConnectionService.mPendingConnectionRequests.add(pr)

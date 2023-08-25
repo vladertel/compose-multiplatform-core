@@ -7,10 +7,10 @@ import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.fetchTextLayoutResult
 import androidx.compose.foundation.text.selection.isSelectionHandle
-import androidx.compose.foundation.text2.input.TextFieldCharSequence
 import androidx.compose.foundation.text2.input.TextFieldState
 import androidx.compose.foundation.text2.input.internal.selection.FakeClipboardManager
 import androidx.compose.foundation.text2.input.placeCursorAtEnd
+import androidx.compose.foundation.text2.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -166,9 +166,9 @@ class BasicTextField2SemanticsTest {
             BasicTextField2(
                 state = state,
                 modifier = Modifier.testTag(Tag),
-                filter = { _, changes ->
+                inputTransformation = { _, changes ->
                     if (changes.length > 1) {
-                        val newText = changes.asSequence().joinToString("-")
+                        val newText = changes.asCharSequence().asSequence().joinToString("-")
                         changes.replace(0, changes.length, newText)
                     }
                 }
@@ -229,8 +229,9 @@ class BasicTextField2SemanticsTest {
             BasicTextField2(
                 state = state,
                 modifier = Modifier.testTag(Tag),
-                filter = { _, changes ->
-                    changes.replace(0, changes.length, changes.replace(Regex("a"), ""))
+                inputTransformation = { _, changes ->
+                    val newChange = changes.asCharSequence().replace(Regex("a"), "")
+                    changes.replace(0, changes.length, newChange)
                 }
             )
         }
@@ -301,7 +302,7 @@ class BasicTextField2SemanticsTest {
 
         rule.onNodeWithTag(Tag).assertTextEquals("hello")
 
-        state.editProcessor.reset(TextFieldCharSequence("hello2"))
+        state.setTextAndPlaceCursorAtEnd("hello2")
 
         rule.onNodeWithTag(Tag).assertTextEquals("hello2")
     }
@@ -337,7 +338,9 @@ class BasicTextField2SemanticsTest {
             assertSelection(TextRange.Zero)
         }
 
-        state.editProcessor.reset(TextFieldCharSequence("hello", selection = TextRange(2)))
+        state.edit {
+            selectCharsIn(TextRange(2))
+        }
 
         with(rule.onNodeWithTag(Tag)) {
             assertTextEquals("hello")
@@ -374,7 +377,7 @@ class BasicTextField2SemanticsTest {
             BasicTextField2(
                 state = state,
                 modifier = Modifier.testTag(Tag),
-                filter = { _, changes ->
+                inputTransformation = { _, changes ->
                     changes.revertAllChanges()
                 }
             )
@@ -509,10 +512,11 @@ class BasicTextField2SemanticsTest {
                 BasicTextField2(
                     state = state,
                     modifier = Modifier.testTag(Tag),
-                    filter = { _, changes ->
+                    inputTransformation = { _, changes ->
                         // remove all 'l' characters
                         if (changes.changes.changeCount != 0) {
-                            changes.replace(0, changes.length, changes.replace(Regex("l"), ""))
+                            val newChange = changes.asCharSequence().replace(Regex("l"), "")
+                            changes.replace(0, changes.length, newChange)
                             changes.placeCursorAtEnd()
                         }
                     }
@@ -551,20 +555,6 @@ class BasicTextField2SemanticsTest {
         }
     }
 
-//    @Test
-//    fun semantics_copy_disabled_whenDisallowCopy() {
-//        val state = TextFieldState("Hello World!", initialSelectionInChars = TextRange(0, 5))
-//        rule.setContent {
-//            BasicTextField2(
-//                state = state,
-//                modifier = Modifier.testTag(Tag),
-//                allowCopy = false
-//            )
-//        }
-//
-//        rule.onNodeWithTag(Tag).assert(SemanticsMatcher.keyNotDefined(SemanticsActions.CopyText))
-//    }
-
     @Test
     fun semantics_copy_disabled_whenSelectionCollapsed() {
         val state = TextFieldState("Hello World!")
@@ -588,7 +578,7 @@ class BasicTextField2SemanticsTest {
                 BasicTextField2(
                     state = state,
                     modifier = Modifier.testTag(Tag),
-                    filter = { original, changes ->
+                    inputTransformation = { original, changes ->
                         // reject copy action collapsing the selection
                         if (changes.selectionInChars != original.selectionInChars) {
                             changes.revertAllChanges()
@@ -628,21 +618,6 @@ class BasicTextField2SemanticsTest {
         }
     }
 
-//    @OptIn(ExperimentalTestApi::class)
-//    @Test
-//    fun semantics_cut_disabled_whenDisallowCopy() {
-//        val state = TextFieldState("Hello World!", initialSelectionInChars = TextRange(0, 5))
-//        rule.setContent {
-//            BasicTextField2(
-//                state = state,
-//                modifier = Modifier.testTag(Tag),
-//                allowCopy = false
-//            )
-//        }
-//
-//        rule.onNodeWithTag(Tag).assert(SemanticsMatcher.keyNotDefined(SemanticsActions.CutText))
-//    }
-
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun semantics_cut_appliesFilter() {
@@ -653,7 +628,7 @@ class BasicTextField2SemanticsTest {
                 BasicTextField2(
                     state = state,
                     modifier = Modifier.testTag(Tag),
-                    filter = { _, changes ->
+                    inputTransformation = { _, changes ->
                         changes.revertAllChanges()
                     }
                 )
