@@ -106,7 +106,9 @@ internal actual class ComposeWindow : UIViewController {
     private val keyboardOverlapHeightState = mutableStateOf(0f)
     private val safeAreaState = mutableStateOf(IOSInsets())
     private val layoutMarginsState = mutableStateOf(IOSInsets())
-    private val interopContext = UIKitInteropContext()
+    private val interopContext = UIKitInteropContext(requestRedraw = {
+        attachedComposeContext?.view?.needRedraw()
+    })
 
     /*
      * Initial value is arbitarily chosen to avoid propagating invalid value logic
