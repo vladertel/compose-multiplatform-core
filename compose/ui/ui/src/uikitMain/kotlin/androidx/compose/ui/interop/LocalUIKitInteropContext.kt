@@ -22,7 +22,7 @@ import platform.Foundation.NSThread
 
 /**
  * Class which can be used to add actions related to UIKit objects to be executed in sync with compose rendering,
- * It's threadsafe, but all operations will be executed in the order of their submission, and on the main thread.
+ * Addding deferred actions is threadsafe, but they will be executed in the order of their submission, and on the main thread.
  */
 class UIKitInteropContext(
     val requestRedraw: () -> Unit
@@ -33,12 +33,17 @@ class UIKitInteropContext(
     /**
      * Add lambda to a list of commands which will be executed later in the same CATransaction, when the next rendered Compose frame is presented
      */
-    fun deferAction(action: () -> Unit) = lock.doLocked {
+    fun deferAction(action: () -> Unit) {
         requestRedraw()
 
-        actions.add(action)
+        lock.doLocked {
+            actions.add(action)
+        }
     }
 
+    /**
+     * Return a copy of the list of [actions] and clear it
+     */
     internal fun getActionsAndClear(): List<() -> Unit> {
         check(NSThread.isMainThread)
 
