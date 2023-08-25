@@ -30,7 +30,9 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.toCompose
 import androidx.compose.ui.interop.LocalLayerContainer
+import androidx.compose.ui.interop.LocalUIKitInteropContext
 import androidx.compose.ui.interop.LocalUIViewController
+import androidx.compose.ui.interop.UIKitInteropContext
 import androidx.compose.ui.native.getMainDispatcher
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.PlatformTextInputService
@@ -104,6 +106,7 @@ internal actual class ComposeWindow : UIViewController {
     private val keyboardOverlapHeightState = mutableStateOf(0f)
     private val safeAreaState = mutableStateOf(IOSInsets())
     private val layoutMarginsState = mutableStateOf(IOSInsets())
+    private val interopContext = UIKitInteropContext()
 
     /*
      * Initial value is arbitarily chosen to avoid propagating invalid value logic
@@ -383,6 +386,8 @@ internal actual class ComposeWindow : UIViewController {
 
                 !hitsInteropView
             },
+
+            retrieveCATransactionCommands = interopContext::getActionsAndClear
         )
 
         skikoUIView.translatesAutoresizingMaskIntoConstraints = false
@@ -522,7 +527,8 @@ internal actual class ComposeWindow : UIViewController {
                     LocalSafeAreaState provides safeAreaState,
                     LocalLayoutMarginsState provides layoutMarginsState,
                     LocalInterfaceOrientationState provides interfaceOrientationState,
-                    LocalSystemTheme provides systemTheme.value
+                    LocalSystemTheme provides systemTheme.value,
+                    LocalUIKitInteropContext provides interopContext
                 ) {
                     content()
                 }

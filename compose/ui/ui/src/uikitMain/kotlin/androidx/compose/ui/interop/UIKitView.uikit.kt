@@ -85,6 +85,8 @@ fun <T : UIView> UIKitView(
     val density = LocalDensity.current.density
     var rectInPixels by remember { mutableStateOf(IntRect(0, 0, 0, 0)) }
     var localToWindowOffset: IntOffset by remember { mutableStateOf(IntOffset.Zero) }
+    val interopContext = LocalUIKitInteropContext.current
+
     Place(
         modifier.onGloballyPositioned { childCoordinates ->
             val coordinates = childCoordinates.parentCoordinates!!
@@ -92,12 +94,18 @@ fun <T : UIView> UIKitView(
             val newRectInPixels = IntRect(localToWindowOffset, coordinates.size)
             if (rectInPixels != newRectInPixels) {
                 val rect = newRectInPixels / density
-                componentInfo.container.setFrame(rect.toCGRect())
+
+                interopContext.addAction {
+                    componentInfo.container.setFrame(rect.toCGRect())
+                }
+
                 if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
-                    onResize(
-                        componentInfo.component,
-                        CGRectMake(0.0, 0.0, rect.width.toDouble(), rect.height.toDouble()),
-                    )
+                    interopContext.addAction {
+                        onResize(
+                            componentInfo.component,
+                            CGRectMake(0.0, 0.0, rect.width.toDouble(), rect.height.toDouble()),
+                        )
+                    }
                 }
                 rectInPixels = newRectInPixels
             }
@@ -114,23 +122,31 @@ fun <T : UIView> UIKitView(
 
     DisposableEffect(Unit) {
         componentInfo.component = factory()
-        componentInfo.container = UIView().apply {
-            addSubview(componentInfo.component)
-        }
         componentInfo.updater = Updater(componentInfo.component, update)
-        root.insertSubview(componentInfo.container, 0)
+
+        interopContext.addAction {
+            componentInfo.container = UIView().apply {
+                addSubview(componentInfo.component)
+            }
+            root.insertSubview(componentInfo.container, 0)
+        }
+
         onDispose {
-            componentInfo.container.removeFromSuperview()
-            componentInfo.updater.dispose()
-            onRelease(componentInfo.component)
+            interopContext.addAction {
+                componentInfo.container.removeFromSuperview()
+                componentInfo.updater.dispose()
+                onRelease(componentInfo.component)
+            }
         }
     }
 
     LaunchedEffect(background) {
-        if (background == Color.Unspecified) {
-            componentInfo.container.backgroundColor = root.backgroundColor
-        } else {
-            componentInfo.container.backgroundColor = parseColor(background)
+        interopContext.addAction {
+            if (background == Color.Unspecified) {
+                componentInfo.container.backgroundColor = root.backgroundColor
+            } else {
+                componentInfo.container.backgroundColor = parseColor(background)
+            }
         }
     }
 

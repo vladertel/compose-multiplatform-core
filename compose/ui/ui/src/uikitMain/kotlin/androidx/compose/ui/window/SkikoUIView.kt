@@ -68,18 +68,6 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     var input: IOSSkikoInput? = null
     var inputTraits: SkikoUITextInputTraits = object : SkikoUITextInputTraits {}
 
-    /**
-     * Indicates that renderer should wait until the issued command buffer is scheduled for execution, so it can
-     * present the drawable inside the CATransaction to sync it with UIKit changes
-     *
-     * See [relevant doc](https://developer.apple.com/documentation/quartzcore/cametallayer/1478157-presentswithtransaction?language=objc)
-     */
-    var presentsWithTransaction: Boolean
-        get() = _metalLayer.presentsWithTransaction
-        set(value) {
-            _metalLayer.presentsWithTransaction = value
-        }
-
     private val _device: MTLDeviceProtocol =
         MTLCreateSystemDefaultDevice() ?: throw IllegalStateException("Metal is not supported on this system")
     private val _metalLayer: CAMetalLayer get() = layer as CAMetalLayer
@@ -126,9 +114,11 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
     constructor(
         frame: CValue<CGRect> = CGRectNull.readValue(),
-        pointInside: (Point, UIEvent?) -> Boolean = { _, _ -> true },
+        pointInside: (Point, UIEvent?) -> Boolean,
+        retrieveCATransactionCommands: () -> List<() -> Unit>
     ) : super(frame) {
         _pointInside = pointInside
+        _redrawer.retrieveCATransactionCommands = retrieveCATransactionCommands
     }
 
     fun needRedraw() = _redrawer.needRedraw()
