@@ -22,7 +22,7 @@ import platform.Foundation.NSThread
 
 /**
  * Class which can be used to add actions related to UIKit objects to be executed in sync with compose rendering,
- * It's threadsafe, but all operations will be executed in the order of their submission
+ * It's threadsafe, but all operations will be executed in the order of their submission on the main thread.
  */
 class UIKitInteropContext {
     private val lock: NSLock = NSLock()
