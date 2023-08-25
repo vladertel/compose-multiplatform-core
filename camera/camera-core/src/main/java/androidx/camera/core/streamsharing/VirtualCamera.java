@@ -19,11 +19,13 @@ import static androidx.camera.core.CameraEffect.IMAGE_CAPTURE;
 import static androidx.camera.core.CameraEffect.PREVIEW;
 import static androidx.camera.core.CameraEffect.VIDEO_CAPTURE;
 import static androidx.camera.core.impl.ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE;
+import static androidx.camera.core.impl.ImageInputConfig.OPTION_INPUT_DYNAMIC_RANGE;
 import static androidx.camera.core.impl.ImageOutputConfig.OPTION_CUSTOM_ORDERED_RESOLUTIONS;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_SURFACE_OCCUPANCY_PRIORITY;
 import static androidx.camera.core.impl.utils.Threads.checkMainThread;
 import static androidx.camera.core.impl.utils.TransformUtils.getRotatedSize;
 import static androidx.camera.core.impl.utils.TransformUtils.rectToSize;
+import static androidx.camera.core.streamsharing.DynamicRangeUtils.resolveDynamicRange;
 import static androidx.camera.core.streamsharing.ResolutionUtils.getMergedResolutions;
 import static androidx.core.util.Preconditions.checkState;
 
@@ -40,6 +42,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.CameraEffect;
+import androidx.camera.core.DynamicRange;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.Preview;
 import androidx.camera.core.UseCase;
@@ -96,6 +99,8 @@ class VirtualCamera implements CameraInternal {
     private final CameraCaptureCallback mParentMetadataCallback = createCameraCaptureCallback();
     @NonNull
     private final VirtualCameraControl mVirtualCameraControl;
+    @NonNull
+    private final VirtualCameraInfo mVirtualCameraInfo;
 
     /**
      * @param parentCamera         the parent {@link CameraInternal} instance. For example, the
@@ -112,6 +117,7 @@ class VirtualCamera implements CameraInternal {
         mChildren = children;
         mVirtualCameraControl = new VirtualCameraControl(parentCamera.getCameraControlInternal(),
                 streamSharingControl);
+        mVirtualCameraInfo = new VirtualCameraInfo(parentCamera.getCameraInfoInternal());
         // Set children state to inactive by default.
         for (UseCase child : children) {
             mChildrenActiveState.put(child, false);
@@ -139,6 +145,19 @@ class VirtualCamera implements CameraInternal {
         // Merge Surface occupancy priority.
         mutableConfig.insertOption(OPTION_SURFACE_OCCUPANCY_PRIORITY,
                 getHighestSurfacePriority(childrenConfigs));
+
+        // Merge dynamic range configs. Try to find a dynamic range that can match all child
+        // requirements, or throw an exception if no matching dynamic range.
+        //  TODO: This approach works for the current code base, where only VideoCapture can be
+        //   configured (Preview follows the settings, ImageCapture is fixed as SDR). When
+        //   dynamic range APIs opened on other use cases, we might want a more advanced approach
+        //   that allows conflicts, e.g. converting HDR stream to SDR stream.
+        DynamicRange dynamicRange = resolveDynamicRange(childrenConfigs);
+        if (dynamicRange == null) {
+            throw new IllegalArgumentException("Failed to merge child dynamic ranges, can not find"
+                    + " a dynamic range that satisfies all children.");
+        }
+        mutableConfig.insertOption(OPTION_INPUT_DYNAMIC_RANGE, dynamicRange);
     }
 
     void bindChildren() {
@@ -306,9 +325,7 @@ class VirtualCamera implements CameraInternal {
     @NonNull
     @Override
     public CameraInfoInternal getCameraInfoInternal() {
-        // TODO(b/265818567): replace this with a virtual camera info that returns a updated sensor
-        //  rotation degrees based on buffer transformation applied in StreamSharing.
-        return mParentCamera.getCameraInfoInternal();
+        return mVirtualCameraInfo;
     }
 
     @NonNull

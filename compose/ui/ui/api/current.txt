@@ -257,6 +257,64 @@ package androidx.compose.ui.autofill {
 
 }
 
+package androidx.compose.ui.draganddrop {
+
+  public final class DragAndDropEvent {
+    ctor public DragAndDropEvent(int type, android.view.DragEvent dragEvent);
+    method public int getType();
+    method public void setType(int);
+    property public final int type;
+  }
+
+  @kotlin.jvm.JvmInline public final value class DragAndDropEventType {
+    field public static final androidx.compose.ui.draganddrop.DragAndDropEventType.Companion Companion;
+  }
+
+  public static final class DragAndDropEventType.Companion {
+    method public int getChanged();
+    method public int getDropped();
+    method public int getEnded();
+    method public int getEntered();
+    method public int getExited();
+    method public int getMoved();
+    method public int getStarted();
+    method public int getUnknown();
+    property public final int Changed;
+    property public final int Dropped;
+    property public final int Ended;
+    property public final int Entered;
+    property public final int Exited;
+    property public final int Moved;
+    property public final int Started;
+    property public final int Unknown;
+  }
+
+  public final class DragAndDropInfo {
+    ctor public DragAndDropInfo(long size, androidx.compose.ui.draganddrop.DragAndDropTransfer transfer, kotlin.jvm.functions.Function1<? super androidx.compose.ui.graphics.drawscope.DrawScope,kotlin.Unit> onDrawDragShadow);
+    method public kotlin.jvm.functions.Function1<androidx.compose.ui.graphics.drawscope.DrawScope,kotlin.Unit> getOnDrawDragShadow();
+    method public long getSize();
+    method public androidx.compose.ui.draganddrop.DragAndDropTransfer getTransfer();
+    property public final kotlin.jvm.functions.Function1<androidx.compose.ui.graphics.drawscope.DrawScope,kotlin.Unit> onDrawDragShadow;
+    property public final long size;
+    property public final androidx.compose.ui.draganddrop.DragAndDropTransfer transfer;
+  }
+
+  public final class DragAndDropTransfer {
+    ctor public DragAndDropTransfer(android.content.ClipData clipData, optional Object? localState, optional int flags);
+    method public android.content.ClipData getClipData();
+    method public int getFlags();
+    method public Object? getLocalState();
+    property public final android.content.ClipData clipData;
+    property public final int flags;
+    property public final Object? localState;
+  }
+
+  public final class DragAndDrop_androidKt {
+    method public static android.view.DragEvent getDragEvent(androidx.compose.ui.draganddrop.DragAndDropEvent);
+  }
+
+}
+
 package androidx.compose.ui.draw {
 
   public final class AlphaKt {
@@ -1932,6 +1990,7 @@ package androidx.compose.ui.input.pointer.util {
     ctor public VelocityTracker();
     method public void addPosition(long timeMillis, long position);
     method public long calculateVelocity();
+    method public long calculateVelocity(long maximumVelocity);
     method public void resetTracking();
   }
 
@@ -1939,6 +1998,7 @@ package androidx.compose.ui.input.pointer.util {
     ctor public VelocityTracker1D(boolean isDataDifferential);
     method public void addDataPoint(long timeMillis, float dataPoint);
     method public float calculateVelocity();
+    method public float calculateVelocity(float maximumVelocity);
     method public boolean isDataDifferential();
     method public void resetTracking();
     property public final boolean isDataDifferential;
@@ -1967,9 +2027,11 @@ package androidx.compose.ui.input.rotary {
 
   public final class RotaryScrollEvent {
     method public float getHorizontalScrollPixels();
+    method public int getInputDeviceId();
     method public long getUptimeMillis();
     method public float getVerticalScrollPixels();
     property public final float horizontalScrollPixels;
+    property public final int inputDeviceId;
     property public final long uptimeMillis;
     property public final float verticalScrollPixels;
   }
@@ -2669,6 +2731,7 @@ package androidx.compose.ui.platform {
     property public long doubleTapMinTimeMillis;
     property public long doubleTapTimeoutMillis;
     property public long longPressTimeoutMillis;
+    property public int maximumFlingVelocity;
     property public float touchSlop;
   }
 
@@ -2884,11 +2947,13 @@ package androidx.compose.ui.platform {
     method public long getDoubleTapMinTimeMillis();
     method public long getDoubleTapTimeoutMillis();
     method public long getLongPressTimeoutMillis();
+    method public default int getMaximumFlingVelocity();
     method public default long getMinimumTouchTargetSize();
     method public float getTouchSlop();
     property public abstract long doubleTapMinTimeMillis;
     property public abstract long doubleTapTimeoutMillis;
     property public abstract long longPressTimeoutMillis;
+    property public default int maximumFlingVelocity;
     property public default long minimumTouchTargetSize;
     property public abstract float touchSlop;
   }

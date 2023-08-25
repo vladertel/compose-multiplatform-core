@@ -25,7 +25,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.text2.input.TextEditFilter
+import androidx.compose.foundation.text2.input.InputTransformation
 import androidx.compose.foundation.text2.input.TextFieldCharSequence
 import androidx.compose.foundation.text2.input.TextFieldState
 import androidx.compose.ui.platform.PlatformTextInputSession
@@ -58,14 +58,14 @@ internal fun setInputConnectionCreatedListenerForTests(
 internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
     state: TextFieldState,
     imeOptions: ImeOptions,
-    filter: TextEditFilter?,
+    filter: InputTransformation?,
     onImeAction: ((ImeAction) -> Unit)?
 ): Nothing {
     val composeImm = ComposeInputMethodManager(view)
 
     coroutineScope {
         launch(start = CoroutineStart.UNDISPATCHED) {
-            state.editProcessor.collectResets { old, new ->
+            state.collectImeNotifications { old, new ->
                 val needUpdateSelection =
                     (old.selectionInChars != new.selectionInChars) ||
                         old.compositionInChars != new.compositionInChars
@@ -91,8 +91,12 @@ internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSe
                 override val text: TextFieldCharSequence
                     get() = state.text
 
-                override fun requestEdits(editCommands: List<EditCommand>) {
-                    state.editProcessor.update(editCommands, filter)
+                override fun requestEdit(block: EditingBuffer.() -> Unit) {
+                    state.editAsUser(
+                        inputTransformation = filter,
+                        notifyImeOfChanges = false,
+                        block = block
+                    )
                 }
 
                 override fun sendKeyEvent(keyEvent: KeyEvent) {
@@ -212,16 +216,16 @@ internal fun EditorInfo.update(textFieldValue: TextFieldCharSequence, imeOptions
 }
 
 /**
- * Adds [resetListener] to this [EditProcessor] and then suspends until cancelled, removing the
+ * Adds [notifyImeListener] to this [TextFieldState] and then suspends until cancelled, removing the
  * listener before continuing.
  */
-private suspend inline fun EditProcessor.collectResets(
-    resetListener: EditProcessor.ResetListener
+private suspend inline fun TextFieldState.collectImeNotifications(
+    notifyImeListener: TextFieldState.NotifyImeListener
 ): Nothing {
     suspendCancellableCoroutine<Nothing> { continuation ->
-        addResetListener(resetListener)
+        addNotifyImeListener(notifyImeListener)
         continuation.invokeOnCancellation {
-            removeResetListener(resetListener)
+            removeNotifyImeListener(notifyImeListener)
         }
     }
 }

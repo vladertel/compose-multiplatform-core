@@ -37,7 +37,7 @@ import androidx.compose.foundation.text.selection.SelectionHandleInfo
 import androidx.compose.foundation.text.selection.SelectionHandleInfoKey
 import androidx.compose.foundation.text.textFieldMinSize
 import androidx.compose.foundation.text2.input.CodepointTransformation
-import androidx.compose.foundation.text2.input.TextEditFilter
+import androidx.compose.foundation.text2.input.InputTransformation
 import androidx.compose.foundation.text2.input.TextFieldLineLimits
 import androidx.compose.foundation.text2.input.TextFieldLineLimits.MultiLine
 import androidx.compose.foundation.text2.input.TextFieldLineLimits.SingleLine
@@ -91,8 +91,8 @@ import androidx.compose.ui.unit.Density
  * the field through the [value] parameter. If an unexpected [value] is passed in during this time,
  * the contents of the field will _not_ be updated to reflect the value until editing is done. When
  * editing is done (i.e. focus is lost), the field will be updated to the last [value] received. Use
- * a [filter] to accept or reject changes during editing. For more direct control of the field
- * contents use the [BasicTextField2] overload that accepts a [TextFieldState].
+ * a [inputTransformation] to accept or reject changes during editing. For more direct control of
+ * the field contents use the [BasicTextField2] overload that accepts a [TextFieldState].
  *
  * Unlike [TextFieldValue] overload, this composable does not let the developer control selection,
  * cursor, and text composition information. Please check [TextFieldValue] and corresponding
@@ -101,15 +101,15 @@ import androidx.compose.ui.unit.Density
  * @param value The input [String] text to be shown in the text field.
  * @param onValueChange The callback that is triggered when the user or the system updates the
  * text. The updated text is passed as a parameter of the callback. The value passed to the callback
- * will already have had the [filter] applied.
+ * will already have had the [inputTransformation] applied.
  * @param modifier optional [Modifier] for this text field.
  * @param enabled controls the enabled state of the [BasicTextField2]. When `false`, the text
  * field will be neither editable nor focusable, the input of the text field will not be selectable.
  * @param readOnly controls the editable state of the [BasicTextField2]. When `true`, the text
  * field can not be modified, however, a user can focus it and copy text from it. Read-only text
  * fields are usually used to display pre-filled forms that user can not edit.
- * @param filter Optional [TextEditFilter] that will be used to filter changes to the
- * [TextFieldState] made by the user. The filter will be applied to changes made by hardware and
+ * @param inputTransformation Optional [InputTransformation] that will be used to filter changes to
+ * the [TextFieldState] made by the user. The filter will be applied to changes made by hardware and
  * software keyboard events, pasting or dropping text, accessibility services, and tests. The filter
  * will _not_ be applied when a new [value] is passe din, or when the filter is changed.
  * If the filter is changed on an existing text field, it will be applied to the next user edit, it
@@ -150,6 +150,8 @@ import androidx.compose.ui.unit.Density
  * innerTextField exactly once.
  */
 @ExperimentalFoundationApi
+// This takes a composable lambda, but it is not primarily a container.
+@Suppress("ComposableLambdaParameterPosition")
 @Composable
 fun BasicTextField2(
     value: String,
@@ -157,7 +159,7 @@ fun BasicTextField2(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     readOnly: Boolean = false,
-    filter: TextEditFilter? = null,
+    inputTransformation: InputTransformation? = null,
     textStyle: TextStyle = TextStyle.Default,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
@@ -165,10 +167,12 @@ fun BasicTextField2(
     onTextLayout: Density.(getResult: () -> TextLayoutResult?) -> Unit = {},
     interactionSource: MutableInteractionSource? = null,
     cursorBrush: Brush = SolidColor(Color.Black),
-    scrollState: ScrollState = rememberScrollState(),
     codepointTransformation: CodepointTransformation? = null,
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
-        @Composable { innerTextField -> innerTextField() }
+        @Composable { innerTextField -> innerTextField() },
+    scrollState: ScrollState = rememberScrollState(),
+    // Last parameter must not be a function unless it's intended to be commonly used as a trailing
+    // lambda.
 ) {
     val state = remember {
         TextFieldState(
@@ -206,7 +210,7 @@ fun BasicTextField2(
         ),
         enabled = enabled,
         readOnly = readOnly,
-        filter = filter,
+        inputTransformation = inputTransformation,
         textStyle = textStyle,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
@@ -235,8 +239,8 @@ fun BasicTextField2(
  * the field through the [value] parameter. If an unexpected [value] is passed in during this time,
  * the contents of the field will _not_ be updated to reflect the value until editing is done. When
  * editing is done (i.e. focus is lost), the field will be updated to the last [value] received. Use
- * a [filter] to accept or reject changes during editing. For more direct control of the field
- * contents use the [BasicTextField2] overload that accepts a [TextFieldState].
+ * a [inputTransformation] to accept or reject changes during editing. For more direct control of
+ * the field contents use the [BasicTextField2] overload that accepts a [TextFieldState].
  *
  * This function ignores the [TextFieldValue.composition] property from [value]. The composition
  * will, however, be reported in [onValueChange].
@@ -245,15 +249,16 @@ fun BasicTextField2(
  * the cursor position or selection.
  * @param onValueChange The callback that is triggered when the user or the system updates the
  * text, cursor, or selection. The updated [TextFieldValue] is passed as a parameter of the
- * callback. The value passed to the callback will already have had the [filter] applied.
+ * callback. The value passed to the callback will already have had the [inputTransformation]
+ * applied.
  * @param modifier optional [Modifier] for this text field.
  * @param enabled controls the enabled state of the [BasicTextField2]. When `false`, the text
  * field will be neither editable nor focusable, the input of the text field will not be selectable.
  * @param readOnly controls the editable state of the [BasicTextField2]. When `true`, the text
  * field can not be modified, however, a user can focus it and copy text from it. Read-only text
  * fields are usually used to display pre-filled forms that user can not edit.
- * @param filter Optional [TextEditFilter] that will be used to filter changes to the
- * [TextFieldState] made by the user. The filter will be applied to changes made by hardware and
+ * @param inputTransformation Optional [InputTransformation] that will be used to filter changes to
+ * the [TextFieldState] made by the user. The filter will be applied to changes made by hardware and
  * software keyboard events, pasting or dropping text, accessibility services, and tests. The filter
  * will _not_ be applied when a new [value] is passed in, or when the filter is changed.
  * If the filter is changed on an existing text field, it will be applied to the next user edit, it
@@ -294,6 +299,8 @@ fun BasicTextField2(
  * innerTextField exactly once.
  */
 @ExperimentalFoundationApi
+// This takes a composable lambda, but it is not primarily a container.
+@Suppress("ComposableLambdaParameterPosition")
 @Composable
 fun BasicTextField2(
     value: TextFieldValue,
@@ -301,7 +308,7 @@ fun BasicTextField2(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     readOnly: Boolean = false,
-    filter: TextEditFilter? = null,
+    inputTransformation: InputTransformation? = null,
     textStyle: TextStyle = TextStyle.Default,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
@@ -309,10 +316,12 @@ fun BasicTextField2(
     onTextLayout: Density.(getResult: () -> TextLayoutResult?) -> Unit = {},
     interactionSource: MutableInteractionSource? = null,
     cursorBrush: Brush = SolidColor(Color.Black),
-    scrollState: ScrollState = rememberScrollState(),
     codepointTransformation: CodepointTransformation? = null,
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
-        @Composable { innerTextField -> innerTextField() }
+        @Composable { innerTextField -> innerTextField() },
+    scrollState: ScrollState = rememberScrollState(),
+    // Last parameter must not be a function unless it's intended to be commonly used as a trailing
+    // lambda.
 ) {
     val state = remember {
         TextFieldState(
@@ -331,7 +340,7 @@ fun BasicTextField2(
         ),
         enabled = enabled,
         readOnly = readOnly,
-        filter = filter,
+        inputTransformation = inputTransformation,
         textStyle = textStyle,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
@@ -364,8 +373,8 @@ fun BasicTextField2(
  * @param readOnly controls the editable state of the [BasicTextField2]. When `true`, the text
  * field can not be modified, however, a user can focus it and copy text from it. Read-only text
  * fields are usually used to display pre-filled forms that user can not edit.
- * @param filter Optional [TextEditFilter] that will be used to filter changes to the
- * [TextFieldState] made by the user. The filter will be applied to changes made by hardware and
+ * @param inputTransformation Optional [InputTransformation] that will be used to filter changes to
+ * the [TextFieldState] made by the user. The filter will be applied to changes made by hardware and
  * software keyboard events, pasting or dropping text, accessibility services, and tests. The filter
  * will _not_ be applied when changing the [state] programmatically, or when the filter is changed.
  * If the filter is changed on an existing text field, it will be applied to the next user edit.
@@ -406,13 +415,15 @@ fun BasicTextField2(
  * innerTextField exactly once.
  */
 @ExperimentalFoundationApi
+// This takes a composable lambda, but it is not primarily a container.
+@Suppress("ComposableLambdaParameterPosition")
 @Composable
 fun BasicTextField2(
     state: TextFieldState,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     readOnly: Boolean = false,
-    filter: TextEditFilter? = null,
+    inputTransformation: InputTransformation? = null,
     textStyle: TextStyle = TextStyle.Default,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
@@ -420,10 +431,12 @@ fun BasicTextField2(
     onTextLayout: Density.(getResult: () -> TextLayoutResult?) -> Unit = {},
     interactionSource: MutableInteractionSource? = null,
     cursorBrush: Brush = SolidColor(Color.Black),
-    scrollState: ScrollState = rememberScrollState(),
     codepointTransformation: CodepointTransformation? = null,
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
-        @Composable { innerTextField -> innerTextField() }
+        @Composable { innerTextField -> innerTextField() },
+    scrollState: ScrollState = rememberScrollState(),
+    // Last parameter must not be a function unless it's intended to be commonly used as a trailing
+    // lambda.
 ) {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -439,7 +452,7 @@ fun BasicTextField2(
         TextFieldSelectionState(
             textFieldState = state,
             textLayoutState = textLayoutState,
-            textEditFilter = filter,
+            inputTransformation = inputTransformation,
             density = density,
             editable = enabled && !readOnly,
             isFocused = isFocused
@@ -451,12 +464,14 @@ fun BasicTextField2(
     SideEffect {
         // These properties are not backed by snapshot state, so they can't be updated directly in
         // composition.
-        textFieldSelectionState.hapticFeedBack = currentHapticFeedback
-        textFieldSelectionState.clipboardManager = currentClipboardManager
-        textFieldSelectionState.textToolbar = currentTextToolbar
-        textFieldSelectionState.textEditFilter = filter
-        textFieldSelectionState.density = density
-        textFieldSelectionState.editable = enabled && !readOnly
+        textFieldSelectionState.update(
+            hapticFeedBack = currentHapticFeedback,
+            clipboardManager = currentClipboardManager,
+            textToolbar = currentTextToolbar,
+            inputTransformation = inputTransformation,
+            density = density,
+            editable = enabled && !readOnly,
+        )
     }
 
     DisposableEffect(textFieldSelectionState) {
@@ -472,7 +487,7 @@ fun BasicTextField2(
                 textFieldState = state,
                 textLayoutState = textLayoutState,
                 textFieldSelectionState = textFieldSelectionState,
-                filter = filter,
+                filter = inputTransformation,
                 enabled = enabled,
                 readOnly = readOnly,
                 keyboardOptions = keyboardOptions,

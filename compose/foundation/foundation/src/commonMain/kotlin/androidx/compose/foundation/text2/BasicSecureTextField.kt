@@ -27,7 +27,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.platformDefaultKeyMapping
 import androidx.compose.foundation.text2.input.CodepointTransformation
-import androidx.compose.foundation.text2.input.TextEditFilter
+import androidx.compose.foundation.text2.input.InputTransformation
 import androidx.compose.foundation.text2.input.TextFieldBuffer
 import androidx.compose.foundation.text2.input.TextFieldCharSequence
 import androidx.compose.foundation.text2.input.TextFieldLineLimits
@@ -97,8 +97,8 @@ import kotlinx.coroutines.launch
  * @param keyboardType The keyboard type to be used in this text field. It is set to
  * [KeyboardType.Password] by default. Use [KeyboardType.NumberPassword] for numerical password
  * fields.
- * @param filter Optional [TextEditFilter] that will be used to filter changes to the
- * [TextFieldState] made by the user. The filter will be applied to changes made by hardware and
+ * @param inputTransformation Optional [InputTransformation] that will be used to filter changes to
+ * the [TextFieldState] made by the user. The filter will be applied to changes made by hardware and
  * software keyboard events, pasting or dropping text, accessibility services, and tests. The filter
  * will _not_ be applied when changing the [state] programmatically, or when the filter is changed.
  * If the filter is changed on an existing text field, it will be applied to the next user edit.
@@ -125,6 +125,8 @@ import kotlinx.coroutines.launch
  * innerTextField exactly once.
  */
 @ExperimentalFoundationApi
+// This takes a composable lambda, but it is not primarily a container.
+@Suppress("ComposableLambdaParameterPosition")
 @Composable
 fun BasicSecureTextField(
     state: TextFieldState,
@@ -134,14 +136,16 @@ fun BasicSecureTextField(
     textObfuscationMode: TextObfuscationMode = TextObfuscationMode.RevealLastTyped,
     keyboardType: KeyboardType = KeyboardType.Password,
     enabled: Boolean = true,
-    filter: TextEditFilter? = null,
+    inputTransformation: InputTransformation? = null,
     textStyle: TextStyle = TextStyle.Default,
     interactionSource: MutableInteractionSource? = null,
     cursorBrush: Brush = SolidColor(Color.Black),
-    scrollState: ScrollState = rememberScrollState(),
     onTextLayout: Density.(getResult: () -> TextLayoutResult?) -> Unit = {},
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
-        @Composable { innerTextField -> innerTextField() }
+        @Composable { innerTextField -> innerTextField() },
+    scrollState: ScrollState = rememberScrollState(),
+    // Last parameter must not be a function unless it's intended to be commonly used as a trailing
+    // lambda.
 ) {
     val coroutineScope = rememberCoroutineScope()
     val secureTextFieldController = remember(coroutineScope) {
@@ -190,10 +194,9 @@ fun BasicSecureTextField(
             modifier = secureTextFieldModifier,
             enabled = enabled,
             readOnly = false,
-            filter = if (revealLastTypedEnabled) {
-                filter?.then(secureTextFieldController.passwordRevealFilter)
-                    ?: secureTextFieldController.passwordRevealFilter
-            } else filter,
+            inputTransformation = if (revealLastTypedEnabled) {
+                inputTransformation.then(secureTextFieldController.passwordRevealFilter)
+            } else inputTransformation,
             textStyle = textStyle,
             interactionSource = interactionSource,
             cursorBrush = cursorBrush,
@@ -218,7 +221,7 @@ internal class SecureTextFieldController(
     coroutineScope: CoroutineScope
 ) {
     /**
-     * A special [TextEditFilter] that tracks changes to the content to identify the last typed
+     * A special [InputTransformation] that tracks changes to the content to identify the last typed
      * character to reveal. `scheduleHide` lambda is delegated to a member function to be able to
      * use [passwordRevealFilter] instance.
      */
@@ -272,12 +275,12 @@ internal class SecureTextFieldController(
 @OptIn(ExperimentalFoundationApi::class)
 internal class PasswordRevealFilter(
     val scheduleHide: () -> Unit
-) : TextEditFilter {
+) : InputTransformation {
     // TODO: Consider setting this as a tracking annotation in AnnotatedString.
     internal var revealCodepointIndex by mutableIntStateOf(-1)
         private set
 
-    override fun filter(
+    override fun transformInput(
         originalValue: TextFieldCharSequence,
         valueWithChanges: TextFieldBuffer
     ) {
