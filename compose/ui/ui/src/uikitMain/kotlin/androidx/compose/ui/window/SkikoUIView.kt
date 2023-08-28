@@ -46,10 +46,6 @@ import org.jetbrains.skiko.SkikoPointerEventKind
 internal interface SkikoUIViewDelegate {
     fun onKeyboardEvent(event: SkikoKeyboardEvent)
 
-    fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean
-
-    fun onPointerEvent(event: SkikoPointerEvent)
-
     fun retrieveCATransactionCommands(): List<() -> Unit>
 
     fun draw(surface: Surface)
@@ -87,17 +83,10 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         }
     )
 
-    /*
-     * When there at least one tracked touch, we need notify redrawer about it. It should schedule CADisplayLink which
-     * affects frequency of polling UITouch events on high frequency display and forces it to match display refresh rate.
-     */
-    private var _touchesCount = 0
+    var isHighFrequencyEventPollingEnabled: Boolean
+        get() = _redrawer.needsProactiveDisplayLink
         set(value) {
-            field = value
-
-            val needHighFrequencyPolling = value > 0
-
-            _redrawer.needsProactiveDisplayLink = needHighFrequencyPolling
+            _redrawer.needsProactiveDisplayLink = value
         }
 
     constructor() : super(frame = CGRectZero.readValue())
@@ -270,75 +259,6 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
             }
         }
         super.pressesEnded(presses, withEvent)
-    }
-
-    /**
-     * https://developer.apple.com/documentation/uikit/uiview/1622533-point
-     */
-    override fun pointInside(point: CValue<CGPoint>, withEvent: UIEvent?): Boolean =
-        delegate?.pointInside(point, withEvent) ?: super.pointInside(point, withEvent)
-
-
-    override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesBegan(touches, withEvent)
-
-        _touchesCount += touches.size
-
-        withEvent?.let {
-            delegate?.onPointerEvent(it.toSkikoPointerEvent(SkikoPointerEventKind.DOWN))
-        }
-    }
-
-    override fun touchesEnded(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesEnded(touches, withEvent)
-
-        _touchesCount -= touches.size
-
-        withEvent?.let {
-            delegate?.onPointerEvent(it.toSkikoPointerEvent(SkikoPointerEventKind.UP))
-        }
-    }
-
-    override fun touchesMoved(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesMoved(touches, withEvent)
-
-        withEvent?.let {
-            delegate?.onPointerEvent(it.toSkikoPointerEvent(SkikoPointerEventKind.MOVE))
-        }
-    }
-
-    override fun touchesCancelled(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesCancelled(touches, withEvent)
-
-        _touchesCount -= touches.size
-
-        withEvent?.let {
-            delegate?.onPointerEvent(it.toSkikoPointerEvent(SkikoPointerEventKind.UP))
-        }
-    }
-
-    private fun UIEvent.toSkikoPointerEvent(kind: SkikoPointerEventKind): SkikoPointerEvent {
-        val pointers = touchesForView(this@SkikoUIView).orEmpty().map {
-            val touch = it as UITouch
-            val (x, y) = touch.locationInView(this@SkikoUIView).useContents { x to y }
-            SkikoPointer(
-                x = x,
-                y = y,
-                pressed = touch.isPressed,
-                device = SkikoPointerDevice.TOUCH,
-                id = touch.hashCode().toLong(),
-                pressure = touch.force
-            )
-        }
-
-        return SkikoPointerEvent(
-            x = pointers.centroidX,
-            y = pointers.centroidY,
-            kind = kind,
-            timestamp = (timestamp * 1_000).toLong(),
-            pointers = pointers,
-            platform = this
-        )
     }
 
     override fun inputDelegate(): UITextInputDelegateProtocol? {
@@ -664,14 +584,6 @@ private fun NSWritingDirection.directionToStr() =
         UITextLayoutDirectionDown -> "Down"
         else -> "unknown direction"
     }
-
-private val UITouch.isPressed
-    get() =
-        phase != UITouchPhase.UITouchPhaseEnded &&
-            phase != UITouchPhase.UITouchPhaseCancelled
-
-private val Iterable<SkikoPointer>.centroidX get() = asSequence().map { it.x }.average()
-private val Iterable<SkikoPointer>.centroidY get() = asSequence().map { it.y }.average()
 
 private fun toSkikoKeyboardEvent(
     event: UIPress,

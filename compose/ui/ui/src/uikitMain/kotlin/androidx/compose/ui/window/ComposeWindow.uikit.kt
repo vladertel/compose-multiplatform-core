@@ -42,6 +42,7 @@ import kotlin.math.roundToInt
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCAction
+import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import org.jetbrains.skia.Surface
 import org.jetbrains.skiko.SkikoKeyboardEvent
@@ -50,6 +51,7 @@ import org.jetbrains.skiko.currentNanoTime
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGPointMake
 import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGRectZero
 import platform.Foundation.*
 import platform.UIKit.*
 import platform.darwin.NSObject
@@ -111,6 +113,8 @@ internal actual class ComposeWindow : UIViewController {
     private val interopContext = UIKitInteropContext(requestRedraw = {
         attachedComposeContext?.view?.needRedraw()
     })
+    private val rootView: ComposeUIView
+        get() = view as ComposeUIView
 
     /*
      * Initial value is arbitarily chosen to avoid propagating invalid value logic
@@ -272,9 +276,47 @@ internal actual class ComposeWindow : UIViewController {
     }
 
     override fun loadView() {
-        view = UIView().apply {
+        view = ComposeUIView().apply {
             backgroundColor = UIColor.whiteColor
             setClipsToBounds(true)
+
+            delegate = object : ComposeUIViewDelegate {
+                override fun onChangedActiveTouchesCount(touchesCount: Int) {
+                    attachedComposeContext?.view?.isHighFrequencyEventPollingEnabled = touchesCount > 0
+                }
+
+                override fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean =
+                    point.useContents {
+                        val hitsInteropView = attachedComposeContext?.scene?.mainOwner?.hitInteropView(
+                            pointerPosition = Offset((x * density.density).toFloat(), (y * density.density).toFloat()),
+                            isTouchEvent = true,
+                        ) ?: false
+
+                        !hitsInteropView
+                    }
+
+                override fun onPointerEvent(event: SkikoPointerEvent) {
+                    val scale = density.density
+
+                    attachedComposeContext?.scene?.sendPointerEvent(
+                        eventType = event.kind.toCompose(),
+                        pointers = event.pointers.map {
+                            ComposeScene.Pointer(
+                                id = PointerId(it.id),
+                                position = Offset(
+                                    x = it.x.toFloat() * scale,
+                                    y = it.y.toFloat() * scale
+                                ),
+                                pressed = it.pressed,
+                                type = it.device.toCompose(),
+                                pressure = it.pressure.toFloat(),
+                            )
+                        },
+                        timeMillis = event.timestamp,
+                        nativeEvent = event
+                    )
+                }
+            }
         } // rootView needs to interop with UIKit
     }
 
@@ -480,38 +522,6 @@ internal actual class ComposeWindow : UIViewController {
         skikoUIView.delegate = object : SkikoUIViewDelegate {
             override fun onKeyboardEvent(event: SkikoKeyboardEvent) {
                 scene.sendKeyEvent(KeyEvent(event))
-            }
-
-            override fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean =
-                point.useContents {
-                    val hitsInteropView = attachedComposeContext?.scene?.mainOwner?.hitInteropView(
-                        pointerPosition = Offset((x * density.density).toFloat(), (y * density.density).toFloat()),
-                        isTouchEvent = true,
-                    ) ?: false
-
-                    !hitsInteropView
-                }
-
-            override fun onPointerEvent(event: SkikoPointerEvent) {
-                val scale = density.density
-
-                scene.sendPointerEvent(
-                    eventType = event.kind.toCompose(),
-                    pointers = event.pointers.map {
-                        ComposeScene.Pointer(
-                            id = PointerId(it.id),
-                            position = Offset(
-                                x = it.x.toFloat() * scale,
-                                y = it.y.toFloat() * scale
-                            ),
-                            pressed = it.pressed,
-                            type = it.device.toCompose(),
-                            pressure = it.pressure.toFloat(),
-                        )
-                    },
-                    timeMillis = event.timestamp,
-                    nativeEvent = event
-                )
             }
 
             override fun retrieveCATransactionCommands(): List<() -> Unit> =
