@@ -16,12 +16,16 @@
 
 package androidx.compose.foundation.text
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.OverscrollEffect
+import androidx.compose.foundation.clipScrollableContainer
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -52,11 +56,16 @@ import androidx.compose.ui.unit.LayoutDirection
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+@ExperimentalFoundationApi
+@Composable
+internal expect fun rememberTextFieldOverscrollEffect(): OverscrollEffect?
+
 // Scrollable
 internal fun Modifier.textFieldScrollable(
     scrollerPosition: TextFieldScrollerPosition,
     interactionSource: MutableInteractionSource? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    overscrollEffect: OverscrollEffect? = null
 ) = composed(
     inspectorInfo = debugInspectorInfo {
         name = "textFieldScrollable"
@@ -84,14 +93,18 @@ internal fun Modifier.textFieldScrollable(
     val wrappedScrollableState = remember(scrollableState, scrollerPosition) {
         createScrollableState(scrollableState, scrollerPosition)
     }
+
     val scroll = Modifier.scrollable(
         orientation = scrollerPosition.orientation,
         reverseDirection = reverseDirection,
+        overscrollEffect = overscrollEffect,
         state = wrappedScrollableState,
         interactionSource = interactionSource,
         enabled = enabled && scrollerPosition.maximum != 0f
     )
+
     scroll
+
 }
 
 // Workaround for K/JS
