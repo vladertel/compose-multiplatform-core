@@ -1173,6 +1173,7 @@ internal actual class ComposableLambdaImpl actual constructor(
 
 @ComposeCompilerApi
 @Stable
+@AllowDifferentMembersInActual // see https://youtrack.jetbrains.com/issue/KT-22841
 actual interface ComposableLambda :
     Function2<Composer, Int, Any?>,
     Function3<Any?, Composer, Int, Any?>,

@@ -28,10 +28,10 @@ import kotlin.native.concurrent.isFrozen
 import kotlin.native.concurrent.freeze
 import kotlin.native.concurrent.ensureNeverFrozen
 
-private val threadCounter = kotlin.native.concurrent.AtomicLong(0)
+private val threadCounter = kotlin.concurrent.AtomicLong(0)
 
 @kotlin.native.concurrent.ThreadLocal
-private var threadId: Long = threadCounter.addAndGet(1)
+private var threadId: Long = threadCounter.addAndGet(1L)
 
 internal actual fun getCurrentThreadId(): Long = threadId
 
@@ -39,7 +39,7 @@ internal actual fun getCurrentThreadId(): Long = threadId
  * AtomicReference implementation suitable for both single and multi-threaded context.
  */
 actual class AtomicReference<V> actual constructor(value: V) {
-    private val delegate = kotlin.native.concurrent.AtomicReference(value)
+    private val delegate = kotlin.concurrent.AtomicReference(value)
 
     actual fun get(): V = delegate.value
 
@@ -59,7 +59,7 @@ actual class AtomicReference<V> actual constructor(value: V) {
 }
 
 internal actual class AtomicInt actual constructor(value: Int) {
-    private val delegate = kotlin.native.concurrent.AtomicInt(value)
+    private val delegate = kotlin.concurrent.AtomicInt(value)
     actual fun get(): Int = delegate.value
     actual fun set(value: Int) {
         delegate.value = value
