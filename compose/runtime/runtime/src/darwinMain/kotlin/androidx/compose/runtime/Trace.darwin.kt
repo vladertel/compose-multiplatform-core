@@ -34,7 +34,7 @@ data class DarwinSignpostInterval(
     val id: os_signpost_id_t
 )
 
-internal class DarwinSignposter(category: String) {
+class DarwinSignposter(category: String) {
     private val log = os_log_create(subsystem = "androidx.compose", category = category)
     private val buf = UByteArray(1024)
     private fun event(id: os_signpost_id_t, name: String, type: os_signpost_type_t) {
@@ -65,10 +65,22 @@ internal class DarwinSignposter(category: String) {
     fun end(interval: DarwinSignpostInterval) {
         event(interval.id, interval.name, OS_SIGNPOST_INTERVAL_END)
     }
+
+    inline fun <T> trace(name: String, block: () -> T): T {
+        val interval = begin(name)
+        try {
+            return block()
+        } finally {
+            interval?.let { end(it) }
+        }
+    }
+
+    companion object {
+        val runtime = DarwinSignposter(category = "runtime")
+    }
 }
 
 internal actual object Trace {
-    val signposter = DarwinSignposter(category = "runtime")
     /**
      * Writes a trace message to indicate that a given section of code has begun.
      * This call must be followed by a corresponding call to [endSection] on the same thread.
@@ -77,7 +89,7 @@ internal actual object Trace {
      * to [endSection]. May be null.
      */
     actual fun beginSection(name: String): Any? =
-        signposter.begin(name)
+        DarwinSignposter.runtime.begin(name)
 
     /**
      * Writes a trace message to indicate that a given section of code has ended.
@@ -90,7 +102,7 @@ internal actual object Trace {
      */
     actual fun endSection(token: Any?) {
         if (token != null) {
-            signposter.end(token as DarwinSignpostInterval)
+            DarwinSignposter.runtime.end(token as DarwinSignpostInterval)
         }
     }
 }
