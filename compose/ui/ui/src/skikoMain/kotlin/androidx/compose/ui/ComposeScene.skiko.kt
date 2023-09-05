@@ -509,8 +509,10 @@ class ComposeScene internal constructor(
      * Sends any pending apply notifications and performs the changes they cause.
      */
     private fun sendAndPerformSnapshotChanges() {
-        Snapshot.sendApplyNotifications()
-        snapshotChanges.perform()
+        trace("ComposeScene:sendAndPerformSnapshotChanges") {
+            Snapshot.sendApplyNotifications()
+            snapshotChanges.perform()
+        }
     }
 
     internal fun hitTestInteropView(position: Offset): Boolean {
@@ -539,16 +541,18 @@ class ComposeScene internal constructor(
      * animations in the content (or any other code, which uses [withFrameNanos]
      */
     fun render(canvas: Canvas, nanoTime: Long): Unit = postponeInvalidation {
-        recomposeDispatcher.flush()
-        frameClock.sendFrame(nanoTime) // Recomposition
-        sendAndPerformSnapshotChanges() // Apply changes from recomposition phase to layout phase
-        needLayout = false
-        forEachOwner { it.measureAndLayout() }
-        syntheticEventSender.updatePointerPosition()
-        sendAndPerformSnapshotChanges()  // Apply changes from layout phase to draw phase
-        needDraw = false
-        forEachOwner { it.draw(canvas) }
-        forEachOwner { it.clearInvalidObservations() }
+        trace("ComposeScene:render") {
+            recomposeDispatcher.flush()
+            frameClock.sendFrame(nanoTime) // Recomposition
+            sendAndPerformSnapshotChanges() // Apply changes from recomposition phase to layout phase
+            needLayout = false
+            forEachOwner { it.measureAndLayout() }
+            syntheticEventSender.updatePointerPosition()
+            sendAndPerformSnapshotChanges()  // Apply changes from layout phase to draw phase
+            needDraw = false
+            forEachOwner { it.draw(canvas) }
+            forEachOwner { it.clearInvalidObservations() }
+        }
     }
 
     private var focusedOwner: SkiaBasedOwner? = null

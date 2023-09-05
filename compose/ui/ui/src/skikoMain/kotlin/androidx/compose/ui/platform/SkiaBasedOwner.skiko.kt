@@ -241,18 +241,20 @@ internal class SkiaBasedOwner(
         private set
 
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
-        measureAndLayoutDelegate.updateRootConstraints(constraints)
-        if (
-            measureAndLayoutDelegate.measureAndLayout {
-                if (sendPointerUpdate) {
-                    onPointerUpdate()
+        trace("SkiaBasedOwner:measureAndLayout") {
+            measureAndLayoutDelegate.updateRootConstraints(constraints)
+            if (
+                measureAndLayoutDelegate.measureAndLayout {
+                    if (sendPointerUpdate) {
+                        onPointerUpdate()
+                    }
                 }
+            ) {
+                requestDraw?.invoke()
             }
-        ) {
-            requestDraw?.invoke()
+            measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
+            contentSize = computeContentSize()
         }
-        measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
-        contentSize = computeContentSize()
     }
 
     override fun measureAndLayout(layoutNode: LayoutNode, constraints: Constraints) {
@@ -349,7 +351,9 @@ internal class SkiaBasedOwner(
     override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
 
     fun draw(canvas: org.jetbrains.skia.Canvas) {
-        root.draw(canvas.asComposeCanvas())
+        trace("SkiaBasedOwner:draw") {
+            root.draw(canvas.asComposeCanvas())
+        }
     }
 
     internal fun processPointerInput(
