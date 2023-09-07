@@ -37,6 +37,16 @@ private class DisplayLinkConditions(
     val setPausedCallback: (Boolean) -> Unit
 ) {
     /**
+     *
+     */
+    private var updatesImmediately = true
+        set(value) {
+            field = value
+
+            update()
+        }
+
+    /**
      * see [MetalRedrawer.needsProactiveDisplayLink]
      */
     var needsToBeProactive: Boolean = false
@@ -67,8 +77,22 @@ private class DisplayLinkConditions(
         }
 
     private fun update() {
+        if (!updatesImmediately) {
+            return
+        }
+
         val isUnpaused = isApplicationActive && (needsToBeProactive || needsRedrawOnNextVsync)
         setPausedCallback(!isUnpaused)
+    }
+
+    inline fun postponeUpdate(block: () -> Unit) {
+        check(updatesImmediately) { "Reentry for DisplayLinkConditions.postponeUpdates is not allowed" }
+        updatesImmediately = false
+        try {
+            block()
+        } finally {
+            updatesImmediately = true
+        }
     }
 }
 
@@ -231,9 +255,14 @@ internal class MetalRedrawer(
 
     private fun handleDisplayLinkTick() {
         if (displayLinkConditions.needsRedrawOnNextVsync) {
-            displayLinkConditions.needsRedrawOnNextVsync = false
+            displayLinkConditions.postponeUpdate {
+                displayLinkConditions.needsRedrawOnNextVsync = false
 
-            draw(DrawReason.DISPLAY_LINK_CALLBACK)
+                // Implementation of [MetalRedrawerCallbacks.draw] may call [needRedraw] during [draw] execution.
+                // If [displayLinkConditions.needsRedrawOnNextVsync] is the same as it was before [postponeUpdates] block,
+                // CADisplayLink paused state won't change, preventing one lost frame before subsequent unpause on 120hz devices.
+                draw(DrawReason.DISPLAY_LINK_CALLBACK)
+            }
         }
     }
 
