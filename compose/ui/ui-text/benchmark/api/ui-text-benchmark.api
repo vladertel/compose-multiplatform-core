@@ -1,0 +1,54 @@
+public final class androidx/compose/ui/text/benchmark/Alphabet {
+	public static final field $stable I
+	public static final field Companion Landroidx/compose/ui/text/benchmark/Alphabet$Companion;
+	public fun <init> (Ljava/util/List;CLjava/lang/String;)V
+	public final fun getCharRanges ()Ljava/util/List;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSpace ()C
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/ui/text/benchmark/Alphabet$Companion {
+	public final fun getCjk ()Landroidx/compose/ui/text/benchmark/Alphabet;
+	public final fun getLatin ()Landroidx/compose/ui/text/benchmark/Alphabet;
+}
+
+public final class androidx/compose/ui/text/benchmark/RandomTextGenerator {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (Landroidx/compose/ui/text/benchmark/Alphabet;Lkotlin/random/Random;)V
+	public synthetic fun <init> (Landroidx/compose/ui/text/benchmark/Alphabet;Lkotlin/random/Random;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun createStyles (Ljava/lang/String;IZ)Ljava/util/List;
+	public static synthetic fun createStyles$default (Landroidx/compose/ui/text/benchmark/RandomTextGenerator;Ljava/lang/String;IZILjava/lang/Object;)Ljava/util/List;
+	public final fun nextAnnotatedString (IIIZ)Landroidx/compose/ui/text/AnnotatedString;
+	public static synthetic fun nextAnnotatedString$default (Landroidx/compose/ui/text/benchmark/RandomTextGenerator;IIIZILjava/lang/Object;)Landroidx/compose/ui/text/AnnotatedString;
+	public final fun nextParagraph (II)Ljava/lang/String;
+	public static synthetic fun nextParagraph$default (Landroidx/compose/ui/text/benchmark/RandomTextGenerator;IIILjava/lang/Object;)Ljava/lang/String;
+	public final fun nextStyledWordList (IIZ)Ljava/util/List;
+	public static synthetic fun nextStyledWordList$default (Landroidx/compose/ui/text/benchmark/RandomTextGenerator;IIZILjava/lang/Object;)Ljava/util/List;
+}
+
+public final class androidx/compose/ui/text/benchmark/TextBenchmarkHelperKt {
+	public static final fun cartesian (Ljava/util/List;[Ljava/lang/Object;)Ljava/util/List;
+	public static final fun cartesian ([[Ljava/lang/Object;)Ljava/util/List;
+}
+
+public final class androidx/compose/ui/text/benchmark/TextBenchmarkTestRule : org/junit/rules/TestRule {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (Landroidx/compose/ui/text/benchmark/Alphabet;)V
+	public synthetic fun <init> (Landroidx/compose/ui/text/benchmark/Alphabet;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun apply (Lorg/junit/runners/model/Statement;Lorg/junit/runner/Description;)Lorg/junit/runners/model/Statement;
+	public final fun generator (Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public final fun getFontSizeSp ()F
+	public final fun getRepeatTimes ()I
+	public final fun getWidthDp ()F
+}
+
+public final class androidx/compose/ui/text/benchmark/TextType : java/lang/Enum {
+	public static final field PlainText Landroidx/compose/ui/text/benchmark/TextType;
+	public static final field StyledText Landroidx/compose/ui/text/benchmark/TextType;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/ui/text/benchmark/TextType;
+	public static fun values ()[Landroidx/compose/ui/text/benchmark/TextType;
+}
+

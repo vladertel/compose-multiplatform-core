@@ -1,0 +1,30 @@
+public final class androidx/compose/ui/graphics/samples/BrushSamplesKt {
+	public static final fun GradientBrushSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun HorizontalGradientColorStopSample ()V
+	public static final fun HorizontalGradientSample ()V
+	public static final fun LinearGradientColorStopSample ()V
+	public static final fun LinearGradientSample ()V
+	public static final fun RadialBrushColorStopSample ()V
+	public static final fun RadialBrushSample ()V
+	public static final fun SweepGradientColorStopSample ()V
+	public static final fun SweepGradientSample ()V
+	public static final fun VerticalGradientColorStopSample ()V
+	public static final fun VerticalGradientSample ()V
+}
+
+public final class androidx/compose/ui/graphics/samples/DrawScopeSampleKt {
+	public static final fun DrawScopeBatchedTransformSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawScopeOvalBrushSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawScopeOvalColorSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawScopeSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/graphics/samples/ImageBitmapSampleKt {
+	public static final fun ImageBitmapReadPixelsSample ()V
+	public static final fun ImageBitmapToPixelMapSample ()V
+}
+
+public final class androidx/compose/ui/graphics/samples/PathEffectSampleKt {
+	public static final fun StampedPathEffectSample (Landroidx/compose/runtime/Composer;I)V
+}
+

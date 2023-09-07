@@ -1,0 +1,51 @@
+public final class androidx/compose/foundation/layout/demos/ComposableSingletons$LayoutDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/layout/demos/ComposableSingletons$LayoutDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/layout/demos/ComposableSingletons$RtlDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/layout/demos/ComposableSingletons$RtlDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$foundation_layout_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/layout/demos/LayoutDemosKt {
+	public static final fun getLayoutDemos ()Landroidx/compose/integration/demos/common/DemoCategory;
+}
+
+public final class androidx/compose/foundation/layout/demos/RtlDemoKt {
+	public static final fun RtlDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun StackExample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/demos/SimpleFlowColumnDemoKt {
+	public static final fun SimpleFlowColumnDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/demos/SimpleFlowRowDemoKt {
+	public static final fun SimpleFlowRowDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/demos/SimpleLayoutDemoKt {
+	public static final fun SimpleLayoutDemo (Landroidx/compose/runtime/Composer;I)V
+}
+

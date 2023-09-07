@@ -1,0 +1,420 @@
+public final class androidx/compose/material/catalog/library/CatalogAppKt {
+	public static final fun MaterialCatalogApp (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/catalog/library/NavGraphKt {
+	public static final field MaterialRoute Ljava/lang/String;
+	public static final fun NavGraph (Landroidx/compose/material/catalog/library/model/Theme;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/catalog/library/model/Component {
+	public static final field $stable I
+	public fun <init> (ILjava/lang/String;Ljava/lang/String;IZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;IZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()I
+	public final fun component5 ()Z
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Ljava/util/List;
+	public final fun copy (ILjava/lang/String;Ljava/lang/String;IZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Landroidx/compose/material/catalog/library/model/Component;
+	public static synthetic fun copy$default (Landroidx/compose/material/catalog/library/model/Component;ILjava/lang/String;Ljava/lang/String;IZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Landroidx/compose/material/catalog/library/model/Component;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDescription ()Ljava/lang/String;
+	public final fun getDocsUrl ()Ljava/lang/String;
+	public final fun getExamples ()Ljava/util/List;
+	public final fun getGuidelinesUrl ()Ljava/lang/String;
+	public final fun getIcon ()I
+	public final fun getId ()I
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSourceUrl ()Ljava/lang/String;
+	public final fun getTintIcon ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/catalog/library/model/ComponentsKt {
+	public static final fun getComponents ()Ljava/util/List;
+}
+
+public final class androidx/compose/material/catalog/library/model/ComposableSingletons$ExamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/catalog/library/model/ComposableSingletons$ExamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function2;
+	public static field lambda-11 Lkotlin/jvm/functions/Function2;
+	public static field lambda-12 Lkotlin/jvm/functions/Function2;
+	public static field lambda-13 Lkotlin/jvm/functions/Function2;
+	public static field lambda-14 Lkotlin/jvm/functions/Function2;
+	public static field lambda-15 Lkotlin/jvm/functions/Function2;
+	public static field lambda-16 Lkotlin/jvm/functions/Function2;
+	public static field lambda-17 Lkotlin/jvm/functions/Function2;
+	public static field lambda-18 Lkotlin/jvm/functions/Function2;
+	public static field lambda-19 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-20 Lkotlin/jvm/functions/Function2;
+	public static field lambda-21 Lkotlin/jvm/functions/Function2;
+	public static field lambda-22 Lkotlin/jvm/functions/Function2;
+	public static field lambda-23 Lkotlin/jvm/functions/Function2;
+	public static field lambda-24 Lkotlin/jvm/functions/Function2;
+	public static field lambda-25 Lkotlin/jvm/functions/Function2;
+	public static field lambda-26 Lkotlin/jvm/functions/Function2;
+	public static field lambda-27 Lkotlin/jvm/functions/Function2;
+	public static field lambda-28 Lkotlin/jvm/functions/Function2;
+	public static field lambda-29 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-30 Lkotlin/jvm/functions/Function2;
+	public static field lambda-31 Lkotlin/jvm/functions/Function2;
+	public static field lambda-32 Lkotlin/jvm/functions/Function2;
+	public static field lambda-33 Lkotlin/jvm/functions/Function2;
+	public static field lambda-34 Lkotlin/jvm/functions/Function2;
+	public static field lambda-35 Lkotlin/jvm/functions/Function2;
+	public static field lambda-36 Lkotlin/jvm/functions/Function2;
+	public static field lambda-37 Lkotlin/jvm/functions/Function2;
+	public static field lambda-38 Lkotlin/jvm/functions/Function2;
+	public static field lambda-39 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-40 Lkotlin/jvm/functions/Function2;
+	public static field lambda-41 Lkotlin/jvm/functions/Function2;
+	public static field lambda-42 Lkotlin/jvm/functions/Function2;
+	public static field lambda-43 Lkotlin/jvm/functions/Function2;
+	public static field lambda-44 Lkotlin/jvm/functions/Function2;
+	public static field lambda-45 Lkotlin/jvm/functions/Function2;
+	public static field lambda-46 Lkotlin/jvm/functions/Function2;
+	public static field lambda-47 Lkotlin/jvm/functions/Function2;
+	public static field lambda-48 Lkotlin/jvm/functions/Function2;
+	public static field lambda-49 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-50 Lkotlin/jvm/functions/Function2;
+	public static field lambda-51 Lkotlin/jvm/functions/Function2;
+	public static field lambda-52 Lkotlin/jvm/functions/Function2;
+	public static field lambda-53 Lkotlin/jvm/functions/Function2;
+	public static field lambda-54 Lkotlin/jvm/functions/Function2;
+	public static field lambda-55 Lkotlin/jvm/functions/Function2;
+	public static field lambda-56 Lkotlin/jvm/functions/Function2;
+	public static field lambda-57 Lkotlin/jvm/functions/Function2;
+	public static field lambda-58 Lkotlin/jvm/functions/Function2;
+	public static field lambda-59 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-60 Lkotlin/jvm/functions/Function2;
+	public static field lambda-61 Lkotlin/jvm/functions/Function2;
+	public static field lambda-62 Lkotlin/jvm/functions/Function2;
+	public static field lambda-63 Lkotlin/jvm/functions/Function2;
+	public static field lambda-64 Lkotlin/jvm/functions/Function2;
+	public static field lambda-65 Lkotlin/jvm/functions/Function2;
+	public static field lambda-66 Lkotlin/jvm/functions/Function2;
+	public static field lambda-67 Lkotlin/jvm/functions/Function2;
+	public static field lambda-68 Lkotlin/jvm/functions/Function2;
+	public static field lambda-69 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public static field lambda-70 Lkotlin/jvm/functions/Function2;
+	public static field lambda-71 Lkotlin/jvm/functions/Function2;
+	public static field lambda-72 Lkotlin/jvm/functions/Function2;
+	public static field lambda-73 Lkotlin/jvm/functions/Function2;
+	public static field lambda-74 Lkotlin/jvm/functions/Function2;
+	public static field lambda-8 Lkotlin/jvm/functions/Function2;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-11$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-12$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-13$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-14$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-15$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-16$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-17$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-18$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-19$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-20$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-21$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-22$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-23$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-24$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-25$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-26$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-27$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-28$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-29$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-30$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-31$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-32$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-33$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-34$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-35$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-36$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-37$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-38$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-39$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-40$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-41$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-42$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-43$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-44$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-45$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-46$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-47$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-48$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-49$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-50$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-51$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-52$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-53$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-54$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-55$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-56$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-57$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-58$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-59$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-60$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-61$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-62$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-63$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-64$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-65$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-66$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-67$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-68$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-69$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-70$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-71$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-72$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-73$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-74$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-8$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-9$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/catalog/library/model/Example {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function2;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Lkotlin/jvm/functions/Function2;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function2;)Landroidx/compose/material/catalog/library/model/Example;
+	public static synthetic fun copy$default (Landroidx/compose/material/catalog/library/model/Example;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)Landroidx/compose/material/catalog/library/model/Example;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContent ()Lkotlin/jvm/functions/Function2;
+	public final fun getDescription ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSourceUrl ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/catalog/library/model/ExamplesKt {
+	public static final fun getAppBarsBottomExamples ()Ljava/util/List;
+	public static final fun getAppBarsTopExamples ()Ljava/util/List;
+	public static final fun getBackdropExamples ()Ljava/util/List;
+	public static final fun getBadgeExamples ()Ljava/util/List;
+	public static final fun getBottomNavigationExamples ()Ljava/util/List;
+	public static final fun getButtonsExamples ()Ljava/util/List;
+	public static final fun getButtonsFloatingActionButtonExamples ()Ljava/util/List;
+	public static final fun getCardsExamples ()Ljava/util/List;
+	public static final fun getCheckboxesExamples ()Ljava/util/List;
+	public static final fun getChipsExamples ()Ljava/util/List;
+	public static final fun getDialogsExamples ()Ljava/util/List;
+	public static final fun getDividersExamples ()Ljava/util/List;
+	public static final fun getListsExamples ()Ljava/util/List;
+	public static final fun getMenusExamples ()Ljava/util/List;
+	public static final fun getNavigationDrawerExamples ()Ljava/util/List;
+	public static final fun getNavigationRailExamples ()Ljava/util/List;
+	public static final fun getProgressIndicatorsExamples ()Ljava/util/List;
+	public static final fun getRadioButtonsExamples ()Ljava/util/List;
+	public static final fun getSheetsBottomExamples ()Ljava/util/List;
+	public static final fun getSlidersExamples ()Ljava/util/List;
+	public static final fun getSnackbarsExamples ()Ljava/util/List;
+	public static final fun getSwitchesExamples ()Ljava/util/List;
+	public static final fun getTabsExamples ()Ljava/util/List;
+	public static final fun getTextFieldsExamples ()Ljava/util/List;
+}
+
+public final class androidx/compose/material/catalog/library/model/Theme {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (Landroidx/compose/material/catalog/library/model/ThemeColor;Landroidx/compose/material/catalog/library/model/ThemeColor;Landroidx/compose/material/catalog/library/model/ThemeFontFamily;Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;III)V
+	public synthetic fun <init> (Landroidx/compose/material/catalog/library/model/ThemeColor;Landroidx/compose/material/catalog/library/model/ThemeColor;Landroidx/compose/material/catalog/library/model/ThemeFontFamily;Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public final fun component2 ()Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public final fun component3 ()Landroidx/compose/material/catalog/library/model/ThemeFontFamily;
+	public final fun component4 ()Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;
+	public final fun component5 ()I
+	public final fun component6 ()I
+	public final fun component7 ()I
+	public final fun copy (Landroidx/compose/material/catalog/library/model/ThemeColor;Landroidx/compose/material/catalog/library/model/ThemeColor;Landroidx/compose/material/catalog/library/model/ThemeFontFamily;Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;III)Landroidx/compose/material/catalog/library/model/Theme;
+	public static synthetic fun copy$default (Landroidx/compose/material/catalog/library/model/Theme;Landroidx/compose/material/catalog/library/model/ThemeColor;Landroidx/compose/material/catalog/library/model/ThemeColor;Landroidx/compose/material/catalog/library/model/ThemeFontFamily;Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;IIIILjava/lang/Object;)Landroidx/compose/material/catalog/library/model/Theme;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFontFamily ()Landroidx/compose/material/catalog/library/model/ThemeFontFamily;
+	public final fun getLargeShapeCornerSize ()I
+	public final fun getMediumShapeCornerSize ()I
+	public final fun getPrimaryColor ()Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public final fun getSecondaryColor ()Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public final fun getShapeCornerFamily ()Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;
+	public final fun getSmallShapeCornerSize ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/catalog/library/model/ThemeColor : java/lang/Enum {
+	public static final field Blue Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static final field Brown Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static final field Green Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static final field Indigo Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static final field Orange Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static final field Pink Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static final field Purple Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static final field Red Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static final field Teal Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static final field Yellow Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/material/catalog/library/model/ThemeColor;
+	public static fun values ()[Landroidx/compose/material/catalog/library/model/ThemeColor;
+}
+
+public final class androidx/compose/material/catalog/library/model/ThemeFontFamily : java/lang/Enum {
+	public static final field Cursive Landroidx/compose/material/catalog/library/model/ThemeFontFamily;
+	public static final field Default Landroidx/compose/material/catalog/library/model/ThemeFontFamily;
+	public static final field Monospace Landroidx/compose/material/catalog/library/model/ThemeFontFamily;
+	public static final field SansSerif Landroidx/compose/material/catalog/library/model/ThemeFontFamily;
+	public static final field Serif Landroidx/compose/material/catalog/library/model/ThemeFontFamily;
+	public final fun getLabel ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/material/catalog/library/model/ThemeFontFamily;
+	public static fun values ()[Landroidx/compose/material/catalog/library/model/ThemeFontFamily;
+}
+
+public final class androidx/compose/material/catalog/library/model/ThemeShapeCornerFamily : java/lang/Enum {
+	public static final field Cut Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;
+	public static final field Rounded Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;
+	public final fun getLabel ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;
+	public static fun values ()[Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;
+}
+
+public final class androidx/compose/material/catalog/library/model/ThemesKt {
+	public static final field MaxLargeShapeCornerSize I
+	public static final field MaxMediumShapeCornerSize I
+	public static final field MaxSmallShapeCornerSize I
+	public static final fun getColor (Landroidx/compose/material/catalog/library/model/ThemeColor;Z)J
+	public static final fun getDefaultTheme ()Landroidx/compose/material/catalog/library/model/Theme;
+	public static final fun getFontFamily (Landroidx/compose/material/catalog/library/model/ThemeFontFamily;)Landroidx/compose/ui/text/font/FontFamily;
+	public static final fun getShape-3ABfNKs (Landroidx/compose/material/catalog/library/model/ThemeShapeCornerFamily;F)Landroidx/compose/foundation/shape/CornerBasedShape;
+	public static final fun getThemeSaver ()Landroidx/compose/runtime/saveable/Saver;
+}
+
+public final class androidx/compose/material/catalog/library/ui/common/BorderKt {
+	public static final fun compositeBorderColor (Landroidx/compose/runtime/Composer;I)J
+	public static final fun getBorderWidth ()F
+	public static final fun gridItemBorder-1Yev-eo (Landroidx/compose/ui/Modifier;IIJF)Landroidx/compose/ui/Modifier;
+	public static synthetic fun gridItemBorder-1Yev-eo$default (Landroidx/compose/ui/Modifier;IIJFILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+}
+
+public final class androidx/compose/material/catalog/library/ui/common/CatalogScaffoldKt {
+	public static final fun CatalogScaffold (Ljava/lang/String;ZLandroidx/compose/material/catalog/library/model/Theme;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;III)V
+}
+
+public final class androidx/compose/material/catalog/library/ui/common/CatalogTopAppBarKt {
+	public static final fun CatalogTopAppBar (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;III)V
+}
+
+public final class androidx/compose/material/catalog/library/ui/common/ComposableSingletons$CatalogTopAppBarKt {
+	public static final field INSTANCE Landroidx/compose/material/catalog/library/ui/common/ComposableSingletons$CatalogTopAppBarKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_catalog_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/catalog/library/ui/component/ComponentItemKt {
+	public static final fun ComponentItem (Landroidx/compose/material/catalog/library/model/Component;Lkotlin/jvm/functions/Function1;IILandroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/catalog/library/ui/component/ComponentKt {
+	public static final fun Component (Landroidx/compose/material/catalog/library/model/Component;Landroidx/compose/material/catalog/library/model/Theme;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/catalog/library/ui/component/ComposableSingletons$ComponentKt {
+	public static final field INSTANCE Landroidx/compose/material/catalog/library/ui/component/ComposableSingletons$ComponentKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/catalog/library/ui/example/ExampleItemKt {
+	public static final fun ExampleItem (Landroidx/compose/material/catalog/library/model/Example;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/catalog/library/ui/example/ExampleKt {
+	public static final fun Example (Landroidx/compose/material/catalog/library/model/Component;Landroidx/compose/material/catalog/library/model/Example;Landroidx/compose/material/catalog/library/model/Theme;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/catalog/library/ui/home/HomeKt {
+	public static final fun Home (Ljava/util/List;Landroidx/compose/material/catalog/library/model/Theme;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/catalog/library/ui/theme/ComposableSingletons$ThemePickerKt {
+	public static final field INSTANCE Landroidx/compose/material/catalog/library/ui/theme/ComposableSingletons$ThemePickerKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$material_catalog_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/catalog/library/ui/theme/ThemeKt {
+	public static final fun CatalogTheme (Landroidx/compose/material/catalog/library/model/Theme;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/catalog/library/ui/theme/ThemePickerKt {
+	public static final fun ThemePicker (Landroidx/compose/material/catalog/library/model/Theme;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/catalog/library/util/ColorKt {
+	public static final fun isLightColor-8_81llA (J)Z
+	public static final fun onColor-8_81llA (J)J
+	public static final fun variantColor-8_81llA (J)J
+}
+
+public final class androidx/compose/material/catalog/library/util/UrlKt {
+	public static final field ComponentGuidelinesUrl Ljava/lang/String;
+	public static final field DocsUrl Ljava/lang/String;
+	public static final field GuidelinesUrl Ljava/lang/String;
+	public static final field IssueUrl Ljava/lang/String;
+	public static final field LicensesUrl Ljava/lang/String;
+	public static final field MaterialSourceUrl Ljava/lang/String;
+	public static final field PrivacyUrl Ljava/lang/String;
+	public static final field ReleasesUrl Ljava/lang/String;
+	public static final field SampleSourceUrl Ljava/lang/String;
+	public static final field SourceUrl Ljava/lang/String;
+	public static final field TermsUrl Ljava/lang/String;
+	public static final fun openUrl (Landroid/content/Context;Ljava/lang/String;)V
+}
+

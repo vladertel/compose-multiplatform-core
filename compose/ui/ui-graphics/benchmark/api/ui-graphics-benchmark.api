@@ -1,0 +1,24 @@
+public abstract class androidx/compose/ui/graphics/benchmark/ImageVectorTestCase : androidx/compose/testutils/LayeredComposeTestCase {
+	public static final field $stable I
+	public synthetic fun ContentWrappers (Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;I)V
+	public fun ContentWrappers (Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+	public fun MeasuredContent (Landroidx/compose/runtime/Composer;I)V
+	public abstract fun getPainter (Landroidx/compose/runtime/Composer;I)Landroidx/compose/ui/graphics/painter/Painter;
+	public abstract fun getTestTag ()Ljava/lang/String;
+}
+
+public final class androidx/compose/ui/graphics/benchmark/ProgrammaticVectorTestCase : androidx/compose/ui/graphics/benchmark/ImageVectorTestCase {
+	public static final field $stable I
+	public fun <init> ()V
+	public synthetic fun getPainter (Landroidx/compose/runtime/Composer;I)Landroidx/compose/ui/graphics/painter/Painter;
+	public fun getPainter (Landroidx/compose/runtime/Composer;I)Landroidx/compose/ui/graphics/vector/VectorPainter;
+	public fun getTestTag ()Ljava/lang/String;
+}
+
+public final class androidx/compose/ui/graphics/benchmark/XmlVectorTestCase : androidx/compose/ui/graphics/benchmark/ImageVectorTestCase {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun getPainter (Landroidx/compose/runtime/Composer;I)Landroidx/compose/ui/graphics/painter/Painter;
+	public fun getTestTag ()Ljava/lang/String;
+}
+

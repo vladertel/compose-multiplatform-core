@@ -1,0 +1,138 @@
+public final class androidx/compose/runtime/samples/ComposableSingletons$CompositionLocalSamplesKt {
+	public static final field INSTANCE Landroidx/compose/runtime/samples/ComposableSingletons$CompositionLocalSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$runtime_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/runtime/samples/ComposableSingletons$EffectSamplesKt {
+	public static final field INSTANCE Landroidx/compose/runtime/samples/ComposableSingletons$EffectSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$runtime_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$runtime_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$runtime_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/runtime/samples/ComposableSingletons$ModelSamplesKt {
+	public static final field INSTANCE Landroidx/compose/runtime/samples/ComposableSingletons$ModelSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$runtime_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/runtime/samples/ComposableSingletons$MutableStateListSamplesKt {
+	public static final field INSTANCE Landroidx/compose/runtime/samples/ComposableSingletons$MutableStateListSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$runtime_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/runtime/samples/ComposableSingletons$MutableStateMapSampleKt {
+	public static final field INSTANCE Landroidx/compose/runtime/samples/ComposableSingletons$MutableStateMapSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$runtime_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$runtime_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/runtime/samples/CompositionLocalSamplesKt {
+	public static final fun compositionLocalProvider ()V
+	public static final fun consumeCompositionLocal ()V
+	public static final fun createCompositionLocal ()V
+	public static final fun someScreenSample ()V
+}
+
+public final class androidx/compose/runtime/samples/CustomTreeCompositionSamplesKt {
+	public static final fun CustomTreeComposition ()V
+}
+
+public final class androidx/compose/runtime/samples/EffectSamplesKt {
+	public static final fun DelegatedReadOnlyStateSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DelegatedStateSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DerivedStateSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DestructuredStateSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleStateSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TwoInputsKeySample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun observeUserSample ()V
+}
+
+public final class androidx/compose/runtime/samples/FlowAdapterSamplesKt {
+	public static final fun FlowWithInitialSample (Lkotlinx/coroutines/flow/Flow;Landroidx/compose/runtime/Composer;I)V
+	public static final fun StateFlowSample (Lkotlinx/coroutines/flow/StateFlow;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/runtime/samples/ImmutableSamplesKt {
+	public static final fun simpleImmutableClass ()V
+}
+
+public final class androidx/compose/runtime/samples/KeySamplesKt {
+	public static final fun LocallyUniqueKeys (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MoreCorrectUniqueKeys (Landroidx/compose/runtime/Composer;I)V
+	public static final fun NotAlwaysUniqueKeys (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/runtime/samples/ModelSamplesKt {
+	public static final fun stateSample ()V
+}
+
+public final class androidx/compose/runtime/samples/MovableContentSamplesKt {
+	public static final fun ItemView (ILandroidx/compose/runtime/Composer;I)V
+	public static final fun MovableContentColumnRowSample (Lkotlin/jvm/functions/Function2;ZLandroidx/compose/runtime/Composer;I)V
+	public static final fun MovableContentMultiColumnSample (Ljava/util/List;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/runtime/samples/MutableStateListSamplesKt {
+	public static final fun stateListSample ()V
+}
+
+public final class androidx/compose/runtime/samples/MutableStateMapSampleKt {
+	public static final fun stateMapSample ()V
+}
+
+public final class androidx/compose/runtime/samples/Person {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Landroidx/compose/runtime/samples/Person;
+	public static synthetic fun copy$default (Landroidx/compose/runtime/samples/Person;Ljava/lang/String;ILjava/lang/Object;)Landroidx/compose/runtime/samples/Person;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/runtime/samples/ProduceStateSampleViewModel {
+	public static final field $stable I
+	public fun <init> ()V
+	public final fun getPeople ()Lkotlinx/coroutines/flow/Flow;
+	public final fun registerPersonObserver (Lkotlin/jvm/functions/Function1;)Landroidx/compose/runtime/samples/ProduceStateSampleViewModel$Disposable;
+}
+
+public abstract interface class androidx/compose/runtime/samples/ProduceStateSampleViewModel$Disposable {
+	public abstract fun dispose ()V
+}
+
+public final class androidx/compose/runtime/samples/ProduceStateSamplesKt {
+	public static final fun ProduceState (Landroidx/compose/runtime/samples/ProduceStateSampleViewModel;Landroidx/compose/runtime/Composer;I)V
+	public static final fun ProduceStateAwaitDispose (Landroidx/compose/runtime/samples/ProduceStateSampleViewModel;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/runtime/samples/SideEffectSamplesKt {
+	public static final fun disposableEffectSample ()V
+	public static final fun rememberUpdatedStateSampleWithDisposableEffect ()V
+	public static final fun rememberUpdatedStateSampleWithLaunchedEffect ()V
+}
+
+public final class androidx/compose/runtime/samples/SnapshotMutationPolicySamplesKt {
+	public static final fun counterSample ()V
+}
+
+public final class androidx/compose/runtime/samples/SnapshotSamplesKt {
+	public static final fun snapshotAsContextElementSample ()V
+	public static final fun snapshotFlowSample ()V
+}
+

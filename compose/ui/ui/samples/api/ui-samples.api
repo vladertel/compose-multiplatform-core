@@ -1,0 +1,268 @@
+public final class androidx/compose/ui/samples/AlignmentLineSampleKt {
+	public static final fun AlignmentLineSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/AlphaSampleKt {
+	public static final fun AlphaSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/AndroidViewSampleKt {
+	public static final fun AndroidDrawableInDrawScopeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AndroidViewSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AndroidViewWithReleaseSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ReusableAndroidViewInLazyColumnSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/BlurSampleKt {
+	public static final fun BlurSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ImageBlurSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/ComposableSingletons$DrawModifierSampleKt {
+	public static final field INSTANCE Landroidx/compose/ui/samples/ComposableSingletons$DrawModifierSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_samples_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/samples/ComposableSingletons$FocusAwareInputSamplesKt {
+	public static final field INSTANCE Landroidx/compose/ui/samples/ComposableSingletons$FocusAwareInputSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/samples/ComposableSingletons$FocusSamplesKt {
+	public static final field INSTANCE Landroidx/compose/ui/samples/ComposableSingletons$FocusSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/samples/ComposableSingletons$ModifierSamplesKt {
+	public static final field INSTANCE Landroidx/compose/ui/samples/ComposableSingletons$ModifierSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/samples/ComposableSingletons$NestedScrollInteropSamplesKt {
+	public static final field INSTANCE Landroidx/compose/ui/samples/ComposableSingletons$NestedScrollInteropSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-2$ui_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_samples_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/samples/ComposableSingletons$NestedScrollSamplesKt {
+	public static final field INSTANCE Landroidx/compose/ui/samples/ComposableSingletons$NestedScrollSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_samples_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/samples/ComposableSingletons$PointerIconSampleKt {
+	public static final field INSTANCE Landroidx/compose/ui/samples/ComposableSingletons$PointerIconSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/samples/ComposableSingletons$SoftwareKeyboardControllerSampleKt {
+	public static final field INSTANCE Landroidx/compose/ui/samples/ComposableSingletons$SoftwareKeyboardControllerSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/samples/DialogSampleKt {
+	public static final fun DialogSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/DrawModifierSampleKt {
+	public static final fun DrawModifierNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawWithCacheContentSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawWithCacheModifierSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawWithCacheModifierStateParameterSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/FocusAwareInputSamplesKt {
+	public static final fun KeyEventIsAltPressedSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun KeyEventIsCtrlPressedSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun KeyEventIsMetaPressedSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun KeyEventIsShiftPressedSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun KeyEventSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun KeyEventTypeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PreRotaryEventSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun RotaryEventSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/FocusSamplesKt {
+	public static final fun CancelFocusMoveSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CaptureFocusSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ClearFocusSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CreateFocusRequesterRefsSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CustomFocusEnterSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CustomFocusExitSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CustomFocusOrderSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FocusPropertiesSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FocusableSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FocusableSampleUsingLowerLevelFocusTarget (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MoveFocusSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun RequestFocusSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/InspectableModifierSampleKt {
+	public static final fun InspectableModifierSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/InspectorInfoInComposedModifierSamplesKt {
+	public static final fun InspectorInfoInComposedModifierSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun InspectorInfoInComposedModifierWithArgumentsSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/LayerModifierSamplesKt {
+	public static final fun AnimateFadeIn (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ChangeOpacity (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CompositingStrategyModulateAlpha (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/LayoutSampleKt {
+	public static final fun ConvenienceLayoutModifierSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LayoutModifierNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LayoutModifierSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LayoutTagChildrenUsage (Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+	public static final fun LayoutUsage (Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+	public static final fun LayoutWithMultipleContentsUsage (Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+	public static final fun LayoutWithProvidedIntrinsicsUsage (Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/LookaheadLayoutSampleKt {
+	public static final fun IntermediateLayoutSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LookaheadLayoutCoordinatesSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun animateContentSizeAfterLookaheadPass (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/ModifierCompositionLocalSampleKt {
+	public static final fun CompositionLocalConsumingModifierObserverNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CompositionLocalConsumingModifierSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/ModifierLocalSamplesKt {
+	public static final fun ModifierLocalChildParentCommunicationInterLayoutNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModifierLocalChildParentCommunicationWithinLayoutNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModifierLocalParentChildCommunicationInterLayoutNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModifierLocalParentChildCommunicationWithinLayoutNodeSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/ModifierSamplesKt {
+	public static final fun ConditionalDelegationExample ()V
+	public static final fun DelegateInAttachSample ()V
+	public static final fun DelegatedNodeSampleExplicit (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DelegatedNodeSampleImplicit (Landroidx/compose/runtime/Composer;I)V
+	public static final fun GlobalPositionAwareModifierNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun JustReadingOrProvidingModifierLocalNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LayoutAwareModifierNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyDelegationExample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModifierFactorySample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModifierNodeCoroutineScopeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModifierNodeElementSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModifierNodeResetSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModifierParameterSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModifierUsageSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PointerInputModifierNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SemanticsModifierNodeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SubcomponentModifierSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/NestedScrollInteropSamplesKt {
+	public static final fun CollapsingToolbarComposeViewComposeNestedScrollInteropSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ComposeInCooperatingViewNestedScrollInteropSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ViewInComposeNestedScrollInteropSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/NestedScrollSamplesKt {
+	public static final fun NestedScrollConnectionSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun NestedScrollDispatcherSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/OnGloballyPositionedSamplesKt {
+	public static final fun OnGloballyPositioned (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/OnPlacedSamplesKt {
+	public static final fun OnPlaced (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/OnSizeChangedSamplesKt {
+	public static final fun OnSizeChangedSample (Ljava/lang/String;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/PainterSampleKt {
+	public static final fun PainterModifierSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PainterResourceSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/PlacementScopeCoordinatesSampleKt {
+	public static final fun PlacementScopeCoordinatesSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/PointerIconSampleKt {
+	public static final fun PointerIconSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/PointerInputModifierSamplesKt {
+	public static final fun keyedPointerInputModifier ()V
+	public static final fun rememberedUpdatedParameterPointerInputModifier ()V
+}
+
+public final class androidx/compose/ui/samples/PopupSampleKt {
+	public static final fun PopupSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/RotateSampleKt {
+	public static final fun RotateSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/ScaleSampleKt {
+	public static final fun ScaleNonUniformSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScaleUniformSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/ShadowSampleKt {
+	public static final fun ShadowSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/SlotsEnum : java/lang/Enum {
+	public static final field Dependent Landroidx/compose/ui/samples/SlotsEnum;
+	public static final field Main Landroidx/compose/ui/samples/SlotsEnum;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/ui/samples/SlotsEnum;
+	public static fun values ()[Landroidx/compose/ui/samples/SlotsEnum;
+}
+
+public final class androidx/compose/ui/samples/SoftwareKeyboardControllerSampleKt {
+	public static final fun SoftwareKeyboardControllerSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/samples/SubcomposeLayoutSampleKt {
+	public static final fun SubcomposeLayoutSample (Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
+	public static final fun SubcomposeLayoutWithIntermediateMeasurePolicySample ()V
+}
+
+public final class androidx/compose/ui/samples/ZIndexModifierSampleKt {
+	public static final fun ZIndexModifierSample (Landroidx/compose/runtime/Composer;I)V
+}
+

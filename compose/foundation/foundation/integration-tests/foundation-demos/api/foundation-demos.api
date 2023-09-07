@@ -1,0 +1,1513 @@
+public final class androidx/compose/foundation/demos/BasicMarqueeDemoKt {
+	public static final fun BasicMarqueeDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$BasicMarqueeDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$BasicMarqueeDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$FocusedBoundsDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$FocusedBoundsDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$FoundationDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$FoundationDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-11 Lkotlin/jvm/functions/Function3;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-13 Lkotlin/jvm/functions/Function3;
+	public static field lambda-14 Lkotlin/jvm/functions/Function3;
+	public static field lambda-15 Lkotlin/jvm/functions/Function3;
+	public static field lambda-16 Lkotlin/jvm/functions/Function3;
+	public static field lambda-17 Lkotlin/jvm/functions/Function3;
+	public static field lambda-18 Lkotlin/jvm/functions/Function3;
+	public static field lambda-19 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-20 Lkotlin/jvm/functions/Function3;
+	public static field lambda-21 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-10$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-11$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-12$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-13$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-14$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-15$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-16$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-17$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-18$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-19$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-20$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-21$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$ListDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$ListDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-11 Lkotlin/jvm/functions/Function3;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-13 Lkotlin/jvm/functions/Function3;
+	public static field lambda-14 Lkotlin/jvm/functions/Function3;
+	public static field lambda-15 Lkotlin/jvm/functions/Function3;
+	public static field lambda-16 Lkotlin/jvm/functions/Function3;
+	public static field lambda-17 Lkotlin/jvm/functions/Function3;
+	public static field lambda-18 Lkotlin/jvm/functions/Function3;
+	public static field lambda-19 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-20 Lkotlin/jvm/functions/Function3;
+	public static field lambda-21 Lkotlin/jvm/functions/Function3;
+	public static field lambda-22 Lkotlin/jvm/functions/Function3;
+	public static field lambda-23 Lkotlin/jvm/functions/Function4;
+	public static field lambda-24 Lkotlin/jvm/functions/Function3;
+	public static field lambda-25 Lkotlin/jvm/functions/Function3;
+	public static field lambda-26 Lkotlin/jvm/functions/Function3;
+	public static field lambda-27 Lkotlin/jvm/functions/Function3;
+	public static field lambda-28 Lkotlin/jvm/functions/Function3;
+	public static field lambda-29 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-30 Lkotlin/jvm/functions/Function3;
+	public static field lambda-31 Lkotlin/jvm/functions/Function3;
+	public static field lambda-32 Lkotlin/jvm/functions/Function3;
+	public static field lambda-33 Lkotlin/jvm/functions/Function4;
+	public static field lambda-34 Lkotlin/jvm/functions/Function4;
+	public static field lambda-35 Lkotlin/jvm/functions/Function4;
+	public static field lambda-36 Lkotlin/jvm/functions/Function2;
+	public static field lambda-37 Lkotlin/jvm/functions/Function4;
+	public static field lambda-38 Lkotlin/jvm/functions/Function3;
+	public static field lambda-39 Lkotlin/jvm/functions/Function4;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-40 Lkotlin/jvm/functions/Function3;
+	public static field lambda-41 Lkotlin/jvm/functions/Function3;
+	public static field lambda-42 Lkotlin/jvm/functions/Function3;
+	public static field lambda-43 Lkotlin/jvm/functions/Function3;
+	public static field lambda-44 Lkotlin/jvm/functions/Function2;
+	public static field lambda-45 Lkotlin/jvm/functions/Function3;
+	public static field lambda-46 Lkotlin/jvm/functions/Function3;
+	public static field lambda-47 Lkotlin/jvm/functions/Function3;
+	public static field lambda-48 Lkotlin/jvm/functions/Function3;
+	public static field lambda-49 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-50 Lkotlin/jvm/functions/Function4;
+	public static field lambda-51 Lkotlin/jvm/functions/Function3;
+	public static field lambda-52 Lkotlin/jvm/functions/Function3;
+	public static field lambda-53 Lkotlin/jvm/functions/Function3;
+	public static field lambda-54 Lkotlin/jvm/functions/Function3;
+	public static field lambda-55 Lkotlin/jvm/functions/Function3;
+	public static field lambda-56 Lkotlin/jvm/functions/Function3;
+	public static field lambda-57 Lkotlin/jvm/functions/Function3;
+	public static field lambda-58 Lkotlin/jvm/functions/Function3;
+	public static field lambda-59 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-60 Lkotlin/jvm/functions/Function4;
+	public static field lambda-61 Lkotlin/jvm/functions/Function3;
+	public static field lambda-62 Lkotlin/jvm/functions/Function3;
+	public static field lambda-63 Lkotlin/jvm/functions/Function4;
+	public static field lambda-64 Lkotlin/jvm/functions/Function3;
+	public static field lambda-65 Lkotlin/jvm/functions/Function3;
+	public static field lambda-66 Lkotlin/jvm/functions/Function3;
+	public static field lambda-67 Lkotlin/jvm/functions/Function3;
+	public static field lambda-68 Lkotlin/jvm/functions/Function3;
+	public static field lambda-69 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-10$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-11$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-12$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-13$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-14$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-15$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-16$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-17$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-18$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-19$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-20$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-21$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-22$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-23$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-24$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-25$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-26$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-27$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-28$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-29$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-30$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-31$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-32$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-33$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-34$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-35$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-36$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-37$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-38$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-39$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-40$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-41$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-42$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-43$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-44$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-45$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-46$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-47$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-48$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-49$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-50$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-51$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-52$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-53$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-54$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-55$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-56$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-57$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-58$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-59$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-60$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-61$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-62$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-63$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-64$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-65$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-66$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-67$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-68$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-69$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$MagnifierDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$MagnifierDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$NestedScrollDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$NestedScrollDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$PointerIconDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$PointerIconDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$PopularBooksDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$PopularBooksDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$ScrollableFocusedChildDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$ScrollableFocusedChildDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/ComposableSingletons$SuspendingGesturesDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/ComposableSingletons$SuspendingGesturesDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/DragDropState {
+	public static final field $stable I
+	public final fun getDraggingItemIndex ()Ljava/lang/Integer;
+}
+
+public final class androidx/compose/foundation/demos/DrawModifiersDemoKt {
+	public static final fun DrawModifiersDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/FocusDemosKt {
+	public static final fun FocusGroupDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/FocusedBoundsDemoKt {
+	public static final fun FocusedBoundsDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/FoundationDemosKt {
+	public static final fun getFoundationDemos ()Landroidx/compose/integration/demos/common/DemoCategory;
+}
+
+public final class androidx/compose/foundation/demos/GridDragDropState {
+	public static final field $stable I
+	public final fun getDraggingItemIndex ()Ljava/lang/Integer;
+}
+
+public final class androidx/compose/foundation/demos/HighLevelGesturesDemoKt {
+	public static final fun HighLevelGesturesDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/LazyColumnDragAndDropDemoKt {
+	public static final fun DraggableItem (Landroidx/compose/foundation/lazy/LazyItemScope;Landroidx/compose/foundation/demos/DragDropState;ILandroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function4;Landroidx/compose/runtime/Composer;II)V
+	public static final fun LazyColumnDragAndDropDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun dragContainer (Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/demos/DragDropState;)Landroidx/compose/ui/Modifier;
+	public static final fun rememberDragDropState (Landroidx/compose/foundation/lazy/LazyListState;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)Landroidx/compose/foundation/demos/DragDropState;
+}
+
+public final class androidx/compose/foundation/demos/LazyGridDragAndDropDemoKt {
+	public static final fun DraggableItem (Landroidx/compose/foundation/lazy/grid/LazyGridItemScope;Landroidx/compose/foundation/demos/GridDragDropState;ILandroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
+	public static final fun LazyGridDragAndDropDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun dragContainer (Landroidx/compose/ui/Modifier;Landroidx/compose/foundation/demos/GridDragDropState;)Landroidx/compose/ui/Modifier;
+	public static final fun rememberGridDragDropState (Landroidx/compose/foundation/lazy/grid/LazyGridState;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)Landroidx/compose/foundation/demos/GridDragDropState;
+}
+
+public final class androidx/compose/foundation/demos/ListDemosKt {
+	public static final fun getLazyListDemos ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/MagnifierDemosKt {
+	public static final fun MultitouchCustomMagnifierDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun getMagnifierDemos ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/NestedScrollDemosKt {
+	public static final fun NestedScrollDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/OverscrollDemoKt {
+	public static final fun OverscrollDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/PointerIconDemoKt {
+	public static final fun PointerIconChildNotFullyOverlappedByParentDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PointerIconFullOverlapDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PointerIconMultiLayeredNestingDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PointerIconNonOverlappingParentsDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PointerIconOverlappingSiblingsDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PointerIconPartialOverlapDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun getPointerIconDemos ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/PopularBooksDemoKt {
+	public static final fun PopularBooksDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/ScrollableFocusedChildDemoKt {
+	public static final fun FocusGrabber (Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun ScrollableFocusedChildDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/SuspendingGesturesDemoKt {
+	public static final fun CoroutineTapDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun Drag2DGestures (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MultitouchArea (Ljava/lang/String;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
+	public static final fun MultitouchGestureDetector (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MultitouchLockGestureDetector (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OrientationLockDragGestures (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PointerTypeInput (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TouchSlopDragGestures (Landroidx/compose/runtime/Composer;I)V
+	public static final fun anotherRandomHue (F)F
+	public static final fun getCoroutineGestureDemos ()Ljava/util/List;
+	public static final fun hueToColor (F)J
+	public static final fun randomHue ()F
+}
+
+public final class androidx/compose/foundation/demos/WindowInsetsDemoKt {
+	public static final fun WindowInsetsDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/pager/ComposableSingletons$PagerCarrouselDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/pager/ComposableSingletons$PagerCarrouselDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function4;
+	public static field lambda-6 Lkotlin/jvm/functions/Function4;
+	public static field lambda-7 Lkotlin/jvm/functions/Function4;
+	public static field lambda-8 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/foundation/demos/pager/ComposableSingletons$PagerDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/pager/ComposableSingletons$PagerDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function4;
+	public static field lambda-4 Lkotlin/jvm/functions/Function4;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/pager/ComposableSingletons$PagerStateInteractionsDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/pager/ComposableSingletons$PagerStateInteractionsDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function4;
+	public static field lambda-6 Lkotlin/jvm/functions/Function4;
+	public static field lambda-7 Lkotlin/jvm/functions/Function4;
+	public static field lambda-8 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/foundation/demos/pager/PagerCarrouselDemosKt {
+	public static final fun getCarrousel ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/pager/PagerDemosKt {
+	public static final fun getPagerDemos ()Ljava/util/List;
+	public static final fun getSimplePager ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/pager/PagerStateInteractionsDemosKt {
+	public static final fun getPagerStateInteractions ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/relocation/BringIntoViewAndroidInteropDemoKt {
+	public static final fun BringIntoViewAndroidInteropDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/relocation/BringIntoViewDemoKt {
+	public static final fun BringIntoViewDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/relocation/BringIntoViewResponderDemoKt {
+	public static final fun BringIntoViewResponderDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/relocation/BringNestedIntoViewDemoKt {
+	public static final fun BringNestedIntoViewDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/relocation/BringRectangleIntoViewDemoKt {
+	public static final fun BringRectangleIntoViewDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/relocation/ComposableSingletons$BringIntoViewAndroidInteropDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/relocation/ComposableSingletons$BringIntoViewAndroidInteropDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/relocation/ComposableSingletons$BringIntoViewDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/relocation/ComposableSingletons$BringIntoViewDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/relocation/ComposableSingletons$RequestRectangleOnScreenDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/relocation/ComposableSingletons$RequestRectangleOnScreenDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/relocation/RequestRectangleOnScreenDemoKt {
+	public static final fun RequestRectangleOnScreenDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/snapping/ComposableSingletons$LazyGridSnappingDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/snapping/ComposableSingletons$LazyGridSnappingDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/foundation/demos/snapping/ComposableSingletons$LazyListSnappingDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/snapping/ComposableSingletons$LazyListSnappingDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-11 Lkotlin/jvm/functions/Function3;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-10$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-11$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-12$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/snapping/ComposableSingletons$RowSnappingDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/snapping/ComposableSingletons$RowSnappingDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/snapping/LazyGridSnappingDemosKt {
+	public static final fun getLazyGridSnappingDemos ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/snapping/LazyListSnappingDemosKt {
+	public static final fun getLazyListSnappingDemos ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/snapping/RowSnapLayoutInfoProviderKt {
+	public static final fun SnapLayoutInfoProvider (Landroidx/compose/foundation/ScrollState;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Landroidx/compose/foundation/gestures/snapping/SnapLayoutInfoProvider;
+}
+
+public final class androidx/compose/foundation/demos/snapping/RowSnappingDemosKt {
+	public static final fun getRowSnappingDemos ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/snapping/SnappingDemosKt {
+	public static final fun getSnappingDemos ()Ljava/util/List;
+}
+
+public final class androidx/compose/foundation/demos/text/AverageDurationMeasurer {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (I)V
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addMeasure (J)V
+	public final fun getAverageDurationFlow ()Lkotlinx/coroutines/flow/Flow;
+	public final fun getCurrent ()Landroidx/compose/runtime/State;
+}
+
+public final class androidx/compose/foundation/demos/text/BasicTextMinMaxLinesDemoKt {
+	public static final fun BasicTextMinMaxLinesDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/BrushDemoKt {
+	public static final fun AnimatedBrush (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BrushDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BrushGraphicalEmoji (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MultiLineSpanBrush (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MultiParagraphBrush (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ShadowAndBrush (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SingleLineSpanBrush (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextBrushDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextFieldBrush (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/CapitalizationAutoCorrectDemoKt {
+	public static final fun CapitalizationAutoCorrectDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$BasicTextMinMaxLinesDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$BasicTextMinMaxLinesDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$BrushDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$BrushDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$ComposeFontPaddingKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$ComposeFontPaddingKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$ComposeInputFieldKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$ComposeInputFieldKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$ComposeInputFieldMinMaxLinesKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$ComposeInputFieldMinMaxLinesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-11 Lkotlin/jvm/functions/Function3;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-13 Lkotlin/jvm/functions/Function3;
+	public static field lambda-14 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-10$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-11$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-12$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-13$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-14$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$ComposeMultiParagraphKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$ComposeMultiParagraphKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$ComposeTextKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$ComposeTextKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-11 Lkotlin/jvm/functions/Function3;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-13 Lkotlin/jvm/functions/Function3;
+	public static field lambda-14 Lkotlin/jvm/functions/Function3;
+	public static field lambda-15 Lkotlin/jvm/functions/Function3;
+	public static field lambda-16 Lkotlin/jvm/functions/Function3;
+	public static field lambda-17 Lkotlin/jvm/functions/Function3;
+	public static field lambda-18 Lkotlin/jvm/functions/Function3;
+	public static field lambda-19 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-20 Lkotlin/jvm/functions/Function3;
+	public static field lambda-21 Lkotlin/jvm/functions/Function2;
+	public static field lambda-22 Lkotlin/jvm/functions/Function2;
+	public static field lambda-23 Lkotlin/jvm/functions/Function2;
+	public static field lambda-24 Lkotlin/jvm/functions/Function2;
+	public static field lambda-25 Lkotlin/jvm/functions/Function2;
+	public static field lambda-26 Lkotlin/jvm/functions/Function2;
+	public static field lambda-27 Lkotlin/jvm/functions/Function2;
+	public static field lambda-28 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-10$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-11$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-12$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-13$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-14$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-15$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-16$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-17$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-18$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-19$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-20$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-21$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-22$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-23$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-24$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-25$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-26$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-27$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-28$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$ComposeTextOverflownSelectionKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$ComposeTextOverflownSelectionKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$ComposeTextSelectionKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$ComposeTextSelectionKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$ComposeTextSelectionSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$ComposeTextSelectionSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$DrawTextDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$DrawTextDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$EllipsizeWithLetterSpacingKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$EllipsizeWithLetterSpacingKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$FontFamilyDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$FontFamilyDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$InteractiveTextKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$InteractiveTextKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$RejectTextChangeDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$RejectTextChangeDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$SystemFontFamilyDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$SystemFontFamilyDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextAnimationDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextAnimationDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextDemosKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-11 Lkotlin/jvm/functions/Function3;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-13 Lkotlin/jvm/functions/Function3;
+	public static field lambda-14 Lkotlin/jvm/functions/Function3;
+	public static field lambda-15 Lkotlin/jvm/functions/Function3;
+	public static field lambda-16 Lkotlin/jvm/functions/Function3;
+	public static field lambda-17 Lkotlin/jvm/functions/Function3;
+	public static field lambda-18 Lkotlin/jvm/functions/Function3;
+	public static field lambda-19 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-20 Lkotlin/jvm/functions/Function3;
+	public static field lambda-21 Lkotlin/jvm/functions/Function3;
+	public static field lambda-22 Lkotlin/jvm/functions/Function3;
+	public static field lambda-23 Lkotlin/jvm/functions/Function3;
+	public static field lambda-24 Lkotlin/jvm/functions/Function3;
+	public static field lambda-25 Lkotlin/jvm/functions/Function3;
+	public static field lambda-26 Lkotlin/jvm/functions/Function3;
+	public static field lambda-27 Lkotlin/jvm/functions/Function3;
+	public static field lambda-28 Lkotlin/jvm/functions/Function3;
+	public static field lambda-29 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-30 Lkotlin/jvm/functions/Function3;
+	public static field lambda-31 Lkotlin/jvm/functions/Function3;
+	public static field lambda-32 Lkotlin/jvm/functions/Function3;
+	public static field lambda-33 Lkotlin/jvm/functions/Function3;
+	public static field lambda-34 Lkotlin/jvm/functions/Function3;
+	public static field lambda-35 Lkotlin/jvm/functions/Function3;
+	public static field lambda-36 Lkotlin/jvm/functions/Function3;
+	public static field lambda-37 Lkotlin/jvm/functions/Function3;
+	public static field lambda-38 Lkotlin/jvm/functions/Function3;
+	public static field lambda-39 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-40 Lkotlin/jvm/functions/Function3;
+	public static field lambda-41 Lkotlin/jvm/functions/Function3;
+	public static field lambda-42 Lkotlin/jvm/functions/Function3;
+	public static field lambda-43 Lkotlin/jvm/functions/Function3;
+	public static field lambda-44 Lkotlin/jvm/functions/Function3;
+	public static field lambda-45 Lkotlin/jvm/functions/Function3;
+	public static field lambda-46 Lkotlin/jvm/functions/Function3;
+	public static field lambda-47 Lkotlin/jvm/functions/Function3;
+	public static field lambda-48 Lkotlin/jvm/functions/Function3;
+	public static field lambda-49 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-50 Lkotlin/jvm/functions/Function3;
+	public static field lambda-51 Lkotlin/jvm/functions/Function3;
+	public static field lambda-52 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-10$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-11$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-12$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-13$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-14$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-15$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-16$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-17$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-18$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-19$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-20$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-21$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-22$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-23$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-24$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-25$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-26$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-27$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-28$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-29$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-30$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-31$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-32$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-33$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-34$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-35$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-36$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-37$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-38$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-39$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-40$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-41$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-42$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-43$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-44$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-45$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-46$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-47$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-48$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-49$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-50$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-51$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-52$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextFieldCursorBlinkingDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextFieldCursorBlinkingDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextFieldFocusKeyboardInteractionKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextFieldFocusKeyboardInteractionKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextFieldImeActionDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextFieldImeActionDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextFieldKeyboardTypeDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextFieldKeyboardTypeDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextFieldValueDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextFieldValueDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextFieldWIthScrollerKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextFieldWIthScrollerKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextFieldsInDialogDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextFieldsInDialogDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-11 Lkotlin/jvm/functions/Function2;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-11$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-12$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TextFieldsInScrollableDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TextFieldsInScrollableDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$TypefaceDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$TypefaceDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$VariableFontsDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$VariableFontsDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$VisualTransformationDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$VisualTransformationDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-8$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$foundation_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeFontPaddingKt {
+	public static final fun TextFontPaddingDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeInputFieldFocusTransitionKt {
+	public static final fun TextFieldFocusTransition (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeInputFieldKt {
+	public static final fun InputFieldDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun getDemoTextFieldModifiers ()Landroidx/compose/ui/Modifier;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeInputFieldMinMaxLinesKt {
+	public static final fun BasicTextFieldMinMaxDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeLineHeightKt {
+	public static final fun TextLineHeightDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeMultiParagraphKt {
+	public static final fun MultiParagraphDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoParagraph (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoParagraphIndent (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoParagraphLineHeight (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoParagraphTextAlign (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoParagraphTextDirection (Landroidx/compose/runtime/Composer;I)V
+	public static final fun getLorem ()Ljava/lang/String;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeReuseLayoutKt {
+	public static final fun TextReuseLayoutDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeTextAccessibilityKt {
+	public static final fun TextAccessibilityDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeTextKt {
+	public static final field displayText Ljava/lang/String;
+	public static final field displayTextArabic Ljava/lang/String;
+	public static final field displayTextBidi Ljava/lang/String;
+	public static final field displayTextChinese Ljava/lang/String;
+	public static final field displayTextHindi Ljava/lang/String;
+	public static final fun EllipsizeDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SecondTagLine (Ljava/lang/String;Landroidx/compose/runtime/Composer;I)V
+	public static final fun TagLine (Ljava/lang/String;Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoBackground (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoBaselineShift (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoBasic (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoComplexStyling (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoFontFamily (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoFontFamilyDefaultValues (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoFontSizeScale (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoHeight (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoHyphens (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoInlineContent (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoLanguage (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoLetterSpacing (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoLocale (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoParagraphStyling (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoShadowEffect (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoSoftWrap (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoTextAlign (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoTextDecoration (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoTextOverflow (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextOverflowDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextOverflowVisibleInDrawText (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextOverflowVisibleInPopupDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun getFontSize10 ()J
+	public static final fun getFontSize4 ()J
+	public static final fun getFontSize6 ()J
+	public static final fun getFontSize8 ()J
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeTextOverflownSelectionKt {
+	public static final fun TextOverflowedSelectionDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun read (Landroid/content/ClipboardManager;)Ljava/lang/String;
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeTextSelectionKt {
+	public static final fun TextDemoSelection (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoSelection2DArrayVertical (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoSelectionEnableAndDisable (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDemoSelectionWithStringInput (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextSelectionDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/ComposeTextSelectionSampleKt {
+	public static final fun TextSelectionSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun getCommonStyle ()Landroidx/compose/ui/text/TextStyle;
+	public static final fun getHeader ()Landroidx/compose/ui/text/TextStyle;
+	public static final fun getHeader2 ()Landroidx/compose/ui/text/TextStyle;
+	public static final fun getHighlight ()Landroidx/compose/ui/text/SpanStyle;
+	public static final fun getLangContent ()Ljava/util/List;
+	public static final fun getLink ()Landroidx/compose/ui/text/SpanStyle;
+	public static final fun getRectColor ()J
+}
+
+public final class androidx/compose/foundation/demos/text/DemoAsyncFont : androidx/compose/ui/text/font/AndroidFont {
+	public static final field $stable I
+	public synthetic fun <init> (Landroidx/compose/ui/text/font/FontWeight;IJLandroid/graphics/Typeface;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Landroidx/compose/ui/text/font/FontWeight;IJLandroid/graphics/Typeface;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getDelay ()J
+	public fun getStyle-_-LCdwA ()I
+	public final fun getTypeface ()Landroid/graphics/Typeface;
+	public fun getWeight ()Landroidx/compose/ui/text/font/FontWeight;
+}
+
+public final class androidx/compose/foundation/demos/text/DemoBlockingFont : androidx/compose/ui/text/font/AndroidFont {
+	public static final field $stable I
+	public synthetic fun <init> (Landroidx/compose/ui/text/font/FontWeight;ILandroid/graphics/Typeface;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getStyle-_-LCdwA ()I
+	public final fun getTypeface ()Landroid/graphics/Typeface;
+	public fun getWeight ()Landroidx/compose/ui/text/font/FontWeight;
+}
+
+public final class androidx/compose/foundation/demos/text/DemoOptionalFont : androidx/compose/ui/text/font/AndroidFont {
+	public static final field $stable I
+	public synthetic fun <init> (Landroidx/compose/ui/text/font/FontWeight;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getStyle-_-LCdwA ()I
+	public fun getWeight ()Landroidx/compose/ui/text/font/FontWeight;
+}
+
+public final class androidx/compose/foundation/demos/text/DrawTextDemoKt {
+	public static final fun DrawTextAndAnimateColor (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextAnnotatedString (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextBlendMode (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextCenter (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextLongString (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextMeasure (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextMeasureAndAnimateColor (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextString (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/EllipsizeWithLetterSpacingKt {
+	public static final fun EllipsizeWithLetterSpacing (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextWithEllipsizeAndLetterSpacing-8iNrtrE (Ljava/lang/String;IILandroidx/compose/ui/text/style/TextIndent;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/EmojiCompatDemoKt {
+	public static final fun EmojiCompatDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/ExampleAsyncFontTypefaceLoader : androidx/compose/ui/text/font/AndroidFont$TypefaceLoader {
+	public static final field $stable I
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ExampleAsyncFontTypefaceLoader;
+	public fun awaitLoad (Landroid/content/Context;Landroidx/compose/ui/text/font/AndroidFont;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun loadBlocking (Landroid/content/Context;Landroidx/compose/ui/text/font/AndroidFont;)Landroid/graphics/Typeface;
+}
+
+public final class androidx/compose/foundation/demos/text/FocusTextFieldImmediatelyDemoKt {
+	public static final fun FocusTextFieldImmediatelyDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/FontFamilyDemoKt {
+	public static final fun AsyncFontFamilyDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FontFamilyDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/FontVariationSettingsCompot {
+	public static final field $stable I
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/FontVariationSettingsCompot;
+	public final fun compatSetFontVariationSettings (Landroid/text/TextPaint;Ljava/lang/String;)V
+}
+
+public final class androidx/compose/foundation/demos/text/FullScreenTextFieldDemoKt {
+	public static final fun FullScreenTextFieldDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/InteractiveTextKt {
+	public static final fun InteractiveTextDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/KeyboardSingleLineDemoKt {
+	public static final fun ImeSingleLineDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/Language : java/lang/Enum {
+	public static final field Arabic Landroidx/compose/foundation/demos/text/Language;
+	public static final field Hebrew Landroidx/compose/foundation/demos/text/Language;
+	public static final field Latin Landroidx/compose/foundation/demos/text/Language;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/foundation/demos/text/Language;
+	public static fun values ()[Landroidx/compose/foundation/demos/text/Language;
+}
+
+public final class androidx/compose/foundation/demos/text/LetterSpacingDemoKt {
+	public static final fun AnnotatedText (FFLandroidx/compose/runtime/Composer;I)V
+	public static final fun LetterSpacingDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/LineBreakDemoKt {
+	public static final fun TextLineBreakDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/LoremIpsumKt {
+	public static final fun loremIpsum (Landroidx/compose/foundation/demos/text/Language;I)Ljava/lang/String;
+	public static synthetic fun loremIpsum$default (Landroidx/compose/foundation/demos/text/Language;IILjava/lang/Object;)Ljava/lang/String;
+}
+
+public final class androidx/compose/foundation/demos/text/MemoryAllocsKt {
+	public static final fun IfNotEmptyText (Landroidx/compose/runtime/State;Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyListReuse (Landroidx/compose/runtime/State;Landroidx/compose/runtime/Composer;I)V
+	public static final fun MemoryAllocsIfNotEmptyText (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MemoryAllocsLazyList (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MemoryAllocsSetText (Landroidx/compose/runtime/Composer;I)V
+	public static final fun Preamble (Ljava/lang/String;Landroidx/compose/runtime/Composer;I)V
+	public static final fun produceLazyListReuseDriver (Landroidx/compose/runtime/Composer;I)Landroidx/compose/runtime/State;
+}
+
+public final class androidx/compose/foundation/demos/text/PlatformTextInputAdapterDemoKt {
+	public static final fun PlatformTextInputAdapterDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun WackyTextField (Landroidx/compose/foundation/demos/text/WackyTextState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/RejectTextChangeDemoKt {
+	public static final fun RejectTextChangeDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/StrokeDemoKt {
+	public static final fun TextStrokeDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun copy-2U6J4A0 (Landroidx/compose/ui/graphics/drawscope/Stroke;FFIILandroidx/compose/ui/graphics/PathEffect;)Landroidx/compose/ui/graphics/drawscope/Stroke;
+	public static synthetic fun copy-2U6J4A0$default (Landroidx/compose/ui/graphics/drawscope/Stroke;FFIILandroidx/compose/ui/graphics/PathEffect;ILjava/lang/Object;)Landroidx/compose/ui/graphics/drawscope/Stroke;
+}
+
+public final class androidx/compose/foundation/demos/text/SystemFontFamilyDemoKt {
+	public static final fun SystemFontFamilyDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SystemFontFamilyDemoItem (Landroidx/compose/ui/text/font/FontFamily;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TailFollowingTextFieldKt {
+	public static final fun TailFollowingTextFieldDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextAnimationDemoKt {
+	public static final fun TextAnimationDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextColorAnimation (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextRotationAnimation (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextScaleAnimation (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextTranslationAnimation (Landroidx/compose/runtime/Composer;I)V
+	public static final fun rememberTextMotionState (Landroidx/compose/runtime/Composer;I)Landroidx/compose/foundation/demos/text/TextMotionState;
+}
+
+public final class androidx/compose/foundation/demos/text/TextDemosKt {
+	public static final fun getTextDemos ()Landroidx/compose/integration/demos/common/DemoCategory;
+}
+
+public final class androidx/compose/foundation/demos/text/TextFieldCursorBlinkingDemoKt {
+	public static final fun ChangingSelectionShowsCursor (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextFieldCursorBlinkingDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TypingCursorNeverBlinks (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextFieldFocusDemoKt {
+	public static final fun TextFieldFocusDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextFieldFocusKeyboardInteractionKt {
+	public static final fun TextFieldFocusKeyboardInteraction (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextFieldImeActionDemoKt {
+	public static final fun ImeActionDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextFieldKeyboardTypeDemoKt {
+	public static final fun KeyboardTypeDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextFieldValueDemoKt {
+	public static final fun TextFieldValueDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextFieldWIthScrollerKt {
+	public static final fun MultilineTextField (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScrollableTextFieldDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SingleLineTextField (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextFieldsInDialogDemoKt {
+	public static final fun TextFieldsInDialogDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextFieldsInScrollableDemoKt {
+	public static final fun TextFieldsInScrollableDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/TextMotionState {
+	public static final field $stable I
+	public fun <init> (Landroidx/compose/ui/text/TextStyle;)V
+	public final fun TextMotionPanel (Landroidx/compose/runtime/Composer;I)V
+	public final fun getTextStyle ()Landroidx/compose/ui/text/TextStyle;
+	public final fun isStatic ()Z
+	public final fun setStatic (Z)V
+}
+
+public final class androidx/compose/foundation/demos/text/TypefaceDemoKt {
+	public static final fun AndroidTypefaceDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FontFamilyFromAndroidTypeface (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TypefaceDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/VariableFontsDemoKt {
+	public static final fun AssetFont (IZLandroidx/compose/runtime/Composer;I)V
+	public static final fun DeviceNamedFontFamilyFont (IZLandroidx/compose/runtime/Composer;I)V
+	public static final fun FileFont (IZLandroidx/compose/runtime/Composer;I)V
+	public static final fun ParcelFileDescriptorFont (IZLandroidx/compose/runtime/Composer;I)V
+	public static final fun ResourceFont (IZLandroidx/compose/runtime/Composer;I)V
+	public static final fun VariableFontsDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/VisualTransformationDemoKt {
+	public static final fun VisualTransformationDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/demos/text/WackyTextState {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;)V
+	public final fun getBuffer ()Ljava/lang/StringBuilder;
+	public final fun getRefresh ()Lkotlin/Unit;
+	public final fun setRefresh (Lkotlin/Unit;)V
+	public fun toString ()Ljava/lang/String;
+}
+

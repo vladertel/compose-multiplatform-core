@@ -1,0 +1,354 @@
+public final class androidx/compose/foundation/samples/BasicMarqueeSamplesKt {
+	public static final fun BasicFocusableMarqueeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BasicMarqueeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BasicMarqueeWithFadedEdgesSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/BasicTextFieldSamplesKt {
+	public static final fun BasicTextFieldSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BasicTextFieldWithStringSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CreditCardSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PlaceholderBasicTextFieldSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextFieldWithIconSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/BorderSamplesKt {
+	public static final fun BorderSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BorderSampleWithBrush (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BorderSampleWithDataClass (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BorderSampleWithDynamicData (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/BringIntoViewSamplesKt {
+	public static final fun BringIntoViewSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BringPartOfComposableIntoViewSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/CanvasSamplesKt {
+	public static final fun CanvasPieChartSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CanvasSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/ClickableSamplesKt {
+	public static final fun ClickableSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/ClickableTextSampleKt {
+	public static final fun ClickableText (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LongClickableText-4YKlhWE (Landroidx/compose/ui/text/AnnotatedString;Landroidx/compose/ui/Modifier;Landroidx/compose/ui/text/TextStyle;ZIILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$BasicTextFieldSamplesKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$BasicTextFieldSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$BorderSamplesKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$BorderSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$BringIntoViewSamplesKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$BringIntoViewSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$CustomTouchSlopSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$CustomTouchSlopSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-2$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$FocusableSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$FocusableSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$InlineTextContentSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$InlineTextContentSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$LazyDslSamplesKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$LazyDslSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$MutatorMutexSamplesKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$MutatorMutexSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$PagerSamplesKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$PagerSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public static field lambda-10 Lkotlin/jvm/functions/Function4;
+	public static field lambda-2 Lkotlin/jvm/functions/Function4;
+	public static field lambda-3 Lkotlin/jvm/functions/Function4;
+	public static field lambda-4 Lkotlin/jvm/functions/Function4;
+	public static field lambda-5 Lkotlin/jvm/functions/Function4;
+	public static field lambda-6 Lkotlin/jvm/functions/Function4;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function4;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-10$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-2$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-3$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-4$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-5$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-6$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-7$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-9$foundation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$ScrollerSamplesKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$ScrollerSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$SelectionSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$SelectionSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/samples/ComposableSingletons$SnapFlingBehaviorSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/samples/ComposableSingletons$SnapFlingBehaviorSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public static field lambda-2 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-2$foundation_samples_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/foundation/samples/CustomTouchSlopAngle : androidx/compose/ui/platform/ViewConfiguration {
+	public static final field $stable I
+	public fun <init> (FLandroidx/compose/ui/platform/ViewConfiguration;)V
+	public fun getDoubleTapMinTimeMillis ()J
+	public fun getDoubleTapTimeoutMillis ()J
+	public fun getLongPressTimeoutMillis ()J
+	public fun getMinimumTouchTargetSize-MYxV2XQ ()J
+	public fun getTouchSlop ()F
+}
+
+public final class androidx/compose/foundation/samples/CustomTouchSlopSampleKt {
+	public static final fun CustomTouchSlopProvider (FLkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+	public static final fun CustomTouchSlopSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LongListOfItems (FLandroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/DarkThemeSampleKt {
+	public static final fun DarkThemeSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/DragGestureDetectorSamplesKt {
+	public static final fun AwaitDragOrCancellationSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AwaitHorizontalDragOrCancellationSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AwaitVerticalDragOrCancellationSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DetectDragGesturesSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DetectDragWithLongPressGesturesSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DetectHorizontalDragGesturesSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DetectVerticalDragGesturesSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DragSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun HorizontalDragSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun VerticalDragSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/DraggableSamplesKt {
+	public static final fun DraggableSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/DrawBackgroundSamplesKt {
+	public static final fun DrawBackgroundColor (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawBackgroundShapedBrush (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/FocusableSampleKt {
+	public static final fun FocusGroupSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FocusableFocusGroupSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FocusableSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/HoverableSampleKt {
+	public static final fun HoverableSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/ImageSamplesKt {
+	public static final fun BitmapPainterSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BitmapPainterSubsectionSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ImageSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/IndicationSamplesKt {
+	public static final fun IndicationSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/InlineTextContentSampleKt {
+	public static final fun InlineTextContentSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/InteractionSourceSampleKt {
+	public static final fun InteractionSourceFlowSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleInteractionSourceSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/LazyDslSamplesKt {
+	public static final fun ItemPlacementAnimationSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyColumnSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyRowSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun StickyHeaderSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun UsingListLayoutInfoForSideEffectSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun UsingListScrollPositionForSideEffectSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun UsingListScrollPositionInCompositionSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/LazyGridSamplesKt {
+	public static final fun LazyHorizontalGridSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyHorizontalGridSpanSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyVerticalGridSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyVerticalGridSpanSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun UsingGridLayoutInfoForSideEffectSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun UsingGridScrollPositionForSideEffectSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun UsingGridScrollPositionInCompositionSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/LazyStaggeredGridSamplesKt {
+	public static final fun LazyHorizontalStaggeredGridSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyHorizontalStaggeredGridSpanSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyVerticalStaggeredGridSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LazyVerticalStaggeredGridSpanSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/MagnifierSamplesKt {
+	public static final fun MagnifierSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/MutatorMutexSamplesKt {
+	public static final fun mutatorMutexStateObject ()V
+	public static final fun mutatorMutexStateObjectWithReceiver ()V
+}
+
+public final class androidx/compose/foundation/samples/OverscrollSampleKt {
+	public static final fun OverscrollSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OverscrollWithDraggable_After (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OverscrollWithDraggable_Before (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/PagerSamplesKt {
+	public static final fun AnimateScrollPageSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CustomPageSizeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun HorizontalPagerWithScrollableContent (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ObservingStateChangesInPagerStateSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PagerWithStateSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScrollToPageSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleHorizontalPagerSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleVerticalPagerSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/ProgressSemanticsSamplesKt {
+	public static final fun DeterminateProgressSemanticsSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun IndeterminateProgressSemanticsSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/ScrollableSamplesKt {
+	public static final fun CanScrollSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScrollableSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/ScrollerSamplesKt {
+	public static final fun ControlledScrollableRowSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun HorizontalScrollSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun VerticalScrollExample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/SelectableSamplesKt {
+	public static final fun SelectableSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/SelectionSampleKt {
+	public static final fun DisableSelectionSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SelectionSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/SnapFlingBehaviorSampleKt {
+	public static final fun SnapFlingBehaviorCustomizedSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SnapFlingBehaviorSimpleSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/TapGestureSamplesKt {
+	public static final fun AwaitLongPressOrCancellationSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/ToggleableSamplesKt {
+	public static final fun ToggleableSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TriStateToggleableSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/TransformGestureSamplesKt {
+	public static final fun CalculateCentroidSize (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CalculatePan (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CalculateRotation (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CalculateZoom (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DetectTransformGestures (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/samples/TransformableSampleKt {
+	public static final fun TransformableSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TransformableSampleInsideScroll (Landroidx/compose/runtime/Composer;I)V
+}
+

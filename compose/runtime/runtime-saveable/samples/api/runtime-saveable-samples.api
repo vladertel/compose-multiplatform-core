@@ -1,0 +1,31 @@
+public final class androidx/compose/runtime/saveable/samples/ComposableSingletons$SaveableStateHolderSamplesKt {
+	public static final field INSTANCE Landroidx/compose/runtime/saveable/samples/ComposableSingletons$SaveableStateHolderSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$runtime_saveable_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$runtime_saveable_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$runtime_saveable_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/runtime/saveable/samples/RememberSaveableSamplesKt {
+	public static final fun RememberSaveable (Landroidx/compose/runtime/Composer;I)V
+	public static final fun RememberSaveableCustomSaver (Landroidx/compose/runtime/Composer;I)V
+	public static final fun RememberSaveableWithMutableState (Landroidx/compose/runtime/Composer;I)V
+	public static final fun RememberSaveableWithMutableStateAndCustomSaver (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/runtime/saveable/samples/SaveableStateHolderSamplesKt {
+	public static final fun Button (Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+	public static final fun Screen1 (Landroidx/compose/runtime/Composer;I)V
+	public static final fun Screen2 (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleNavigationWithSaveableStateSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/runtime/saveable/samples/SaverSamplesKt {
+	public static final fun CustomSaverSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ListSaverSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MapSaverSample (Landroidx/compose/runtime/Composer;I)V
+}
+

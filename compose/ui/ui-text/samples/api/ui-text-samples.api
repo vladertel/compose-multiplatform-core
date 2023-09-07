@@ -1,0 +1,81 @@
+public final class androidx/compose/ui/text/samples/AnnotatedStringBuilderSamplesKt {
+	public static final fun AnnotatedStringAddStringAnnotationSample ()V
+	public static final fun AnnotatedStringBuilderAppendableSample ()V
+	public static final fun AnnotatedStringBuilderLambdaSample ()V
+	public static final fun AnnotatedStringBuilderPushParagraphStyleSample ()V
+	public static final fun AnnotatedStringBuilderPushSample ()V
+	public static final fun AnnotatedStringBuilderPushStringAnnotationSample ()V
+	public static final fun AnnotatedStringBuilderSample ()V
+	public static final fun AnnotatedStringBuilderWithStyleSample ()V
+	public static final fun AnnotatedStringConstructorSample ()V
+}
+
+public final class androidx/compose/ui/text/samples/BaselineShiftSamplesKt {
+	public static final fun BaselineShiftAnnotatedStringSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BaselineShiftSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/DrawTextSamplesKt {
+	public static final fun DrawTextAnnotatedStringSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextDrawWithCacheSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextMeasureInLayoutSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawTextStyledSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/FontFamilySamplesKt {
+	public static final fun CustomFontFamilySample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FontFamilyCursiveSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FontFamilyMonospaceSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FontFamilySansSerifSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FontFamilySerifSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FontFamilySynthesisSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/LineBreakSamplesKt {
+	public static final fun AndroidLineBreakSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LineBreakSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/ParagraphStyleSamplesKt {
+	public static final fun ParagraphStyleAnnotatedStringsSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ParagraphStyleSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/SpanStyleSamplesKt {
+	public static final fun SpanStyleBrushSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SpanStyleSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/TextDecorationSamplesKt {
+	public static final fun TextDecorationCombinedSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDecorationLineThroughSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextDecorationUnderlineSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/TextMeasurerSamplesKt {
+	public static final fun measureTextAnnotatedString (Landroidx/compose/ui/text/TextMeasurer;)V
+	public static final fun measureTextStringWithConstraints (Landroidx/compose/ui/text/TextMeasurer;)V
+}
+
+public final class androidx/compose/ui/text/samples/TextMotionSamplesKt {
+	public static final fun TextMotionSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/TextOverflowSamplesKt {
+	public static final fun TextOverflowClipSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextOverflowEllipsisSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextOverflowVisibleFixedSizeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextOverflowVisibleMinHeightSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/TextStyleSamplesKt {
+	public static final fun TextStyleBrushSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextStyleSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/text/samples/VisualTransformationSamplesKt {
+	public static final fun creditCardFilter (Landroidx/compose/ui/text/AnnotatedString;)Landroidx/compose/ui/text/input/TransformedText;
+	public static final fun passwordFilter (Landroidx/compose/ui/text/AnnotatedString;)Landroidx/compose/ui/text/input/TransformedText;
+}
+

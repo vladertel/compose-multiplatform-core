@@ -1,0 +1,5 @@
+public final class androidx/compose/material/icons/samples/IconSamplesKt {
+	public static final fun AppIcons (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DrawIcon (Landroidx/compose/runtime/Composer;I)V
+}
+

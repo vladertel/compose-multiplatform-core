@@ -1,0 +1,111 @@
+public final class androidx/compose/animation/samples/AnimatedContentSamplesKt {
+	public static final fun AnimateIncrementDecrementSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AnimatedContentTransitionSpecSample ()V
+	public static final fun SimpleAnimatedContentSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SlideIntoContainerSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TransitionExtensionAnimatedContentSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/animation/samples/AnimatedValueSamplesKt {
+	public static final fun AnimatableColor ()V
+	public static final fun ColorAnimationSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/animation/samples/AnimatedVisibilitySamplesKt {
+	public static final fun AVColumnScopeWithMutableTransitionState (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AVScopeAnimateEnterExit (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AddAnimatedVisibilityToGenericTransitionSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AnimateEnterExitPartialContent (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AnimatedFloatingActionButton (Landroidx/compose/foundation/layout/ColumnScope;Landroidx/compose/runtime/Composer;I)V
+	public static final fun AnimatedVisibilityLazyColumnSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AnimatedVisibilityWithBooleanVisibleParamNoReceiver (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ColumnAnimatedVisibilitySample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ExpandInShrinkOutSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ExpandShrinkVerticallySample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FadeTransition (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FullyLoadedTransition (Landroidx/compose/runtime/Composer;I)V
+	public static final fun HorizontalTransitionSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScaledEnterExit (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SlideInOutSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SlideTransition (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/animation/samples/AnimationModifierSampleKt {
+	public static final fun AnimateContent (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/animation/samples/ComposableSingletons$AnimatedContentSamplesKt {
+	public static final field INSTANCE Landroidx/compose/animation/samples/ComposableSingletons$AnimatedContentSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$animation_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-2$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/animation/samples/ComposableSingletons$AnimatedVisibilitySamplesKt {
+	public static final field INSTANCE Landroidx/compose/animation/samples/ComposableSingletons$AnimatedVisibilitySamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-10 Lkotlin/jvm/functions/Function2;
+	public static field lambda-11 Lkotlin/jvm/functions/Function3;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-13 Lkotlin/jvm/functions/Function3;
+	public static field lambda-14 Lkotlin/jvm/functions/Function3;
+	public static field lambda-15 Lkotlin/jvm/functions/Function3;
+	public static field lambda-16 Lkotlin/jvm/functions/Function3;
+	public static field lambda-17 Lkotlin/jvm/functions/Function3;
+	public static field lambda-18 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-10$animation_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-11$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-12$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-13$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-14$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-15$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-16$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-17$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-18$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/animation/samples/ComposableSingletons$CrossfadeSampleKt {
+	public static final field INSTANCE Landroidx/compose/animation/samples/ComposableSingletons$CrossfadeSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/animation/samples/ComposableSingletons$TransitionSamplesKt {
+	public static final field INSTANCE Landroidx/compose/animation/samples/ComposableSingletons$TransitionSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$animation_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/animation/samples/CrossfadeSampleKt {
+	public static final fun CrossfadeSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/animation/samples/TransitionSamplesKt {
+	public static final fun GestureAnimationSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun InfiniteTransitionSample (Landroidx/compose/runtime/Composer;I)V
+}
+

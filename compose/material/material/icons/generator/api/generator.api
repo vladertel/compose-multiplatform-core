@@ -1,0 +1,514 @@
+public final class androidx/compose/material/icons/generator/ClassNames {
+	public static final field INSTANCE Landroidx/compose/material/icons/generator/ClassNames;
+	public final fun getIcons ()Lcom/squareup/kotlinpoet/ClassName;
+	public final fun getImageVector ()Lcom/squareup/kotlinpoet/ClassName;
+	public final fun getPathFillType ()Lcom/squareup/kotlinpoet/ClassName;
+}
+
+public final class androidx/compose/material/icons/generator/CoreIconsKt {
+	public static final fun getCoreIcons ()Ljava/util/List;
+}
+
+public final class androidx/compose/material/icons/generator/Icon {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Landroidx/compose/material/icons/generator/IconTheme;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Landroidx/compose/material/icons/generator/IconTheme;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Landroidx/compose/material/icons/generator/IconTheme;Ljava/lang/String;)Landroidx/compose/material/icons/generator/Icon;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/Icon;Ljava/lang/String;Ljava/lang/String;Landroidx/compose/material/icons/generator/IconTheme;Ljava/lang/String;ILjava/lang/Object;)Landroidx/compose/material/icons/generator/Icon;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFileContent ()Ljava/lang/String;
+	public final fun getKotlinName ()Ljava/lang/String;
+	public final fun getTheme ()Landroidx/compose/material/icons/generator/IconTheme;
+	public final fun getXmlFileName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/IconParser {
+	public fun <init> (Landroidx/compose/material/icons/generator/Icon;)V
+	public final fun parse ()Landroidx/compose/material/icons/generator/vector/Vector;
+}
+
+public final class androidx/compose/material/icons/generator/IconProcessor {
+	public fun <init> (Ljava/util/List;Ljava/io/File;Ljava/io/File;Z)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/io/File;Ljava/io/File;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun process ()Ljava/util/List;
+}
+
+public final class androidx/compose/material/icons/generator/IconTestingManifestGenerator {
+	public fun <init> (Ljava/util/List;)V
+	public final fun generateTo (Ljava/io/File;)V
+}
+
+public final class androidx/compose/material/icons/generator/IconTheme : java/lang/Enum {
+	public static final field Filled Landroidx/compose/material/icons/generator/IconTheme;
+	public static final field Outlined Landroidx/compose/material/icons/generator/IconTheme;
+	public static final field Rounded Landroidx/compose/material/icons/generator/IconTheme;
+	public static final field Sharp Landroidx/compose/material/icons/generator/IconTheme;
+	public static final field TwoTone Landroidx/compose/material/icons/generator/IconTheme;
+	public final fun getThemeClassName ()Ljava/lang/String;
+	public final fun getThemePackageName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/material/icons/generator/IconTheme;
+	public static fun values ()[Landroidx/compose/material/icons/generator/IconTheme;
+}
+
+public final class androidx/compose/material/icons/generator/IconThemeKt {
+	public static final fun getClassName (Landroidx/compose/material/icons/generator/IconTheme;)Lcom/squareup/kotlinpoet/ClassName;
+	public static final fun toIconTheme (Ljava/lang/String;)Landroidx/compose/material/icons/generator/IconTheme;
+}
+
+public final class androidx/compose/material/icons/generator/IconWriter {
+	public fun <init> (Ljava/util/List;)V
+	public final fun generateTo (Ljava/io/File;Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class androidx/compose/material/icons/generator/ImageVectorGenerator {
+	public fun <init> (Ljava/lang/String;Landroidx/compose/material/icons/generator/IconTheme;Landroidx/compose/material/icons/generator/vector/Vector;)V
+	public final fun createFileSpec ()Lcom/squareup/kotlinpoet/FileSpec;
+}
+
+public final class androidx/compose/material/icons/generator/KotlinPoetUtilsKt {
+	public static final fun setIndent (Lcom/squareup/kotlinpoet/FileSpec$Builder;)Lcom/squareup/kotlinpoet/FileSpec$Builder;
+	public static final fun writeToWithCopyright (Lcom/squareup/kotlinpoet/FileSpec;Ljava/io/File;Lkotlin/jvm/functions/Function1;)V
+	public static synthetic fun writeToWithCopyright$default (Lcom/squareup/kotlinpoet/FileSpec;Ljava/io/File;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
+}
+
+public final class androidx/compose/material/icons/generator/MemberNames {
+	public static final field INSTANCE Landroidx/compose/material/icons/generator/MemberNames;
+	public final fun getEvenOdd ()Lcom/squareup/kotlinpoet/MemberName;
+	public final fun getGroup ()Lcom/squareup/kotlinpoet/MemberName;
+	public final fun getMaterialIcon ()Lcom/squareup/kotlinpoet/MemberName;
+	public final fun getMaterialPath ()Lcom/squareup/kotlinpoet/MemberName;
+}
+
+public final class androidx/compose/material/icons/generator/NamesKt {
+	public static final fun className (Landroidx/compose/material/icons/generator/PackageNames;[Ljava/lang/String;)Lcom/squareup/kotlinpoet/ClassName;
+}
+
+public final class androidx/compose/material/icons/generator/PackageNames : java/lang/Enum {
+	public static final field GraphicsPackage Landroidx/compose/material/icons/generator/PackageNames;
+	public static final field MaterialIconsPackage Landroidx/compose/material/icons/generator/PackageNames;
+	public static final field VectorPackage Landroidx/compose/material/icons/generator/PackageNames;
+	public final fun getPackageName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/material/icons/generator/PackageNames;
+	public static fun values ()[Landroidx/compose/material/icons/generator/PackageNames;
+}
+
+public class androidx/compose/material/icons/generator/tasks/CoreIconGenerationTask : androidx/compose/material/icons/generator/tasks/IconGenerationTask {
+	public static final field Companion Landroidx/compose/material/icons/generator/tasks/CoreIconGenerationTask$Companion;
+	public fun <init> ()V
+	public fun run ()V
+}
+
+public final class androidx/compose/material/icons/generator/tasks/CoreIconGenerationTask$Companion {
+	public final fun register (Lorg/gradle/api/Project;Lcom/android/build/gradle/api/BaseVariant;)V
+	public static synthetic fun register$default (Landroidx/compose/material/icons/generator/tasks/CoreIconGenerationTask$Companion;Lorg/gradle/api/Project;Lcom/android/build/gradle/api/BaseVariant;ILjava/lang/Object;)V
+}
+
+public class androidx/compose/material/icons/generator/tasks/ExtendedIconGenerationTask : androidx/compose/material/icons/generator/tasks/IconGenerationTask {
+	public static final field Companion Landroidx/compose/material/icons/generator/tasks/ExtendedIconGenerationTask$Companion;
+	public fun <init> ()V
+	public static final fun registerSourceJarOnly (Lorg/gradle/api/Project;Lcom/android/build/gradle/api/BaseVariant;)V
+	public fun run ()V
+}
+
+public final class androidx/compose/material/icons/generator/tasks/ExtendedIconGenerationTask$Companion {
+	public final fun register (Lorg/gradle/api/Project;Lcom/android/build/gradle/api/BaseVariant;)V
+	public static synthetic fun register$default (Landroidx/compose/material/icons/generator/tasks/ExtendedIconGenerationTask$Companion;Lorg/gradle/api/Project;Lcom/android/build/gradle/api/BaseVariant;ILjava/lang/Object;)V
+	public final fun registerSourceJarOnly (Lorg/gradle/api/Project;Lcom/android/build/gradle/api/BaseVariant;)V
+}
+
+public abstract class androidx/compose/material/icons/generator/tasks/IconGenerationTask : org/gradle/api/DefaultTask {
+	public static final field Companion Landroidx/compose/material/icons/generator/tasks/IconGenerationTask$Companion;
+	public static final field GeneratedResource Ljava/lang/String;
+	public static final field GeneratedSrcAndroidTest Ljava/lang/String;
+	public static final field GeneratedSrcMain Ljava/lang/String;
+	public field buildDirectory Ljava/io/File;
+	public fun <init> ()V
+	public final fun getAllIconsDirectory ()Ljava/io/File;
+	public final fun getBuildDirectory ()Ljava/io/File;
+	public final fun getExpectedApiFile ()Ljava/io/File;
+	public final fun getGeneratedApiFile ()Ljava/io/File;
+	public final fun getGeneratedResourceDirectory ()Ljava/io/File;
+	public final fun getGeneratedSrcAndroidTestDirectory ()Ljava/io/File;
+	public final fun getGeneratedSrcMainDirectory ()Ljava/io/File;
+	public final fun getIconDirectories ()Ljava/util/List;
+	public final fun getThemeName ()Ljava/lang/String;
+	public final fun loadIcons ()Ljava/util/List;
+	public static final fun registerCoreIconProject (Lorg/gradle/api/Project;Lcom/android/build/gradle/LibraryExtension;Z)V
+	public static final fun registerExtendedIconMainProject (Lorg/gradle/api/Project;Lcom/android/build/gradle/LibraryExtension;)V
+	public static final fun registerExtendedIconThemeProject (Lorg/gradle/api/Project;Lcom/android/build/gradle/LibraryExtension;)V
+	public abstract fun run ()V
+	public final fun setBuildDirectory (Ljava/io/File;)V
+	public final fun setThemeName (Ljava/lang/String;)V
+}
+
+public final class androidx/compose/material/icons/generator/tasks/IconGenerationTask$Companion {
+	public final fun registerCoreIconProject (Lorg/gradle/api/Project;Lcom/android/build/gradle/LibraryExtension;Z)V
+	public final fun registerExtendedIconMainProject (Lorg/gradle/api/Project;Lcom/android/build/gradle/LibraryExtension;)V
+	public final fun registerExtendedIconThemeProject (Lorg/gradle/api/Project;Lcom/android/build/gradle/LibraryExtension;)V
+}
+
+public final class androidx/compose/material/icons/generator/tasks/IconGenerationTaskKt {
+	public static final fun getMultiplatformSourceSet (Lorg/gradle/api/Project;Ljava/lang/String;)Lorg/jetbrains/kotlin/gradle/plugin/KotlinSourceSet;
+	public static final fun registerGenerationTask (Lorg/gradle/api/Project;Ljava/lang/String;Ljava/lang/Class;Lcom/android/build/gradle/api/BaseVariant;)Lkotlin/Pair;
+	public static synthetic fun registerGenerationTask$default (Lorg/gradle/api/Project;Ljava/lang/String;Ljava/lang/Class;Lcom/android/build/gradle/api/BaseVariant;ILjava/lang/Object;)Lkotlin/Pair;
+}
+
+public class androidx/compose/material/icons/generator/tasks/IconTestingGenerationTask : androidx/compose/material/icons/generator/tasks/IconGenerationTask {
+	public static final field Companion Landroidx/compose/material/icons/generator/tasks/IconTestingGenerationTask$Companion;
+	public fun <init> ()V
+	public final fun getDrawableDirectory ()Ljava/io/File;
+	public fun run ()V
+}
+
+public final class androidx/compose/material/icons/generator/tasks/IconTestingGenerationTask$Companion {
+	public final fun register (Lorg/gradle/api/Project;Lcom/android/build/gradle/api/BaseVariant;)V
+}
+
+public final class androidx/compose/material/icons/generator/vector/FillType : java/lang/Enum {
+	public static final field EvenOdd Landroidx/compose/material/icons/generator/vector/FillType;
+	public static final field NonZero Landroidx/compose/material/icons/generator/vector/FillType;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/material/icons/generator/vector/FillType;
+	public static fun values ()[Landroidx/compose/material/icons/generator/vector/FillType;
+}
+
+public abstract class androidx/compose/material/icons/generator/vector/PathNode {
+	public synthetic fun <init> (ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ZZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public abstract fun asFunctionCall ()Ljava/lang/String;
+	public final fun isCurve ()Z
+	public final fun isQuad ()Z
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$ArcTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FFFZZFF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()Z
+	public final fun component5 ()Z
+	public final fun component6 ()F
+	public final fun component7 ()F
+	public final fun copy (FFFZZFF)Landroidx/compose/material/icons/generator/vector/PathNode$ArcTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$ArcTo;FFFZZFFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$ArcTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArcStartX ()F
+	public final fun getArcStartY ()F
+	public final fun getHorizontalEllipseRadius ()F
+	public final fun getTheta ()F
+	public final fun getVerticalEllipseRadius ()F
+	public fun hashCode ()I
+	public final fun isMoreThanHalf ()Z
+	public final fun isPositiveArc ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$Close : androidx/compose/material/icons/generator/vector/PathNode {
+	public static final field INSTANCE Landroidx/compose/material/icons/generator/vector/PathNode$Close;
+	public fun asFunctionCall ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$CurveTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FFFFFF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun component5 ()F
+	public final fun component6 ()F
+	public final fun copy (FFFFFF)Landroidx/compose/material/icons/generator/vector/PathNode$CurveTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$CurveTo;FFFFFFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$CurveTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX1 ()F
+	public final fun getX2 ()F
+	public final fun getX3 ()F
+	public final fun getY1 ()F
+	public final fun getY2 ()F
+	public final fun getY3 ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$HorizontalTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (F)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun copy (F)Landroidx/compose/material/icons/generator/vector/PathNode$HorizontalTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$HorizontalTo;FILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$HorizontalTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$LineTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun copy (FF)Landroidx/compose/material/icons/generator/vector/PathNode$LineTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$LineTo;FFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$LineTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX ()F
+	public final fun getY ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$MoveTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun copy (FF)Landroidx/compose/material/icons/generator/vector/PathNode$MoveTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$MoveTo;FFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$MoveTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX ()F
+	public final fun getY ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$QuadTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FFFF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun copy (FFFF)Landroidx/compose/material/icons/generator/vector/PathNode$QuadTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$QuadTo;FFFFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$QuadTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX1 ()F
+	public final fun getX2 ()F
+	public final fun getY1 ()F
+	public final fun getY2 ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$ReflectiveCurveTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FFFF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun copy (FFFF)Landroidx/compose/material/icons/generator/vector/PathNode$ReflectiveCurveTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$ReflectiveCurveTo;FFFFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$ReflectiveCurveTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX1 ()F
+	public final fun getX2 ()F
+	public final fun getY1 ()F
+	public final fun getY2 ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$ReflectiveQuadTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun copy (FF)Landroidx/compose/material/icons/generator/vector/PathNode$ReflectiveQuadTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$ReflectiveQuadTo;FFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$ReflectiveQuadTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX ()F
+	public final fun getY ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$RelativeArcTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FFFZZFF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()Z
+	public final fun component5 ()Z
+	public final fun component6 ()F
+	public final fun component7 ()F
+	public final fun copy (FFFZZFF)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeArcTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$RelativeArcTo;FFFZZFFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeArcTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArcStartDx ()F
+	public final fun getArcStartDy ()F
+	public final fun getHorizontalEllipseRadius ()F
+	public final fun getTheta ()F
+	public final fun getVerticalEllipseRadius ()F
+	public fun hashCode ()I
+	public final fun isMoreThanHalf ()Z
+	public final fun isPositiveArc ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$RelativeCurveTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FFFFFF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun component5 ()F
+	public final fun component6 ()F
+	public final fun copy (FFFFFF)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeCurveTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$RelativeCurveTo;FFFFFFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeCurveTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDx1 ()F
+	public final fun getDx2 ()F
+	public final fun getDx3 ()F
+	public final fun getDy1 ()F
+	public final fun getDy2 ()F
+	public final fun getDy3 ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$RelativeHorizontalTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (F)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun copy (F)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeHorizontalTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$RelativeHorizontalTo;FILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeHorizontalTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$RelativeLineTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun copy (FF)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeLineTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$RelativeLineTo;FFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeLineTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX ()F
+	public final fun getY ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$RelativeMoveTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun copy (FF)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeMoveTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$RelativeMoveTo;FFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeMoveTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX ()F
+	public final fun getY ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$RelativeQuadTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FFFF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun copy (FFFF)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeQuadTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$RelativeQuadTo;FFFFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeQuadTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX1 ()F
+	public final fun getX2 ()F
+	public final fun getY1 ()F
+	public final fun getY2 ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$RelativeReflectiveCurveTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FFFF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun component3 ()F
+	public final fun component4 ()F
+	public final fun copy (FFFF)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeReflectiveCurveTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$RelativeReflectiveCurveTo;FFFFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeReflectiveCurveTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX1 ()F
+	public final fun getX2 ()F
+	public final fun getY1 ()F
+	public final fun getY2 ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$RelativeReflectiveQuadTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (FF)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun component2 ()F
+	public final fun copy (FF)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeReflectiveQuadTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$RelativeReflectiveQuadTo;FFILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeReflectiveQuadTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getX ()F
+	public final fun getY ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$RelativeVerticalTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (F)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun copy (F)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeVerticalTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$RelativeVerticalTo;FILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$RelativeVerticalTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getY ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathNode$VerticalTo : androidx/compose/material/icons/generator/vector/PathNode {
+	public fun <init> (F)V
+	public fun asFunctionCall ()Ljava/lang/String;
+	public final fun component1 ()F
+	public final fun copy (F)Landroidx/compose/material/icons/generator/vector/PathNode$VerticalTo;
+	public static synthetic fun copy$default (Landroidx/compose/material/icons/generator/vector/PathNode$VerticalTo;FILjava/lang/Object;)Landroidx/compose/material/icons/generator/vector/PathNode$VerticalTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getY ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/material/icons/generator/vector/PathParser {
+	public static final field INSTANCE Landroidx/compose/material/icons/generator/vector/PathParser;
+	public final fun parsePathString (Ljava/lang/String;)Ljava/util/List;
+}
+
+public final class androidx/compose/material/icons/generator/vector/Vector {
+	public fun <init> (Ljava/util/List;)V
+	public final fun getNodes ()Ljava/util/List;
+}
+
+public abstract class androidx/compose/material/icons/generator/vector/VectorNode {
+}
+
+public final class androidx/compose/material/icons/generator/vector/VectorNode$Group : androidx/compose/material/icons/generator/vector/VectorNode {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getPaths ()Ljava/util/List;
+}
+
+public final class androidx/compose/material/icons/generator/vector/VectorNode$Path : androidx/compose/material/icons/generator/vector/VectorNode {
+	public fun <init> (FFLandroidx/compose/material/icons/generator/vector/FillType;Ljava/util/List;)V
+	public final fun getFillAlpha ()F
+	public final fun getFillType ()Landroidx/compose/material/icons/generator/vector/FillType;
+	public final fun getNodes ()Ljava/util/List;
+	public final fun getStrokeAlpha ()F
+}
+

@@ -1,0 +1,28 @@
+public abstract interface annotation class androidx/compose/animation/graphics/ExperimentalAnimationGraphicsApi : java/lang/annotation/Annotation {
+}
+
+public final class androidx/compose/animation/graphics/res/AnimatedVectorPainterResources_androidKt {
+	public static final fun rememberAnimatedVectorPainter (Landroidx/compose/animation/graphics/vector/AnimatedImageVector;ZLandroidx/compose/runtime/Composer;I)Landroidx/compose/ui/graphics/painter/Painter;
+}
+
+public final class androidx/compose/animation/graphics/res/AnimatedVectorResources_androidKt {
+	public static final fun animatedVectorResource (Landroidx/compose/animation/graphics/vector/AnimatedImageVector$Companion;ILandroidx/compose/runtime/Composer;I)Landroidx/compose/animation/graphics/vector/AnimatedImageVector;
+}
+
+public final class androidx/compose/animation/graphics/res/ComposableSingletons$AnimatedVectorPainterResources_androidKt {
+	public static final field INSTANCE Landroidx/compose/animation/graphics/res/ComposableSingletons$AnimatedVectorPainterResources_androidKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$animation_graphics_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/animation/graphics/vector/AnimatedImageVector {
+	public static final field $stable I
+	public static final field Companion Landroidx/compose/animation/graphics/vector/AnimatedImageVector$Companion;
+	public final fun getImageVector ()Landroidx/compose/ui/graphics/vector/ImageVector;
+	public final fun getTotalDuration ()I
+}
+
+public final class androidx/compose/animation/graphics/vector/AnimatedImageVector$Companion {
+}
+

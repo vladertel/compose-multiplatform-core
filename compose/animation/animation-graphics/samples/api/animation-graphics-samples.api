@@ -1,0 +1,4 @@
+public final class androidx/compose/animation/graphics/samples/AnimatedVectorSampleKt {
+	public static final fun AnimatedVectorSample (Landroidx/compose/runtime/Composer;I)V
+}
+

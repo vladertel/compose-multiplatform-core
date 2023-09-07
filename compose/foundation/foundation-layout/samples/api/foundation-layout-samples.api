@@ -1,0 +1,187 @@
+public final class androidx/compose/foundation/layout/samples/AspectRatioSampleKt {
+	public static final fun SimpleAspectRatio (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/BoxSampleKt {
+	public static final fun SimpleBox (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/BoxWithConstraintsSampleKt {
+	public static final fun BoxWithConstraintsSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/ColumnSampleKt {
+	public static final fun SimpleAlignInColumn (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleColumn (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleRelativeToSiblings (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleRelativeToSiblingsInColumn (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/ComposableSingletons$BoxWithConstraintsSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/layout/samples/ComposableSingletons$BoxWithConstraintsSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/layout/samples/ComposableSingletons$WindowInsetsConnectionSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/layout/samples/ComposableSingletons$WindowInsetsConnectionSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/foundation/layout/samples/ComposableSingletons$WindowInsetsPaddingSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/layout/samples/ComposableSingletons$WindowInsetsPaddingSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function2;
+	public static field lambda-11 Lkotlin/jvm/functions/Function2;
+	public static field lambda-12 Lkotlin/jvm/functions/Function2;
+	public static field lambda-13 Lkotlin/jvm/functions/Function2;
+	public static field lambda-14 Lkotlin/jvm/functions/Function2;
+	public static field lambda-15 Lkotlin/jvm/functions/Function2;
+	public static field lambda-16 Lkotlin/jvm/functions/Function2;
+	public static field lambda-17 Lkotlin/jvm/functions/Function2;
+	public static field lambda-18 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public static field lambda-8 Lkotlin/jvm/functions/Function2;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-11$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-12$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-13$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-14$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-15$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-16$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-17$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-18$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-8$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-9$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/layout/samples/ComposableSingletons$WindowInsetsSizeSampleKt {
+	public static final field INSTANCE Landroidx/compose/foundation/layout/samples/ComposableSingletons$WindowInsetsSizeSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$foundation_layout_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/foundation/layout/samples/FlowColumnSampleKt {
+	public static final fun SimpleFlowColumn (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleFlowColumnWithWeights (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/FlowRowSampleKt {
+	public static final fun SimpleFlowRow (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleFlowRowWithWeights (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/IntrinsicSampleKt {
+	public static final fun MatchParentDividerForAspectRatio (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MatchParentDividerForText (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SameWidthBoxes (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SameWidthTextBoxes (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/LayoutOffsetSampleKt {
+	public static final fun AbsoluteOffsetModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AbsoluteOffsetPxModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OffsetModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OffsetPxModifier (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/LayoutPaddingSampleKt {
+	public static final fun AbsolutePaddingModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PaddingAllModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PaddingModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PaddingValuesModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SymmetricPaddingModifier (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/RelativePaddingFromSamplesKt {
+	public static final fun PaddingFromBaselineSampleDp (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PaddingFromBaselineSampleTextUnit (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PaddingFromSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/RowSampleKt {
+	public static final fun SimpleAlignByInRow (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleAlignInRow (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleRow (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/SizeModifierSampleKt {
+	public static final fun DefaultMinSizeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FillHalfHeightModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FillHalfSizeModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FillHalfWidthModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleFillHeightModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleFillModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleFillWidthModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleHeightModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleRequiredHeightModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleRequiredSizeModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleRequiredWidthModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleSizeModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleSizeModifierWithDpSize (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleWidthModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleWrapContentAlignedModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleWrapContentHorizontallyAlignedModifier (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleWrapContentVerticallyAlignedModifier (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/SpacerSampleKt {
+	public static final fun SpacerExample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/WindowInsetsConnectionSampleKt {
+	public static final fun windowInsetsNestedScrollDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/foundation/layout/samples/WindowInsetsPaddingSampleKt {
+	public static final fun captionBarPaddingSample ()V
+	public static final fun consumedInsetsPaddingSample ()V
+	public static final fun consumedInsetsSample ()V
+	public static final fun displayCutoutPaddingSample ()V
+	public static final fun imePaddingSample ()V
+	public static final fun insetsDp ()V
+	public static final fun insetsInt ()V
+	public static final fun insetsPaddingSample ()V
+	public static final fun mandatorySystemGesturesPaddingSample ()V
+	public static final fun paddingValuesSample ()V
+	public static final fun safeContentPaddingSample ()V
+	public static final fun safeDrawingPaddingSample ()V
+	public static final fun safeGesturesPaddingSample ()V
+	public static final fun statusBarsAndNavigationBarsPaddingSample ()V
+	public static final fun systemBarsPaddingSample ()V
+	public static final fun systemGesturesPaddingSample ()V
+	public static final fun waterfallPaddingSample ()V
+	public static final fun withConsumedInsetsSample ()V
+}
+
+public final class androidx/compose/foundation/layout/samples/WindowInsetsSizeSampleKt {
+	public static final fun insetsBottomHeightSample ()V
+	public static final fun insetsEndWidthSample ()V
+	public static final fun insetsStartWidthSample ()V
+	public static final fun insetsTopHeightSample ()V
+}
+

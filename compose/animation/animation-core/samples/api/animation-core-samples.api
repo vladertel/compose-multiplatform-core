@@ -1,0 +1,82 @@
+public final class androidx/compose/animation/core/samples/AnimatableSamplesKt {
+	public static final fun AnimatableAnimateToGenericsType (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AnimatableAnimationResultSample ()V
+	public static final fun AnimatableDecayAndAnimateToSample ()V
+	public static final fun AnimatableFadeIn ()V
+}
+
+public final class androidx/compose/animation/core/samples/AnimatedValueSamplesKt {
+	public static final fun AlphaAnimationSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun AnimateOffsetSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ArbitraryValueTypeTransitionSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DpAnimationSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/animation/core/samples/AnimationSpecSamplesKt {
+	public static final fun InfiniteProgressIndicator (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/animation/core/samples/ComposableSingletons$TransitionSamplesKt {
+	public static final field INSTANCE Landroidx/compose/animation/core/samples/ComposableSingletons$TransitionSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$animation_core_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$animation_core_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/animation/core/samples/DialerState : java/lang/Enum {
+	public static final field DialerMinimized Landroidx/compose/animation/core/samples/DialerState;
+	public static final field NumberPad Landroidx/compose/animation/core/samples/DialerState;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/animation/core/samples/DialerState;
+	public static fun values ()[Landroidx/compose/animation/core/samples/DialerState;
+}
+
+public final class androidx/compose/animation/core/samples/InfiniteTransitionSamplesKt {
+	public static final fun InfiniteTransitionAnimateValueSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun InfiniteTransitionSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/animation/core/samples/KeyframesBuilderSampleKt {
+	public static final fun FloatKeyframesBuilder ()V
+	public static final fun FloatKeyframesBuilderInline ()V
+	public static final fun KeyframesBuilderForPosition ()V
+	public static final fun KeyframesBuilderWithEasing ()V
+}
+
+public final class androidx/compose/animation/core/samples/LikedStates : java/lang/Enum {
+	public static final field Disappeared Landroidx/compose/animation/core/samples/LikedStates;
+	public static final field Initial Landroidx/compose/animation/core/samples/LikedStates;
+	public static final field Liked Landroidx/compose/animation/core/samples/LikedStates;
+	public static fun valueOf (Ljava/lang/String;)Landroidx/compose/animation/core/samples/LikedStates;
+	public static fun values ()[Landroidx/compose/animation/core/samples/LikedStates;
+}
+
+public final class androidx/compose/animation/core/samples/MySize {
+	public static final field $stable I
+	public synthetic fun <init> (FFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-D9Ej5fM ()F
+	public final fun component2-D9Ej5fM ()F
+	public final fun copy-YgX7TsA (FF)Landroidx/compose/animation/core/samples/MySize;
+	public static synthetic fun copy-YgX7TsA$default (Landroidx/compose/animation/core/samples/MySize;FFILjava/lang/Object;)Landroidx/compose/animation/core/samples/MySize;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHeight-D9Ej5fM ()F
+	public final fun getWidth-D9Ej5fM ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/animation/core/samples/SuspendAnimationSamplesKt {
+	public static final fun animateToOnAnimationState ()V
+	public static final fun suspendAnimateFloatVariant ()V
+}
+
+public final class androidx/compose/animation/core/samples/TransitionSamplesKt {
+	public static final fun AnimateFloatSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CreateChildTransitionSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun DoubleTapToLikeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun GestureAnimationSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun InitialStateSample ()V
+	public static final fun TransitionStateIsIdleSample (Landroidx/compose/runtime/Composer;I)V
+}
+

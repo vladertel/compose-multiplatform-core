@@ -1,0 +1,712 @@
+public final class androidx/compose/material/samples/AlertDialogSampleKt {
+	public static final fun AlertDialogSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CustomAlertDialogSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/AppBarSamplesKt {
+	public static final fun SimpleBottomAppBar (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleTopAppBar (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/BackdropScaffoldSamplesKt {
+	public static final fun BackdropScaffoldSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/BadgeSamplesKt {
+	public static final fun BottomNavigationItemWithBadge (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/BottomNavigationSamplesKt {
+	public static final fun BottomNavigationSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun BottomNavigationWithOnlySelectedLabelsSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/BottomSheetScaffoldSamplesKt {
+	public static final fun BottomSheetScaffoldSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ButtonSamplesKt {
+	public static final fun ButtonSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ButtonWithIconSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OutlinedButtonSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextButtonSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/CardSamplesKt {
+	public static final fun CardSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ClickableCardSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ChipSamplesKt {
+	public static final fun ChipGroupReflowSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ChipGroupSingleLineSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ChipSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FilterChipSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FilterChipWithLeadingIconSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OutlinedChipWithIconSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OutlinedFilterChipSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$AlertDialogSampleKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$AlertDialogSampleKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$AppBarSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$AppBarSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function2;
+	public static field lambda-11 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public static field lambda-8 Lkotlin/jvm/functions/Function2;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-11$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-8$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-9$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$BackdropScaffoldSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$BackdropScaffoldSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$BadgeSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$BadgeSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$BottomNavigationSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$BottomNavigationSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$BottomSheetScaffoldSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$BottomSheetScaffoldSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function4;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-7$material_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ButtonSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ButtonSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$CardSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$CardSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ChipSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ChipSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function2;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-10$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-9$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ContentAlphaSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ContentAlphaSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$DrawerSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$DrawerSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function4;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ElevationSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ElevationSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ExposedDropdownMenuSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ExposedDropdownMenuSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$FloatingActionButtonSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$FloatingActionButtonSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$IconButtonSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$IconButtonSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ListSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ListSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function2;
+	public static field lambda-11 Lkotlin/jvm/functions/Function2;
+	public static field lambda-12 Lkotlin/jvm/functions/Function2;
+	public static field lambda-13 Lkotlin/jvm/functions/Function2;
+	public static field lambda-14 Lkotlin/jvm/functions/Function2;
+	public static field lambda-15 Lkotlin/jvm/functions/Function2;
+	public static field lambda-16 Lkotlin/jvm/functions/Function2;
+	public static field lambda-17 Lkotlin/jvm/functions/Function2;
+	public static field lambda-18 Lkotlin/jvm/functions/Function2;
+	public static field lambda-19 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-20 Lkotlin/jvm/functions/Function2;
+	public static field lambda-21 Lkotlin/jvm/functions/Function2;
+	public static field lambda-22 Lkotlin/jvm/functions/Function2;
+	public static field lambda-23 Lkotlin/jvm/functions/Function2;
+	public static field lambda-24 Lkotlin/jvm/functions/Function2;
+	public static field lambda-25 Lkotlin/jvm/functions/Function2;
+	public static field lambda-26 Lkotlin/jvm/functions/Function2;
+	public static field lambda-27 Lkotlin/jvm/functions/Function2;
+	public static field lambda-28 Lkotlin/jvm/functions/Function2;
+	public static field lambda-29 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-30 Lkotlin/jvm/functions/Function2;
+	public static field lambda-31 Lkotlin/jvm/functions/Function2;
+	public static field lambda-32 Lkotlin/jvm/functions/Function2;
+	public static field lambda-33 Lkotlin/jvm/functions/Function2;
+	public static field lambda-34 Lkotlin/jvm/functions/Function2;
+	public static field lambda-35 Lkotlin/jvm/functions/Function2;
+	public static field lambda-36 Lkotlin/jvm/functions/Function2;
+	public static field lambda-37 Lkotlin/jvm/functions/Function2;
+	public static field lambda-38 Lkotlin/jvm/functions/Function2;
+	public static field lambda-39 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-40 Lkotlin/jvm/functions/Function2;
+	public static field lambda-41 Lkotlin/jvm/functions/Function2;
+	public static field lambda-42 Lkotlin/jvm/functions/Function2;
+	public static field lambda-43 Lkotlin/jvm/functions/Function2;
+	public static field lambda-44 Lkotlin/jvm/functions/Function2;
+	public static field lambda-45 Lkotlin/jvm/functions/Function2;
+	public static field lambda-46 Lkotlin/jvm/functions/Function2;
+	public static field lambda-47 Lkotlin/jvm/functions/Function2;
+	public static field lambda-48 Lkotlin/jvm/functions/Function2;
+	public static field lambda-49 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-50 Lkotlin/jvm/functions/Function2;
+	public static field lambda-51 Lkotlin/jvm/functions/Function2;
+	public static field lambda-52 Lkotlin/jvm/functions/Function2;
+	public static field lambda-53 Lkotlin/jvm/functions/Function2;
+	public static field lambda-54 Lkotlin/jvm/functions/Function2;
+	public static field lambda-55 Lkotlin/jvm/functions/Function2;
+	public static field lambda-56 Lkotlin/jvm/functions/Function2;
+	public static field lambda-57 Lkotlin/jvm/functions/Function2;
+	public static field lambda-58 Lkotlin/jvm/functions/Function2;
+	public static field lambda-59 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-60 Lkotlin/jvm/functions/Function2;
+	public static field lambda-61 Lkotlin/jvm/functions/Function2;
+	public static field lambda-62 Lkotlin/jvm/functions/Function2;
+	public static field lambda-63 Lkotlin/jvm/functions/Function2;
+	public static field lambda-64 Lkotlin/jvm/functions/Function2;
+	public static field lambda-65 Lkotlin/jvm/functions/Function2;
+	public static field lambda-66 Lkotlin/jvm/functions/Function2;
+	public static field lambda-67 Lkotlin/jvm/functions/Function2;
+	public static field lambda-68 Lkotlin/jvm/functions/Function2;
+	public static field lambda-69 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public static field lambda-70 Lkotlin/jvm/functions/Function2;
+	public static field lambda-71 Lkotlin/jvm/functions/Function2;
+	public static field lambda-72 Lkotlin/jvm/functions/Function2;
+	public static field lambda-73 Lkotlin/jvm/functions/Function2;
+	public static field lambda-74 Lkotlin/jvm/functions/Function2;
+	public static field lambda-75 Lkotlin/jvm/functions/Function2;
+	public static field lambda-8 Lkotlin/jvm/functions/Function2;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-11$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-12$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-13$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-14$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-15$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-16$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-17$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-18$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-19$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-20$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-21$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-22$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-23$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-24$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-25$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-26$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-27$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-28$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-29$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-30$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-31$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-32$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-33$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-34$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-35$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-36$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-37$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-38$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-39$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-40$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-41$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-42$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-43$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-44$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-45$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-46$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-47$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-48$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-49$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-50$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-51$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-52$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-53$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-54$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-55$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-56$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-57$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-58$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-59$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-60$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-61$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-62$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-63$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-64$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-65$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-66$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-67$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-68$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-69$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-70$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-71$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-72$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-73$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-74$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-75$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-8$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-9$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$MenuSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$MenuSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$material_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ModalBottomSheetSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ModalBottomSheetSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function4;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ProgressIndicatorSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ProgressIndicatorSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ScaffoldSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ScaffoldSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function2;
+	public static field lambda-11 Lkotlin/jvm/functions/Function2;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-13 Lkotlin/jvm/functions/Function4;
+	public static field lambda-14 Lkotlin/jvm/functions/Function3;
+	public static field lambda-15 Lkotlin/jvm/functions/Function2;
+	public static field lambda-16 Lkotlin/jvm/functions/Function3;
+	public static field lambda-17 Lkotlin/jvm/functions/Function3;
+	public static field lambda-18 Lkotlin/jvm/functions/Function3;
+	public static field lambda-19 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-20 Lkotlin/jvm/functions/Function3;
+	public static field lambda-21 Lkotlin/jvm/functions/Function2;
+	public static field lambda-22 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function4;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function2;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-11$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-12$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-13$material_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-14$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-15$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-16$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-17$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-18$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-19$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-20$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-21$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-22$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-7$material_samples_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-9$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$SurfaceSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$SurfaceSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$SwipeToDismissSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$SwipeToDismissSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$TextFieldSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$TextFieldSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function2;
+	public static field lambda-11 Lkotlin/jvm/functions/Function2;
+	public static field lambda-12 Lkotlin/jvm/functions/Function2;
+	public static field lambda-13 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public static field lambda-8 Lkotlin/jvm/functions/Function2;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-11$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-12$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-13$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-8$material_samples_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-9$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ComposableSingletons$ThemeSamplesKt {
+	public static final field INSTANCE Landroidx/compose/material/samples/ComposableSingletons$ThemeSamplesKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$material_samples_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/material/samples/ContentAlphaSamplesKt {
+	public static final fun ContentAlphaSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/DrawerSamplesKt {
+	public static final fun BottomDrawerSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ModalDrawerSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ElevationSamplesKt {
+	public static final fun AbsoluteElevationSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ExposedDropdownMenuSamplesKt {
+	public static final fun EditableExposedDropdownMenuSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ExposedDropdownMenuSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/FloatingActionButtonSamplesKt {
+	public static final fun FluidExtendedFab (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleExtendedFabNoIcon (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleExtendedFabWithIcon (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleFab (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/IconButtonSamplesKt {
+	public static final fun IconButtonSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun IconToggleButtonSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ListSamplesKt {
+	public static final fun ClickableListItems (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OneLineListItems (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OneLineRtlLtrListItems (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ThreeLineListItems (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ThreeLineRtlLtrListItems (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TwoLineListItems (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TwoLineRtlLtrListItems (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/MenuSamplesKt {
+	public static final fun MenuSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun MenuWithScrollStateSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ModalBottomSheetSamplesKt {
+	public static final fun ModalBottomSheetSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/NavigationRailSampleKt {
+	public static final fun CompactNavigationRailSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun NavigationRailBottomAlignSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun NavigationRailSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun NavigationRailWithOnlySelectedLabelsSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ProgressIndicatorSamplesKt {
+	public static final fun CircularProgressIndicatorSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LinearProgressIndicatorSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/PullRefreshSamplesKt {
+	public static final fun CustomPullRefreshSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PullRefreshIndicatorTransformSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PullRefreshSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ScaffoldSamplesKt {
+	public static final fun ScaffoldWithBottomBarAndCutout (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScaffoldWithCoroutinesSnackbar (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScaffoldWithCustomSnackbar (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScaffoldWithSimpleSnackbar (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleScaffoldWithTopBar (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/SelectionControlsSamplesKt {
+	public static final fun CheckboxSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FocusedCheckboxSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun RadioButtonSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun RadioGroupSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SwitchSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TriStateCheckboxSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/SliderSampleKt {
+	public static final fun RangeSliderSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SliderSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun StepRangeSliderSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun StepsSliderSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/SurfaceSamplesKt {
+	public static final fun ClickableSurfaceSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SelectableSurfaceSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SurfaceSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ToggleableSurfaceSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/SwipeToDismissSamplesKt {
+	public static final fun SwipeToDismissListItems (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/SwipeableSamplesKt {
+	public static final fun SwipeableSample (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/TabSamplesKt {
+	public static final fun FancyAnimatedIndicator (Ljava/util/List;ILandroidx/compose/runtime/Composer;I)V
+	public static final fun FancyIndicator-3J-VO9M (JLandroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun FancyIndicatorContainerTabs (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FancyIndicatorTabs (Landroidx/compose/runtime/Composer;I)V
+	public static final fun FancyTab (Ljava/lang/String;Lkotlin/jvm/functions/Function0;ZLandroidx/compose/runtime/Composer;I)V
+	public static final fun FancyTabs (Landroidx/compose/runtime/Composer;I)V
+	public static final fun IconTabs (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LeadingIconTabs (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScrollingFancyIndicatorContainerTabs (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScrollingTextTabs (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextAndIconTabs (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextTabs (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/TextFieldSamplesKt {
+	public static final fun CustomOutlinedTextFieldBasedOnDecorationBox (Landroidx/compose/runtime/Composer;I)V
+	public static final fun CustomTextFieldBasedOnDecorationBox (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OutlinedTextFieldSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun PasswordTextField (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleOutlinedTextFieldSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun SimpleTextFieldSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextArea (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextFieldSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextFieldWithErrorState (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextFieldWithHelperMessage (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextFieldWithHideKeyboardOnImeAction (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextFieldWithIcons (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TextFieldWithPlaceholder (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/material/samples/ThemeSamplesKt {
+	public static final fun MaterialThemeSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ThemeColorSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ThemeTextStyleSample (Landroidx/compose/runtime/Composer;I)V
+}
+

@@ -1,0 +1,64 @@
+public final class androidx/compose/ui/tooling/ComposableInvoker {
+	public static final field $stable I
+	public static final field INSTANCE Landroidx/compose/ui/tooling/ComposableInvoker;
+	public final fun invokeComposable (Ljava/lang/String;Ljava/lang/String;Landroidx/compose/runtime/Composer;[Ljava/lang/Object;)V
+}
+
+public final class androidx/compose/ui/tooling/ComposableSingletons$ComposeViewAdapterKt {
+	public static final field INSTANCE Landroidx/compose/ui/tooling/ComposableSingletons$ComposeViewAdapterKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_tooling_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_tooling_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_tooling_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/tooling/ComposableSingletons$PreviewActivityKt {
+	public static final field INSTANCE Landroidx/compose/ui/tooling/ComposableSingletons$PreviewActivityKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_tooling_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/tooling/InspectableKt {
+	public static final fun InInspectionModeOnly (Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/tooling/PreviewActivity : androidx/activity/ComponentActivity {
+	public static final field $stable I
+	public fun <init> ()V
+}
+
+public final class androidx/compose/ui/tooling/ViewInfo {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;ILandroidx/compose/ui/unit/IntRect;Landroidx/compose/ui/tooling/data/SourceLocation;Ljava/util/List;Ljava/lang/Object;)V
+	public final fun allChildren ()Ljava/util/List;
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()Landroidx/compose/ui/unit/IntRect;
+	public final fun component4 ()Landroidx/compose/ui/tooling/data/SourceLocation;
+	public final fun component5 ()Ljava/util/List;
+	public final fun component6 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/String;ILandroidx/compose/ui/unit/IntRect;Landroidx/compose/ui/tooling/data/SourceLocation;Ljava/util/List;Ljava/lang/Object;)Landroidx/compose/ui/tooling/ViewInfo;
+	public static synthetic fun copy$default (Landroidx/compose/ui/tooling/ViewInfo;Ljava/lang/String;ILandroidx/compose/ui/unit/IntRect;Landroidx/compose/ui/tooling/data/SourceLocation;Ljava/util/List;Ljava/lang/Object;ILjava/lang/Object;)Landroidx/compose/ui/tooling/ViewInfo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBounds ()Landroidx/compose/ui/unit/IntRect;
+	public final fun getChildren ()Ljava/util/List;
+	public final fun getFileName ()Ljava/lang/String;
+	public final fun getLayoutInfo ()Ljava/lang/Object;
+	public final fun getLineNumber ()I
+	public final fun getLocation ()Landroidx/compose/ui/tooling/data/SourceLocation;
+	public final fun hasBounds ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class androidx/compose/ui/tooling/animation/ToolingState : androidx/compose/runtime/State {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/Object;)V
+	public fun getValue ()Ljava/lang/Object;
+	public fun setValue (Ljava/lang/Object;)V
+}
+

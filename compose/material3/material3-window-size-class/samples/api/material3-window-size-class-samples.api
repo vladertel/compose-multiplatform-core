@@ -1,0 +1,4 @@
+public final class androidx/compose/material3/windowsizeclass/samples/WindowSizeClassSamplesKt {
+	public static final fun AndroidWindowSizeClassSample ()V
+}
+

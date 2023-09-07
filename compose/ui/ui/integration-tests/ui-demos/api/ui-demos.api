@@ -1,0 +1,1253 @@
+public final class androidx/compose/foundation/demos/text/ComposableSingletons$SoftwareKeyboardControllerDemoKt {
+	public static final field INSTANCE Landroidx/compose/foundation/demos/text/ComposableSingletons$SoftwareKeyboardControllerDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/foundation/demos/text/SoftwareKeyboardControllerDemoKt {
+	public static final fun SoftwareKeyboardControllerDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/ComplexAccessibilityKt {
+	public static final fun CardRow (Landroidx/compose/ui/Modifier;ILjava/lang/String;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)V
+	public static final fun ContentColumn (Landroidx/compose/foundation/layout/PaddingValues;Landroidx/compose/runtime/Composer;I)V
+	public static final fun FloatingBox (Landroidx/compose/runtime/Composer;I)V
+	public static final fun IconsInScaffoldWithListDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun InteropColumn (Landroidx/compose/foundation/layout/PaddingValues;Landroidx/compose/runtime/Composer;I)V
+	public static final fun InteropColumnBackwards (Landroidx/compose/foundation/layout/PaddingValues;Landroidx/compose/runtime/Composer;I)V
+	public static final fun InteropSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun InteropSampleBackwards (Landroidx/compose/runtime/Composer;I)V
+	public static final fun LastElementOverLaidColumn (Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+	public static final fun NestedAndPeerTraversalIndexDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun NestedContainersFalseDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun NestedContainersTrueDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun NestedTraversalIndexInheritanceDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OverlaidNodeLayoutDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun OverlaidNodeTraversalIndexDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScaffoldSample (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScaffoldSampleScroll (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScrollColumn (Landroidx/compose/foundation/layout/PaddingValues;Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScrollingColumnDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun TopAppBar (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/ComposableSingletons$ComplexAccessibilityKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/ComposableSingletons$ComplexAccessibilityKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-11 Lkotlin/jvm/functions/Function2;
+	public static field lambda-12 Lkotlin/jvm/functions/Function2;
+	public static field lambda-13 Lkotlin/jvm/functions/Function2;
+	public static field lambda-14 Lkotlin/jvm/functions/Function3;
+	public static field lambda-15 Lkotlin/jvm/functions/Function2;
+	public static field lambda-16 Lkotlin/jvm/functions/Function2;
+	public static field lambda-17 Lkotlin/jvm/functions/Function2;
+	public static field lambda-18 Lkotlin/jvm/functions/Function3;
+	public static field lambda-19 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-20 Lkotlin/jvm/functions/Function2;
+	public static field lambda-21 Lkotlin/jvm/functions/Function3;
+	public static field lambda-22 Lkotlin/jvm/functions/Function3;
+	public static field lambda-23 Lkotlin/jvm/functions/Function2;
+	public static field lambda-24 Lkotlin/jvm/functions/Function2;
+	public static field lambda-25 Lkotlin/jvm/functions/Function2;
+	public static field lambda-26 Lkotlin/jvm/functions/Function2;
+	public static field lambda-27 Lkotlin/jvm/functions/Function3;
+	public static field lambda-28 Lkotlin/jvm/functions/Function3;
+	public static field lambda-29 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-30 Lkotlin/jvm/functions/Function3;
+	public static field lambda-31 Lkotlin/jvm/functions/Function2;
+	public static field lambda-32 Lkotlin/jvm/functions/Function3;
+	public static field lambda-33 Lkotlin/jvm/functions/Function2;
+	public static field lambda-34 Lkotlin/jvm/functions/Function2;
+	public static field lambda-35 Lkotlin/jvm/functions/Function2;
+	public static field lambda-36 Lkotlin/jvm/functions/Function3;
+	public static field lambda-37 Lkotlin/jvm/functions/Function3;
+	public static field lambda-38 Lkotlin/jvm/functions/Function3;
+	public static field lambda-39 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-40 Lkotlin/jvm/functions/Function3;
+	public static field lambda-41 Lkotlin/jvm/functions/Function2;
+	public static field lambda-42 Lkotlin/jvm/functions/Function3;
+	public static field lambda-43 Lkotlin/jvm/functions/Function2;
+	public static field lambda-44 Lkotlin/jvm/functions/Function2;
+	public static field lambda-45 Lkotlin/jvm/functions/Function2;
+	public static field lambda-46 Lkotlin/jvm/functions/Function3;
+	public static field lambda-47 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-11$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-12$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-13$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-14$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-15$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-16$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-17$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-18$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-19$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-20$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-21$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-22$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-23$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-24$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-25$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-26$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-27$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-28$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-29$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-30$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-31$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-32$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-33$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-34$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-35$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-36$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-37$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-38$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-39$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-40$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-41$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-42$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-43$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-44$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-45$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-46$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-47$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/ComposableSingletons$DialogDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/ComposableSingletons$DialogDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/ComposableSingletons$MultipleCollectKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/ComposableSingletons$MultipleCollectKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/ComposableSingletons$PainterResourcesDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/ComposableSingletons$PainterResourcesDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/ComposableSingletons$PopupDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/ComposableSingletons$PopupDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-10 Lkotlin/jvm/functions/Function2;
+	public static field lambda-11 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function2;
+	public static field lambda-9 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-10$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-11$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-9$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/ComposableSingletons$UiDemosKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/ComposableSingletons$UiDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-10 Lkotlin/jvm/functions/Function3;
+	public static field lambda-11 Lkotlin/jvm/functions/Function3;
+	public static field lambda-12 Lkotlin/jvm/functions/Function3;
+	public static field lambda-13 Lkotlin/jvm/functions/Function3;
+	public static field lambda-14 Lkotlin/jvm/functions/Function3;
+	public static field lambda-15 Lkotlin/jvm/functions/Function3;
+	public static field lambda-16 Lkotlin/jvm/functions/Function3;
+	public static field lambda-17 Lkotlin/jvm/functions/Function3;
+	public static field lambda-18 Lkotlin/jvm/functions/Function3;
+	public static field lambda-19 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-20 Lkotlin/jvm/functions/Function3;
+	public static field lambda-21 Lkotlin/jvm/functions/Function3;
+	public static field lambda-22 Lkotlin/jvm/functions/Function3;
+	public static field lambda-23 Lkotlin/jvm/functions/Function3;
+	public static field lambda-24 Lkotlin/jvm/functions/Function3;
+	public static field lambda-25 Lkotlin/jvm/functions/Function3;
+	public static field lambda-26 Lkotlin/jvm/functions/Function3;
+	public static field lambda-27 Lkotlin/jvm/functions/Function3;
+	public static field lambda-28 Lkotlin/jvm/functions/Function3;
+	public static field lambda-29 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-30 Lkotlin/jvm/functions/Function3;
+	public static field lambda-31 Lkotlin/jvm/functions/Function3;
+	public static field lambda-32 Lkotlin/jvm/functions/Function3;
+	public static field lambda-33 Lkotlin/jvm/functions/Function3;
+	public static field lambda-34 Lkotlin/jvm/functions/Function3;
+	public static field lambda-35 Lkotlin/jvm/functions/Function3;
+	public static field lambda-36 Lkotlin/jvm/functions/Function3;
+	public static field lambda-37 Lkotlin/jvm/functions/Function3;
+	public static field lambda-38 Lkotlin/jvm/functions/Function3;
+	public static field lambda-39 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-40 Lkotlin/jvm/functions/Function3;
+	public static field lambda-41 Lkotlin/jvm/functions/Function3;
+	public static field lambda-42 Lkotlin/jvm/functions/Function3;
+	public static field lambda-43 Lkotlin/jvm/functions/Function3;
+	public static field lambda-44 Lkotlin/jvm/functions/Function3;
+	public static field lambda-45 Lkotlin/jvm/functions/Function3;
+	public static field lambda-46 Lkotlin/jvm/functions/Function3;
+	public static field lambda-47 Lkotlin/jvm/functions/Function3;
+	public static field lambda-48 Lkotlin/jvm/functions/Function3;
+	public static field lambda-49 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-50 Lkotlin/jvm/functions/Function3;
+	public static field lambda-51 Lkotlin/jvm/functions/Function3;
+	public static field lambda-52 Lkotlin/jvm/functions/Function3;
+	public static field lambda-53 Lkotlin/jvm/functions/Function3;
+	public static field lambda-54 Lkotlin/jvm/functions/Function3;
+	public static field lambda-55 Lkotlin/jvm/functions/Function3;
+	public static field lambda-56 Lkotlin/jvm/functions/Function3;
+	public static field lambda-57 Lkotlin/jvm/functions/Function3;
+	public static field lambda-58 Lkotlin/jvm/functions/Function3;
+	public static field lambda-59 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-60 Lkotlin/jvm/functions/Function3;
+	public static field lambda-61 Lkotlin/jvm/functions/Function3;
+	public static field lambda-62 Lkotlin/jvm/functions/Function3;
+	public static field lambda-63 Lkotlin/jvm/functions/Function3;
+	public static field lambda-64 Lkotlin/jvm/functions/Function3;
+	public static field lambda-65 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public static field lambda-9 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-10$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-11$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-12$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-13$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-14$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-15$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-16$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-17$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-18$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-19$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-20$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-21$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-22$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-23$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-24$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-25$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-26$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-27$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-28$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-29$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-30$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-31$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-32$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-33$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-34$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-35$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-36$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-37$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-38$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-39$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-40$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-41$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-42$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-43$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-44$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-45$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-46$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-47$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-48$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-49$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-50$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-51$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-52$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-53$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-54$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-55$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-56$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-57$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-58$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-59$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-60$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-61$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-62$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-63$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-64$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-65$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-9$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/ComposableSingletons$VectorGraphicsDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/ComposableSingletons$VectorGraphicsDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/demos/DeclarativeGraphicsDemoKt {
+	public static final fun DeclarativeGraphicsDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/DialogDemoKt {
+	public static final fun DialogDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/MultipleCollectKt {
+	public static final fun HeaderFooterLayout (Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+	public static final fun MultipleCollectTest (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/PainterResourcesDemoKt {
+	public static final fun PainterResourcesDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/PopupDemoKt {
+	public static final fun PopupDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/UiDemosKt {
+	public static final fun getAccessibilityDemos ()Landroidx/compose/integration/demos/common/DemoCategory;
+	public static final fun getCoreDemos ()Landroidx/compose/integration/demos/common/DemoCategory;
+}
+
+public final class androidx/compose/ui/demos/VectorGraphicsDemoKt {
+	public static final fun VectorGraphicsDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/autofill/ExplicitAutofillTypesDemoKt {
+	public static final fun ExplicitAutofillTypesDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/databinding/Android4ButtonsInComposeBinding : androidx/viewbinding/ViewBinding {
+	public final field buttonBlue Landroid/widget/Button;
+	public final field buttonGreen Landroid/widget/Button;
+	public final field buttonRed Landroid/widget/Button;
+	public final field buttonYellow Landroid/widget/Button;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/Android4ButtonsInComposeBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/RelativeLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/Android4ButtonsInComposeBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/Android4ButtonsInComposeBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/AndroidInComposeNestedScrollInteropBinding : androidx/viewbinding/ViewBinding {
+	public final field mainList Landroidx/recyclerview/widget/RecyclerView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/AndroidInComposeNestedScrollInteropBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/FrameLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/AndroidInComposeNestedScrollInteropBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/AndroidInComposeNestedScrollInteropBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/AndroidInComposeNestedScrollInteropListItemBinding : androidx/viewbinding/ViewBinding {
+	public final field listItem Landroid/widget/TextView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/AndroidInComposeNestedScrollInteropListItemBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/FrameLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/AndroidInComposeNestedScrollInteropListItemBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/AndroidInComposeNestedScrollInteropListItemBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/AndroidScrollInComposeScrollDifferentOrientationBinding : androidx/viewbinding/ViewBinding {
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/AndroidScrollInComposeScrollDifferentOrientationBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/ScrollView;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/AndroidScrollInComposeScrollDifferentOrientationBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/AndroidScrollInComposeScrollDifferentOrientationBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/AndroidScrollInComposeScrollSameOrientationBinding : androidx/viewbinding/ViewBinding {
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/AndroidScrollInComposeScrollSameOrientationBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/ScrollView;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/AndroidScrollInComposeScrollSameOrientationBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/AndroidScrollInComposeScrollSameOrientationBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/AndroidScrollviewBinding : androidx/viewbinding/ViewBinding {
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/AndroidScrollviewBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/ScrollView;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/AndroidScrollviewBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/AndroidScrollviewBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/AndroidTapInComposeScrollBinding : androidx/viewbinding/ViewBinding {
+	public final field buttonBlue Landroid/widget/Button;
+	public final field buttonGreen Landroid/widget/Button;
+	public final field buttonRed Landroid/widget/Button;
+	public final field buttonYellow Landroid/widget/Button;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/AndroidTapInComposeScrollBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/LinearLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/AndroidTapInComposeScrollBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/AndroidTapInComposeScrollBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/AndroidTapInComposeTapBinding : androidx/viewbinding/ViewBinding {
+	public final field buttonRed Landroid/widget/Button;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/AndroidTapInComposeTapBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/RelativeLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/AndroidTapInComposeTapBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/AndroidTapInComposeTapBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/AndroidViewRowInLazyColumnBinding : androidx/viewbinding/ViewBinding {
+	public final field androidViewRowAllocationId Landroid/widget/TextView;
+	public final field androidViewRowCheckbox Landroid/widget/CheckBox;
+	public final field androidViewRowLabel Landroid/widget/TextView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/AndroidViewRowInLazyColumnBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/LinearLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/AndroidViewRowInLazyColumnBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/AndroidViewRowInLazyColumnBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/BottomSheetFragmentNestedscrollinteropDemoBinding : androidx/viewbinding/ViewBinding {
+	public final field button Landroid/widget/Button;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/BottomSheetFragmentNestedscrollinteropDemoBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/FrameLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/BottomSheetFragmentNestedscrollinteropDemoBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/BottomSheetFragmentNestedscrollinteropDemoBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/ComposeInAndroidCoordinatorLayoutBinding : androidx/viewbinding/ViewBinding {
+	public final field appBar Lcom/google/android/material/appbar/AppBarLayout;
+	public final field composeView Landroidx/compose/ui/platform/ComposeView;
+	public final field fab Lcom/google/android/material/floatingactionbutton/FloatingActionButton;
+	public final field toolbar Landroidx/appcompat/widget/Toolbar;
+	public final field toolbarLayout Lcom/google/android/material/appbar/CollapsingToolbarLayout;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidCoordinatorLayoutBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroidx/coordinatorlayout/widget/CoordinatorLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidCoordinatorLayoutBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/ComposeInAndroidCoordinatorLayoutBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/ComposeInAndroidDialogDismissDialogDuringDispatchBinding : androidx/viewbinding/ViewBinding {
+	public final field showDialogButton Landroid/widget/Button;
+	public final field text1 Landroid/widget/TextView;
+	public final field text2 Landroid/widget/TextView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidDialogDismissDialogDuringDispatchBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/LinearLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidDialogDismissDialogDuringDispatchBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/ComposeInAndroidDialogDismissDialogDuringDispatchBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/ComposeInAndroidScrollBinding : androidx/viewbinding/ViewBinding {
+	public final field container Landroidx/core/widget/NestedScrollView;
+	public final field text1 Landroid/widget/TextView;
+	public final field text2 Landroid/widget/TextView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidScrollBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/LinearLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidScrollBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/ComposeInAndroidScrollBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/ComposeInAndroidScrollHorizontalPagerBinding : androidx/viewbinding/ViewBinding {
+	public final field pager Landroidx/viewpager2/widget/ViewPager2;
+	public final field text1 Landroid/widget/TextView;
+	public final field text2 Landroid/widget/TextView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidScrollHorizontalPagerBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/LinearLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidScrollHorizontalPagerBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/ComposeInAndroidScrollHorizontalPagerBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/ComposeInAndroidSwipeToRefreshLayoutBinding : androidx/viewbinding/ViewBinding {
+	public final field nestedScrollableView Landroidx/compose/ui/demos/viewinterop/NestedScrollableView;
+	public final field slidingPaneLayout Landroidx/swiperefreshlayout/widget/SwipeRefreshLayout;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidSwipeToRefreshLayoutBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroidx/swiperefreshlayout/widget/SwipeRefreshLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidSwipeToRefreshLayoutBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/ComposeInAndroidSwipeToRefreshLayoutBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/ComposeInAndroidTapBinding : androidx/viewbinding/ViewBinding {
+	public final field clickableContainer Landroidx/compose/ui/platform/ComposeView;
+	public final field text1 Landroid/widget/TextView;
+	public final field text2 Landroid/widget/TextView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidTapBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/LinearLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/ComposeInAndroidTapBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/ComposeInAndroidTapBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/DialogBinding : androidx/viewbinding/ViewBinding {
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/DialogBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/LinearLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/DialogBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/DialogBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/FragmentBottomSheetBinding : androidx/viewbinding/ViewBinding {
+	public final field composeView Landroidx/compose/ui/platform/ComposeView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/FragmentBottomSheetBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroidx/coordinatorlayout/widget/CoordinatorLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/FragmentBottomSheetBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/FragmentBottomSheetBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/InteropDemoBinding : androidx/viewbinding/ViewBinding {
+	public final field recyclerView Landroidx/recyclerview/widget/RecyclerView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/InteropDemoBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroidx/recyclerview/widget/RecyclerView;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/InteropDemoBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/InteropDemoBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/InteropDemoRowBinding : androidx/viewbinding/ViewBinding {
+	public final field itemRow Landroidx/compose/ui/demos/recyclerview/ComposeItemRow;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/InteropDemoRowBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroidx/compose/ui/demos/recyclerview/ComposeItemRow;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/InteropDemoRowBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/InteropDemoRowBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/PagerItemBinding : androidx/viewbinding/ViewBinding {
+	public final field composeContainer Landroidx/compose/ui/platform/ComposeView;
+	public final field text Landroid/widget/TextView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/PagerItemBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/LinearLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/PagerItemBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/PagerItemBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/TestLayoutBinding : androidx/viewbinding/ViewBinding {
+	public final field text1 Landroid/widget/TextView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/TestLayoutBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroid/widget/RelativeLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/TestLayoutBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/TestLayoutBinding;
+}
+
+public final class androidx/compose/ui/demos/databinding/ThreeFoldNestedScrollInteropBinding : androidx/viewbinding/ViewBinding {
+	public final field composeView Landroidx/compose/ui/platform/ComposeView;
+	public static fun bind (Landroid/view/View;)Landroidx/compose/ui/demos/databinding/ThreeFoldNestedScrollInteropBinding;
+	public synthetic fun getRoot ()Landroid/view/View;
+	public fun getRoot ()Landroidx/coordinatorlayout/widget/CoordinatorLayout;
+	public static fun inflate (Landroid/view/LayoutInflater;)Landroidx/compose/ui/demos/databinding/ThreeFoldNestedScrollInteropBinding;
+	public static fun inflate (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Z)Landroidx/compose/ui/demos/databinding/ThreeFoldNestedScrollInteropBinding;
+}
+
+public final class androidx/compose/ui/demos/focus/AdjacentScrollablesFocusDemoKt {
+	public static final fun AdjacentScrollablesFocusDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/CancelFocusDemoKt {
+	public static final fun CancelFocusDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/CaptureFocusDemoKt {
+	public static final fun CaptureFocusDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/ClickableInLazyColumnDemoKt {
+	public static final fun ClickableInLazyColumnDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$ClickableInLazyColumnDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$ClickableInLazyColumnDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$ExplicitEnterExitWithCustomFocusEnterExitDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$ExplicitEnterExitWithCustomFocusEnterExitDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$FocusInDialogDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$FocusInDialogDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$FocusInPopupDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$FocusInPopupDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$FocusManagerMoveFocusDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$FocusManagerMoveFocusDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$FocusableDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$FocusableDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$LazyListChildFocusDemosKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$LazyListChildFocusDemosKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function4;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-8$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$NestedLazyListFocusSearchDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$NestedLazyListFocusSearchDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$ScrollableLazyRowFocusDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$ScrollableLazyRowFocusDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public static field lambda-2 Lkotlin/jvm/functions/Function4;
+	public static field lambda-3 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/demos/focus/ComposableSingletons$TwoDimentionalFocusSearchDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/focus/ComposableSingletons$TwoDimentionalFocusSearchDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/focus/ConditionalFocusabilityDemoKt {
+	public static final fun ConditionalFocusabilityDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/CustomFocusOrderDemoKt {
+	public static final fun CustomFocusOrderDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/ExplicitEnterExitWithCustomFocusEnterExitDemoKt {
+	public static final fun ExplicitEnterExitWithCustomFocusEnterExitDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/FocusInDialogDemoKt {
+	public static final fun FocusInDialogDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/FocusInPopupDemoKt {
+	public static final fun FocusInPopupDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/FocusManagerMoveFocusDemoKt {
+	public static final fun FocusManagerMoveFocusDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/FocusableDemoKt {
+	public static final fun FocusableDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/LazyListChildFocusDemosKt {
+	public static final fun LazyListChildFocusDemos (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/NestedLazyListFocusSearchDemoKt {
+	public static final fun NestedLazyListFocusSearchDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/OneDimensionalFocusSearchDemoKt {
+	public static final fun OneDimensionalFocusSearchDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/ReuseFocusReferenceKt {
+	public static final fun ReuseFocusRequesterDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/ScrollableLazyRowFocusDemoKt {
+	public static final fun ScrollableLazyRowFocusDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/ScrollableRowFocusDemoKt {
+	public static final fun ScrollableRowFocusDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/focus/TwoDimentionalFocusSearchDemoKt {
+	public static final fun TwoDimensionalFocusSearchDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/ButtonMetaStateDemoKt {
+	public static final fun ButtonMetaStateDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/ComposableSingletons$HorizontalScrollersInVerticalScrollerDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/gestures/ComposableSingletons$HorizontalScrollersInVerticalScrollerDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/gestures/ComposableSingletons$NestedLongPressDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/gestures/ComposableSingletons$NestedLongPressDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/gestures/ComposableSingletons$NestedPressDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/gestures/ComposableSingletons$NestedPressDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/gestures/ComposableSingletons$NestedScrollingDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/gestures/ComposableSingletons$NestedScrollingDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function4;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/demos/gestures/ComposableSingletons$PointerInputDuringSubCompDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/gestures/ComposableSingletons$PointerInputDuringSubCompDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/demos/gestures/ComposableSingletons$ScrollGestureFilterDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/gestures/ComposableSingletons$ScrollGestureFilterDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/gestures/ComposableSingletons$VerticalScrollerInDrawerLayoutDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/gestures/ComposableSingletons$VerticalScrollerInDrawerLayoutDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/gestures/DoubleTapGestureDetectorDemoKt {
+	public static final fun DoubleTapGestureFilterDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/DoubleTapInTapDemoKt {
+	public static final fun DoubleTapInTapDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/DragScaleGestureDetectorDemoKt {
+	public static final fun DragAndScaleGestureFilterDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/DragSlopExceededGestureFilterDemoKt {
+	public static final fun DragSlopExceededGestureFilterDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/EventTypesDemoKt {
+	public static final fun EventTypesDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/HorizontalScrollersInVerticalScrollerDemoKt {
+	public static final fun HorizontalScrollersInVerticalScrollersDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/LongPressDragGestureDetectorDemoKt {
+	public static final fun LongPressDragGestureFilterDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/LongPressGestureDetectorDemoKt {
+	public static final fun LongPressGestureDetectorDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/NestedLongPressDemoKt {
+	public static final fun NestedLongPressDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/NestedPressDemoKt {
+	public static final fun NestedPressingDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/NestedScrollingDemoKt {
+	public static final fun NestedScrollDispatchDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun NestedScrollingDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/PointerInputDuringSubCompDemoKt {
+	public static final fun PointerInputDuringSubComp (Landroidx/compose/runtime/Composer;I)V
+	public static final fun pointerCounterGestureFilter (Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function1;)Landroidx/compose/ui/Modifier;
+}
+
+public final class androidx/compose/ui/demos/gestures/PopupDragDemoKt {
+	public static final fun PopupDragDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/PressIndicatorGestureDetectorDemoKt {
+	public static final fun PressIndicatorGestureFilterDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/RawDragGestureDetectorDemoKt {
+	public static final fun RawDragGestureFilterDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/ScaleGestureDetectorDemoKt {
+	public static final fun ScaleGestureFilterDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/ScrollGestureFilterDemoKt {
+	public static final fun ScrollGestureFilterDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun ScrollableBox-9uvDSr4 (FLandroidx/compose/foundation/gestures/Orientation;JJLkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class androidx/compose/ui/demos/gestures/TapGestureDetectorDemoKt {
+	public static final fun DetectTapGesturesDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/TapPressureGestureDetectorDemoKt {
+	public static final fun DetectTapPressureGesturesDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/TouchSlopDragGestureDetectorDemoKt {
+	public static final fun DragGestureFilterDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/gestures/VerticalScrollerInDrawerLayoutDemoKt {
+	public static final fun VerticalScrollerInDrawerDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/input/ComposableSingletons$TouchModeDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/input/ComposableSingletons$TouchModeDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/input/TouchModeDemoKt {
+	public static final fun TouchModeDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/keyinput/ComposableSingletons$KeyInputDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/keyinput/ComposableSingletons$KeyInputDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/keyinput/InterceptEnterToSendMessageDemoKt {
+	public static final fun InterceptEnterToSendMessageDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/keyinput/KeyInputDemoKt {
+	public static final fun KeyInputDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/modifier/CommunicatingModifierDemoKt {
+	public static final fun CommunicatingModifierDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun getModifierLocalColor ()Landroidx/compose/ui/modifier/ProvidableModifierLocal;
+}
+
+public abstract class androidx/compose/ui/demos/recyclerview/AbstractInteropDemoFragment : androidx/fragment/app/Fragment {
+	public static final field $stable I
+	public field recyclerView Landroidx/recyclerview/widget/RecyclerView;
+	public fun <init> (Z)V
+	public final fun getInteropOn ()Z
+	public final fun getRecyclerView ()Landroidx/recyclerview/widget/RecyclerView;
+	public fun onViewCreated (Landroid/view/View;Landroid/os/Bundle;)V
+	public final fun setRecyclerView (Landroidx/recyclerview/widget/RecyclerView;)V
+}
+
+public final class androidx/compose/ui/demos/recyclerview/AbstractInteropDemoFragment$MainAdapter : androidx/recyclerview/widget/RecyclerView$Adapter {
+	public fun <init> (Landroidx/compose/ui/demos/recyclerview/AbstractInteropDemoFragment;)V
+	public fun getItemCount ()I
+	public fun onBindViewHolder (Landroidx/compose/ui/demos/recyclerview/AbstractInteropDemoFragment$MainAdapter$ViewHolder;I)V
+	public synthetic fun onBindViewHolder (Landroidx/recyclerview/widget/RecyclerView$ViewHolder;I)V
+	public fun onCreateViewHolder (Landroid/view/ViewGroup;I)Landroidx/compose/ui/demos/recyclerview/AbstractInteropDemoFragment$MainAdapter$ViewHolder;
+	public synthetic fun onCreateViewHolder (Landroid/view/ViewGroup;I)Landroidx/recyclerview/widget/RecyclerView$ViewHolder;
+}
+
+public final class androidx/compose/ui/demos/recyclerview/AbstractInteropDemoFragment$MainAdapter$ViewHolder : androidx/recyclerview/widget/RecyclerView$ViewHolder {
+	public fun <init> (Landroidx/compose/ui/demos/recyclerview/AbstractInteropDemoFragment$MainAdapter;Landroid/view/View;)V
+	public final fun getItemRow ()Landroidx/compose/ui/demos/recyclerview/ComposeItemRow;
+}
+
+public final class androidx/compose/ui/demos/recyclerview/ComposableSingletons$RecyclerViewInteropDemoFragmentKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/recyclerview/ComposableSingletons$RecyclerViewInteropDemoFragmentKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function4;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+}
+
+public final class androidx/compose/ui/demos/recyclerview/ComposeItemRow : androidx/compose/ui/platform/AbstractComposeView {
+	public static final field $stable I
+	public fun <init> (Landroid/content/Context;)V
+	public fun <init> (Landroid/content/Context;Landroid/util/AttributeSet;)V
+	public fun <init> (Landroid/content/Context;Landroid/util/AttributeSet;I)V
+	public synthetic fun <init> (Landroid/content/Context;Landroid/util/AttributeSet;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun Content (Landroidx/compose/runtime/Composer;I)V
+	public final fun getIndex ()I
+	public final fun getRowState ()Landroidx/compose/foundation/lazy/LazyListState;
+	public final fun setIndex (I)V
+	public final fun setRowState (Landroidx/compose/foundation/lazy/LazyListState;)V
+}
+
+public final class androidx/compose/ui/demos/recyclerview/RecyclerViewDemosKt {
+	public static final fun getRecyclerViewDemos ()Landroidx/compose/integration/demos/common/DemoCategory;
+}
+
+public final class androidx/compose/ui/demos/recyclerview/RecyclerViewInteropDemoFragment : androidx/compose/ui/demos/recyclerview/AbstractInteropDemoFragment {
+	public static final field $stable I
+	public fun <init> ()V
+}
+
+public final class androidx/compose/ui/demos/recyclerview/RecyclerViewInteropDemoFragmentKt {
+	public static final fun ItemRow (ILandroidx/compose/foundation/lazy/LazyListState;Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/recyclerview/RecyclerViewInteropOffDemoFragment : androidx/compose/ui/demos/recyclerview/AbstractInteropDemoFragment {
+	public static final field $stable I
+	public fun <init> ()V
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ComplexInteractionsKt {
+	public static final fun ComposeInAndroidInComposeEtcTargetingDemo (Landroidx/compose/runtime/Composer;I)V
+	public static final fun getComplexTouchInterop ()Landroidx/compose/integration/demos/common/DemoCategory;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ComposableSingletons$ComplexInteractionsKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/viewinterop/ComposableSingletons$ComplexInteractionsKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ComposableSingletons$EditTextInteropDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/viewinterop/ComposableSingletons$EditTextInteropDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ComposableSingletons$NestedScrollInteropKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/viewinterop/ComposableSingletons$NestedScrollInteropKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function4;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function2;
+	public static field lambda-6 Lkotlin/jvm/functions/Function4;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-7$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ComposableSingletons$PointerInputInteropAndroidInComposeKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/viewinterop/ComposableSingletons$PointerInputInteropAndroidInComposeKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public static field lambda-3 Lkotlin/jvm/functions/Function3;
+	public static field lambda-4 Lkotlin/jvm/functions/Function3;
+	public static field lambda-5 Lkotlin/jvm/functions/Function3;
+	public static field lambda-6 Lkotlin/jvm/functions/Function3;
+	public static field lambda-7 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-7$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ComposableSingletons$PointerInputInteropComposeInAndroidKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/viewinterop/ComposableSingletons$PointerInputInteropComposeInAndroidKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public static field lambda-2 Lkotlin/jvm/functions/Function2;
+	public static field lambda-3 Lkotlin/jvm/functions/Function2;
+	public static field lambda-4 Lkotlin/jvm/functions/Function2;
+	public static field lambda-5 Lkotlin/jvm/functions/Function4;
+	public static field lambda-6 Lkotlin/jvm/functions/Function2;
+	public static field lambda-7 Lkotlin/jvm/functions/Function2;
+	public static field lambda-8 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-3$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-4$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-5$ui_demos_release ()Lkotlin/jvm/functions/Function4;
+	public final fun getLambda-6$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-7$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+	public final fun getLambda-8$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ComposableSingletons$ResizeComposeViewDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/viewinterop/ComposableSingletons$ResizeComposeViewDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function2;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ComposableSingletons$ScrollingAndroidViewsDemoKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/viewinterop/ComposableSingletons$ScrollingAndroidViewsDemoKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ComposableSingletons$ViewInteropKt {
+	public static final field INSTANCE Landroidx/compose/ui/demos/viewinterop/ComposableSingletons$ViewInteropKt;
+	public static field lambda-1 Lkotlin/jvm/functions/Function3;
+	public static field lambda-2 Lkotlin/jvm/functions/Function3;
+	public fun <init> ()V
+	public final fun getLambda-1$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda-2$ui_demos_release ()Lkotlin/jvm/functions/Function3;
+}
+
+public class androidx/compose/ui/demos/viewinterop/ComposeInAndroidDialogDismissDialogDuringDispatch : androidx/fragment/app/FragmentActivity {
+	public static final field $stable I
+	public fun <init> ()V
+	protected fun onCreate (Landroid/os/Bundle;)V
+}
+
+public class androidx/compose/ui/demos/viewinterop/ComposeNothingInAndroidTap : androidx/activity/ComponentActivity {
+	public static final field $stable I
+	public fun <init> ()V
+	protected fun onCreate (Landroid/os/Bundle;)V
+}
+
+public class androidx/compose/ui/demos/viewinterop/ComposeScrollInAndroidScrollDifferentOrientation : androidx/activity/ComponentActivity {
+	public static final field $stable I
+	public fun <init> ()V
+	protected fun onCreate (Landroid/os/Bundle;)V
+}
+
+public class androidx/compose/ui/demos/viewinterop/ComposeScrollInAndroidScrollSameOrientation : androidx/activity/ComponentActivity {
+	public static final field $stable I
+	public fun <init> ()V
+	protected fun onCreate (Landroid/os/Bundle;)V
+}
+
+public class androidx/compose/ui/demos/viewinterop/ComposeScrollInAndroidScrollSameOrientationHorizontal : androidx/activity/ComponentActivity {
+	public static final field $stable I
+	public fun <init> ()V
+	protected fun onCreate (Landroid/os/Bundle;)V
+}
+
+public class androidx/compose/ui/demos/viewinterop/ComposeTapInAndroidScroll : androidx/activity/ComponentActivity {
+	public static final field $stable I
+	public fun <init> ()V
+	protected fun onCreate (Landroid/os/Bundle;)V
+}
+
+public class androidx/compose/ui/demos/viewinterop/ComposeTapInAndroidTap : androidx/activity/ComponentActivity {
+	public static final field $stable I
+	public fun <init> ()V
+	protected fun onCreate (Landroid/os/Bundle;)V
+}
+
+public final class androidx/compose/ui/demos/viewinterop/EditTextInteropDemoKt {
+	public static final fun EditTextInteropDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/viewinterop/FocusTransferDemoKt {
+	public static final fun FocusTransferDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/viewinterop/MyDialogFragment : androidx/fragment/app/DialogFragment {
+	public static final field $stable I
+	public static final field Companion Landroidx/compose/ui/demos/viewinterop/MyDialogFragment$Companion;
+	public fun <init> ()V
+	public fun onCreateView (Landroid/view/LayoutInflater;Landroid/view/ViewGroup;Landroid/os/Bundle;)Landroid/view/View;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/MyDialogFragment$Companion {
+	public final fun newInstance ()Landroidx/compose/ui/demos/viewinterop/MyDialogFragment;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/PointerInputInteropAndroidInComposeKt {
+	public static final fun getAndroidInComposeDemos ()Landroidx/compose/integration/demos/common/DemoCategory;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/PointerInputInteropComposeInAndroidKt {
+	public static final fun getComposeInAndroidDemos ()Landroidx/compose/integration/demos/common/DemoCategory;
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ResizeComposeViewDemoKt {
+	public static final fun ResizeComposeViewDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ScrollingAndroidViewsDemoKt {
+	public static final fun ScrollingAndroidViewsDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
+public final class androidx/compose/ui/demos/viewinterop/ViewInteropKt {
+	public static final fun ViewInteropDemo (Landroidx/compose/runtime/Composer;I)V
+}
+
