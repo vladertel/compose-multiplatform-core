@@ -1,3 +1,7 @@
+public final class androidx/compose/ui/util/AndroidTrace_androidKt {
+	public static final fun trace (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+}
+
 public final class androidx/compose/ui/util/InlineClassHelperKt {
 	public static final fun packFloats (FF)J
 	public static final fun packInts (II)J

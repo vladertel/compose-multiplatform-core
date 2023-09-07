@@ -168,7 +168,7 @@ public final class androidx/compose/animation/core/AnimationVector1D : androidx/
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getValue ()F
 	public fun hashCode ()I
-	public synthetic fun newVector$animation_core ()Landroidx/compose/animation/core/AnimationVector;
+	public synthetic fun newVector$animation_core_release ()Landroidx/compose/animation/core/AnimationVector;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -179,7 +179,7 @@ public final class androidx/compose/animation/core/AnimationVector2D : androidx/
 	public final fun getV1 ()F
 	public final fun getV2 ()F
 	public fun hashCode ()I
-	public synthetic fun newVector$animation_core ()Landroidx/compose/animation/core/AnimationVector;
+	public synthetic fun newVector$animation_core_release ()Landroidx/compose/animation/core/AnimationVector;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -191,7 +191,7 @@ public final class androidx/compose/animation/core/AnimationVector3D : androidx/
 	public final fun getV2 ()F
 	public final fun getV3 ()F
 	public fun hashCode ()I
-	public synthetic fun newVector$animation_core ()Landroidx/compose/animation/core/AnimationVector;
+	public synthetic fun newVector$animation_core_release ()Landroidx/compose/animation/core/AnimationVector;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -204,7 +204,7 @@ public final class androidx/compose/animation/core/AnimationVector4D : androidx/
 	public final fun getV3 ()F
 	public final fun getV4 ()F
 	public fun hashCode ()I
-	public synthetic fun newVector$animation_core ()Landroidx/compose/animation/core/AnimationVector;
+	public synthetic fun newVector$animation_core_release ()Landroidx/compose/animation/core/AnimationVector;
 	public fun toString ()Ljava/lang/String;
 }
 

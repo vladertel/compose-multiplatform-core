@@ -1,3 +1,170 @@
+public final class androidx/compose/ui/graphics/AndroidBlendMode_androidKt {
+	public static final fun isSupported-s9anfk8 (I)Z
+}
+
+public final class androidx/compose/ui/graphics/AndroidCanvas : androidx/compose/ui/graphics/Canvas {
+	public fun <init> ()V
+	public fun clipPath-mtrdD-E (Landroidx/compose/ui/graphics/Path;I)V
+	public fun clipRect-N_I0leg (FFFFI)V
+	public fun concat-58bKbWc ([F)V
+	public fun disableZ ()V
+	public fun drawArc (FFFFFFZLandroidx/compose/ui/graphics/Paint;)V
+	public fun drawCircle-9KIMszo (JFLandroidx/compose/ui/graphics/Paint;)V
+	public fun drawImage-d-4ec7I (Landroidx/compose/ui/graphics/ImageBitmap;JLandroidx/compose/ui/graphics/Paint;)V
+	public fun drawImageRect-HPBpro0 (Landroidx/compose/ui/graphics/ImageBitmap;JJJJLandroidx/compose/ui/graphics/Paint;)V
+	public fun drawLine-Wko1d7g (JJLandroidx/compose/ui/graphics/Paint;)V
+	public fun drawOval (FFFFLandroidx/compose/ui/graphics/Paint;)V
+	public fun drawPath (Landroidx/compose/ui/graphics/Path;Landroidx/compose/ui/graphics/Paint;)V
+	public fun drawPoints-O7TthRY (ILjava/util/List;Landroidx/compose/ui/graphics/Paint;)V
+	public fun drawRawPoints-O7TthRY (I[FLandroidx/compose/ui/graphics/Paint;)V
+	public fun drawRect (FFFFLandroidx/compose/ui/graphics/Paint;)V
+	public fun drawRoundRect (FFFFFFLandroidx/compose/ui/graphics/Paint;)V
+	public fun drawVertices-TPEHhCM (Landroidx/compose/ui/graphics/Vertices;ILandroidx/compose/ui/graphics/Paint;)V
+	public fun enableZ ()V
+	public final fun getInternalCanvas ()Landroid/graphics/Canvas;
+	public fun restore ()V
+	public fun rotate (F)V
+	public fun save ()V
+	public fun saveLayer (Landroidx/compose/ui/geometry/Rect;Landroidx/compose/ui/graphics/Paint;)V
+	public fun scale (FF)V
+	public final fun setInternalCanvas (Landroid/graphics/Canvas;)V
+	public fun skew (FF)V
+	public final fun toRegionOp--7u2Bmg (I)Landroid/graphics/Region$Op;
+	public fun translate (FF)V
+}
+
+public final class androidx/compose/ui/graphics/AndroidCanvas_androidKt {
+	public static final fun Canvas (Landroid/graphics/Canvas;)Landroidx/compose/ui/graphics/Canvas;
+	public static final fun getNativeCanvas (Landroidx/compose/ui/graphics/Canvas;)Landroid/graphics/Canvas;
+}
+
+public final class androidx/compose/ui/graphics/AndroidColorFilter_androidKt {
+	public static final fun asAndroidColorFilter (Landroidx/compose/ui/graphics/ColorFilter;)Landroid/graphics/ColorFilter;
+	public static final fun asComposeColorFilter (Landroid/graphics/ColorFilter;)Landroidx/compose/ui/graphics/ColorFilter;
+}
+
+public final class androidx/compose/ui/graphics/AndroidColorSpace_androidKt {
+	public static final fun toAndroidColorSpace (Landroidx/compose/ui/graphics/colorspace/ColorSpace;)Landroid/graphics/ColorSpace;
+	public static final fun toComposeColorSpace (Landroid/graphics/ColorSpace;)Landroidx/compose/ui/graphics/colorspace/ColorSpace;
+}
+
+public final class androidx/compose/ui/graphics/AndroidImageBitmap_androidKt {
+	public static final fun asAndroidBitmap (Landroidx/compose/ui/graphics/ImageBitmap;)Landroid/graphics/Bitmap;
+	public static final fun asImageBitmap (Landroid/graphics/Bitmap;)Landroidx/compose/ui/graphics/ImageBitmap;
+}
+
+public final class androidx/compose/ui/graphics/AndroidMatrixConversions_androidKt {
+	public static final fun setFrom-EL8BTi8 (Landroid/graphics/Matrix;[F)V
+	public static final fun setFrom-tU-YjHk ([FLandroid/graphics/Matrix;)V
+}
+
+public final class androidx/compose/ui/graphics/AndroidPaint : androidx/compose/ui/graphics/Paint {
+	public fun <init> ()V
+	public fun <init> (Landroid/graphics/Paint;)V
+	public fun asFrameworkPaint ()Landroid/graphics/Paint;
+	public fun getAlpha ()F
+	public fun getBlendMode-0nO6VwU ()I
+	public fun getColor-0d7_KjU ()J
+	public fun getColorFilter ()Landroidx/compose/ui/graphics/ColorFilter;
+	public fun getFilterQuality-f-v9h1I ()I
+	public fun getPathEffect ()Landroidx/compose/ui/graphics/PathEffect;
+	public fun getShader ()Landroid/graphics/Shader;
+	public fun getStrokeCap-KaPHkGw ()I
+	public fun getStrokeJoin-LxFBmk8 ()I
+	public fun getStrokeMiterLimit ()F
+	public fun getStrokeWidth ()F
+	public fun getStyle-TiuSbCo ()I
+	public fun isAntiAlias ()Z
+	public fun setAlpha (F)V
+	public fun setAntiAlias (Z)V
+	public fun setBlendMode-s9anfk8 (I)V
+	public fun setColor-8_81llA (J)V
+	public fun setColorFilter (Landroidx/compose/ui/graphics/ColorFilter;)V
+	public fun setFilterQuality-vDHp3xo (I)V
+	public fun setPathEffect (Landroidx/compose/ui/graphics/PathEffect;)V
+	public fun setShader (Landroid/graphics/Shader;)V
+	public fun setStrokeCap-BeK7IIE (I)V
+	public fun setStrokeJoin-Ww9F2mQ (I)V
+	public fun setStrokeMiterLimit (F)V
+	public fun setStrokeWidth (F)V
+	public fun setStyle-k9PVt8s (I)V
+}
+
+public final class androidx/compose/ui/graphics/AndroidPaint_androidKt {
+	public static final fun Paint ()Landroidx/compose/ui/graphics/Paint;
+	public static final fun asComposePaint (Landroid/graphics/Paint;)Landroidx/compose/ui/graphics/Paint;
+}
+
+public final class androidx/compose/ui/graphics/AndroidPath : androidx/compose/ui/graphics/Path {
+	public fun <init> ()V
+	public fun <init> (Landroid/graphics/Path;)V
+	public synthetic fun <init> (Landroid/graphics/Path;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun addArc (Landroidx/compose/ui/geometry/Rect;FF)V
+	public fun addArcRad (Landroidx/compose/ui/geometry/Rect;FF)V
+	public fun addOval (Landroidx/compose/ui/geometry/Rect;)V
+	public fun addPath-Uv8p0NA (Landroidx/compose/ui/graphics/Path;J)V
+	public fun addRect (Landroidx/compose/ui/geometry/Rect;)V
+	public fun addRoundRect (Landroidx/compose/ui/geometry/RoundRect;)V
+	public fun arcTo (Landroidx/compose/ui/geometry/Rect;FFZ)V
+	public fun close ()V
+	public fun cubicTo (FFFFFF)V
+	public fun getBounds ()Landroidx/compose/ui/geometry/Rect;
+	public fun getFillType-Rg-k1Os ()I
+	public final fun getInternalPath ()Landroid/graphics/Path;
+	public fun isConvex ()Z
+	public fun isEmpty ()Z
+	public fun lineTo (FF)V
+	public fun moveTo (FF)V
+	public fun op-N5in7k0 (Landroidx/compose/ui/graphics/Path;Landroidx/compose/ui/graphics/Path;I)Z
+	public fun quadraticBezierTo (FFFF)V
+	public fun relativeCubicTo (FFFFFF)V
+	public fun relativeLineTo (FF)V
+	public fun relativeMoveTo (FF)V
+	public fun relativeQuadraticBezierTo (FFFF)V
+	public fun reset ()V
+	public fun rewind ()V
+	public fun setFillType-oQ8Xj4U (I)V
+	public fun transform-58bKbWc ([F)V
+	public fun translate-k-4lQ0M (J)V
+}
+
+public final class androidx/compose/ui/graphics/AndroidPathEffect_androidKt {
+	public static final fun asAndroidPathEffect (Landroidx/compose/ui/graphics/PathEffect;)Landroid/graphics/PathEffect;
+	public static final fun toComposePathEffect (Landroid/graphics/PathEffect;)Landroidx/compose/ui/graphics/PathEffect;
+}
+
+public final class androidx/compose/ui/graphics/AndroidPathMeasure : androidx/compose/ui/graphics/PathMeasure {
+	public fun getLength ()F
+	public fun getPosition-tuRUvjQ (F)J
+	public fun getSegment (FFLandroidx/compose/ui/graphics/Path;Z)Z
+	public fun getTangent-tuRUvjQ (F)J
+	public fun setPath (Landroidx/compose/ui/graphics/Path;Z)V
+}
+
+public final class androidx/compose/ui/graphics/AndroidPathMeasure_androidKt {
+	public static final fun PathMeasure ()Landroidx/compose/ui/graphics/PathMeasure;
+}
+
+public final class androidx/compose/ui/graphics/AndroidPath_androidKt {
+	public static final fun Path ()Landroidx/compose/ui/graphics/Path;
+	public static final fun asAndroidPath (Landroidx/compose/ui/graphics/Path;)Landroid/graphics/Path;
+	public static final fun asComposePath (Landroid/graphics/Path;)Landroidx/compose/ui/graphics/Path;
+}
+
+public final class androidx/compose/ui/graphics/AndroidRenderEffect_androidKt {
+	public static final fun asComposeRenderEffect (Landroid/graphics/RenderEffect;)Landroidx/compose/ui/graphics/RenderEffect;
+}
+
+public final class androidx/compose/ui/graphics/AndroidTileMode_androidKt {
+	public static final fun isSupported-0vamqd0 (I)Z
+	public static final fun toAndroidTileMode-0vamqd0 (I)Landroid/graphics/Shader$TileMode;
+	public static final fun toComposeTileMode (Landroid/graphics/Shader$TileMode;)I
+}
+
+public final class androidx/compose/ui/graphics/AndroidVertexMode_androidKt {
+	public static final fun toAndroidVertexMode-JOOmi9M (I)Landroid/graphics/Canvas$VertexMode;
+}
+
 public final class androidx/compose/ui/graphics/BlendMode {
 	public static final field Companion Landroidx/compose/ui/graphics/BlendMode$Companion;
 	public static final synthetic fun box-impl (I)Landroidx/compose/ui/graphics/BlendMode;
@@ -44,17 +211,11 @@ public final class androidx/compose/ui/graphics/BlendMode$Companion {
 }
 
 public final class androidx/compose/ui/graphics/BlurEffect : androidx/compose/ui/graphics/RenderEffect {
-	public static final field Companion Landroidx/compose/ui/graphics/BlurEffect$Companion;
 	public synthetic fun <init> (Landroidx/compose/ui/graphics/RenderEffect;FFIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Landroidx/compose/ui/graphics/RenderEffect;FFILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-}
-
-public final class androidx/compose/ui/graphics/BlurEffect$Companion {
-	public final fun convertRadiusToSigma (F)F
-	public final fun getBlurSigmaScale ()F
 }
 
 public abstract class androidx/compose/ui/graphics/Brush {
@@ -87,7 +248,7 @@ public final class androidx/compose/ui/graphics/Brush$Companion {
 }
 
 public final class androidx/compose/ui/graphics/BrushKt {
-	public static final fun ShaderBrush (Lorg/jetbrains/skia/Shader;)Landroidx/compose/ui/graphics/ShaderBrush;
+	public static final fun ShaderBrush (Landroid/graphics/Shader;)Landroidx/compose/ui/graphics/ShaderBrush;
 }
 
 public abstract interface class androidx/compose/ui/graphics/Canvas {
@@ -140,6 +301,12 @@ public final class androidx/compose/ui/graphics/Canvas$DefaultImpls {
 	public static fun drawRect (Landroidx/compose/ui/graphics/Canvas;Landroidx/compose/ui/geometry/Rect;Landroidx/compose/ui/graphics/Paint;)V
 	public static synthetic fun scale$default (Landroidx/compose/ui/graphics/Canvas;FFILjava/lang/Object;)V
 	public static fun skewRad (Landroidx/compose/ui/graphics/Canvas;FF)V
+}
+
+public final class androidx/compose/ui/graphics/CanvasHolder {
+	public fun <init> ()V
+	public final fun drawInto (Landroid/graphics/Canvas;Lkotlin/jvm/functions/Function1;)V
+	public final fun getAndroidCanvas ()Landroidx/compose/ui/graphics/AndroidCanvas;
 }
 
 public final class androidx/compose/ui/graphics/CanvasKt {
@@ -281,38 +448,6 @@ public final class androidx/compose/ui/graphics/DegreesKt {
 	public static final fun degrees (F)F
 }
 
-public final class androidx/compose/ui/graphics/DesktopColorFilter_desktopKt {
-	public static final fun asDesktopColorFilter (Landroidx/compose/ui/graphics/ColorFilter;)Lorg/jetbrains/skia/ColorFilter;
-	public static final fun toComposeColorFilter (Lorg/jetbrains/skia/ColorFilter;)Landroidx/compose/ui/graphics/ColorFilter;
-}
-
-public final class androidx/compose/ui/graphics/DesktopImageAsset_desktopKt {
-	public static final fun asDesktopBitmap (Landroidx/compose/ui/graphics/ImageBitmap;)Lorg/jetbrains/skia/Bitmap;
-	public static final fun asImageBitmap (Lorg/jetbrains/skia/Bitmap;)Landroidx/compose/ui/graphics/ImageBitmap;
-	public static final fun asImageBitmap (Lorg/jetbrains/skia/Image;)Landroidx/compose/ui/graphics/ImageBitmap;
-}
-
-public final class androidx/compose/ui/graphics/DesktopImageConverters_desktopKt {
-	public static final fun asAwtImage (Landroidx/compose/ui/graphics/ImageBitmap;)Ljava/awt/image/BufferedImage;
-	public static final fun asAwtImage-Ug5Nnss (Landroidx/compose/ui/graphics/painter/Painter;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;J)Ljava/awt/Image;
-	public static synthetic fun asAwtImage-Ug5Nnss$default (Landroidx/compose/ui/graphics/painter/Painter;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;JILjava/lang/Object;)Ljava/awt/Image;
-	public static final fun asPainter (Ljava/awt/image/BufferedImage;)Landroidx/compose/ui/graphics/painter/Painter;
-	public static final fun toAwtImage (Landroidx/compose/ui/graphics/ImageBitmap;)Ljava/awt/image/BufferedImage;
-	public static final fun toAwtImage-Ug5Nnss (Landroidx/compose/ui/graphics/painter/Painter;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;J)Ljava/awt/Image;
-	public static synthetic fun toAwtImage-Ug5Nnss$default (Landroidx/compose/ui/graphics/painter/Painter;Landroidx/compose/ui/unit/Density;Landroidx/compose/ui/unit/LayoutDirection;JILjava/lang/Object;)Ljava/awt/Image;
-	public static final fun toComposeBitmap (Ljava/awt/image/BufferedImage;)Landroidx/compose/ui/graphics/ImageBitmap;
-	public static final fun toComposeImageBitmap (Ljava/awt/image/BufferedImage;)Landroidx/compose/ui/graphics/ImageBitmap;
-	public static final fun toPainter (Ljava/awt/image/BufferedImage;)Landroidx/compose/ui/graphics/painter/Painter;
-}
-
-public final class androidx/compose/ui/graphics/DesktopPathEffect_desktopKt {
-	public static final fun asDesktopPathEffect (Landroidx/compose/ui/graphics/PathEffect;)Lorg/jetbrains/skia/PathEffect;
-}
-
-public final class androidx/compose/ui/graphics/DesktopPath_desktopKt {
-	public static final fun asDesktopPath (Landroidx/compose/ui/graphics/Path;)Lorg/jetbrains/skia/Path;
-}
-
 public abstract interface annotation class androidx/compose/ui/graphics/ExperimentalGraphicsApi : java/lang/annotation/Annotation {
 }
 
@@ -387,7 +522,7 @@ public final class androidx/compose/ui/graphics/ImageBitmapKt {
 
 public final class androidx/compose/ui/graphics/LinearGradient : androidx/compose/ui/graphics/ShaderBrush {
 	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;JJIILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun createShader-uvyYCjk (J)Lorg/jetbrains/skia/Shader;
+	public fun createShader-uvyYCjk (J)Landroid/graphics/Shader;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getIntrinsicSize-NH-jbRc ()J
 	public fun hashCode ()I
@@ -489,14 +624,14 @@ public final class androidx/compose/ui/graphics/OutlineKt {
 }
 
 public abstract interface class androidx/compose/ui/graphics/Paint {
-	public abstract fun asFrameworkPaint ()Lorg/jetbrains/skia/Paint;
+	public abstract fun asFrameworkPaint ()Landroid/graphics/Paint;
 	public abstract fun getAlpha ()F
 	public abstract fun getBlendMode-0nO6VwU ()I
 	public abstract fun getColor-0d7_KjU ()J
 	public abstract fun getColorFilter ()Landroidx/compose/ui/graphics/ColorFilter;
 	public abstract fun getFilterQuality-f-v9h1I ()I
 	public abstract fun getPathEffect ()Landroidx/compose/ui/graphics/PathEffect;
-	public abstract fun getShader ()Lorg/jetbrains/skia/Shader;
+	public abstract fun getShader ()Landroid/graphics/Shader;
 	public abstract fun getStrokeCap-KaPHkGw ()I
 	public abstract fun getStrokeJoin-LxFBmk8 ()I
 	public abstract fun getStrokeMiterLimit ()F
@@ -510,7 +645,7 @@ public abstract interface class androidx/compose/ui/graphics/Paint {
 	public abstract fun setColorFilter (Landroidx/compose/ui/graphics/ColorFilter;)V
 	public abstract fun setFilterQuality-vDHp3xo (I)V
 	public abstract fun setPathEffect (Landroidx/compose/ui/graphics/PathEffect;)V
-	public abstract fun setShader (Lorg/jetbrains/skia/Shader;)V
+	public abstract fun setShader (Landroid/graphics/Shader;)V
 	public abstract fun setStrokeCap-BeK7IIE (I)V
 	public abstract fun setStrokeJoin-Ww9F2mQ (I)V
 	public abstract fun setStrokeMiterLimit (F)V
@@ -686,26 +821,28 @@ public final class androidx/compose/ui/graphics/PointMode$Companion {
 
 public final class androidx/compose/ui/graphics/RadialGradient : androidx/compose/ui/graphics/ShaderBrush {
 	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;JFIILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun createShader-uvyYCjk (J)Lorg/jetbrains/skia/Shader;
+	public fun createShader-uvyYCjk (J)Landroid/graphics/Shader;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getIntrinsicSize-NH-jbRc ()J
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class androidx/compose/ui/graphics/RectHelper_androidKt {
+	public static final fun toAndroidRect (Landroidx/compose/ui/geometry/Rect;)Landroid/graphics/Rect;
+	public static final fun toAndroidRect (Landroidx/compose/ui/unit/IntRect;)Landroid/graphics/Rect;
+	public static final fun toAndroidRectF (Landroidx/compose/ui/geometry/Rect;)Landroid/graphics/RectF;
+	public static final fun toComposeIntRect (Landroid/graphics/Rect;)Landroidx/compose/ui/unit/IntRect;
+	public static final fun toComposeRect (Landroid/graphics/Rect;)Landroidx/compose/ui/geometry/Rect;
+}
+
 public final class androidx/compose/ui/graphics/RectangleShapeKt {
 	public static final fun getRectangleShape ()Landroidx/compose/ui/graphics/Shape;
 }
 
-public final class androidx/compose/ui/graphics/Rects_skikoKt {
-	public static final fun toComposeRect (Lorg/jetbrains/skia/Rect;)Landroidx/compose/ui/geometry/Rect;
-	public static final fun toSkiaRRect (Landroidx/compose/ui/geometry/RoundRect;)Lorg/jetbrains/skia/RRect;
-	public static final fun toSkiaRect (Landroidx/compose/ui/geometry/Rect;)Lorg/jetbrains/skia/Rect;
-}
-
 public abstract class androidx/compose/ui/graphics/RenderEffect {
-	public final fun asSkiaImageFilter ()Lorg/jetbrains/skia/ImageFilter;
-	protected abstract fun createImageFilter ()Lorg/jetbrains/skia/ImageFilter;
+	public final fun asAndroidRenderEffect ()Landroid/graphics/RenderEffect;
+	protected abstract fun createRenderEffect ()Landroid/graphics/RenderEffect;
 	public fun isSupported ()Z
 }
 
@@ -715,25 +852,21 @@ public final class androidx/compose/ui/graphics/RenderEffectKt {
 	public static final fun OffsetEffect (FF)Landroidx/compose/ui/graphics/OffsetEffect;
 }
 
-public final class androidx/compose/ui/graphics/RenderEffect_desktopKt {
-	public static final fun asDesktopImageFilter (Landroidx/compose/ui/graphics/RenderEffect;)Lorg/jetbrains/skia/ImageFilter;
-}
-
 public abstract class androidx/compose/ui/graphics/ShaderBrush : androidx/compose/ui/graphics/Brush {
 	public fun <init> ()V
 	public final fun applyTo-Pq9zytI (JLandroidx/compose/ui/graphics/Paint;F)V
-	public abstract fun createShader-uvyYCjk (J)Lorg/jetbrains/skia/Shader;
+	public abstract fun createShader-uvyYCjk (J)Landroid/graphics/Shader;
 }
 
 public final class androidx/compose/ui/graphics/ShaderKt {
-	public static final fun ImageShader-F49vj9s (Landroidx/compose/ui/graphics/ImageBitmap;II)Lorg/jetbrains/skia/Shader;
-	public static synthetic fun ImageShader-F49vj9s$default (Landroidx/compose/ui/graphics/ImageBitmap;IIILjava/lang/Object;)Lorg/jetbrains/skia/Shader;
-	public static final fun LinearGradientShader-VjE6UOU (JJLjava/util/List;Ljava/util/List;I)Lorg/jetbrains/skia/Shader;
-	public static synthetic fun LinearGradientShader-VjE6UOU$default (JJLjava/util/List;Ljava/util/List;IILjava/lang/Object;)Lorg/jetbrains/skia/Shader;
-	public static final fun RadialGradientShader-8uybcMk (JFLjava/util/List;Ljava/util/List;I)Lorg/jetbrains/skia/Shader;
-	public static synthetic fun RadialGradientShader-8uybcMk$default (JFLjava/util/List;Ljava/util/List;IILjava/lang/Object;)Lorg/jetbrains/skia/Shader;
-	public static final fun SweepGradientShader-9KIMszo (JLjava/util/List;Ljava/util/List;)Lorg/jetbrains/skia/Shader;
-	public static synthetic fun SweepGradientShader-9KIMszo$default (JLjava/util/List;Ljava/util/List;ILjava/lang/Object;)Lorg/jetbrains/skia/Shader;
+	public static final fun ImageShader-F49vj9s (Landroidx/compose/ui/graphics/ImageBitmap;II)Landroid/graphics/Shader;
+	public static synthetic fun ImageShader-F49vj9s$default (Landroidx/compose/ui/graphics/ImageBitmap;IIILjava/lang/Object;)Landroid/graphics/Shader;
+	public static final fun LinearGradientShader-VjE6UOU (JJLjava/util/List;Ljava/util/List;I)Landroid/graphics/Shader;
+	public static synthetic fun LinearGradientShader-VjE6UOU$default (JJLjava/util/List;Ljava/util/List;IILjava/lang/Object;)Landroid/graphics/Shader;
+	public static final fun RadialGradientShader-8uybcMk (JFLjava/util/List;Ljava/util/List;I)Landroid/graphics/Shader;
+	public static synthetic fun RadialGradientShader-8uybcMk$default (JFLjava/util/List;Ljava/util/List;IILjava/lang/Object;)Landroid/graphics/Shader;
+	public static final fun SweepGradientShader-9KIMszo (JLjava/util/List;Ljava/util/List;)Landroid/graphics/Shader;
+	public static synthetic fun SweepGradientShader-9KIMszo$default (JLjava/util/List;Ljava/util/List;ILjava/lang/Object;)Landroid/graphics/Shader;
 }
 
 public final class androidx/compose/ui/graphics/Shadow {
@@ -760,55 +893,6 @@ public final class androidx/compose/ui/graphics/ShadowKt {
 
 public abstract interface class androidx/compose/ui/graphics/Shape {
 	public abstract fun createOutline-Pq9zytI (JLandroidx/compose/ui/unit/LayoutDirection;Landroidx/compose/ui/unit/Density;)Landroidx/compose/ui/graphics/Outline;
-}
-
-public final class androidx/compose/ui/graphics/SkiaBackedCanvas_skikoKt {
-	public static final fun asComposeCanvas (Lorg/jetbrains/skia/Canvas;)Landroidx/compose/ui/graphics/Canvas;
-	public static final fun getAlphaMultiplier (Landroidx/compose/ui/graphics/Canvas;)F
-	public static final fun getNativeCanvas (Landroidx/compose/ui/graphics/Canvas;)Lorg/jetbrains/skia/Canvas;
-	public static final fun setAlphaMultiplier (Landroidx/compose/ui/graphics/Canvas;F)V
-}
-
-public final class androidx/compose/ui/graphics/SkiaBackedPaint_skikoKt {
-	public static final fun Paint ()Landroidx/compose/ui/graphics/Paint;
-	public static final fun asComposePaint (Lorg/jetbrains/skia/Paint;)Landroidx/compose/ui/graphics/Paint;
-	public static final fun isSupported-s9anfk8 (I)Z
-}
-
-public final class androidx/compose/ui/graphics/SkiaBackedPathEffect_skikoKt {
-	public static final fun asComposePathEffect (Lorg/jetbrains/skia/PathEffect;)Landroidx/compose/ui/graphics/PathEffect;
-	public static final fun asSkiaPathEffect (Landroidx/compose/ui/graphics/PathEffect;)Lorg/jetbrains/skia/PathEffect;
-}
-
-public final class androidx/compose/ui/graphics/SkiaBackedPathMeasure_skikoKt {
-	public static final fun PathMeasure ()Landroidx/compose/ui/graphics/PathMeasure;
-	public static final fun asComposePathEffect (Lorg/jetbrains/skia/PathMeasure;)Landroidx/compose/ui/graphics/PathMeasure;
-	public static final fun asSkiaPathMeasure (Landroidx/compose/ui/graphics/PathMeasure;)Lorg/jetbrains/skia/PathMeasure;
-}
-
-public final class androidx/compose/ui/graphics/SkiaBackedPath_skikoKt {
-	public static final fun Path ()Landroidx/compose/ui/graphics/Path;
-	public static final fun asComposePath (Lorg/jetbrains/skia/Path;)Landroidx/compose/ui/graphics/Path;
-	public static final fun asSkiaPath (Landroidx/compose/ui/graphics/Path;)Lorg/jetbrains/skia/Path;
-}
-
-public final class androidx/compose/ui/graphics/SkiaBackedRenderEffect_skikoKt {
-	public static final fun asComposeRenderEffect (Lorg/jetbrains/skia/ImageFilter;)Landroidx/compose/ui/graphics/RenderEffect;
-}
-
-public final class androidx/compose/ui/graphics/SkiaColorFilter_skikoKt {
-	public static final fun asComposeColorFilter (Lorg/jetbrains/skia/ColorFilter;)Landroidx/compose/ui/graphics/ColorFilter;
-	public static final fun asSkiaColorFilter (Landroidx/compose/ui/graphics/ColorFilter;)Lorg/jetbrains/skia/ColorFilter;
-}
-
-public final class androidx/compose/ui/graphics/SkiaImageAsset_skikoKt {
-	public static final fun asComposeImageBitmap (Lorg/jetbrains/skia/Bitmap;)Landroidx/compose/ui/graphics/ImageBitmap;
-	public static final fun asSkiaBitmap (Landroidx/compose/ui/graphics/ImageBitmap;)Lorg/jetbrains/skia/Bitmap;
-	public static final fun toComposeImageBitmap (Lorg/jetbrains/skia/Image;)Landroidx/compose/ui/graphics/ImageBitmap;
-}
-
-public final class androidx/compose/ui/graphics/SkiaTileMode_skikoKt {
-	public static final fun isSupported-0vamqd0 (I)Z
 }
 
 public final class androidx/compose/ui/graphics/SolidColor : androidx/compose/ui/graphics/Brush {
@@ -879,7 +963,7 @@ public final class androidx/compose/ui/graphics/StrokeJoin$Companion {
 
 public final class androidx/compose/ui/graphics/SweepGradient : androidx/compose/ui/graphics/ShaderBrush {
 	public synthetic fun <init> (JLjava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun createShader-uvyYCjk (J)Lorg/jetbrains/skia/Shader;
+	public fun createShader-uvyYCjk (J)Landroid/graphics/Shader;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;

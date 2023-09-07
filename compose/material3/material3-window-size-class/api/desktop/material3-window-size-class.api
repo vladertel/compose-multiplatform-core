@@ -1,3 +1,7 @@
+public final class androidx/compose/material3/windowsizeclass/AndroidWindowSizeClass_androidKt {
+	public static final fun calculateWindowSizeClass (Landroid/app/Activity;Landroidx/compose/runtime/Composer;I)Landroidx/compose/material3/windowsizeclass/WindowSizeClass;
+}
+
 public abstract interface annotation class androidx/compose/material3/windowsizeclass/ExperimentalMaterial3WindowSizeClassApi : java/lang/annotation/Annotation {
 }
 

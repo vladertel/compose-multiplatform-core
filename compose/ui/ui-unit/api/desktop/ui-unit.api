@@ -1,3 +1,7 @@
+public final class androidx/compose/ui/unit/AndroidDensity_androidKt {
+	public static final fun Density (Landroid/content/Context;)Landroidx/compose/ui/unit/Density;
+}
+
 public final class androidx/compose/ui/unit/Constraints {
 	public static final field Companion Landroidx/compose/ui/unit/Constraints$Companion;
 	public static final field Infinity I
