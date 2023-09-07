@@ -186,16 +186,6 @@ internal class MetalRedrawer(
             caDisplayLink?.preferredFramesPerSecond = value
         }
 
-    /**
-     * Needs scheduling displayLink for forcing UITouch events to come at the fastest possible cadence.
-     * Otherwise, touch events can come at rate lower than actual display refresh rate.
-     */
-    var needsProactiveDisplayLink: Boolean
-        get() = displayLinkConditions.needsToBeProactive
-        set(value) {
-            displayLinkConditions.needsToBeProactive = value
-        }
-
     private var caDisplayLink: CADisplayLink? = CADisplayLink.displayLinkWithTarget(
         target = DisplayLinkProxy {
             this.handleDisplayLinkTick()
@@ -206,6 +196,12 @@ internal class MetalRedrawer(
     private val displayLinkConditions = DisplayLinkConditions { paused ->
         caDisplayLink?.setPaused(paused)
     }
+
+    /**
+     * Needs scheduling displayLink for forcing UITouch events to come at the fastest possible cadence.
+     * Otherwise, touch events can come at rate lower than actual display refresh rate.
+     */
+    var needsProactiveDisplayLink by displayLinkConditions::needsToBeProactive
 
     private val applicationStateListener = ApplicationStateListener { isApplicationActive ->
         displayLinkConditions.isApplicationActive = isApplicationActive
