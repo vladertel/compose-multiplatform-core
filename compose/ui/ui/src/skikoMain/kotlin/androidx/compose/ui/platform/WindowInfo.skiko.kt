@@ -24,11 +24,13 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.EmptyPointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.unit.IntSize
+import kotlin.AllowDifferentMembersInActual
 
 /**
  * Provides information about the Window that is hosting this compose hierarchy.
  */
 @Stable
+@AllowDifferentMembersInActual
 actual interface WindowInfo {
     /**
      * Indicates whether the window hosting this compose hierarchy is in focus.
