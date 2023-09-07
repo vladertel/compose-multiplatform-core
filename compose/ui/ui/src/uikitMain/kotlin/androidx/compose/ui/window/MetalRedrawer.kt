@@ -243,12 +243,17 @@ internal class MetalRedrawer(
     private fun draw(reason: DrawReason) {
         check(NSThread.isMainThread)
 
-        val targetTimestamp = caDisplayLink?.targetTimestamp
+        val caDisplayLink = caDisplayLink
 
-        if (targetTimestamp == null) {
+        if (caDisplayLink == null) {
             // TODO: anomaly, log
             // Logger.warn { "caDisplayLink callback called after it was invalidated " }
             return
+        }
+
+        val targetTimestamp = when(reason) {
+            DrawReason.DISPLAY_LINK_CALLBACK -> caDisplayLink.targetTimestamp
+            DrawReason.SYNCHRONOUS_DRAW_REQUEST -> CACurrentMediaTime()
         }
 
         autoreleasepool {
