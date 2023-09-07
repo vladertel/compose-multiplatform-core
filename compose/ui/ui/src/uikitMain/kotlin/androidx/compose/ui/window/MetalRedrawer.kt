@@ -48,12 +48,8 @@ private class DisplayLinkConditions(
     /**
      * Indicates that scene is invalidated and next display link callback will draw
      */
-    var needsRedrawOnNextVsync: Boolean = false
-        set(value) {
-            field = value
-
-            update()
-        }
+    val needsRedrawOnNextVsync: Boolean
+        get() = scheduledRedrawVsyncsCount > 0
 
     /**
      * Indicates that application is running foreground now
@@ -64,6 +60,32 @@ private class DisplayLinkConditions(
 
             update()
         }
+
+    /**
+     * Number of subsequent vsync that will issue a draw
+     */
+    private var scheduledRedrawVsyncsCount = 0
+        set(value) {
+            field = value
+
+            update()
+        }
+
+    /**
+     * Notify that vsync has issued a draw dispatch
+     */
+    fun onDrawStart() {
+        check(scheduledRedrawVsyncsCount >= 1)
+        scheduledRedrawVsyncsCount -= 1
+    }
+
+    /**
+     * Mark next two vsyncs to issue a draw dispatch and unpause displayLink if needed. Helps to avoid a pause of two intervals on 120hz displays,
+     * where if pause and unpause happen on different jobs of RunLoop (invalidation arrives asynchronously), the actual vsync happens two frames later, locking animations to 60hz.
+     */
+    fun needRedraw() {
+        scheduledRedrawVsyncsCount = 2
+    }
 
     private fun update() {
         val isUnpaused = isApplicationActive && (needsToBeProactive || needsRedrawOnNextVsync)
@@ -167,7 +189,11 @@ internal class MetalRedrawer(
     )
 
     private val displayLinkConditions = DisplayLinkConditions { paused ->
-        caDisplayLink?.setPaused(paused)
+        val caDisplayLink = caDisplayLink ?: return@DisplayLinkConditions
+
+        if (caDisplayLink.paused != paused) {
+            caDisplayLink.paused = paused
+        }
     }
 
     private val applicationStateListener = ApplicationStateListener { isApplicationActive ->
@@ -216,13 +242,11 @@ internal class MetalRedrawer(
      * Marks current state as dirty and unpauses display link if needed and enables draw dispatch operation on
      * next vsync
      */
-    fun needRedraw() {
-        displayLinkConditions.needsRedrawOnNextVsync = true
-    }
+    fun needRedraw() = displayLinkConditions.needRedraw()
 
     private fun handleDisplayLinkTick() {
         if (displayLinkConditions.needsRedrawOnNextVsync) {
-            displayLinkConditions.needsRedrawOnNextVsync = false
+            displayLinkConditions.onDrawStart()
 
             draw(DrawReason.DISPLAY_LINK_CALLBACK)
         }
