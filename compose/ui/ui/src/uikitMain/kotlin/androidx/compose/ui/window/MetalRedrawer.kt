@@ -86,6 +86,9 @@ private class DisplayLinkConditions(
         }
     }
 
+    /**
+     * Combines all logical flags and pass it as an argument to setPausedCallback invocation, if [areUpdatesPostponed] is false
+     */
     private fun update() {
         if (areUpdatesPostponed) {
             return
@@ -198,7 +201,7 @@ internal class MetalRedrawer(
     }
 
     /**
-     * Needs scheduling displayLink for forcing UITouch events to come at the fastest possible cadence.
+     * Needs scheduling displayLink to force iOS to poll UITouch events and send it at the fastest possible rate.
      * Otherwise, touch events can come at rate lower than actual display refresh rate.
      */
     var needsProactiveDisplayLink by displayLinkConditions::needsToBeProactive
