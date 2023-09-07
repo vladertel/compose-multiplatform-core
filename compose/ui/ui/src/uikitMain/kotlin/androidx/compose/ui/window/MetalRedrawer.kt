@@ -255,7 +255,7 @@ internal class MetalRedrawer(
             return
         }
 
-        // If called outside of unpaused CADisplayLink scope, targetTimestamp doesn't contain valid value
+        // If called outside of unpaused CADisplayLink scope, targetTimestamp doesn't contain a valid value
         val targetTimestamp = when (reason) {
             DrawReason.DISPLAY_LINK_CALLBACK -> caDisplayLink.targetTimestamp
             DrawReason.SYNCHRONOUS_DRAW_REQUEST -> CACurrentMediaTime()
