@@ -37,16 +37,6 @@ private class DisplayLinkConditions(
     val setPausedCallback: (Boolean) -> Unit
 ) {
     /**
-     *
-     */
-    private var updatesImmediately = true
-        set(value) {
-            field = value
-
-            update()
-        }
-
-    /**
      * see [MetalRedrawer.needsProactiveDisplayLink]
      */
     var needsToBeProactive: Boolean = false
@@ -76,23 +66,33 @@ private class DisplayLinkConditions(
             update()
         }
 
+    private var areUpdatesPostponed = false
+        set(value) {
+            field = value
+
+            update()
+        }
+
+    /**
+     * Postpone setPausedCallback invocation to the moment after [block] ends.
+     */
+    inline fun postponeUpdate(block: () -> Unit) {
+        check(!areUpdatesPostponed) { "Reentry for DisplayLinkConditions.postponeUpdates is not allowed" }
+        areUpdatesPostponed = true
+        try {
+            block()
+        } finally {
+            areUpdatesPostponed = false
+        }
+    }
+
     private fun update() {
-        if (!updatesImmediately) {
+        if (areUpdatesPostponed) {
             return
         }
 
         val isUnpaused = isApplicationActive && (needsToBeProactive || needsRedrawOnNextVsync)
         setPausedCallback(!isUnpaused)
-    }
-
-    inline fun postponeUpdate(block: () -> Unit) {
-        check(updatesImmediately) { "Reentry for DisplayLinkConditions.postponeUpdates is not allowed" }
-        updatesImmediately = false
-        try {
-            block()
-        } finally {
-            updatesImmediately = true
-        }
     }
 }
 
