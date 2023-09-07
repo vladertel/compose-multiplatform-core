@@ -81,7 +81,7 @@ private class DisplayLinkConditions(
 
     /**
      * Mark next two vsyncs to issue a draw dispatch and unpause displayLink if needed. Helps to avoid a pause of two intervals on 120hz displays,
-     * where if pause and unpause happen on different jobs of RunLoop (invalidation arrives asynchronously), the actual vsync happens two frames later, locking animations to 60hz.
+     * where if pause and unpause happen on different jobs of main RunLoop (invalidation arrives asynchronously) the actual vsync happens two frames later, locking animations to 60hz.
      */
     fun needRedraw() {
         scheduledRedrawVsyncsCount = 2
