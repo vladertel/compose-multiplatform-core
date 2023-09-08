@@ -192,11 +192,7 @@ internal class MetalRedrawer(
     )
 
     private val displayLinkConditions = DisplayLinkConditions { paused ->
-        val caDisplayLink = caDisplayLink ?: return@DisplayLinkConditions
-
-        if (caDisplayLink.paused != paused) {
-            caDisplayLink.paused = paused
-        }
+        caDisplayLink?.paused = paused
     }
 
     private val applicationStateListener = ApplicationStateListener { isApplicationActive ->
