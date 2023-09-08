@@ -46,7 +46,7 @@ private class DisplayLinkConditions(
         }
 
     /**
-     * Indicates that scene is invalidated and next display link callback will draw
+     * When CADisplayLink invokes a callback, this value is checked to decide if draw needs to be dispatched
      */
     val needsRedrawOnNextVsync: Boolean
         get() = scheduledRedrawsCount > 0
