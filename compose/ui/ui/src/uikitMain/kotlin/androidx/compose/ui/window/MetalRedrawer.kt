@@ -49,7 +49,7 @@ private class DisplayLinkConditions(
      * Indicates that scene is invalidated and next display link callback will draw
      */
     val needsRedrawOnNextVsync: Boolean
-        get() = scheduledRedrawVsyncsCount > 0
+        get() = scheduledRedrawsCount > 0
 
     /**
      * Indicates that application is running foreground now
@@ -64,7 +64,7 @@ private class DisplayLinkConditions(
     /**
      * Number of subsequent vsync that will issue a draw
      */
-    private var scheduledRedrawVsyncsCount = 0
+    private var scheduledRedrawsCount = 0
         set(value) {
             field = value
 
@@ -75,21 +75,24 @@ private class DisplayLinkConditions(
      * Notify that vsync has issued a draw dispatch
      */
     fun onDrawStart() {
-        check(scheduledRedrawVsyncsCount >= 1)
-        scheduledRedrawVsyncsCount -= 1
+        check(scheduledRedrawsCount >= 1)
+        scheduledRedrawsCount -= 1
     }
 
     /**
-     * Mark next two vsyncs to issue a draw dispatch and unpause displayLink if needed. Helps to avoid a pause of two intervals on 120hz displays,
-     * where if subsequent pause and unpause happen on different jobs of main RunLoop (invalidation arrives asynchronously) the actual vsync happens two frames later, locking animations to 60hz.
+     * Mark next [FRAMES_COUNT_TO_SCHEDULE_ON_NEED_REDRAW] frames to issue a draw dispatch and unpause displayLink if needed.
      */
     fun needRedraw() {
-        scheduledRedrawVsyncsCount = 2
+        scheduledRedrawsCount = FRAMES_COUNT_TO_SCHEDULE_ON_NEED_REDRAW
     }
 
     private fun update() {
         val isUnpaused = isApplicationActive && (needsToBeProactive || needsRedrawOnNextVsync)
         setPausedCallback(!isUnpaused)
+    }
+
+    companion object {
+        const val FRAMES_COUNT_TO_SCHEDULE_ON_NEED_REDRAW = 2
     }
 }
 
