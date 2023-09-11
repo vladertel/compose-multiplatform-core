@@ -40,7 +40,7 @@ import org.jetbrains.kotlin.platform.konan.isNative
  *  @see https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.native/-hidden-from-obj-c/
  */
 class AddHiddenFromObjCLowering(
-    pluginContext: IrPluginContext,
+    private val pluginContext: IrPluginContext,
     symbolRemapper: ComposableSymbolRemapper,
     metrics: ModuleMetrics,
     private val hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet
@@ -105,11 +105,12 @@ class AddHiddenFromObjCLowering(
         }
     }
 
-    private fun IrMutableAnnotationContainer.addHiddenFromObjCAnnotation() {
-        annotations = annotations + IrConstructorCallImpl.fromSymbolOwner(
+    private fun IrDeclaration.addHiddenFromObjCAnnotation() {
+        val annotation = IrConstructorCallImpl.fromSymbolOwner(
             type = hiddenFromObjCAnnotation.defaultType,
             constructorSymbol = hiddenFromObjCAnnotation.constructors.first()
         )
+        pluginContext.annotationsRegistrar.addMetadataVisibleAnnotationsToElement(this, annotation)
     }
 
     private fun IrType.hasComposable(): Boolean {
