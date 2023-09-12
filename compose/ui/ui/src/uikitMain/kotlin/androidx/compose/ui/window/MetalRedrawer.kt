@@ -364,12 +364,10 @@ internal class MetalRedrawer(
                 .objectForInfoDictionaryKey("MetalHudEnabled") as? NSNumber
 
             if (entry?.boolValue == true) {
-                dispatch_async(dispatch_get_main_queue()) {
-                    metalLayer.developerHUDProperties = mapOf(
-                        "mode" to "default",
-                        "logging" to "default"
-                    )
-                }
+                metalLayer.developerHUDProperties = mapOf(
+                    "mode" to "default",
+                    "logging" to "default"
+                )
             }
         }
     }
