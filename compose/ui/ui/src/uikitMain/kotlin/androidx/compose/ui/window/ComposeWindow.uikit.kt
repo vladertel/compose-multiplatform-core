@@ -32,6 +32,7 @@ import androidx.compose.ui.input.pointer.toCompose
 import androidx.compose.ui.interop.LocalLayerContainer
 import androidx.compose.ui.interop.LocalUIKitInteropContext
 import androidx.compose.ui.interop.LocalUIViewController
+import androidx.compose.ui.interop.UIKitInteropAction
 import androidx.compose.ui.interop.UIKitInteropContext
 import androidx.compose.ui.native.getMainDispatcher
 import androidx.compose.ui.platform.*
@@ -131,6 +132,7 @@ private class AttachedComposeContext(
             view.bottomAnchor.constraintEqualToAnchor(parentView.bottomAnchor)
         )
     }
+
     fun dispose() {
         scene.close()
         view.dispose()
@@ -146,9 +148,11 @@ internal actual class ComposeWindow : UIViewController {
     private var isInsideSwiftUI = false
     private val safeAreaState = mutableStateOf(IOSInsets())
     private val layoutMarginsState = mutableStateOf(IOSInsets())
-    private val interopContext = UIKitInteropContext(requestRedraw = {
-        attachedComposeContext?.view?.needRedraw()
-    })
+    private val interopContext = UIKitInteropContext(
+        requestRedraw = {
+            attachedComposeContext?.view?.needRedraw()
+        }
+    )
 
     /*
      * Initial value is arbitarily chosen to avoid propagating invalid value logic
@@ -634,8 +638,8 @@ internal actual class ComposeWindow : UIViewController {
                 )
             }
 
-            override fun retrieveCATransactionCommands(): List<() -> Unit> =
-                interopContext.getActionsAndClear()
+            override fun retrieveInteropActions(): List<UIKitInteropAction> =
+                interopContext.retrieve()
 
             override fun draw(surface: Surface, targetTimestamp: NSTimeInterval) {
                 // The calculation is split in two instead of
@@ -644,7 +648,8 @@ internal actual class ComposeWindow : UIViewController {
                 val integral = floor(targetTimestamp)
                 val fractional = targetTimestamp - integral
                 val secondsToNanos = 1_000_000_000L
-                val nanos = integral.roundToLong() * secondsToNanos + (fractional * 1e9).roundToLong()
+                val nanos =
+                    integral.roundToLong() * secondsToNanos + (fractional * 1e9).roundToLong()
 
                 scene.render(surface.canvas, nanos)
             }
@@ -679,25 +684,25 @@ internal actual class ComposeWindow : UIViewController {
 }
 
 private fun UIViewController.checkIfInsideSwiftUI(): Boolean {
-        var parent = parentViewController
+    var parent = parentViewController
 
-        while (parent != null) {
-            val isUIHostingController = parent.`class`()?.let {
-                val className = NSStringFromClass(it)
-                // SwiftUI UIHostingController has mangled name depending on generic instantiation type,
-                // It always contains UIHostingController substring though
-                return className.contains("UIHostingController")
-            } ?: false
+    while (parent != null) {
+        val isUIHostingController = parent.`class`()?.let {
+            val className = NSStringFromClass(it)
+            // SwiftUI UIHostingController has mangled name depending on generic instantiation type,
+            // It always contains UIHostingController substring though
+            return className.contains("UIHostingController")
+        } ?: false
 
-            if (isUIHostingController) {
-                return true
-            }
-
-            parent = parent.parentViewController
+        if (isUIHostingController) {
+            return true
         }
 
-        return false
+        parent = parent.parentViewController
     }
+
+    return false
+}
 
 private fun UIUserInterfaceStyle.asComposeSystemTheme(): SystemTheme {
     return when (this) {
