@@ -16,6 +16,10 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.ui.interop.UIKitInteropAction
+import androidx.compose.ui.interop.UIKitInteropArbitaryAction
+import androidx.compose.ui.interop.UIKitInteropState
+import androidx.compose.ui.interop.UIKitInteropStateUpdate
 import androidx.compose.ui.util.fastForEach
 import kotlinx.cinterop.*
 import org.jetbrains.skia.*
@@ -156,7 +160,7 @@ internal interface MetalRedrawerCallbacks {
     /**
      * Retrieve a list of pending actions which need to be synchronized with Metal rendering using CATransaction mechanism.
      */
-    fun retrieveCATransactionCommands(): List<() -> Unit>
+    fun retrieveInteropActions(): List<UIKitInteropAction>
 }
 
 internal class MetalRedrawer(
@@ -322,10 +326,9 @@ internal class MetalRedrawer(
             callbacks.draw(surface, lastRenderTimestamp)
             surface.flushAndSubmit()
 
-            val caTransactionCommands = callbacks.retrieveCATransactionCommands()
+            val interopActions = callbacks.retrieveInteropActions()
             val presentsWithTransaction =
-                isForcedToPresentWithTransactionEveryFrame || caTransactionCommands.isNotEmpty()
-
+                isForcedToPresentWithTransactionEveryFrame || interopActions.isNotEmpty()
             metalLayer.presentsWithTransaction = presentsWithTransaction
 
             val commandBuffer = queue.commandBuffer()!!
@@ -347,7 +350,17 @@ internal class MetalRedrawer(
                 // to ensure that transaction is available
                 commandBuffer.waitUntilScheduled()
                 metalDrawable.present()
-                caTransactionCommands.fastForEach { it.invoke() }
+                interopActions.fastForEach {
+                    when (it) {
+                        is UIKitInteropArbitaryAction -> it.invoke()
+                        is UIKitInteropStateUpdate -> {
+                            when (it.state) {
+                                UIKitInteropState.BEGAN -> metalLayer.setOpaque(false)
+                                UIKitInteropState.ENDED -> metalLayer.setOpaque(true)
+                            }
+                        }
+                    }
+                }
                 CATransaction.flush()
             }
 

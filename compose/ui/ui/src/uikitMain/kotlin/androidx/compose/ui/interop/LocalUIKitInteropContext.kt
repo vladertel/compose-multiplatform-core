@@ -19,6 +19,23 @@ package androidx.compose.ui.interop
 import androidx.compose.runtime.staticCompositionLocalOf
 import platform.Foundation.NSLock
 
+internal sealed class UIKitInteropAction
+
+internal data class UIKitInteropArbitaryAction(val block: () -> Unit) : UIKitInteropAction() {
+    fun invoke() = block()
+}
+
+internal enum class UIKitInteropState {
+    BEGAN, ENDED
+}
+
+internal data class UIKitInteropStateUpdate(val state: UIKitInteropState) : UIKitInteropAction()
+
+internal enum class UIKitInteropViewHierarchyChange {
+    VIEW_ADDED,
+    VIEW_REMOVED
+}
+
 /**
  * Class which can be used to add actions related to UIKit objects to be executed in sync with compose rendering,
  * Addding deferred actions is threadsafe, but they will be executed in the order of their submission, and on the main thread.
@@ -27,23 +44,47 @@ internal class UIKitInteropContext(
     val requestRedraw: () -> Unit
 ) {
     private val lock: NSLock = NSLock()
-    private val actions = mutableListOf<() -> Unit>()
+    private val actions = mutableListOf<UIKitInteropAction>()
+
+    /**
+     * Number of views, created by interop API and present in current view hierarchy
+     */
+    private var viewsCount = 0
+        set(value) {
+            require(value >= 0)
+
+            field = value
+        }
 
     /**
      * Add lambda to a list of commands which will be executed later in the same CATransaction, when the next rendered Compose frame is presented
      */
-    fun deferAction(action: () -> Unit) {
+    fun deferAction(hierarchyChange: UIKitInteropViewHierarchyChange? = null, action: () -> Unit) {
         requestRedraw()
 
         lock.doLocked {
-            actions.add(action)
+            if (hierarchyChange == UIKitInteropViewHierarchyChange.VIEW_ADDED) {
+                if (viewsCount == 0) {
+                    actions.add(UIKitInteropStateUpdate(UIKitInteropState.BEGAN))
+                }
+                viewsCount += 1
+            }
+
+            actions.add(UIKitInteropArbitaryAction(action))
+
+            if (hierarchyChange == UIKitInteropViewHierarchyChange.VIEW_REMOVED) {
+                viewsCount -= 1
+                if (viewsCount == 0) {
+                    actions.add(UIKitInteropStateUpdate(UIKitInteropState.ENDED))
+                }
+            }
         }
     }
 
     /**
-     * Return a copy of the list of [actions] and clear it.
+     * Return a copy of the list of [actions] and clear internal storage.
      */
-    internal fun getActionsAndClear(): List<() -> Unit> {
+    internal fun retrieve(): List<UIKitInteropAction> {
         return lock.doLocked {
             val result = actions.toList()
             actions.clear()

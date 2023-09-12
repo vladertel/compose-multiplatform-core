@@ -122,9 +122,11 @@ fun <T : UIView> UIKitView(
 
     DisposableEffect(Unit) {
         componentInfo.component = factory()
-        componentInfo.updater = Updater(componentInfo.component, update, interopContext::deferAction)
+        componentInfo.updater = Updater(componentInfo.component, update) {
+            interopContext.deferAction(action = it)
+        }
 
-        interopContext.deferAction {
+        interopContext.deferAction(UIKitInteropViewHierarchyChange.VIEW_ADDED) {
             componentInfo.container = UIView().apply {
                 addSubview(componentInfo.component)
             }
@@ -132,7 +134,7 @@ fun <T : UIView> UIKitView(
         }
 
         onDispose {
-            interopContext.deferAction {
+            interopContext.deferAction(UIKitInteropViewHierarchyChange.VIEW_REMOVED) {
                 componentInfo.container.removeFromSuperview()
                 componentInfo.updater.dispose()
                 onRelease(componentInfo.component)
