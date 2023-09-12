@@ -92,6 +92,12 @@ private class DisplayLinkConditions(
     }
 
     companion object {
+        /**
+         * Right now `needRedraw` doesn't reentry from within `draw` callback during animation which leads to a situation where CADisplayLink is first paused
+         * and then asynchronously unpaused. This effectively makes Pro Motion display lose a frame before running on highest possible frequency again.
+         * To avoid this, we need to render at least two frames (instead of just one) after each `needRedraw` assuming that invalidation comes inbetween them and
+         * displayLink is not paused by the end of RuntimeLoop tick.
+         */
         const val FRAMES_COUNT_TO_SCHEDULE_ON_NEED_REDRAW = 2
     }
 }
