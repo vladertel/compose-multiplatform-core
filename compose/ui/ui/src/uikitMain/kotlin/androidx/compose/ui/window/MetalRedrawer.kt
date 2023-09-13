@@ -201,7 +201,7 @@ internal class MetalRedrawer(
      */
     private var caDisplayLink: CADisplayLink? = CADisplayLink.displayLinkWithTarget(
         target = DisplayLinkProxy {
-            val targetTimestamp = this.caDisplayLink?.targetTimestamp ?: return@DisplayLinkProxy
+            val targetTimestamp = currentTargetTimestamp ?: return@DisplayLinkProxy
 
             displayLinkConditions.onDisplayLinkTick {
                 draw(waitUntilCompletion = false, targetTimestamp)
