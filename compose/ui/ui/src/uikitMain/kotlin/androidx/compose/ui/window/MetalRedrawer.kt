@@ -207,7 +207,10 @@ internal class MetalRedrawer(
         set(value) {
             field = value
 
-            // If active, make metalLayer transparent, opaque otherwise
+            /*
+             * If active, make metalLayer transparent, opaque otherwise.
+             * Rendering into opaque CAMetalLayer allows direct-to-screen optimization.
+             */
             metalLayer.setOpaque(!value)
         }
 
