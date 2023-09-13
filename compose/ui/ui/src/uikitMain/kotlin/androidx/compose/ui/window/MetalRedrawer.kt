@@ -191,7 +191,7 @@ internal class MetalRedrawer(
         }
 
     /**
-     * Needs scheduling displayLink for forcing UITouch events to come at the fastest possible cadence.
+     * Set to `true` if need always running invalidation-independent displayLink for forcing UITouch events to come at the fastest possible cadence.
      * Otherwise, touch events can come at rate lower than actual display refresh rate.
      */
     var needsProactiveDisplayLink: Boolean
@@ -201,7 +201,7 @@ internal class MetalRedrawer(
         }
 
     /**
-     * true if Metal rendering is synchronized with changes of UIKit interop views, false otherwise
+     * `true` if Metal rendering is synchronized with changes of UIKit interop views, `false` otherwise
      */
     private var isInteropActive = false
         set(value) {
