@@ -228,7 +228,6 @@ internal class MetalRedrawer(
         get() = caDisplayLink?.targetTimestamp
 
     private val displayLinkConditions = DisplayLinkConditions { paused ->
-        println("Paused: $paused")
         caDisplayLink?.paused = paused
     }
 
