@@ -23,6 +23,7 @@ plugins {
 }
 
 dependencies {
+
     implementation(projectOrArtifact(":annotation:annotation"))
     implementation(projectOrArtifact(":annotation:annotation-experimental"))
     implementation(libs.kotlinStdlib)
