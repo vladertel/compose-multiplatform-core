@@ -23,25 +23,6 @@ internal enum class UIKitInteropState {
     BEGAN, UNCHANGED, ENDED
 }
 
-internal fun UIKitInteropState.combineWith(value: UIKitInteropState): UIKitInteropState =
-    when (value) {
-        UIKitInteropState.UNCHANGED -> error("Can't assign UNCHANGED value explicitly")
-        UIKitInteropState.BEGAN -> {
-            when (this) {
-                UIKitInteropState.BEGAN -> error("Can't assign BEGAN twice in the same transaction")
-                UIKitInteropState.UNCHANGED -> value
-                UIKitInteropState.ENDED -> UIKitInteropState.UNCHANGED
-            }
-        }
-        UIKitInteropState.ENDED -> {
-            when (this) {
-                UIKitInteropState.BEGAN -> UIKitInteropState.UNCHANGED
-                UIKitInteropState.UNCHANGED -> value
-                UIKitInteropState.ENDED -> error("Can't assign ENDED twice in the same transaction")
-            }
-        }
-    }
-
 internal enum class UIKitInteropViewHierarchyChange {
     VIEW_ADDED,
     VIEW_REMOVED
@@ -74,7 +55,23 @@ private class UIKitInteropMutableTransaction: UIKitInteropTransaction {
     override val actions = mutableListOf<UIKitInteropAction>()
     override var state = UIKitInteropState.UNCHANGED
         set(value) {
-            field = field.combineWith(value)
+            field = when (value) {
+                UIKitInteropState.UNCHANGED -> error("Can't assign UNCHANGED value explicitly")
+                UIKitInteropState.BEGAN -> {
+                    when (field) {
+                        UIKitInteropState.BEGAN -> error("Can't assign BEGAN twice in the same transaction")
+                        UIKitInteropState.UNCHANGED -> value
+                        UIKitInteropState.ENDED -> UIKitInteropState.UNCHANGED
+                    }
+                }
+                UIKitInteropState.ENDED -> {
+                    when (field) {
+                        UIKitInteropState.BEGAN -> UIKitInteropState.UNCHANGED
+                        UIKitInteropState.UNCHANGED -> value
+                        UIKitInteropState.ENDED -> error("Can't assign ENDED twice in the same transaction")
+                    }
+                }
+            }
         }
 }
 

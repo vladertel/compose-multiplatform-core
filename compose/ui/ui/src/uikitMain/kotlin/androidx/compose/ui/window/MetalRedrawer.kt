@@ -344,8 +344,8 @@ internal class MetalRedrawer(
                 isForcedToPresentWithTransactionEveryFrame || isInteropActive
             metalLayer.presentsWithTransaction = presentsWithTransaction
 
-            // We only need to synchronize this specific frame if there are any pending changes
-            val synchronizePresentation = presentsWithTransaction && interopTransaction.isNotEmpty()
+            // We only need to synchronize this specific frame if there are any pending changes or isForcedToPresentWithTransactionEveryFrame is true
+            val synchronizePresentation = isForcedToPresentWithTransactionEveryFrame || (presentsWithTransaction && interopTransaction.isNotEmpty())
 
             val commandBuffer = queue.commandBuffer()!!
             commandBuffer.label = "Present"
