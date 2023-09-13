@@ -96,11 +96,13 @@ fun <T : UIView> UIKitView(
                 val rect = newRectInPixels / density
 
                 interopContext.deferAction {
+                    println("container ${componentInfo.component.hashCode()} updated to $rect")
                     componentInfo.container.setFrame(rect.toCGRect())
                 }
 
                 if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
                     interopContext.deferAction {
+                        println("component ${componentInfo.component.hashCode()} updated to $rect")
                         onResize(
                             componentInfo.component,
                             CGRectMake(0.0, 0.0, rect.width.toDouble(), rect.height.toDouble()),
