@@ -19,21 +19,28 @@ package androidx.compose.ui.interop
 import androidx.compose.runtime.staticCompositionLocalOf
 import platform.Foundation.NSLock
 
-internal sealed class UIKitInteropAction
-
-internal data class UIKitInteropArbitaryAction(val block: () -> Unit) : UIKitInteropAction() {
-    fun invoke() = block()
-}
-
 internal enum class UIKitInteropState {
     BEGAN, ENDED
 }
 
-internal data class UIKitInteropStateUpdate(val state: UIKitInteropState) : UIKitInteropAction()
-
 internal enum class UIKitInteropViewHierarchyChange {
     VIEW_ADDED,
     VIEW_REMOVED
+}
+
+typealias UIKitInteropAction = () -> Unit
+internal class UIKitInteropTransaction {
+    val actions = mutableListOf<UIKitInteropAction>()
+    var stateChange: UIKitInteropState? = null
+        set(value) {
+            if (field == null) {
+                field = value
+            } else {
+                field
+            }
+        }
+
+    fun isEmpty() = actions.isEmpty() && stateChange == null
 }
 
 /**
@@ -44,7 +51,7 @@ internal class UIKitInteropContext(
     val requestRedraw: () -> Unit
 ) {
     private val lock: NSLock = NSLock()
-    private val actions = mutableListOf<UIKitInteropAction>()
+    private var transaction = UIKitInteropTransaction()
 
     /**
      * Number of views, created by interop API and present in current view hierarchy

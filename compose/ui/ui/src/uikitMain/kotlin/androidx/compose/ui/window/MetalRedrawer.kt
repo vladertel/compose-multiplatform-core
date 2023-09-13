@@ -200,6 +200,8 @@ internal class MetalRedrawer(
             displayLinkConditions.needsToBeProactive = value
         }
 
+    private var currentInteropState = UIKitInteropState.ENDED
+
     /**
      * null after [dispose] call
      */
@@ -350,6 +352,7 @@ internal class MetalRedrawer(
                 // to ensure that transaction is available
                 commandBuffer.waitUntilScheduled()
                 metalDrawable.present()
+                println("GO")
                 interopActions.fastForEach {
                     when (it) {
                         is UIKitInteropArbitaryAction -> it.invoke()
@@ -361,7 +364,8 @@ internal class MetalRedrawer(
                         }
                     }
                 }
-                CATransaction.flush()
+
+                CATransaction.commit()
             }
 
             surface.close()
