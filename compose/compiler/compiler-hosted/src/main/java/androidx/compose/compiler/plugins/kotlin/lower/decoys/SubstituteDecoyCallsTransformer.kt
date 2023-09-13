@@ -153,7 +153,7 @@ class SubstituteDecoyCallsTransformer(
             constructorTypeArgumentsCount = expression.constructorTypeArgumentsCount
         ).let {
             it.copyTypeAndValueArgumentsFrom(expression)
-            return@let it.copyWithNewTypeParams(callee, actualConstructor)
+            it
         }
 
         return super.visitConstructorCall(updatedCall)
@@ -178,7 +178,7 @@ class SubstituteDecoyCallsTransformer(
             valueArgumentsCount = expression.valueArgumentsCount,
         ).let {
             it.copyTypeAndValueArgumentsFrom(expression)
-            return@let it.copyWithNewTypeParams(callee, actualConstructor)
+            it
         }
 
         return super.visitDelegatingConstructorCall(updatedCall)
@@ -203,7 +203,7 @@ class SubstituteDecoyCallsTransformer(
             superQualifierSymbol = expression.superQualifierSymbol
         ).let {
             it.copyTypeAndValueArgumentsFrom(expression)
-            return@let it.copyWithNewTypeParams(callee, actualFunction)
+            it
         }
         return super.visitCall(updatedCall)
     }
@@ -227,7 +227,7 @@ class SubstituteDecoyCallsTransformer(
             reflectionTarget = expression.reflectionTarget
         ).let {
             it.copyTypeAndValueArgumentsFrom(expression)
-            return@let it.copyWithNewTypeParams(callee, actualFunction)
+            it
         }
         return super.visitFunctionReference(updatedReference)
     }
