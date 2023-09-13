@@ -46,12 +46,6 @@ private class DisplayLinkConditions(
         }
 
     /**
-     * When CADisplayLink invokes a callback, this value is checked to decide if draw needs to be dispatched
-     */
-    val needsRedrawOnNextVsync: Boolean
-        get() = scheduledRedrawsCount > 0
-
-    /**
      * Indicates that application is running foreground now
      */
     var isApplicationActive: Boolean = false
@@ -72,11 +66,13 @@ private class DisplayLinkConditions(
         }
 
     /**
-     * Notify that vsync has issued a draw dispatch
+     * Handle display link callback by updating internal state and dispatching the draw, if needed.
      */
-    fun onDrawStart() {
-        check(scheduledRedrawsCount >= 1)
-        scheduledRedrawsCount -= 1
+    inline fun onDisplayLinkTick(draw: () -> Unit) {
+        if (scheduledRedrawsCount > 0) {
+            scheduledRedrawsCount -= 1
+            draw()
+        }
     }
 
     /**
@@ -87,7 +83,7 @@ private class DisplayLinkConditions(
     }
 
     private fun update() {
-        val isUnpaused = isApplicationActive && (needsToBeProactive || needsRedrawOnNextVsync)
+        val isUnpaused = isApplicationActive && (needsToBeProactive || scheduledRedrawsCount > 0)
         setPausedCallback(!isUnpaused)
     }
 
@@ -192,7 +188,9 @@ internal class MetalRedrawer(
 
     private var caDisplayLink: CADisplayLink? = CADisplayLink.displayLinkWithTarget(
         target = DisplayLinkProxy {
-            this.handleDisplayLinkTick()
+            displayLinkConditions.onDisplayLinkTick {
+                draw(DrawReason.DISPLAY_LINK_CALLBACK)
+            }
         },
         selector = NSSelectorFromString(DisplayLinkProxy::handleDisplayLinkTick.name)
     )
@@ -248,14 +246,6 @@ internal class MetalRedrawer(
      * next vsync
      */
     fun needRedraw() = displayLinkConditions.needRedraw()
-
-    private fun handleDisplayLinkTick() {
-        if (displayLinkConditions.needsRedrawOnNextVsync) {
-            displayLinkConditions.onDrawStart()
-
-            draw(DrawReason.DISPLAY_LINK_CALLBACK)
-        }
-    }
 
     /**
      * Immediately dispatch draw and block the thread until it's finished and presented on the screen.
