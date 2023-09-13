@@ -157,7 +157,8 @@ internal interface MetalRedrawerCallbacks {
     fun draw(surface: Surface, targetTimestamp: NSTimeInterval)
 
     /**
-     * Retrieve a list of pending actions which need to be synchronized with Metal rendering using CATransaction mechanism.
+     * Retrieve a transaction object, containing a list of pending actions
+     * that need to be synchronized with Metal rendering using CATransaction mechanism.
      */
     fun retrieveInteropTransaction(): UIKitInteropTransaction
 }
