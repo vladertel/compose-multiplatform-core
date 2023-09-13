@@ -17,6 +17,7 @@
 package androidx.compose.ui.window
 
 import androidx.compose.ui.interop.UIKitInteropAction
+import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.platform.IOSSkikoInput
 import androidx.compose.ui.platform.SkikoUITextInputTraits
 import androidx.compose.ui.platform.TextActions
@@ -48,7 +49,7 @@ internal interface SkikoUIViewDelegate {
 
     fun onPointerEvent(event: SkikoPointerEvent)
 
-    fun retrieveInteropActions(): List<UIKitInteropAction>
+    fun retrieveInteropTransaction(): UIKitInteropTransaction
 
     fun draw(surface: Surface, targetTimestamp: NSTimeInterval)
 }
@@ -82,8 +83,9 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
                 delegate?.draw(surface, targetTimestamp)
             }
 
-            override fun retrieveInteropActions(): List<UIKitInteropAction> =
-                delegate?.retrieveInteropActions() ?: listOf()
+            override fun retrieveInteropTransaction(): UIKitInteropTransaction =
+                delegate?.retrieveInteropTransaction() ?: UIKitInteropTransaction.empty
+
         }
     )
 

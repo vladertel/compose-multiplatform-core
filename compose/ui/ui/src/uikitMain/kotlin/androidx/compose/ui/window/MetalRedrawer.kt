@@ -16,26 +16,25 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.ui.interop.UIKitInteropAction
-import androidx.compose.ui.interop.UIKitInteropArbitaryAction
 import androidx.compose.ui.interop.UIKitInteropState
-import androidx.compose.ui.interop.UIKitInteropStateUpdate
+import androidx.compose.ui.interop.UIKitInteropTransaction
+import androidx.compose.ui.interop.isNotEmpty
 import androidx.compose.ui.util.fastForEach
+import kotlin.math.roundToInt
 import kotlinx.cinterop.*
 import org.jetbrains.skia.*
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSRunLoop
 import platform.Foundation.NSSelectorFromString
+import platform.Foundation.NSThread
 import platform.Metal.MTLCommandBufferProtocol
 import platform.QuartzCore.*
-import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
-import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.darwin.*
-import kotlin.math.roundToInt
-import platform.Foundation.NSThread
 import platform.Foundation.NSTimeInterval
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationState
 
 private class DisplayLinkConditions(
     val setPausedCallback: (Boolean) -> Unit
@@ -160,7 +159,7 @@ internal interface MetalRedrawerCallbacks {
     /**
      * Retrieve a list of pending actions which need to be synchronized with Metal rendering using CATransaction mechanism.
      */
-    fun retrieveInteropActions(): List<UIKitInteropAction>
+    fun retrieveInteropTransaction(): UIKitInteropTransaction
 }
 
 internal class MetalRedrawer(
@@ -200,7 +199,16 @@ internal class MetalRedrawer(
             displayLinkConditions.needsToBeProactive = value
         }
 
-    private var currentInteropState = UIKitInteropState.ENDED
+    /**
+     * true if Metal rendering is synchronized with changes of UIKit interop views, false otherwise
+     */
+    private var isInteropActive = false
+        set(value) {
+            field = value
+
+            // If active, make metalLayer transparent, opaque otherwise
+            metalLayer.setOpaque(!value)
+        }
 
     /**
      * null after [dispose] call
@@ -220,6 +228,7 @@ internal class MetalRedrawer(
         get() = caDisplayLink?.targetTimestamp
 
     private val displayLinkConditions = DisplayLinkConditions { paused ->
+        println("Paused: $paused")
         caDisplayLink?.paused = paused
     }
 
@@ -328,15 +337,21 @@ internal class MetalRedrawer(
             callbacks.draw(surface, lastRenderTimestamp)
             surface.flushAndSubmit()
 
-            val interopActions = callbacks.retrieveInteropActions()
+            val interopTransaction = callbacks.retrieveInteropTransaction()
+            if (interopTransaction.state == UIKitInteropState.BEGAN) {
+                isInteropActive = true
+            }
             val presentsWithTransaction =
-                isForcedToPresentWithTransactionEveryFrame || interopActions.isNotEmpty()
+                isForcedToPresentWithTransactionEveryFrame || isInteropActive
             metalLayer.presentsWithTransaction = presentsWithTransaction
+
+            // We only need to synchronize this specific frame if there are any pending changes
+            val synchronizePresentation = presentsWithTransaction && interopTransaction.isNotEmpty()
 
             val commandBuffer = queue.commandBuffer()!!
             commandBuffer.label = "Present"
 
-            if (!presentsWithTransaction) {
+            if (!synchronizePresentation) {
                 // If there are no pending changes in UIKit interop, present the drawable ASAP
                 commandBuffer.presentDrawable(metalDrawable)
             }
@@ -347,22 +362,17 @@ internal class MetalRedrawer(
             }
             commandBuffer.commit()
 
-            if (presentsWithTransaction) {
+            if (synchronizePresentation) {
                 // If there are pending changes in UIKit interop, [waitUntilScheduled](https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443036-waituntilscheduled) is called
                 // to ensure that transaction is available
                 commandBuffer.waitUntilScheduled()
                 metalDrawable.present()
-                println("GO")
-                interopActions.fastForEach {
-                    when (it) {
-                        is UIKitInteropArbitaryAction -> it.invoke()
-                        is UIKitInteropStateUpdate -> {
-                            when (it.state) {
-                                UIKitInteropState.BEGAN -> metalLayer.setOpaque(false)
-                                UIKitInteropState.ENDED -> metalLayer.setOpaque(true)
-                            }
-                        }
-                    }
+                interopTransaction.actions.fastForEach {
+                    it.invoke()
+                }
+
+                if (interopTransaction.state == UIKitInteropState.ENDED) {
+                    isInteropActive = false
                 }
 
                 CATransaction.commit()

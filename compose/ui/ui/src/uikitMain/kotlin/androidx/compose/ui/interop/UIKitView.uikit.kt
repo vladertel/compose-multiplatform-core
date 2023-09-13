@@ -43,13 +43,13 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.round
 import kotlinx.atomicfu.atomic
 import kotlinx.cinterop.CValue
+import kotlinx.cinterop.useContents
 import platform.CoreGraphics.CGRect
 import platform.CoreGraphics.CGRectMake
 import platform.Foundation.NSThread
+import platform.UIKit.NSStringFromCGRect
 import platform.UIKit.UIColor
 import platform.UIKit.UIView
-import platform.darwin.dispatch_async
-import platform.darwin.dispatch_get_main_queue
 
 private val STUB_CALLBACK_WITH_RECEIVER: Any.() -> Unit = {}
 private val NoOpUpdate: UIView.() -> Unit = STUB_CALLBACK_WITH_RECEIVER
@@ -96,13 +96,11 @@ fun <T : UIView> UIKitView(
                 val rect = newRectInPixels / density
 
                 interopContext.deferAction {
-                    println("container ${componentInfo.component.hashCode()} updated to $rect")
                     componentInfo.container.setFrame(rect.toCGRect())
                 }
 
                 if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
                     interopContext.deferAction {
-                        println("component ${componentInfo.component.hashCode()} updated to $rect")
                         onResize(
                             componentInfo.component,
                             CGRectMake(0.0, 0.0, rect.width.toDouble(), rect.height.toDouble()),

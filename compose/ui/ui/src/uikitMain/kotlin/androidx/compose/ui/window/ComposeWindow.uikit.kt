@@ -34,6 +34,7 @@ import androidx.compose.ui.interop.LocalUIKitInteropContext
 import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.interop.UIKitInteropAction
 import androidx.compose.ui.interop.UIKitInteropContext
+import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
@@ -638,7 +639,7 @@ internal actual class ComposeWindow : UIViewController {
                 )
             }
 
-            override fun retrieveInteropActions(): List<UIKitInteropAction> =
+            override fun retrieveInteropTransaction(): UIKitInteropTransaction =
                 interopContext.retrieve()
 
             override fun draw(surface: Surface, targetTimestamp: NSTimeInterval) {
