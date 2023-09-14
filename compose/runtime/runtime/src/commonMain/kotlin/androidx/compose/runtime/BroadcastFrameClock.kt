@@ -19,6 +19,7 @@ package androidx.compose.runtime
 import androidx.compose.runtime.snapshots.fastForEach
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resumeWithException
+import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
@@ -51,7 +52,8 @@ class BroadcastFrameClock(
     /**
      * `true` if there are any callers of [withFrameNanos] awaiting to run for a pending frame.
      */
-    val hasAwaiters: Boolean get() = synchronized(lock) { awaiters.isNotEmpty() }
+    val hasAwaiters: Boolean get() = awaitersCount.value > 0
+    val awaitersCount = atomic(0)
 
     /**
      * Send a frame for time [timeNanos] to all current callers of [withFrameNanos].
@@ -76,35 +78,42 @@ class BroadcastFrameClock(
 
     override suspend fun <R> withFrameNanos(
         onFrame: (Long) -> R
-    ): R = suspendCancellableCoroutine { co ->
-        lateinit var awaiter: FrameAwaiter<R>
-        val hasNewAwaiters = synchronized(lock) {
-            val cause = failureCause
-            if (cause != null) {
-                co.resumeWithException(cause)
-                return@suspendCancellableCoroutine
-            }
-            awaiter = FrameAwaiter(onFrame, co)
-            val hadAwaiters = awaiters.isNotEmpty()
-            awaiters.add(awaiter)
-            !hadAwaiters
-        }
+    ): R {
+        awaitersCount += 1
+        try {
+            return suspendCancellableCoroutine { co ->
+                lateinit var awaiter: FrameAwaiter<R>
+                val hasNewAwaiters = synchronized(lock) {
+                    val cause = failureCause
+                    if (cause != null) {
+                        co.resumeWithException(cause)
+                        return@suspendCancellableCoroutine
+                    }
+                    awaiter = FrameAwaiter(onFrame, co)
+                    val hadAwaiters = awaiters.isNotEmpty()
+                    awaiters.add(awaiter)
+                    !hadAwaiters
+                }
 
-        co.invokeOnCancellation {
-            synchronized(lock) {
-                awaiters.remove(awaiter)
-            }
-        }
+                co.invokeOnCancellation {
+                    synchronized(lock) {
+                        awaiters.remove(awaiter)
+                    }
+                }
 
-        // Wake up anything that was waiting for someone to schedule a frame
-        if (hasNewAwaiters && onNewAwaiters != null) {
-            try {
-                // BUG: Kotlin 1.4.21 plugin doesn't smart cast for a direct onNewAwaiters() here
-                onNewAwaiters.invoke()
-            } catch (t: Throwable) {
-                // If onNewAwaiters fails, we permanently fail the BroadcastFrameClock.
-                fail(t)
+                // Wake up anything that was waiting for someone to schedule a frame
+                if (hasNewAwaiters && onNewAwaiters != null) {
+                    try {
+                        // BUG: Kotlin 1.4.21 plugin doesn't smart cast for a direct onNewAwaiters() here
+                        onNewAwaiters.invoke()
+                    } catch (t: Throwable) {
+                        // If onNewAwaiters fails, we permanently fail the BroadcastFrameClock.
+                        fail(t)
+                    }
+                }
             }
+        } finally {
+            awaitersCount -= 1
         }
     }
 

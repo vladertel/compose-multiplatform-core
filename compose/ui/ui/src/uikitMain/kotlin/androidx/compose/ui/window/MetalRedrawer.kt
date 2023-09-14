@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.runtime.DarwinSignpostInterval
+import androidx.compose.runtime.DarwinSignposter
 import androidx.compose.ui.interop.UIKitInteropState
 import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.interop.isNotEmpty
@@ -44,6 +46,10 @@ private class DisplayLinkConditions(
      */
     var needsToBeProactive: Boolean = false
         set(value) {
+            if (field == value) {
+                return
+            }
+
             field = value
 
             update()
@@ -54,6 +60,10 @@ private class DisplayLinkConditions(
      */
     var isApplicationActive: Boolean = false
         set(value) {
+            if (field == value) {
+                return
+            }
+
             field = value
 
             update()
@@ -64,18 +74,38 @@ private class DisplayLinkConditions(
      */
     private var scheduledRedrawsCount = 0
         set(value) {
+            if (field == value) {
+                return
+            }
+
             field = value
 
             update()
         }
+
+    private var shouldPostponeUpdate = false
+
+    private inline fun postponeUpdate(block: () -> Unit) {
+        check(!shouldPostponeUpdate)
+        shouldPostponeUpdate = true
+
+        try {
+            block()
+        } finally {
+            shouldPostponeUpdate = false
+            update()
+        }
+    }
 
     /**
      * Handle display link callback by updating internal state and dispatching the draw, if needed.
      */
     inline fun onDisplayLinkTick(draw: () -> Unit) {
         if (scheduledRedrawsCount > 0) {
-            scheduledRedrawsCount -= 1
-            draw()
+            postponeUpdate {
+                scheduledRedrawsCount -= 1
+                draw()
+            }
         }
     }
 
@@ -83,10 +113,15 @@ private class DisplayLinkConditions(
      * Mark next [FRAMES_COUNT_TO_SCHEDULE_ON_NEED_REDRAW] frames to issue a draw dispatch and unpause displayLink if needed.
      */
     fun needRedraw() {
+        println("needRedraw")
         scheduledRedrawsCount = FRAMES_COUNT_TO_SCHEDULE_ON_NEED_REDRAW
     }
 
     private fun update() {
+        if (shouldPostponeUpdate) {
+            return
+        }
+
         val isUnpaused = isApplicationActive && (needsToBeProactive || scheduledRedrawsCount > 0)
         setPausedCallback(!isUnpaused)
     }
@@ -230,8 +265,24 @@ internal class MetalRedrawer(
         get() = caDisplayLink?.targetTimestamp
 
     private val displayLinkConditions = DisplayLinkConditions { paused ->
-        caDisplayLink?.paused = paused
+        caDisplayLink?.let {
+            if (it.paused != paused) {
+                it.paused = paused
+
+                val signposter = DarwinSignposter.runtime
+                if (!paused) {
+                    unpausedInterval = signposter.begin("DisplayLinkUnpaused")
+                } else {
+                    unpausedInterval?.let { interval ->
+                        signposter.end(interval)
+                    }
+                    unpausedInterval = null
+                }
+            }
+        }
     }
+
+    private var unpausedInterval: DarwinSignpostInterval? = null
 
     private val applicationStateListener = ApplicationStateListener { isApplicationActive ->
         displayLinkConditions.isApplicationActive = isApplicationActive
@@ -334,9 +385,11 @@ internal class MetalRedrawer(
                 return@autoreleasepool
             }
 
+            println("draw begin")
             surface.canvas.clear(Color.WHITE)
             callbacks.draw(surface, lastRenderTimestamp)
             surface.flushAndSubmit()
+            println("draw end")
 
             val interopTransaction = callbacks.retrieveInteropTransaction()
             if (interopTransaction.state == UIKitInteropState.BEGAN) {

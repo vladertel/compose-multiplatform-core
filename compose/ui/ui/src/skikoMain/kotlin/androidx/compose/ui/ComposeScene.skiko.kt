@@ -521,12 +521,19 @@ class ComposeScene internal constructor(
      */
     fun render(canvas: Canvas, nanoTime: Long): Unit = postponeInvalidation {
         trace("ComposeScene:render") {
-            recomposeDispatcher.flush()
-            frameClock.sendFrame(nanoTime) // Recomposition
+            trace("recomposeDispatcher:flush") {
+                recomposeDispatcher.flush()
+            }
+            trace("frameClock:sendFrame") {
+                frameClock.sendFrame(nanoTime) // Recomposition
+
+            }
             sendAndPerformSnapshotChanges() // Apply changes from recomposition phase to layout phase
             needLayout = false
             forEachOwner { it.measureAndLayout() }
-            syntheticEventSender.updatePointerPosition()
+            trace("syntheticEventSender:updatePointerPosition") {
+                syntheticEventSender.updatePointerPosition()
+            }
             sendAndPerformSnapshotChanges()  // Apply changes from layout phase to draw phase
             needDraw = false
             forEachOwner { it.draw(canvas) }
