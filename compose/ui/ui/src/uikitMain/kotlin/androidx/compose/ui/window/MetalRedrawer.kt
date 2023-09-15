@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.runtime.DarwinSignpostInterval
+import androidx.compose.runtime.DarwinSignposter
 import androidx.compose.ui.util.fastForEach
 import kotlinx.cinterop.*
 import org.jetbrains.skia.*
@@ -213,8 +215,22 @@ internal class MetalRedrawer(
     private val currentTargetTimestamp: NSTimeInterval?
         get() = caDisplayLink?.targetTimestamp
 
+    private var displayLinkUnpausedInterval: DarwinSignpostInterval? = null
     private val displayLinkConditions = DisplayLinkConditions { paused ->
-        caDisplayLink?.paused = paused
+        val displayLink = caDisplayLink ?: return@DisplayLinkConditions
+
+        if (displayLink.paused != paused) {
+            displayLink.paused = paused
+
+            if (paused) {
+                displayLinkUnpausedInterval?.let {
+                    DarwinSignposter.scheduling.end(it)
+                }
+                displayLinkUnpausedInterval = null
+            } else {
+                displayLinkUnpausedInterval = DarwinSignposter.scheduling.begin("CADisplayLink::unpause")
+            }
+        }
     }
 
     private val applicationStateListener = ApplicationStateListener { isApplicationActive ->

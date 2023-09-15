@@ -35,6 +35,9 @@ data class DarwinSignpostInterval(
 )
 
 class DarwinSignposter(category: String) {
+    val isEnabled: Boolean
+        get() = os_signpost_enabled(log)
+
     private val log = os_log_create(subsystem = "androidx.compose", category = category)
     private val buf = UByteArray(1024)
     private fun event(id: os_signpost_id_t, name: String, type: os_signpost_type_t) {
@@ -52,7 +55,7 @@ class DarwinSignposter(category: String) {
         }
     }
 
-    fun begin(name: String) = if (os_signpost_enabled(log)) {
+    fun begin(name: String) = if (isEnabled) {
         os_signpost_id_generate(log).let { id ->
             event(id, name, OS_SIGNPOST_INTERVAL_BEGIN)
 
@@ -77,6 +80,7 @@ class DarwinSignposter(category: String) {
 
     companion object {
         val runtime = DarwinSignposter(category = "runtime")
+        val scheduling = DarwinSignposter("scheduling")
     }
 }
 

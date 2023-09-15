@@ -33,6 +33,7 @@ import androidx.compose.ui.interop.LocalLayerContainer
 import androidx.compose.ui.interop.LocalUIKitInteropContext
 import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.interop.UIKitInteropContext
+import androidx.compose.ui.native.getMainDispatcher
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
@@ -586,7 +587,7 @@ internal actual class ComposeWindow : UIViewController {
         }
 
         val scene = ComposeScene(
-            coroutineContext = Dispatchers.Main,
+            coroutineContext = getMainDispatcher(),
             platform = platform,
             density = density,
             invalidate = skikoUIView::needRedraw,
