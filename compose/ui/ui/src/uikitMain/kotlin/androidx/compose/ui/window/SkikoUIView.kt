@@ -31,6 +31,7 @@ import platform.UIKit.*
 import platform.darwin.NSInteger
 import kotlin.math.max
 import kotlin.math.min
+import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Surface
 import org.jetbrains.skiko.SkikoInputModifiers
 import org.jetbrains.skiko.SkikoKey
@@ -51,7 +52,7 @@ internal interface SkikoUIViewDelegate {
 
     fun retrieveCATransactionCommands(): List<() -> Unit>
 
-    fun draw(surface: Surface, targetTimestamp: NSTimeInterval)
+    fun render(retrieveCanvas: () -> Canvas?, targetTimestamp: NSTimeInterval)
 }
 
 @Suppress("CONFLICTING_OVERLOADS")
@@ -79,8 +80,8 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     private val _redrawer: MetalRedrawer = MetalRedrawer(
         _metalLayer,
         callbacks = object : MetalRedrawerCallbacks {
-            override fun draw(surface: Surface, targetTimestamp: NSTimeInterval) {
-                delegate?.draw(surface, targetTimestamp)
+            override fun render(retrieveCanvas: () -> Canvas?, targetTimestamp: NSTimeInterval) {
+                delegate?.render(retrieveCanvas, targetTimestamp)
             }
 
             override fun retrieveCATransactionCommands(): List<() -> Unit> =
