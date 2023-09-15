@@ -38,7 +38,7 @@ import platform.darwin.dispatch_queue_t
 import platform.darwin.dispatch_time
 
 @OptIn(InternalCoroutinesApi::class, ExperimentalCoroutinesApi::class)
-private class TracingCoroutineDispatcher(
+private class TracingDispatchQueueCoroutineDispatcher(
     private val dispatchQueue: dispatch_queue_t,
     private val signposter: DarwinSignposter,
     private val name: String
@@ -100,7 +100,7 @@ internal fun getMainDispatcher(): CoroutineDispatcher {
     return if (signposter.isEnabled) {
         println("Using tracing coroutine dispatcher")
 
-        TracingCoroutineDispatcher(dispatch_get_main_queue(), signposter, "main")
+        TracingDispatchQueueCoroutineDispatcher(dispatch_get_main_queue(), signposter, "main")
     } else {
         Dispatchers.Main
     }
