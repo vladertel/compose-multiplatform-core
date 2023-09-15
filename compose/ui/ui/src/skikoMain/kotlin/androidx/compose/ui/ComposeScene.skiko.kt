@@ -541,18 +541,18 @@ class ComposeScene internal constructor(
      * animations in the content (or any other code, which uses [withFrameNanos]
      */
     fun render(canvas: Canvas, nanoTime: Long): Unit = postponeInvalidation {
-        trace("ComposeScene:render") {
-            recomposeDispatcher.flush()
+        recomposeDispatcher.flush()
+        trace("BroadcastFrameClock:sendFrame") {
             frameClock.sendFrame(nanoTime) // Recomposition
-            sendAndPerformSnapshotChanges() // Apply changes from recomposition phase to layout phase
-            needLayout = false
-            forEachOwner { it.measureAndLayout() }
-            syntheticEventSender.updatePointerPosition()
-            sendAndPerformSnapshotChanges()  // Apply changes from layout phase to draw phase
-            needDraw = false
-            forEachOwner { it.draw(canvas) }
-            forEachOwner { it.clearInvalidObservations() }
         }
+        sendAndPerformSnapshotChanges() // Apply changes from recomposition phase to layout phase
+        needLayout = false
+        forEachOwner { it.measureAndLayout() }
+        syntheticEventSender.updatePointerPosition()
+        sendAndPerformSnapshotChanges()  // Apply changes from layout phase to draw phase
+        needDraw = false
+        forEachOwner { it.draw(canvas) }
+        forEachOwner { it.clearInvalidObservations() }
     }
 
     private var focusedOwner: SkiaBasedOwner? = null

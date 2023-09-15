@@ -230,7 +230,7 @@ internal class SkiaBasedOwner(
 
     private var needClearObservations = false
 
-    fun clearInvalidObservations() {
+    fun clearInvalidObservations() = trace("SkiaBasedOwner:clearInvalidObservations") {
         if (needClearObservations) {
             snapshotObserver.clearInvalidObservations()
             needClearObservations = false
