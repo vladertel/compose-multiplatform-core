@@ -696,7 +696,7 @@ class ComposeScene internal constructor(
         }
     }
 
-    private fun processPointerInput(event: PointerInputEvent) {
+    private fun processPointerInput(event: PointerInputEvent) = trace("ComposeScene:processPointerInput") {
         when (event.eventType) {
             PointerEventType.Press -> processPress(event)
             PointerEventType.Release -> processRelease(event)

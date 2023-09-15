@@ -83,7 +83,7 @@ internal class SyntheticEventSender(
         sendInternal(event)
     }
 
-    fun updatePointerPosition() {
+    fun updatePointerPosition() = trace("SyntheticEventSender::updatePointerPosition") {
         if (needUpdatePointerPosition) {
             needUpdatePointerPosition = false
 
