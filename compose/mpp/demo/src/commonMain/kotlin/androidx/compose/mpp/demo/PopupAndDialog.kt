@@ -1,7 +1,13 @@
 package androidx.compose.mpp.demo
 
 import androidx.compose.material3.AlertDialog as AlertDialog3
+import androidx.compose.material3.Button as Button3
 import androidx.compose.material3.DropdownMenu as DropdownMenu3
+import androidx.compose.material3.DropdownMenuItem as DropdownMenuItem3
+import androidx.compose.material3.ExposedDropdownMenuBox as ExposedDropdownMenuBox3
+import androidx.compose.material3.ExposedDropdownMenuDefaults as ExposedDropdownMenuDefaults3
+import androidx.compose.material3.Text as Text3
+import androidx.compose.material3.TextField as TextField3
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -14,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -21,17 +28,26 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.ExposedDropdownMenuBox
+import androidx.compose.material.ExposedDropdownMenuDefaults
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.mpp.demo.textfield.android.loremIpsum
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
@@ -40,6 +56,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import kotlinx.coroutines.launch
 
 @Composable
 fun PopupAndDialog() {
@@ -53,8 +70,11 @@ fun PopupAndDialog() {
         DialogSamples()
         AlertDialogSample()
         AlertDialog3Sample()
+        ModalBottomSheet3Sample()
         DropdownMenuSample()
         DropdownMenu3Sample()
+        ExposedDropdownMenuSample()
+        ExposedDropdownMenu3Sample()
     }
 }
 
@@ -105,39 +125,39 @@ private fun AlertDialog3Sample() {
     var short by remember { mutableStateOf(false) }
     var long by remember { mutableStateOf(false) }
     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        Button(onClick = { short = true }) {
-            Text("AlertDialog3 (short)")
+        Button3(onClick = { short = true }) {
+            Text3("AlertDialog3 (short)")
         }
-        Button(onClick = { long = true }) {
-            Text("AlertDialog3 (long)")
+        Button3(onClick = { long = true }) {
+            Text3("AlertDialog3 (long)")
         }
     }
     if (short) {
         AlertDialog3(
             onDismissRequest = { },
             confirmButton = {
-                Button(onClick = { short = false }) {
-                    Text("OK")
+                Button3(onClick = { short = false }) {
+                    Text3("OK")
                 }
             },
-            text = { Text("Meow") },
+            text = { Text3("Meow") },
         )
     }
     if (long) {
         AlertDialog3(
             onDismissRequest = { },
             confirmButton = {
-                Button(onClick = { long = false }) {
-                    Text("OK")
+                Button3(onClick = { long = false }) {
+                    Text3("OK")
                 }
             },
             dismissButton = {
-                Button(onClick = { long = false }) {
-                    Text("Cancel")
+                Button3(onClick = { long = false }) {
+                    Text3("Cancel")
                 }
             },
-            title = { Text("Alert Dialog") },
-            text = { Text(loremIpsum()) },
+            title = { Text3("Alert Dialog") },
+            text = { Text3(loremIpsum()) },
         )
     }
 }
@@ -232,7 +252,6 @@ private fun MyPopup(
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun DialogSamples() {
     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -290,6 +309,37 @@ private fun DialogSample(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModalBottomSheet3Sample() {
+    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val bottomSheetState = rememberModalBottomSheetState()
+    Button3(onClick = { openBottomSheet = true }) {
+        Text3(text = "ModalBottomSheet3")
+    }
+    if (openBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { openBottomSheet = false },
+            sheetState = bottomSheetState
+        ) {
+            Button3(onClick = {
+                scope.launch {
+                    bottomSheetState.hide()
+                    openBottomSheet = false
+                }
+            }) {
+                Text3("Hide")
+            }
+            LazyColumn {
+                items(30) {
+                    ListItem({ Text("Item $it") })
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun DropdownMenuSample() {
     val horizontalScrollState = rememberScrollState()
@@ -330,18 +380,18 @@ private fun DropdownMenu3Sample() {
     val horizontalScrollState = rememberScrollState()
     Row(
         modifier = Modifier
-            .background(Color.Gray)
+            .background(Color.LightGray)
             .horizontalScroll(horizontalScrollState),
         horizontalArrangement = Arrangement.spacedBy(100.dp)
     ) {
         repeat(10) {
             Column {
                 var expanded by remember { mutableStateOf(false) }
-                Button(
+                Button3(
                     onClick = { expanded = true },
                     modifier = Modifier.width(180.dp)
                 ) {
-                    Text("DropdownMenu3")
+                    Text3("DropdownMenu3")
                 }
                 DropdownMenu3(
                     expanded = expanded,
@@ -350,11 +400,85 @@ private fun DropdownMenu3Sample() {
                     properties = PopupProperties(focusable = false)
                 ) {
                     repeat(it + 5) {
-                        DropdownMenuItem(onClick = { expanded = false }) {
-                            Text("Item $it")
-                        }
+                        DropdownMenuItem3(
+                            text = { Text3("Item $it") },
+                            onClick = { expanded = false }
+                        )
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+private fun ExposedDropdownMenuSample() {
+    val options = List(5) { "Item $it" }
+    var expanded by remember { mutableStateOf(false) }
+    var selectedOptionText by remember { mutableStateOf(options[0]) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+    ) {
+        TextField(
+            readOnly = true,
+            value = selectedOptionText,
+            onValueChange = {},
+            label = { Text3("ExposedDropdownMenuBox") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.textFieldColors(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            options.forEach { selectionOption ->
+                DropdownMenuItem(
+                    onClick = {
+                        selectedOptionText = selectionOption
+                        expanded = false
+                    },
+                ) {
+                    Text(selectionOption)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExposedDropdownMenu3Sample() {
+    val options = List(5) { "Item $it" }
+    var expanded by remember { mutableStateOf(false) }
+    var selectedOptionText by remember { mutableStateOf(options[0]) }
+    ExposedDropdownMenuBox3(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+    ) {
+        TextField3(
+            modifier = Modifier.menuAnchor(),
+            readOnly = true,
+            value = selectedOptionText,
+            onValueChange = {},
+            label = { Text3("ExposedDropdownMenuBox3") },
+            trailingIcon = { ExposedDropdownMenuDefaults3.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults3.textFieldColors(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            options.forEach { selectionOption ->
+                DropdownMenuItem3(
+                    text = { Text3(selectionOption) },
+                    onClick = {
+                        selectedOptionText = selectionOption
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults3.ItemContentPadding,
+                )
             }
         }
     }

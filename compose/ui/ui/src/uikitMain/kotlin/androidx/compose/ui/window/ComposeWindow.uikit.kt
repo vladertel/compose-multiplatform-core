@@ -33,21 +33,25 @@ import androidx.compose.ui.interop.LocalLayerContainer
 import androidx.compose.ui.interop.LocalUIKitInteropContext
 import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.interop.UIKitInteropContext
-import androidx.compose.ui.native.getMainDispatcher
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
 import androidx.compose.ui.unit.*
+import kotlin.math.floor
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.skia.Surface
+import org.jetbrains.skiko.OS
+import org.jetbrains.skiko.OSVersion
 import org.jetbrains.skiko.SkikoKeyboardEvent
 import org.jetbrains.skiko.SkikoPointerEvent
-import org.jetbrains.skiko.currentNanoTime
+import org.jetbrains.skiko.available
 import platform.CoreGraphics.CGAffineTransformIdentity
 import platform.CoreGraphics.CGAffineTransformInvert
 import platform.CoreGraphics.CGPoint
@@ -166,15 +170,9 @@ internal actual class ComposeWindow : UIViewController {
      */
     private val currentInterfaceOrientation: InterfaceOrientation?
         get() {
-            // Flag for checking which API to use
             // Modern: https://developer.apple.com/documentation/uikit/uiwindowscene/3198088-interfaceorientation?language=objc
             // Deprecated: https://developer.apple.com/documentation/uikit/uiapplication/1623026-statusbarorientation?language=objc
-            val supportsWindowSceneApi =
-                NSProcessInfo.processInfo.operatingSystemVersion.useContents {
-                    majorVersion >= 13
-                }
-
-            return if (supportsWindowSceneApi) {
+            return if (available(OS.Ios to OSVersion(13))) {
                 view.window?.windowScene?.interfaceOrientation?.let {
                     InterfaceOrientation.getByRawValue(it)
                 }
@@ -182,6 +180,10 @@ internal actual class ComposeWindow : UIViewController {
                 InterfaceOrientation.getByRawValue(UIApplication.sharedApplication.statusBarOrientation)
             }
         }
+
+    private val _windowInfo = WindowInfoImpl().apply {
+        isWindowFocused = true
+    }
 
     @OverrideInit
     actual constructor() : super(nibName = null, bundle = null)
@@ -318,6 +320,8 @@ internal actual class ComposeWindow : UIViewController {
     override fun viewDidLoad() {
         super.viewDidLoad()
 
+        PlistSanityCheck.performIfNeeded()
+
         configuration.delegate.viewDidLoad()
     }
 
@@ -341,15 +345,19 @@ internal actual class ComposeWindow : UIViewController {
     }
 
     private fun updateLayout(context: AttachedComposeContext) {
-        context.scene.density = density
-        context.scene.constraints = view.frame.useContents {
-            val scale = density.density
-
-            Constraints(
-                maxWidth = (size.width * scale).roundToInt(),
-                maxHeight = (size.height * scale).roundToInt()
+        val scale = density.density
+        val size = view.frame.useContents {
+            IntSize(
+                width = (size.width * scale).roundToInt(),
+                height = (size.height * scale).roundToInt()
             )
         }
+        _windowInfo.containerSize = size
+        context.scene.density = density
+        context.scene.constraints = Constraints(
+            maxWidth = size.width,
+            maxHeight = size.height
+        )
 
         context.view.needRedraw()
     }
@@ -523,6 +531,8 @@ internal actual class ComposeWindow : UIViewController {
         val inputTraits = inputServices.skikoUITextInputTraits
 
         val platform = object : Platform by Platform.Empty {
+            override val windowInfo: WindowInfo
+                get() = _windowInfo
             override val textInputService: PlatformTextInputService = inputServices
             override val viewConfiguration =
                 object : ViewConfiguration {
@@ -576,7 +586,7 @@ internal actual class ComposeWindow : UIViewController {
         }
 
         val scene = ComposeScene(
-            coroutineContext = getMainDispatcher(),
+            coroutineContext = Dispatchers.Main,
             platform = platform,
             density = density,
             invalidate = skikoUIView::needRedraw,
@@ -627,8 +637,16 @@ internal actual class ComposeWindow : UIViewController {
             override fun retrieveCATransactionCommands(): List<() -> Unit> =
                 interopContext.getActionsAndClear()
 
-            override fun draw(surface: Surface) {
-                scene.render(surface.canvas, currentNanoTime())
+            override fun draw(surface: Surface, targetTimestamp: NSTimeInterval) {
+                // The calculation is split in two instead of
+                // `(targetTimestamp * 1e9).toLong()`
+                // to avoid losing precision for fractional part
+                val integral = floor(targetTimestamp)
+                val fractional = targetTimestamp - integral
+                val secondsToNanos = 1_000_000_000L
+                val nanos = integral.roundToLong() * secondsToNanos + (fractional * 1e9).roundToLong()
+
+                scene.render(surface.canvas, nanos)
             }
         }
 

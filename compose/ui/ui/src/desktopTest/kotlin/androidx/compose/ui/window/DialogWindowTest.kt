@@ -34,7 +34,6 @@ import androidx.compose.ui.awt.ComposeDialog
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
@@ -42,8 +41,10 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.sendKeyEvent
+import androidx.compose.ui.toInt
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.window.toSize
 import com.google.common.truth.Truth.assertThat
@@ -528,8 +529,8 @@ class DialogWindowTest {
         var isDrawn = false
         var isVisibleOnFirstComposition = false
         var isVisibleOnFirstDraw = false
-        var actualCanvasSize: Size? = null
-        var expectedCanvasSizePx: Size? = null
+        var actualCanvasSize: IntSize? = null
+        var expectedCanvasSizePx: IntSize? = null
 
         launchTestApplication {
             DialogWindow(
@@ -546,8 +547,10 @@ class DialogWindowTest {
                         isVisibleOnFirstDraw = window.isVisible
                         isDrawn = true
 
-                        actualCanvasSize = size
-                        expectedCanvasSizePx = expectedCanvasSize().toSize()
+                        // toInt() because this is how ComposeWindow rounds decimal sizes
+                        // (see ComposeBridge.updateSceneSize)
+                        actualCanvasSize = size.toInt()
+                        expectedCanvasSizePx = expectedCanvasSize().toSize().toInt()
                     }
                 }
             }
@@ -603,27 +606,4 @@ class DialogWindowTest {
         awaitIdle()
         assertThat(localLayoutDirection).isEqualTo(LayoutDirection.Ltr)
     }
-
-    private val DialogWindowTestMethods = ComponentTestMethods(
-        create = { ComposeDialog() },
-        setContent = { setContent{ it() } },
-        display = { isVisible = true },
-        dispose = { dispose() }
-    )
-
-    @Test
-    fun `componentOrientation modifies LayoutDirection`() =
-        componentOrientationModifiesLayoutDirection(DialogWindowTestMethods)
-
-    @Test
-    fun `locale modifies LayoutDirection`() =
-        localeModifiesLayoutDirection(DialogWindowTestMethods)
-
-    @Test
-    fun `component orientation overrides locale for LayoutDirection`() =
-        componentOrientationOverridesLocaleForLayoutDirection(DialogWindowTestMethods)
-
-    @Test
-    fun `locale does not override component orientation for LayoutDirection`() =
-        localeDoesNotOverrideComponentOrientationForLayoutDirection(DialogWindowTestMethods)
 }
