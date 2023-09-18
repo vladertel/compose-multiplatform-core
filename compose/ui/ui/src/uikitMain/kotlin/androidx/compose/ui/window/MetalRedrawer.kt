@@ -30,6 +30,7 @@ import platform.UIKit.UIApplicationState
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.darwin.*
 import kotlin.math.roundToInt
+import org.jetbrains.skia.Rect
 import platform.Foundation.NSThread
 import platform.Foundation.NSTimeInterval
 
@@ -146,12 +147,12 @@ private class ApplicationStateListener(
 
 internal interface MetalRedrawerCallbacks {
     /**
-     * Draw into a surface.
+     * Perform time step and encode draw operations into canvas.
      *
-     * @param surface The surface to be drawn.
+     * @param canvas Canvas to encode draw operations into.
      * @param targetTimestamp Timestamp indicating the expected draw result presentation time. Implementation should forward its internal time clock to this targetTimestamp to achieve smooth visual change cadence.
      */
-    fun draw(surface: Surface, targetTimestamp: NSTimeInterval)
+    fun render(canvas: Canvas, targetTimestamp: NSTimeInterval)
 
     /**
      * Retrieve a list of pending actions which need to be synchronized with Metal rendering using CATransaction mechanism.
@@ -173,6 +174,7 @@ internal class MetalRedrawer(
     private val context = DirectContext.makeMetal(device.objcPtr(), queue.objcPtr())
     private val inflightCommandBuffers = mutableListOf<MTLCommandBufferProtocol>()
     private var lastRenderTimestamp: NSTimeInterval = CACurrentMediaTime()
+    private val pictureRecorder = PictureRecorder()
 
     // Semaphore for preventing command buffers count more than swapchain size to be scheduled/executed at the same time
     private val inflightSemaphore =
@@ -251,6 +253,8 @@ internal class MetalRedrawer(
         caDisplayLink?.invalidate()
         caDisplayLink = null
 
+        pictureRecorder.close()
+
         context.flush()
         context.close()
     }
@@ -286,6 +290,19 @@ internal class MetalRedrawer(
                 return@autoreleasepool
             }
 
+            // Perform timestep and record all draw commands into [Picture]
+            pictureRecorder.beginRecording(Rect(
+                left = 0f,
+                top = 0f,
+                width.toFloat(),
+                height.toFloat()
+            )).also { canvas ->
+                canvas.clear(Color.WHITE)
+                callbacks.render(canvas, lastRenderTimestamp)
+            }
+
+            val picture = pictureRecorder.finishRecordingAsPicture()
+
             dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
 
             val metalDrawable = metalLayer.nextDrawable()
@@ -293,6 +310,7 @@ internal class MetalRedrawer(
             if (metalDrawable == null) {
                 // TODO: anomaly, log
                 // Logger.warn { "'metalLayer.nextDrawable()' returned null. 'metalLayer.allowsNextDrawableTimeout' should be set to false. Skipping the frame." }
+                picture.close()
                 dispatch_semaphore_signal(inflightSemaphore)
                 return@autoreleasepool
             }
@@ -312,14 +330,14 @@ internal class MetalRedrawer(
             if (surface == null) {
                 // TODO: anomaly, log
                 // Logger.warn { "'Surface.makeFromBackendRenderTarget' returned null. Skipping the frame." }
+                picture.close()
                 renderTarget.close()
-                // TODO: manually release metalDrawable when K/N API arrives
                 dispatch_semaphore_signal(inflightSemaphore)
                 return@autoreleasepool
             }
 
-            surface.canvas.clear(Color.WHITE)
-            callbacks.draw(surface, lastRenderTimestamp)
+            surface.canvas.drawPicture(picture)
+            picture.close()
             surface.flushAndSubmit()
 
             val caTransactionCommands = callbacks.retrieveCATransactionCommands()
