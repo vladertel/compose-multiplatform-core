@@ -517,6 +517,7 @@ class ComposeScene internal constructor(
      * Render the current content on [canvas]. Passed [nanoTime] will be used to drive all
      * animations in the content (or any other code, which uses [withFrameNanos]
      */
+    @Deprecated("Use `fun render(retrieveCanvas: () -> Canvas?, nanoTime: Long): Unit` instead")
     fun render(canvas: Canvas, nanoTime: Long): Unit = render(retrieveCanvas = { canvas }, nanoTime)
 
     /**
