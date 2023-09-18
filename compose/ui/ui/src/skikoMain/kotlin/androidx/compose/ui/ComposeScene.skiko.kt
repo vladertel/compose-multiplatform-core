@@ -513,6 +513,7 @@ class ComposeScene internal constructor(
         snapshotChanges.perform()
     }
 
+    // TODO: investigate early canvas acquisition causing swapchain congestion on DirectX and OpenGL
     /**
      * Render the current content on [canvas]. Passed [nanoTime] will be used to drive all
      * animations in the content (or any other code, which uses [withFrameNanos]
@@ -523,7 +524,7 @@ class ComposeScene internal constructor(
      * Flush async operations, notify all animations and perform recomposition-layout-draw sequence.
      * [Canvas] to draw on is retrieved lazily to postpone acquiring drawable as late as possible.
      */
-    fun render(retrieveCanvas: () -> Canvas?, nanoTime: Long): Unit = postponeInvalidation {
+    internal fun render(retrieveCanvas: () -> Canvas?, nanoTime: Long): Unit = postponeInvalidation {
         recomposeDispatcher.flush()
         frameClock.sendFrame(nanoTime) // Recomposition
         sendAndPerformSnapshotChanges() // Apply changes from recomposition phase to layout phase
