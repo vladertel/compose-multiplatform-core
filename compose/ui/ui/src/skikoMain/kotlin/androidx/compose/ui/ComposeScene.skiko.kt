@@ -517,14 +517,7 @@ class ComposeScene internal constructor(
      * Render the current content on [canvas]. Passed [nanoTime] will be used to drive all
      * animations in the content (or any other code, which uses [withFrameNanos]
      */
-    @Deprecated("Use `fun render(retrieveCanvas: () -> Canvas?, nanoTime: Long): Unit` instead")
-    fun render(canvas: Canvas, nanoTime: Long): Unit = render(retrieveCanvas = { canvas }, nanoTime)
-
-    /**
-     * Flush async operations, notify all animations and perform recomposition-layout-draw sequence.
-     * [Canvas] to draw on is retrieved lazily to postpone acquiring drawable as late as possible.
-     */
-    fun render(retrieveCanvas: () -> Canvas?, nanoTime: Long): Unit = postponeInvalidation {
+    fun render(canvas: Canvas, nanoTime: Long): Unit = postponeInvalidation {
         recomposeDispatcher.flush()
         frameClock.sendFrame(nanoTime) // Recomposition
         sendAndPerformSnapshotChanges() // Apply changes from recomposition phase to layout phase
@@ -533,11 +526,7 @@ class ComposeScene internal constructor(
         syntheticEventSender.updatePointerPosition()
         sendAndPerformSnapshotChanges()  // Apply changes from layout phase to draw phase
         needDraw = false
-
-        retrieveCanvas()?.let { canvas ->
-            forEachOwner { it.draw(canvas) }
-        }
-
+        forEachOwner { it.draw(canvas) }
         forEachOwner { it.clearInvalidObservations() }
     }
 

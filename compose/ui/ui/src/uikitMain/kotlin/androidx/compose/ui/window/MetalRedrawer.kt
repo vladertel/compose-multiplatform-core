@@ -148,10 +148,10 @@ internal interface MetalRedrawerCallbacks {
     /**
      * Draw into a surface.
      *
-     * @param retrieveCanvas Callback to lazily retrieve canvas to postpone drawable acquiring.
+     * @param surface The surface to be drawn.
      * @param targetTimestamp Timestamp indicating the expected draw result presentation time. Implementation should forward its internal time clock to this targetTimestamp to achieve smooth visual change cadence.
      */
-    fun render(retrieveCanvas: () -> Canvas?, targetTimestamp: NSTimeInterval)
+    fun draw(surface: Surface, targetTimestamp: NSTimeInterval)
 
     /**
      * Retrieve a list of pending actions which need to be synchronized with Metal rendering using CATransaction mechanism.
@@ -272,52 +272,6 @@ internal class MetalRedrawer(
         draw(waitUntilCompletion = true, CACurrentMediaTime())
     }
 
-    private data class FrameRenderTarget(
-        val drawable: CAMetalDrawableProtocol,
-        val renderTarget: BackendRenderTarget,
-        val surface: Surface
-    ) {
-        fun dispose() {
-            surface.close()
-            renderTarget.close()
-            // TODO manually release metalDrawable when K/N API arrives
-        }
-    }
-
-    private fun createFrameRenderTarget(width: Int, height: Int): FrameRenderTarget? {
-        dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
-
-        val metalDrawable = metalLayer.nextDrawable()
-
-        if (metalDrawable == null) {
-            // TODO: anomaly, log
-            // Logger.warn { "'metalLayer.nextDrawable()' returned null. 'metalLayer.allowsNextDrawableTimeout' should be set to false. Skipping the frame." }
-            dispatch_semaphore_signal(inflightSemaphore)
-            return null
-        }
-
-        val renderTarget =
-            BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
-
-        val surface = Surface.makeFromBackendRenderTarget(
-            context,
-            renderTarget,
-            SurfaceOrigin.TOP_LEFT,
-            SurfaceColorFormat.BGRA_8888,
-            ColorSpace.sRGB,
-            SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
-        )
-
-        if (surface == null) {
-            renderTarget.close()
-            // TODO: manually release metalDrawable when K/N API arrives
-            dispatch_semaphore_signal(inflightSemaphore)
-            return null
-        }
-
-        return FrameRenderTarget(metalDrawable, renderTarget, surface)
-    }
-
     private fun draw(waitUntilCompletion: Boolean, targetTimestamp: NSTimeInterval) {
         check(NSThread.isMainThread)
 
@@ -332,21 +286,41 @@ internal class MetalRedrawer(
                 return@autoreleasepool
             }
 
-            var frameRenderTarget: FrameRenderTarget? = null
+            dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
 
-            // Lambda which overwrites local frameRenderTarget if called, clears [Canvas] and returns it to the callee
-            val retrieveCanvas = {
-                createFrameRenderTarget(width, height)?.also {
-                    frameRenderTarget = it
-                    it.surface.canvas.clear(Color.WHITE)
-                }?.surface?.canvas
+            val metalDrawable = metalLayer.nextDrawable()
+
+            if (metalDrawable == null) {
+                // TODO: anomaly, log
+                // Logger.warn { "'metalLayer.nextDrawable()' returned null. 'metalLayer.allowsNextDrawableTimeout' should be set to false. Skipping the frame." }
+                dispatch_semaphore_signal(inflightSemaphore)
+                return@autoreleasepool
             }
 
-            callbacks.render(retrieveCanvas, lastRenderTimestamp)
+            val renderTarget =
+                BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
 
-            // Wrap up all the rendering work, if callee of retrieveCanvas encoded any work, return otherwise
-            val nonNullFrameRenderTarget = frameRenderTarget ?: return@autoreleasepool
-            nonNullFrameRenderTarget.surface.flushAndSubmit()
+            val surface = Surface.makeFromBackendRenderTarget(
+                context,
+                renderTarget,
+                SurfaceOrigin.TOP_LEFT,
+                SurfaceColorFormat.BGRA_8888,
+                ColorSpace.sRGB,
+                SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
+            )
+
+            if (surface == null) {
+                // TODO: anomaly, log
+                // Logger.warn { "'Surface.makeFromBackendRenderTarget' returned null. Skipping the frame." }
+                renderTarget.close()
+                // TODO: manually release metalDrawable when K/N API arrives
+                dispatch_semaphore_signal(inflightSemaphore)
+                return@autoreleasepool
+            }
+
+            surface.canvas.clear(Color.WHITE)
+            callbacks.draw(surface, lastRenderTimestamp)
+            surface.flushAndSubmit()
 
             val caTransactionCommands = callbacks.retrieveCATransactionCommands()
             val presentsWithTransaction =
@@ -359,7 +333,7 @@ internal class MetalRedrawer(
 
             if (!presentsWithTransaction) {
                 // If there are no pending changes in UIKit interop, present the drawable ASAP
-                commandBuffer.presentDrawable(nonNullFrameRenderTarget.drawable)
+                commandBuffer.presentDrawable(metalDrawable)
             }
 
             commandBuffer.addCompletedHandler {
@@ -372,12 +346,14 @@ internal class MetalRedrawer(
                 // If there are pending changes in UIKit interop, [waitUntilScheduled](https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443036-waituntilscheduled) is called
                 // to ensure that transaction is available
                 commandBuffer.waitUntilScheduled()
-                nonNullFrameRenderTarget.drawable.present()
+                metalDrawable.present()
                 caTransactionCommands.fastForEach { it.invoke() }
                 CATransaction.flush()
             }
 
-            nonNullFrameRenderTarget.dispose()
+            surface.close()
+            renderTarget.close()
+            // TODO manually release metalDrawable when K/N API arrives
 
             // Track current inflight command buffers to synchronously wait for their schedule in case app goes background
             if (inflightCommandBuffers.size == metalLayer.maximumDrawableCount.toInt()) {
