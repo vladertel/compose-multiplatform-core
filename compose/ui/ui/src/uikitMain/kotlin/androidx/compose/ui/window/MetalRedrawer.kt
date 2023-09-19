@@ -347,8 +347,11 @@ internal class MetalRedrawer(
 
             val picture = pictureRecorder.finishRecordingAsPicture()
 
-            val metalDrawable = trace("acquireDrawable") {
+            trace("waitInflightSemaphore") {
                 dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
+            }
+
+            val metalDrawable = trace("nextDrawable") {
                 metalLayer.nextDrawable()
             }
 
