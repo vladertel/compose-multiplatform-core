@@ -508,10 +508,12 @@ class ComposeScene internal constructor(
     /**
      * Sends any pending apply notifications and performs the changes they cause.
      */
-    private fun sendAndPerformSnapshotChanges() {
-        Snapshot.sendApplyNotifications()
-        snapshotChanges.perform()
-    }
+    private fun sendAndPerformSnapshotChanges() =
+        trace("ComposeScene:sendAndPerformSnapshotChanges") {
+            Snapshot.sendApplyNotifications()
+            snapshotChanges.perform()
+
+        }
 
     /**
      * Render the current content on [canvas]. Passed [nanoTime] will be used to drive all
@@ -519,7 +521,9 @@ class ComposeScene internal constructor(
      */
     fun render(canvas: Canvas, nanoTime: Long): Unit = postponeInvalidation {
         recomposeDispatcher.flush()
-        frameClock.sendFrame(nanoTime) // Recomposition
+        trace("BroadcastFrameClock:sendFrame") {
+            frameClock.sendFrame(nanoTime) // Recomposition
+        }
         sendAndPerformSnapshotChanges() // Apply changes from recomposition phase to layout phase
         needLayout = false
         forEachOwner { it.measureAndLayout() }
@@ -671,7 +675,7 @@ class ComposeScene internal constructor(
         }
     }
 
-    private fun processPointerInput(event: PointerInputEvent) {
+    private fun processPointerInput(event: PointerInputEvent) = trace("ComposeScene:processPointerInput") {
         when (event.eventType) {
             PointerEventType.Press -> processPress(event)
             PointerEventType.Release -> processRelease(event)

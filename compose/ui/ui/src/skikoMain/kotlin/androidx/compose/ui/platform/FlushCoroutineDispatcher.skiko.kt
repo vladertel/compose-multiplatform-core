@@ -18,6 +18,7 @@ package androidx.compose.ui.platform
 
 import androidx.compose.ui.synchronized
 import androidx.compose.ui.createSynchronizedObject
+import androidx.compose.ui.trace
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -76,12 +77,14 @@ internal class FlushCoroutineDispatcher(
      * performing in the [scope]
      */
     fun flush() = performRun {
-        synchronized(tasksLock) {
-            tasksCopy.addAll(tasks)
-            tasks.clear()
+        trace("FlushCoroutineDispatcher:flush") {
+            synchronized(tasksLock) {
+                tasksCopy.addAll(tasks)
+                tasks.clear()
+            }
+            tasksCopy.forEach(Runnable::run)
+            tasksCopy.clear()
         }
-        tasksCopy.forEach(Runnable::run)
-        tasksCopy.clear()
     }
 
     // the lock is needed to be certain that all tasks will be completed after `flush` method

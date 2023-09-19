@@ -230,7 +230,7 @@ internal class SkiaBasedOwner(
 
     private var needClearObservations = false
 
-    fun clearInvalidObservations() {
+    fun clearInvalidObservations() = trace("SkiaBasedOwner:clearInvalidObservations") {
         if (needClearObservations) {
             snapshotObserver.clearInvalidObservations()
             needClearObservations = false
@@ -240,7 +240,7 @@ internal class SkiaBasedOwner(
     var contentSize = IntSize.Zero
         private set
 
-    override fun measureAndLayout(sendPointerUpdate: Boolean) {
+    override fun measureAndLayout(sendPointerUpdate: Boolean) = trace("SkiaBasedOwner:measureAndLayout") {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
         if (
             measureAndLayoutDelegate.measureAndLayout {
@@ -348,7 +348,7 @@ internal class SkiaBasedOwner(
 
     override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
 
-    fun draw(canvas: org.jetbrains.skia.Canvas) {
+    fun draw(canvas: org.jetbrains.skia.Canvas) = trace("SkiaBasedOwner:draw") {
         root.draw(canvas.asComposeCanvas())
     }
 
