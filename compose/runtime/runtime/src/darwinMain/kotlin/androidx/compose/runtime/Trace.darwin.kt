@@ -29,12 +29,12 @@ import platform.darwin.os_signpost_id_generate
 import platform.darwin.os_signpost_id_t
 import platform.darwin.os_signpost_type_t
 
-data class DarwinSignpostInterval(
+internal data class DarwinSignpostInterval(
     val name: String,
     val id: os_signpost_id_t
 )
 
-class DarwinSignposter(category: String) {
+internal class DarwinSignposter(category: String) {
     private val log = os_log_create(subsystem = "androidx.compose", category = category)
     private val buf = UByteArray(1024)
     private fun event(id: os_signpost_id_t, name: String, type: os_signpost_type_t) {
