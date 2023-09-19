@@ -512,7 +512,6 @@ class ComposeScene internal constructor(
         trace("ComposeScene:sendAndPerformSnapshotChanges") {
             Snapshot.sendApplyNotifications()
             snapshotChanges.perform()
-
         }
 
     internal fun hitTestInteropView(position: Offset): Boolean {
