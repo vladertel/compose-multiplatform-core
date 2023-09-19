@@ -34,7 +34,6 @@ import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.darwin.*
 import kotlin.math.roundToInt
 import org.jetbrains.skia.Rect
-import platform.Foundation.NSThread
 import platform.Foundation.NSTimeInterval
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationState
