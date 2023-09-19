@@ -393,12 +393,14 @@ internal class MetalRedrawer(
 
             val mustEncodeAndPresentOnMainThread = synchronizePresentation || waitUntilCompletion
 
+            val commandBuffer = queue.commandBuffer()!!
+            commandBuffer.enqueue()
+
             val encodeAndPresentBlock = {
                 surface.canvas.drawPicture(picture)
                 picture.close()
                 surface.flushAndSubmit()
 
-                val commandBuffer = queue.commandBuffer()!!
                 commandBuffer.label = "Present"
 
                 if (!synchronizePresentation) {
