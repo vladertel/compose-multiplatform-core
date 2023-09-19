@@ -403,7 +403,6 @@ internal class MetalRedrawer(
                     picture.close()
                     surface.flushAndSubmit()
 
-                    val commandBuffer = queue.commandBuffer()!!
                     commandBuffer.label = "Present"
 
                     if (!synchronizePresentation) {
