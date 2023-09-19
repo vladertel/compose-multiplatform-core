@@ -20,6 +20,7 @@ import androidx.compose.ui.interop.UIKitInteropState
 import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.interop.doLocked
 import androidx.compose.ui.interop.isNotEmpty
+import androidx.compose.ui.trace
 import androidx.compose.ui.util.fastForEach
 import kotlin.math.roundToInt
 import kotlinx.cinterop.*
@@ -394,48 +395,50 @@ internal class MetalRedrawer(
             val mustEncodeAndPresentOnMainThread = synchronizePresentation || waitUntilCompletion
 
             val encodeAndPresentBlock = {
-                surface.canvas.drawPicture(picture)
-                picture.close()
-                surface.flushAndSubmit()
+                trace("encodeAndPresent") {
+                    surface.canvas.drawPicture(picture)
+                    picture.close()
+                    surface.flushAndSubmit()
 
-                val commandBuffer = queue.commandBuffer()!!
-                commandBuffer.label = "Present"
+                    val commandBuffer = queue.commandBuffer()!!
+                    commandBuffer.label = "Present"
 
-                if (!synchronizePresentation) {
-                    // If there are no pending changes in UIKit interop, present the drawable ASAP
-                    commandBuffer.presentDrawable(metalDrawable)
-                }
-
-                commandBuffer.addCompletedHandler {
-                    // Signal work finish, allow a new command buffer to be scheduled
-                    dispatch_semaphore_signal(inflightSemaphore)
-                }
-                commandBuffer.commit()
-
-                if (synchronizePresentation) {
-                    // If there are pending changes in UIKit interop, [waitUntilScheduled](https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443036-waituntilscheduled) is called
-                    // to ensure that transaction is available
-                    commandBuffer.waitUntilScheduled()
-                    metalDrawable.present()
-                    interopTransaction.actions.fastForEach {
-                        it.invoke()
+                    if (!synchronizePresentation) {
+                        // If there are no pending changes in UIKit interop, present the drawable ASAP
+                        commandBuffer.presentDrawable(metalDrawable)
                     }
 
-                    if (interopTransaction.state == UIKitInteropState.ENDED) {
-                        isInteropActive = false
+                    commandBuffer.addCompletedHandler {
+                        // Signal work finish, allow a new command buffer to be scheduled
+                        dispatch_semaphore_signal(inflightSemaphore)
+                    }
+                    commandBuffer.commit()
+
+                    if (synchronizePresentation) {
+                        // If there are pending changes in UIKit interop, [waitUntilScheduled](https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443036-waituntilscheduled) is called
+                        // to ensure that transaction is available
+                        commandBuffer.waitUntilScheduled()
+                        metalDrawable.present()
+                        interopTransaction.actions.fastForEach {
+                            it.invoke()
+                        }
+
+                        if (interopTransaction.state == UIKitInteropState.ENDED) {
+                            isInteropActive = false
+                        }
+
+                        CATransaction.commit()
                     }
 
-                    CATransaction.commit()
-                }
+                    surface.close()
+                    renderTarget.close()
 
-                surface.close()
-                renderTarget.close()
+                    // Track current inflight command buffers to synchronously wait for their schedule in case app goes background
+                    inflightCommandBuffers.add(commandBuffer)
 
-                // Track current inflight command buffers to synchronously wait for their schedule in case app goes background
-                inflightCommandBuffers.add(commandBuffer)
-
-                if (waitUntilCompletion) {
-                    commandBuffer.waitUntilCompleted()
+                    if (waitUntilCompletion) {
+                        commandBuffer.waitUntilCompleted()
+                    }
                 }
             }
 
