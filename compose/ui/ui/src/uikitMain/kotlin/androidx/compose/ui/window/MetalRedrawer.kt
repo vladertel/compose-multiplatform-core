@@ -179,7 +179,7 @@ internal class InflightCommandBuffers(
         }
     }
 
-    fun add(commandBuffer: MTLCommandBufferProtocol) {
+    fun add(commandBuffer: MTLCommandBufferProtocol) = lock.doLocked {
         if (list.size == maxInflightCount) {
             list.removeAt(0)
         }
