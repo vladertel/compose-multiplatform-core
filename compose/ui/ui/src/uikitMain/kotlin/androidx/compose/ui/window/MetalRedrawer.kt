@@ -347,9 +347,10 @@ internal class MetalRedrawer(
 
             val picture = pictureRecorder.finishRecordingAsPicture()
 
-            dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
-
-            val metalDrawable = metalLayer.nextDrawable()
+            val metalDrawable = trace("acquireDrawable") {
+                dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
+                metalLayer.nextDrawable()
+            }
 
             if (metalDrawable == null) {
                 // TODO: anomaly, log
