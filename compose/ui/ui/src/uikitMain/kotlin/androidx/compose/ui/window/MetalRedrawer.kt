@@ -332,14 +332,12 @@ internal class MetalRedrawer(
             }
 
             // Perform timestep and record all draw commands into [Picture]
-            pictureRecorder.beginRecording(
-                Rect(
-                    left = 0f,
-                    top = 0f,
-                    width.toFloat(),
-                    height.toFloat()
-                )
-            ).also { canvas ->
+            pictureRecorder.beginRecording(Rect(
+                left = 0f,
+                top = 0f,
+                width.toFloat(),
+                height.toFloat()
+            )).also { canvas ->
                 canvas.clear(Color.WHITE)
                 callbacks.render(canvas, lastRenderTimestamp)
             }
@@ -378,6 +376,10 @@ internal class MetalRedrawer(
                 dispatch_semaphore_signal(inflightSemaphore)
                 return@autoreleasepool
             }
+
+            surface.canvas.drawPicture(picture)
+            picture.close()
+            surface.flushAndSubmit()
 
             val interopTransaction = callbacks.retrieveInteropTransaction()
             if (interopTransaction.state == UIKitInteropState.BEGAN) {
