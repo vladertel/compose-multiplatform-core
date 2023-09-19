@@ -16,8 +16,69 @@
 
 package androidx.compose.ui
 
-import androidx.compose.runtime.DarwinSignpostInterval
-import androidx.compose.runtime.DarwinSignposter
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.usePinned
+import platform.darwin.OS_SIGNPOST_INTERVAL_BEGIN
+import platform.darwin.OS_SIGNPOST_INTERVAL_END
+import platform.darwin.__dso_handle
+import platform.darwin._os_signpost_emit_with_name_impl
+import platform.darwin.os_log_create
+import platform.darwin.os_signpost_enabled
+import platform.darwin.os_signpost_id_generate
+import platform.darwin.os_signpost_id_t
+import platform.darwin.os_signpost_type_t
+
+internal data class DarwinSignpostInterval(
+    val name: String,
+    val id: os_signpost_id_t
+)
+
+internal class DarwinSignposter(category: String) {
+    private val log = os_log_create(subsystem = "androidx.compose", category = category)
+    private val buf = UByteArray(1024)
+    private fun event(id: os_signpost_id_t, name: String, type: os_signpost_type_t) {
+        buf.usePinned { pinned ->
+            _os_signpost_emit_with_name_impl(
+                __dso_handle.ptr,
+                log,
+                type,
+                id,
+                name,
+                format = "",
+                buf = pinned.addressOf(0),
+                size = 1024u
+            )
+        }
+    }
+
+    fun begin(name: String) = if (os_signpost_enabled(log)) {
+        os_signpost_id_generate(log).let { id ->
+            event(id, name, OS_SIGNPOST_INTERVAL_BEGIN)
+
+            DarwinSignpostInterval(name, id)
+        }
+    } else {
+        null
+    }
+
+    fun end(interval: DarwinSignpostInterval) {
+        event(interval.id, interval.name, OS_SIGNPOST_INTERVAL_END)
+    }
+
+    inline fun <T> trace(name: String, block: () -> T): T {
+        val interval = begin(name)
+        try {
+            return block()
+        } finally {
+            interval?.let { end(it) }
+        }
+    }
+
+    companion object {
+        val ui = DarwinSignposter(category = "ui")
+    }
+}
 
 // Copy of compose.runtime.Trace
 internal actual object Trace {
@@ -29,7 +90,7 @@ internal actual object Trace {
      * to [endSection]. May be null.
      */
     actual fun beginSection(name: String): Any? =
-        DarwinSignposter.runtime.begin(name)
+        DarwinSignposter.ui.begin(name)
 
     /**
      * Writes a trace message to indicate that a given section of code has ended.
@@ -42,7 +103,7 @@ internal actual object Trace {
      */
     actual fun endSection(token: Any?) {
         if (token != null) {
-            DarwinSignposter.runtime.end(token as DarwinSignpostInterval)
+            DarwinSignposter.ui.end(token as DarwinSignpostInterval)
         }
     }
 }
