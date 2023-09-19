@@ -180,7 +180,7 @@ internal class InflightCommandBuffers(
         }
     }
 
-    fun add(commandBuffer: MTLCommandBufferProtocol) {
+    fun add(commandBuffer: MTLCommandBufferProtocol) = lock.doLocked {
         if (list.size == maxInflightCount) {
             list.removeAt(0)
         }
@@ -393,6 +393,9 @@ internal class MetalRedrawer(
                 isForcedToPresentWithTransactionEveryFrame || (presentsWithTransaction && interopTransaction.isNotEmpty())
 
             val mustEncodeAndPresentOnMainThread = synchronizePresentation || waitUntilCompletion
+
+            val commandBuffer = queue.commandBuffer()!!
+            commandBuffer.enqueue()
 
             val encodeAndPresentBlock = {
                 trace("encodeAndPresent") {
