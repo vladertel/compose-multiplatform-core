@@ -223,6 +223,7 @@ class CreateDecoysTransformer(
         newFunction.body = original.moveBodyTo(newFunction)
             ?.copyWithNewTypeParams(original, newFunction)
 
+        val oldBody = original.body
         // we need to clean the original body before types remapping (to not remap body, it's moved to a new function).
         // also see fun IrFunction.stubBody
         original.body = null
@@ -239,6 +240,9 @@ class CreateDecoysTransformer(
                 newFunction = newFunction
             )
         }
+
+        // restore the old body to make `stubBody` work correctly (only abstract functions can have empty body)
+        original.body = oldBody
 
         return newFunction
     }
