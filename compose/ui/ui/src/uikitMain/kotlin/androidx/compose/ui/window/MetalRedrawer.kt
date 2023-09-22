@@ -362,16 +362,13 @@ internal class MetalRedrawer(
                 isInteropActive = true
             }
             val presentsWithTransaction =
-                isForcedToPresentWithTransactionEveryFrame || isInteropActive
+                isForcedToPresentWithTransactionEveryFrame || interopTransaction.isNotEmpty()
             metalLayer.presentsWithTransaction = presentsWithTransaction
-
-            // We only need to synchronize this specific frame if there are any pending changes or isForcedToPresentWithTransactionEveryFrame is true
-            val synchronizePresentation = isForcedToPresentWithTransactionEveryFrame || (presentsWithTransaction && interopTransaction.isNotEmpty())
 
             val commandBuffer = queue.commandBuffer()!!
             commandBuffer.label = "Present"
 
-            if (!synchronizePresentation) {
+            if (!presentsWithTransaction) {
                 // If there are no pending changes in UIKit interop, present the drawable ASAP
                 commandBuffer.presentDrawable(metalDrawable)
             }
@@ -382,7 +379,7 @@ internal class MetalRedrawer(
             }
             commandBuffer.commit()
 
-            if (synchronizePresentation) {
+            if (presentsWithTransaction) {
                 // If there are pending changes in UIKit interop, [waitUntilScheduled](https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443036-waituntilscheduled) is called
                 // to ensure that transaction is available
                 commandBuffer.waitUntilScheduled()
