@@ -391,8 +391,6 @@ internal class MetalRedrawer(
                 if (interopTransaction.state == UIKitInteropState.ENDED) {
                     isInteropActive = false
                 }
-
-                CATransaction.commit()
             }
 
             surface.close()
