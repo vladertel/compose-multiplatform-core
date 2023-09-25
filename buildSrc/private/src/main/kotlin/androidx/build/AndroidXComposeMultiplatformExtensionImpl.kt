@@ -306,7 +306,7 @@ private fun Project.publishAndroidxReference(target: KotlinAndroidTarget) {
             SoftwareComponentInternal,
             ComponentWithVariants,
             ComponentWithCoordinates {
-            override fun getName(): String = "kotlin2"
+            override fun getName(): String = "kotlinDecoratedRootComponent"
             override fun getVariants(): Set<SoftwareComponent> = rootComponent.variants
             override fun getCoordinates(): ModuleVersionIdentifier =
                 rootComponent.coordinates
@@ -330,7 +330,7 @@ private fun Project.publishAndroidxReference(target: KotlinAndroidTarget) {
             val kotlinMultiplatform = publications
                 .getByName("kotlinMultiplatform") as MavenPublication
 
-            publications.create("kotlinMultiplatform2", MavenPublication::class.java) {
+            publications.create("kotlinMultiplatformDecorated", MavenPublication::class.java) {
                 it.artifactId = kotlinMultiplatform.artifactId
                 it.groupId = kotlinMultiplatform.groupId
                 it.version = kotlinMultiplatform.version
@@ -384,3 +384,6 @@ private fun Project.publishAndroidxReference(target: KotlinAndroidTarget) {
     }
 }
 
+// We have few workarounds in build scripts or gradle plugins,
+// and this global val can help track them
+internal val isJBFork = true

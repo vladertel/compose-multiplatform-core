@@ -51,6 +51,7 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.named
 import org.gradle.work.DisableCachingByDefault
 import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 
@@ -182,6 +183,14 @@ abstract class CreateLibraryBuildInfoFileTask : DefaultTask() {
             variant: VariantPublishPlan,
             shaProvider: Provider<String>
         ): TaskProvider<CreateLibraryBuildInfoFileTask> {
+            if (androidx.build.isJBFork) {
+                // We don't really use these tasks in our fork, and we may disable this completely.
+                // The reason for a duplicate is that we have a custom 'KotlinMultiplatformDecoration' publication,
+                // which leads to a task duplicate here.
+                val task = project.tasks.findByName(TASK_NAME + variant.taskSuffix)
+                if (task != null)
+                    return project.tasks.named<CreateLibraryBuildInfoFileTask>(TASK_NAME + variant.taskSuffix)
+            }
             return project.tasks.register(
                 TASK_NAME + variant.taskSuffix,
                 CreateLibraryBuildInfoFileTask::class.java
@@ -271,25 +280,24 @@ abstract class CreateLibraryBuildInfoFileTask : DefaultTask() {
 
 // Tasks that create a json files of a project's variant's dependencies
 fun Project.addCreateLibraryBuildInfoFileTasks(extension: AndroidXExtension) {
-    // TODO: this breaks JB publication. Do we need it in our fork?
-//    extension.ifReleasing {
-//        configure<PublishingExtension> {
-//            // Unfortunately, dependency information is only available through internal API
-//            // (See https://github.com/gradle/gradle/issues/21345).
-//            publications.withType(MavenPublicationInternal::class.java).configureEach { mavenPub ->
-//                // Ideally we would be able to inspect each publication after initial configuration
-//                // without using afterEvaluate, but there is not a clean gradle API for doing
-//                // that (see https://github.com/gradle/gradle/issues/21424)
-//                afterEvaluate {
-//                    // java-gradle-plugin creates marker publications that are aliases of the
-//                    // main publication.  We do not track these aliases.
-//                    if (!mavenPub.isAlias) {
-//                        createTaskForComponent(mavenPub, extension.mavenGroup, mavenPub.artifactId)
-//                    }
-//                }
-//            }
-//        }
-//    }
+    extension.ifReleasing {
+        configure<PublishingExtension> {
+            // Unfortunately, dependency information is only available through internal API
+            // (See https://github.com/gradle/gradle/issues/21345).
+            publications.withType(MavenPublicationInternal::class.java).configureEach { mavenPub ->
+                // Ideally we would be able to inspect each publication after initial configuration
+                // without using afterEvaluate, but there is not a clean gradle API for doing
+                // that (see https://github.com/gradle/gradle/issues/21424)
+                afterEvaluate {
+                    // java-gradle-plugin creates marker publications that are aliases of the
+                    // main publication.  We do not track these aliases.
+                    if (!mavenPub.isAlias) {
+                        createTaskForComponent(mavenPub, extension.mavenGroup, mavenPub.artifactId)
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun Project.createTaskForComponent(
