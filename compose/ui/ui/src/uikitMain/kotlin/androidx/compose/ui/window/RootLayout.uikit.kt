@@ -17,18 +17,27 @@
 package androidx.compose.ui.window
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.InternalComposeApi
-import androidx.compose.ui.uikit.LocalSafeAreaState
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntOffset
-import kotlin.math.max
+import androidx.compose.ui.platform.LocalLayoutMargins
+import androidx.compose.ui.platform.LocalSafeArea
+import androidx.compose.ui.platform.PlatformInsets
+import androidx.compose.ui.platform.exclude
 
 @OptIn(InternalComposeApi::class)
 @Composable
-internal actual fun Density.platformOffset(): IntOffset =
-    with(LocalSafeAreaState.current.value) {
-        IntOffset(
-            x = max(left.roundToPx(), right.roundToPx()),
-            y = max(top.roundToPx(), bottom.roundToPx())
-        )
-    }
+internal actual fun platformInsets(): PlatformInsets {
+    return LocalSafeArea.current
+}
+
+@OptIn(InternalComposeApi::class)
+@Composable
+internal actual fun platformOwnerContent(content: @Composable () -> Unit) {
+    val safeArea = LocalSafeArea.current
+    val layoutMargins = LocalLayoutMargins.current
+    CompositionLocalProvider(
+        LocalSafeArea provides PlatformInsets(),
+        LocalLayoutMargins provides layoutMargins.exclude(safeArea),
+        content = content
+    )
+}

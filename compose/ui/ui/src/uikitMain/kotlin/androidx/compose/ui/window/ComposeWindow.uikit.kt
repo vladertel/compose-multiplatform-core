@@ -19,7 +19,9 @@ package androidx.compose.ui.window
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.InternalComposeApi
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.SystemTheme
@@ -33,6 +35,7 @@ import androidx.compose.ui.interop.LocalLayerContainer
 import androidx.compose.ui.interop.LocalUIKitInteropContext
 import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.interop.UIKitInteropContext
+import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
@@ -46,7 +49,7 @@ import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.skia.Surface
+import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.OSVersion
 import org.jetbrains.skiko.SkikoKeyboardEvent
@@ -131,6 +134,7 @@ private class AttachedComposeContext(
             view.bottomAnchor.constraintEqualToAnchor(parentView.bottomAnchor)
         )
     }
+
     fun dispose() {
         scene.close()
         view.dispose()
@@ -144,11 +148,13 @@ internal actual class ComposeWindow : UIViewController {
     internal lateinit var configuration: ComposeUIViewControllerConfiguration
     private val keyboardOverlapHeightState = mutableStateOf(0f)
     private var isInsideSwiftUI = false
-    private val safeAreaState = mutableStateOf(IOSInsets())
-    private val layoutMarginsState = mutableStateOf(IOSInsets())
-    private val interopContext = UIKitInteropContext(requestRedraw = {
-        attachedComposeContext?.view?.needRedraw()
-    })
+    private var safeAreaState by mutableStateOf(PlatformInsets())
+    private var layoutMarginsState by mutableStateOf(PlatformInsets())
+    private val interopContext = UIKitInteropContext(
+        requestRedraw = {
+            attachedComposeContext?.view?.needRedraw()
+        }
+    )
 
     /*
      * Initial value is arbitarily chosen to avoid propagating invalid value logic
@@ -293,7 +299,7 @@ internal actual class ComposeWindow : UIViewController {
     fun viewSafeAreaInsetsDidChange() {
         // super.viewSafeAreaInsetsDidChange() // TODO: call super after Kotlin 1.8.20
         view.safeAreaInsets.useContents {
-            safeAreaState.value = IOSInsets(
+            safeAreaState = PlatformInsets(
                 top = top.dp,
                 bottom = bottom.dp,
                 left = left.dp,
@@ -301,7 +307,7 @@ internal actual class ComposeWindow : UIViewController {
             )
         }
         view.directionalLayoutMargins.useContents {
-            layoutMarginsState.value = IOSInsets(
+            layoutMarginsState = PlatformInsets(
                 top = top.dp,
                 bottom = bottom.dp,
                 left = leading.dp,
@@ -601,15 +607,12 @@ internal actual class ComposeWindow : UIViewController {
 
             override fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean =
                 point.useContents {
-                    val hitsInteropView = attachedComposeContext?.scene?.mainOwner?.hitInteropView(
-                        pointerPosition = Offset(
-                            (x * density.density).toFloat(),
-                            (y * density.density).toFloat()
-                        ),
-                        isTouchEvent = true,
-                    ) ?: false
+                    val position = Offset(
+                        (x * density.density).toFloat(),
+                        (y * density.density).toFloat()
+                    )
 
-                    !hitsInteropView
+                    !scene.hitTestInteropView(position)
                 }
 
             override fun onPointerEvent(event: SkikoPointerEvent) {
@@ -634,19 +637,20 @@ internal actual class ComposeWindow : UIViewController {
                 )
             }
 
-            override fun retrieveCATransactionCommands(): List<() -> Unit> =
-                interopContext.getActionsAndClear()
+            override fun retrieveInteropTransaction(): UIKitInteropTransaction =
+                interopContext.retrieve()
 
-            override fun draw(surface: Surface, targetTimestamp: NSTimeInterval) {
+            override fun render(canvas: Canvas, targetTimestamp: NSTimeInterval) {
                 // The calculation is split in two instead of
                 // `(targetTimestamp * 1e9).toLong()`
                 // to avoid losing precision for fractional part
                 val integral = floor(targetTimestamp)
                 val fractional = targetTimestamp - integral
                 val secondsToNanos = 1_000_000_000L
-                val nanos = integral.roundToLong() * secondsToNanos + (fractional * 1e9).roundToLong()
+                val nanos =
+                    integral.roundToLong() * secondsToNanos + (fractional * 1e9).roundToLong()
 
-                scene.render(surface.canvas, nanos)
+                scene.render(canvas, nanos)
             }
         }
 
@@ -658,8 +662,8 @@ internal actual class ComposeWindow : UIViewController {
                     LocalLayerContainer provides view,
                     LocalUIViewController provides this,
                     LocalKeyboardOverlapHeightState provides keyboardOverlapHeightState,
-                    LocalSafeAreaState provides safeAreaState,
-                    LocalLayoutMarginsState provides layoutMarginsState,
+                    LocalSafeArea provides safeAreaState,
+                    LocalLayoutMargins provides layoutMarginsState,
                     LocalInterfaceOrientationState provides interfaceOrientationState,
                     LocalSystemTheme provides systemTheme.value,
                     LocalUIKitInteropContext provides interopContext,
@@ -679,25 +683,25 @@ internal actual class ComposeWindow : UIViewController {
 }
 
 private fun UIViewController.checkIfInsideSwiftUI(): Boolean {
-        var parent = parentViewController
+    var parent = parentViewController
 
-        while (parent != null) {
-            val isUIHostingController = parent.`class`()?.let {
-                val className = NSStringFromClass(it)
-                // SwiftUI UIHostingController has mangled name depending on generic instantiation type,
-                // It always contains UIHostingController substring though
-                return className.contains("UIHostingController")
-            } ?: false
+    while (parent != null) {
+        val isUIHostingController = parent.`class`()?.let {
+            val className = NSStringFromClass(it)
+            // SwiftUI UIHostingController has mangled name depending on generic instantiation type,
+            // It always contains UIHostingController substring though
+            return className.contains("UIHostingController")
+        } ?: false
 
-            if (isUIHostingController) {
-                return true
-            }
-
-            parent = parent.parentViewController
+        if (isUIHostingController) {
+            return true
         }
 
-        return false
+        parent = parent.parentViewController
     }
+
+    return false
+}
 
 private fun UIUserInterfaceStyle.asComposeSystemTheme(): SystemTheme {
     return when (this) {

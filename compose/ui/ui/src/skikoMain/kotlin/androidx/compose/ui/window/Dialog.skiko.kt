@@ -35,10 +35,10 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.requireCurrent
 import androidx.compose.ui.semantics.dialog
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.center
 
@@ -58,6 +58,8 @@ private val DefaultScrimColor = Color.Black.copy(alpha = DefaultScrimOpacity)
  * dialog's bounds. If true, clicking outside the dialog will call onDismissRequest.
  * @property usePlatformDefaultWidth Whether the width of the dialog's content should be limited to
  * the platform default, which is smaller than the screen width.
+ * @property usePlatformInsets Whether the width of the popup's content should be limited by
+ * platform insets.
  * @property scrimColor Color of background fill.
  */
 @Immutable
@@ -65,6 +67,7 @@ actual class DialogProperties @ExperimentalComposeUiApi constructor(
     actual val dismissOnBackPress: Boolean = true,
     actual val dismissOnClickOutside: Boolean = true,
     actual val usePlatformDefaultWidth: Boolean = true,
+    val usePlatformInsets: Boolean = true,
     val scrimColor: Color = DefaultScrimColor,
 ) {
     // Constructor with all non-experimental arguments.
@@ -76,7 +79,8 @@ actual class DialogProperties @ExperimentalComposeUiApi constructor(
         dismissOnBackPress = dismissOnBackPress,
         dismissOnClickOutside = dismissOnClickOutside,
         usePlatformDefaultWidth = usePlatformDefaultWidth,
-        scrimColor = DefaultScrimColor
+        usePlatformInsets = true,
+        scrimColor = DefaultScrimColor,
     )
 
     actual constructor(
@@ -97,7 +101,8 @@ actual class DialogProperties @ExperimentalComposeUiApi constructor(
         dismissOnBackPress = dismissOnBackPress,
         dismissOnClickOutside = dismissOnClickOutside,
         usePlatformDefaultWidth = usePlatformDefaultWidth,
-        scrimColor = DefaultScrimColor
+        usePlatformInsets = true,
+        scrimColor = DefaultScrimColor,
     )
 
     override fun equals(other: Any?): Boolean {
@@ -107,6 +112,7 @@ actual class DialogProperties @ExperimentalComposeUiApi constructor(
         if (dismissOnBackPress != other.dismissOnBackPress) return false
         if (dismissOnClickOutside != other.dismissOnClickOutside) return false
         if (usePlatformDefaultWidth != other.usePlatformDefaultWidth) return false
+        if (usePlatformInsets != other.usePlatformInsets) return false
         if (scrimColor != other.scrimColor) return false
 
         return true
@@ -116,6 +122,7 @@ actual class DialogProperties @ExperimentalComposeUiApi constructor(
         var result = dismissOnBackPress.hashCode()
         result = 31 * result + dismissOnClickOutside.hashCode()
         result = 31 * result + usePlatformDefaultWidth.hashCode()
+        result = 31 * result + usePlatformInsets.hashCode()
         result = 31 * result + scrimColor.hashCode()
         return result
     }
@@ -170,15 +177,19 @@ private fun DialogLayout(
     onOutsidePointerEvent: ((PointerInputEvent) -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
+    val platformInsets = if (properties.usePlatformInsets) {
+        platformInsets()
+    } else {
+        PlatformInsets.Zero
+    }
     RootLayout(
         modifier = modifier,
         focusable = true,
         onOutsidePointerEvent = onOutsidePointerEvent
     ) { owner ->
-        val density = LocalDensity.current
         val measurePolicy = rememberDialogMeasurePolicy(
             properties = properties,
-            platformOffset = with(density) { platformOffset() }
+            platformInsets = platformInsets
         ) {
             owner.bounds = it
         }
@@ -192,14 +203,16 @@ private fun DialogLayout(
 @Composable
 private fun rememberDialogMeasurePolicy(
     properties: DialogProperties,
-    platformOffset: IntOffset,
+    platformInsets: PlatformInsets,
     onBoundsChanged: (IntRect) -> Unit
-) = remember(properties, platformOffset, onBoundsChanged) {
+) = remember(properties, platformInsets, onBoundsChanged) {
     RootMeasurePolicy(
-        platformOffset = platformOffset,
+        platformInsets = platformInsets,
         usePlatformDefaultWidth = properties.usePlatformDefaultWidth
     ) { windowSize, contentSize ->
-        val position = windowSize.center - contentSize.center
+        val position = positionWithInsets(platformInsets, windowSize) {
+            it.center - contentSize.center
+        }
         onBoundsChanged(IntRect(position, contentSize))
         position
     }

@@ -26,8 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.MeasurePolicy
+import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.platform.SkiaBasedOwner
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.requireCurrent
@@ -71,7 +73,9 @@ internal fun RootLayout(
         )
         scene.attach(owner)
         owner to owner.setContent(parent = parentComposition) {
-            content(owner)
+            platformOwnerContent {
+                content(owner)
+            }
         }
     }
     DisposableEffect(Unit) {
@@ -99,12 +103,12 @@ internal fun EmptyLayout(
 )
 
 internal fun RootMeasurePolicy(
-    platformOffset: IntOffset,
+    platformInsets: PlatformInsets,
     usePlatformDefaultWidth: Boolean,
-    calculatePosition: (windowSize: IntSize, contentSize: IntSize) -> IntOffset,
+    calculatePosition: MeasureScope.(windowSize: IntSize, contentSize: IntSize) -> IntOffset,
 ) = MeasurePolicy {measurables, constraints ->
     val platformConstraints = applyPlatformConstrains(
-        constraints, platformOffset, usePlatformDefaultWidth
+        constraints, platformInsets, usePlatformDefaultWidth
     )
     val placeables = measurables.fastMap { it.measure(platformConstraints) }
     val windowSize = IntSize(constraints.maxWidth, constraints.maxHeight)
@@ -122,13 +126,12 @@ internal fun RootMeasurePolicy(
 
 private fun Density.applyPlatformConstrains(
     constraints: Constraints,
-    platformOffset: IntOffset,
+    platformInsets: PlatformInsets,
     usePlatformDefaultWidth: Boolean
 ): Constraints {
-    val platformConstraints = constraints.offset(
-        horizontal = -2 * platformOffset.x,
-        vertical = -2 * platformOffset.y
-    )
+    val horizontal = platformInsets.left.roundToPx() + platformInsets.right.roundToPx()
+    val vertical = platformInsets.top.roundToPx() + platformInsets.bottom.roundToPx()
+    val platformConstraints = constraints.offset(-horizontal, -vertical)
     return if (usePlatformDefaultWidth) {
         platformConstraints.constrain(
             platformDefaultConstrains(constraints)
@@ -138,8 +141,30 @@ private fun Density.applyPlatformConstrains(
     }
 }
 
+internal fun MeasureScope.positionWithInsets(
+    insets: PlatformInsets,
+    size: IntSize,
+    calculatePosition: (size: IntSize) -> IntOffset,
+): IntOffset {
+    val horizontal = insets.left.roundToPx() + insets.right.roundToPx()
+    val vertical = insets.top.roundToPx() + insets.bottom.roundToPx()
+    val sizeWithPadding = IntSize(
+        width = size.width - horizontal,
+        height = size.height - vertical
+    )
+    val position = calculatePosition(sizeWithPadding)
+    val offset = IntOffset(
+        x = insets.left.roundToPx(),
+        y = insets.top.roundToPx()
+    )
+    return position + offset
+}
+
 @Composable
-internal expect fun Density.platformOffset(): IntOffset
+internal expect fun platformInsets(): PlatformInsets
+
+@Composable
+internal expect fun platformOwnerContent(content: @Composable () -> Unit)
 
 private fun Density.platformDefaultConstrains(
     constraints: Constraints
