@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.InternalCoreApi
 import androidx.compose.ui.node.Nodes
 import androidx.compose.ui.node.dispatchForKind
+import androidx.compose.ui.node.has
 import androidx.compose.ui.node.layoutCoordinates
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEach
@@ -53,6 +54,7 @@ internal class HitPathTracker(private val rootCoordinates: LayoutCoordinates) {
      * ordered from ancestor to descendant.
      */
     fun addHitPath(pointerId: PointerId, pointerInputNodes: List<Modifier.Node>) {
+        root.resetIsIn()
         var parent: NodeParent = root
         var merging = true
         eachPin@ for (i in pointerInputNodes.indices) {
@@ -178,6 +180,12 @@ internal open class NodeParent {
         return dispatched
     }
 
+    open fun resetIsIn() {
+        children.forEach {
+            it.resetIsIn()
+        }
+    }
+
     /**
      * Dispatches the cancel event to all child [Node]s.
      */
@@ -235,6 +243,9 @@ internal class Node(val modifierNode: Modifier.Node) : NodeParent() {
     // set.
     val pointerIds: MutableVector<PointerId> = mutableVectorOf()
 
+    private var isIn = true
+    private var hasEntered = false
+
     /**
      * Cached properties that will be set before the main event pass, and reset after the final
      * pass. Since we know that these won't change within the entire pass, we don't need to
@@ -246,8 +257,6 @@ internal class Node(val modifierNode: Modifier.Node) : NodeParent() {
     private val relevantChanges: MutableMap<PointerId, PointerInputChange> = mutableMapOf()
     private var coordinates: LayoutCoordinates? = null
     private var pointerEvent: PointerEvent? = null
-    private var isIn = true
-    private var hasEntered = false
 
     override fun dispatchMainEventPass(
         changes: Map<PointerId, PointerInputChange>,
@@ -468,6 +477,11 @@ internal class Node(val modifierNode: Modifier.Node) : NodeParent() {
         modifierNode.dispatchForKind(Nodes.PointerInput) {
             it.onCancelPointerInput()
         }
+    }
+
+    override fun resetIsIn() {
+        super.resetIsIn()
+        isIn = false
     }
 
     fun markIsIn() {
