@@ -147,7 +147,7 @@ fun <T : UIView> UIKitView(
             if (background == Color.Unspecified) {
                 componentInfo.container.backgroundColor = root.backgroundColor
             } else {
-                componentInfo.container.backgroundColor = parseColor(background)
+                componentInfo.container.backgroundColor = background.toUIColor()
             }
         }
     }
@@ -167,14 +167,13 @@ private object PlaceMeasurePolicy : MeasurePolicy {
         layout(constraints.maxWidth, constraints.maxHeight) {}
 }
 
-private fun parseColor(color: Color): UIColor {
-    return UIColor(
-        red = color.red.toDouble(),
-        green = color.green.toDouble(),
-        blue = color.blue.toDouble(),
-        alpha = color.alpha.toDouble()
+internal fun Color.toUIColor(): UIColor =
+    UIColor(
+        red = red.toDouble(),
+        green = green.toDouble(),
+        blue = blue.toDouble(),
+        alpha = alpha.toDouble()
     )
-}
 
 private class ComponentInfo<T : UIView> {
     lateinit var container: UIView

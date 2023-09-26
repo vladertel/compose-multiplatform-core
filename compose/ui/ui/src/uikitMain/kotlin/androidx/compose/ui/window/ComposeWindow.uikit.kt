@@ -318,7 +318,7 @@ internal actual class ComposeWindow : UIViewController {
 
     override fun loadView() {
         view = UIView().apply {
-            backgroundColor = UIColor.whiteColor
+            backgroundColor = UIColor.clearColor
             setClipsToBounds(true)
         } // rootView needs to interop with UIKit
     }
@@ -329,6 +329,9 @@ internal actual class ComposeWindow : UIViewController {
         PlistSanityCheck.performIfNeeded()
 
         configuration.delegate.viewDidLoad()
+        configuration.onBackgroundColorChange = {
+            attachedComposeContext?.view?.setClearColor(it)
+        }
     }
 
     override fun traitCollectionDidChange(previousTraitCollection: UITraitCollection?) {
@@ -512,7 +515,7 @@ internal actual class ComposeWindow : UIViewController {
         }
 
         val skikoUIView = SkikoUIView()
-
+        skikoUIView.setClearColor(configuration.backgroundColor)
         skikoUIView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(skikoUIView)
 

@@ -11,8 +11,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.LocalUIViewController
+import androidx.compose.ui.interop.UIKitView
 import androidx.compose.ui.window.ComposeUIViewController
+import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.NSLayoutConstraintMeta
+import platform.UIKit.UIColor
+import platform.UIKit.UILabel
 import platform.UIKit.UINavigationController
+import platform.UIKit.UIViewController
+import platform.UIKit.addChildViewController
+import platform.UIKit.didMoveToParentViewController
 import platform.UIKit.navigationController
 
 /*
@@ -36,7 +44,7 @@ val NativeModalWithNaviationExample = Screen.Example("Native modal with navigati
 }
 @Composable
 private fun NativeModalWithNavigation() {
-    Box(Modifier.fillMaxSize().background(Color.DarkGray), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val viewController = LocalUIViewController.current
         Button(onClick = {
             val navigationController = UINavigationController(rootViewController = ComposeUIViewController {
@@ -52,17 +60,65 @@ private fun NativeModalWithNavigation() {
 
 @Composable
 private fun NativeNavigationPage() {
-    Column(Modifier.fillMaxSize().background(Color.DarkGray), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        val navigationController = LocalUIViewController.current.navigationController
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            val navigationController = LocalUIViewController.current.navigationController
 
-        Button(onClick = {
-            navigationController?.pushViewController(
-                ComposeUIViewController {
-                    NativeNavigationPage()
-                }, true
+            val colors = listOf(
+                "White" to Color.White,
+                "Green" to Color.Green,
+                "Black" to Color.Black,
+                "Semitransparent Black" to Color(0x88000000),
+                "Transparent" to Color(0x00000000),
+                "Semitransparent Red" to Color(0x88FF0000),
             )
-        }) {
-            Text("Push")
+
+            for (color in colors) {
+                Button(onClick = {
+                    val viewController = UIViewController()
+                    viewController.view.backgroundColor = UIColor.whiteColor
+
+                    val label = UILabel()
+                    label.textColor = UIColor.blackColor
+                    label.numberOfLines = 0
+                    label.text =
+                        """
+                            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque scelerisque fermentum sem, at vestibulum quam. Donec euismod turpis non augue vestibulum, id varius metus tincidunt
+                        """.trimIndent()
+                    label.translatesAutoresizingMaskIntoConstraints = false
+                    viewController.view.addSubview(label)
+
+                    val composeViewController = ComposeUIViewController(configure = {
+                        backgroundColor = color.second
+                    }) {
+                        NativeNavigationPage()
+                    }
+
+                    viewController.addChildViewController(composeViewController)
+                    composeViewController.view.translatesAutoresizingMaskIntoConstraints = false
+                    viewController.view.addSubview(composeViewController.view)
+                    composeViewController.didMoveToParentViewController(viewController)
+
+                    NSLayoutConstraint.activateConstraints(listOf(
+                        label.topAnchor.constraintEqualToAnchor(viewController.view.topAnchor),
+                        label.bottomAnchor.constraintEqualToAnchor(viewController.view.bottomAnchor),
+                        label.leftAnchor.constraintEqualToAnchor(viewController.view.leftAnchor),
+                        label.rightAnchor.constraintEqualToAnchor(viewController.view.rightAnchor),
+
+                        composeViewController.view.topAnchor.constraintEqualToAnchor(viewController.view.topAnchor),
+                        composeViewController.view.bottomAnchor.constraintEqualToAnchor(viewController.view.bottomAnchor),
+                        composeViewController.view.leftAnchor.constraintEqualToAnchor(viewController.view.leftAnchor),
+                        composeViewController.view.rightAnchor.constraintEqualToAnchor(viewController.view.rightAnchor)
+                    ))
+
+                    navigationController?.pushViewController(
+                        viewController,
+                        animated = true
+                    )
+                }) {
+                    Text(color.first)
+                }
+            }
         }
     }
 }

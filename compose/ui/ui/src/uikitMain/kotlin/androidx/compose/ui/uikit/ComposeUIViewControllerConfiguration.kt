@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.uikit
 
+import androidx.compose.ui.graphics.Color
+
 /**
  * Configuration of ComposeUIViewController behavior.
  */
@@ -30,6 +32,17 @@ class ComposeUIViewControllerConfiguration {
      * UIViewController lifetime events.
      */
     var delegate = object : ComposeUIViewControllerDelegate {}
+
+    /**
+     * Default clear color used when rendering ComposeScene.
+     */
+    var backgroundColor: Color = Color.White
+        set(value) {
+            field = value
+            onBackgroundColorChange(value)
+        }
+
+    internal var onBackgroundColorChange: (Color) -> Unit = { }
 }
 
 /**

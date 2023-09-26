@@ -192,6 +192,8 @@ internal class MetalRedrawer(
     private val metalLayer: CAMetalLayer,
     private val callbacks: MetalRedrawerCallbacks,
 ) {
+    var clearColor = Color.WHITE
+
     // Workaround for KN compiler bug
     // Type mismatch: inferred type is objcnames.protocols.MTLDeviceProtocol but platform.Metal.MTLDeviceProtocol was expected
     @Suppress("USELESS_CAST")
@@ -202,6 +204,9 @@ internal class MetalRedrawer(
     private val context = DirectContext.makeMetal(device.objcPtr(), queue.objcPtr())
     private var lastRenderTimestamp: NSTimeInterval = CACurrentMediaTime()
     private val pictureRecorder = PictureRecorder()
+
+    private val isClearColorOpaque: Boolean
+        get() = Color.getA(clearColor) == 255
 
     // Semaphore for preventing command buffers count more than swapchain size to be scheduled/executed at the same time
     private val inflightSemaphore =
@@ -234,9 +239,6 @@ internal class MetalRedrawer(
         set(value) {
             field = value
 
-            // If active, make metalLayer transparent, opaque otherwise.
-            // Rendering into opaque CAMetalLayer allows direct-to-screen optimization.
-            metalLayer.setOpaque(!value)
             metalLayer.drawsAsynchronously = !value
         }
 
@@ -334,7 +336,7 @@ internal class MetalRedrawer(
                 width.toFloat(),
                 height.toFloat()
             )).also { canvas ->
-                canvas.clear(Color.WHITE)
+                canvas.clear(clearColor)
                 callbacks.render(canvas, lastRenderTimestamp)
             }
 
@@ -377,6 +379,11 @@ internal class MetalRedrawer(
             if (interopTransaction.state == UIKitInteropState.BEGAN) {
                 isInteropActive = true
             }
+
+            // If active, make metalLayer transparent, opaque otherwise.
+            // Rendering into opaque CAMetalLayer allows direct-to-screen optimization.
+            metalLayer.setOpaque(!isInteropActive && isClearColorOpaque)
+
             val presentsWithTransaction =
                 isForcedToPresentWithTransactionEveryFrame || interopTransaction.isNotEmpty()
             metalLayer.presentsWithTransaction = presentsWithTransaction
@@ -414,6 +421,8 @@ internal class MetalRedrawer(
                     if (interopTransaction.state == UIKitInteropState.ENDED) {
                         isInteropActive = false
                     }
+
+                    metalLayer.setOpaque(!isInteropActive && isClearColorOpaque)
                 }
 
                 surface.close()

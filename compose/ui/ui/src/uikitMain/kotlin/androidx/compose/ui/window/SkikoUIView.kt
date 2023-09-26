@@ -16,11 +16,13 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.UIKitInteropAction
 import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.platform.IOSSkikoInput
 import androidx.compose.ui.platform.SkikoUITextInputTraits
 import androidx.compose.ui.platform.TextActions
+import kotlin.math.roundToInt
 import kotlinx.cinterop.*
 import org.jetbrains.skia.Rect
 import platform.CoreGraphics.*
@@ -124,6 +126,21 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
     }
 
     fun needRedraw() = _redrawer.needRedraw()
+
+    /**
+     * Set clear color assuming that color is 32 bit srgb.
+     */
+    fun setClearColor(color: Color) {
+        val convert = { value: Float ->
+            (value * 255.0).roundToInt()
+        }
+        val red = convert(color.red)
+        val green = convert(color.green)
+        val blue = convert(color.blue)
+        val alpha = convert(color.alpha)
+
+        _redrawer.clearColor = (alpha shl 24) + (red shl 16) + (green shl 8) + blue
+    }
 
     var isForcedToPresentWithTransactionEveryFrame by _redrawer::isForcedToPresentWithTransactionEveryFrame
 
