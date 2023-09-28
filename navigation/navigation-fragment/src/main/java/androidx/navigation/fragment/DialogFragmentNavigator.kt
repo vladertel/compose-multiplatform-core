@@ -86,6 +86,7 @@ public class DialogFragmentNavigator(
                                     "dismissed dialog"
                             )
                         }
+                        @Suppress("SyntheticAccessor")
                         poppedEntry?.let { popWithTransition(popIndex, it, false) }
                     }
                 }
