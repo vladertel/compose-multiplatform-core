@@ -20,6 +20,7 @@ import androidx.compose.material.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import java.awt.Point
 import javax.accessibility.AccessibleText
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -55,5 +56,8 @@ class AccessibilityTest {
         assertEquals("d", accessibleText.getBeforeIndex(AccessibleText.CHARACTER, 21))
         assertEquals("world", accessibleText.getBeforeIndex(AccessibleText.WORD, 21))
         assertEquals("Hi world", accessibleText.getBeforeIndex(AccessibleText.SENTENCE, 21))
+
+        assertEquals(0, accessibleText.getIndexAtPoint(Point(0, 0)))
+        assertEquals("Hello world. Hi world.".length, accessibleText.getIndexAtPoint(Point(10000, 10000)))
     }
 }
