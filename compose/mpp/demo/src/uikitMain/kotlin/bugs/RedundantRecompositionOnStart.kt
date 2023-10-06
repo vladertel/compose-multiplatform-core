@@ -16,14 +16,18 @@
 
 package bugs
 
+import androidx.compose.material.Text
 import androidx.compose.mpp.demo.Screen
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalDensity
 
-val IosBugs = Screen.Selection(
-    "IosBugs",
-    UIKitViewAndDropDownMenu,
-    KeyboardEmptyWhiteSpace,
-    KeyboardPasswordType,
-    UIKitRenderSync,
-    DispatchersMainDelayCheck,
-    StartRecompositionCheck
-)
+// https://github.com/JetBrains/compose-multiplatform/issues/3778
+val StartRecompositionCheck = Screen.Example("Start Recomposition Check") {
+    Text("See logs. Density should be printed only once")
+
+    val value = remember(LocalDensity.current) {
+        (1..100).random()
+    }
+    println("Density: ${LocalDensity.current}")
+    println("value is $value")
+}

@@ -665,31 +665,35 @@ internal actual class ComposeWindow : UIViewController {
             }
         }
 
-        scene.setContent(
-            onPreviewKeyEvent = inputServices::onPreviewKeyEvent,
-            onKeyEvent = { false },
-            content = {
-                CompositionLocalProvider(
-                    LocalLayerContainer provides view,
-                    LocalUIViewController provides this,
-                    LocalKeyboardOverlapHeightState provides keyboardOverlapHeightState,
-                    LocalSafeArea provides safeAreaState,
-                    LocalLayoutMargins provides layoutMarginsState,
-                    LocalInterfaceOrientationState provides interfaceOrientationState,
-                    LocalSystemTheme provides systemTheme.value,
-                    LocalUIKitInteropContext provides interopContext,
-                ) {
-                    content()
+        fun onReadyToSetContent() {
+            scene.setContent(
+                onPreviewKeyEvent = inputServices::onPreviewKeyEvent,
+                onKeyEvent = { false },
+                content = {
+                    CompositionLocalProvider(
+                        LocalLayerContainer provides view,
+                        LocalUIViewController provides this,
+                        LocalKeyboardOverlapHeightState provides keyboardOverlapHeightState,
+                        LocalSafeArea provides safeAreaState,
+                        LocalLayoutMargins provides layoutMarginsState,
+                        LocalInterfaceOrientationState provides interfaceOrientationState,
+                        LocalSystemTheme provides systemTheme.value,
+                        LocalUIKitInteropContext provides interopContext,
+                    ) {
+                        content()
+                    }
+                },
+            )
+        }
+
+        skikoUIView.onAttachedToWindow = {
+            attachedComposeContext =
+                AttachedComposeContext(scene, skikoUIView, interopContext).also {
+                    it.setConstraintsToFillView(view)
+                    updateLayout(it)
                 }
-            },
-        )
-
-
-        attachedComposeContext =
-            AttachedComposeContext(scene, skikoUIView, interopContext).also {
-                it.setConstraintsToFillView(view)
-                updateLayout(it)
-            }
+            onReadyToSetContent()
+        }
     }
 }
 
