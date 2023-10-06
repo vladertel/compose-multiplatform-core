@@ -16,18 +16,28 @@
 
 package bugs
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material.Text
 import androidx.compose.mpp.demo.Screen
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 
+private var counter = 0
+
 // https://github.com/JetBrains/compose-multiplatform/issues/3778
 val StartRecompositionCheck = Screen.Example("Start Recomposition Check") {
-    Text("See logs. Density should be printed only once")
+    remember {
+        counter = 0
+    }
 
     val value = remember(LocalDensity.current) {
         (1..100).random()
     }
     println("Density: ${LocalDensity.current}")
     println("value is $value")
+
+    Column {
+        Text("Recompositions count = ${++counter} (should be 1)")
+        Text("Density = ${LocalDensity.current}")
+    }
 }
