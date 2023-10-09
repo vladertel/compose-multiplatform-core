@@ -17,19 +17,19 @@
 package bugs
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.Text
 import androidx.compose.mpp.demo.Screen
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 
 private var counter = 0
 
 // https://github.com/JetBrains/compose-multiplatform/issues/3778
 val StartRecompositionCheck = Screen.Example("Start Recomposition Check") {
-    remember {
-        counter = 0
-    }
-
     val value = remember(LocalDensity.current) {
         (1..100).random()
     }
@@ -37,6 +37,8 @@ val StartRecompositionCheck = Screen.Example("Start Recomposition Check") {
     println("value is $value")
 
     Column {
+        Spacer(Modifier.height(64.dp))
+        Text("This demo should be launched using app arguments: `demo=StartRecompositionCheck`\n")
         Text("Recompositions count = ${++counter} (should be 1)")
         Text("Density = ${LocalDensity.current}")
     }

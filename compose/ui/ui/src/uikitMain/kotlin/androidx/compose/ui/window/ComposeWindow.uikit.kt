@@ -665,33 +665,36 @@ internal actual class ComposeWindow : UIViewController {
             }
         }
 
-        fun onReadyToSetContent() {
-            scene.setContent(
-                onPreviewKeyEvent = inputServices::onPreviewKeyEvent,
-                onKeyEvent = { false },
-                content = {
-                    CompositionLocalProvider(
-                        LocalLayerContainer provides view,
-                        LocalUIViewController provides this,
-                        LocalKeyboardOverlapHeightState provides keyboardOverlapHeightState,
-                        LocalSafeArea provides safeAreaState,
-                        LocalLayoutMargins provides layoutMarginsState,
-                        LocalInterfaceOrientationState provides interfaceOrientationState,
-                        LocalSystemTheme provides systemTheme.value,
-                        LocalUIKitInteropContext provides interopContext,
-                        content = content
-                    )
-                },
-            )
-        }
+        val isReadyToShowContent = mutableStateOf(false)
+
+        scene.setContent(
+            onPreviewKeyEvent = inputServices::onPreviewKeyEvent,
+            onKeyEvent = { false },
+            content = {
+                if (!isReadyToShowContent.value) return@setContent
+                CompositionLocalProvider(
+                    LocalLayerContainer provides view,
+                    LocalUIViewController provides this,
+                    LocalKeyboardOverlapHeightState provides keyboardOverlapHeightState,
+                    LocalSafeArea provides safeAreaState,
+                    LocalLayoutMargins provides layoutMarginsState,
+                    LocalInterfaceOrientationState provides interfaceOrientationState,
+                    LocalSystemTheme provides systemTheme.value,
+                    LocalUIKitInteropContext provides interopContext,
+                    content = content
+                )
+            },
+        )
+
+        attachedComposeContext =
+            AttachedComposeContext(scene, skikoUIView, interopContext).also {
+                it.setConstraintsToFillView(view)
+                updateLayout(it)
+            }
 
         skikoUIView.onAttachedToWindow = {
-            attachedComposeContext =
-                AttachedComposeContext(scene, skikoUIView, interopContext).also {
-                    it.setConstraintsToFillView(view)
-                    updateLayout(it)
-                }
-            onReadyToSetContent()
+            attachedComposeContext!!.scene.density = density
+            isReadyToShowContent.value = true
         }
     }
 }
