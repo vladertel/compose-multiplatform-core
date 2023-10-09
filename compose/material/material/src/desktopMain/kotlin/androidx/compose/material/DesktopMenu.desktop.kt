@@ -25,6 +25,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -36,12 +37,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -272,13 +277,19 @@ fun DropdownMenu(
     }
 
     if (expandedStates.currentState || expandedStates.targetState) {
+        val windowMargin = DropdownMenuWindowMargin
         OpenDropdownMenu(
             expandedStates = expandedStates,
-            popupPositionProvider = rememberPopupPositionProviderAtPosition(position!!),
+            popupPositionProvider = rememberPopupPositionProviderAtPosition(
+                position!!,
+                windowMargin = windowMargin
+            ),
             scrollState = scrollState,
             onDismissRequest = onDismissRequest,
             focusable = focusable,
-            modifier = modifier,
+            modifier = modifier.limitDropdownMenuContentHeight(
+                windowMargin = windowMargin
+            ),
             content = content
         )
     }
@@ -427,13 +438,18 @@ fun CursorDropdownMenu(
     expandedStates.targetState = expanded
 
     if (expandedStates.currentState || expandedStates.targetState) {
+        val windowMargin = DropdownMenuWindowMargin
         OpenDropdownMenu(
             expandedStates = expandedStates,
-            popupPositionProvider = rememberCursorPositionProvider(),
+            popupPositionProvider = rememberCursorPositionProvider(
+                windowMargin = windowMargin
+            ),
             scrollState = scrollState,
             onDismissRequest = onDismissRequest,
             focusable = focusable,
-            modifier = modifier,
+            modifier = modifier.limitDropdownMenuContentHeight(
+                windowMargin = windowMargin
+            ),
             content = content
         )
     }
@@ -504,3 +520,13 @@ fun Modifier.contextMenuOpenDetector(
         this
     }
 }
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun Modifier.limitDropdownMenuContentHeight(windowMargin: Dp) = composed {
+    val density = LocalDensity.current
+    val containerSize = LocalWindowInfo.current.containerSize
+    val maxHeight = with(density) { containerSize.height.toDp() } - windowMargin * 2
+    this.sizeIn(maxHeight = maxHeight)
+}
+
+private val DropdownMenuWindowMargin = 4.dp
