@@ -85,6 +85,8 @@ internal class LayoutNodeDrawScope(
         drawNode.dispatchForKind(Nodes.Draw) {
             drawDirect(canvas, size, coordinator, it)
         }
+
+        drawRect()
     }
 
     internal fun drawDirect(
