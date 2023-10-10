@@ -22,6 +22,8 @@ import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.ObserverHandle
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.ComposeScene
 import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.SystemTheme
@@ -33,7 +35,6 @@ import androidx.compose.ui.input.pointer.HistoricalChange
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.input.pointer.toCompose
 import androidx.compose.ui.interop.LocalLayerContainer
 import androidx.compose.ui.interop.LocalUIKitInteropContext
 import androidx.compose.ui.interop.LocalUIViewController
@@ -43,15 +44,12 @@ import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.util.fastMap
 import kotlin.math.floor
 import kotlin.math.roundToInt
-import kotlin.math.roundToLong
 import kotlin.math.roundToLong
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCAction
-import kotlinx.cinterop.objcPtr
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.Dispatchers
@@ -59,8 +57,6 @@ import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.OSVersion
 import org.jetbrains.skiko.SkikoKeyboardEvent
-import org.jetbrains.skiko.SkikoPointerEvent
-import org.jetbrains.skiko.currentNanoTime
 import platform.CoreGraphics.CGPoint
 import org.jetbrains.skiko.available
 import platform.CoreGraphics.CGAffineTransformIdentity
@@ -161,6 +157,8 @@ internal actual class ComposeWindow : UIViewController {
     private var isInsideSwiftUI = false
     private var safeAreaState by mutableStateOf(PlatformInsets())
     private var layoutMarginsState by mutableStateOf(PlatformInsets())
+    private var windowReadyObserver: ObserverHandle? = null
+    private val readyPropertiesCounter = mutableStateOf(0) // currently it should become 2
 
     /*
      * Initial value is arbitarily chosen to avoid propagating invalid value logic
@@ -320,6 +318,7 @@ internal actual class ComposeWindow : UIViewController {
                 bottom = bottom.dp,
             )
         }
+        readyPropertiesCounter.value++
     }
 
     override fun loadView() {
@@ -510,6 +509,8 @@ internal actual class ComposeWindow : UIViewController {
     actual fun dispose() {
         attachedComposeContext?.dispose()
         attachedComposeContext = null
+        windowReadyObserver?.dispose()
+        windowReadyObserver = null
     }
 
     private fun attachComposeIfNeeded() {
@@ -665,26 +666,34 @@ internal actual class ComposeWindow : UIViewController {
             }
         }
 
-        val isReadyToShowContent = mutableStateOf(false)
 
-        scene.setContent(
-            onPreviewKeyEvent = inputServices::onPreviewKeyEvent,
-            onKeyEvent = { false },
-            content = {
-                if (!isReadyToShowContent.value) return@setContent
-                CompositionLocalProvider(
-                    LocalLayerContainer provides view,
-                    LocalUIViewController provides this,
-                    LocalKeyboardOverlapHeightState provides keyboardOverlapHeightState,
-                    LocalSafeArea provides safeAreaState,
-                    LocalLayoutMargins provides layoutMarginsState,
-                    LocalInterfaceOrientationState provides interfaceOrientationState,
-                    LocalSystemTheme provides systemTheme.value,
-                    LocalUIKitInteropContext provides interopContext,
-                    content = content
-                )
-            },
-        )
+        fun onReadyToSetContent() {
+            scene.setContent(
+                onPreviewKeyEvent = inputServices::onPreviewKeyEvent,
+                onKeyEvent = { false },
+                content = {
+                    CompositionLocalProvider(
+                        LocalLayerContainer provides view,
+                        LocalUIViewController provides this,
+                        LocalKeyboardOverlapHeightState provides keyboardOverlapHeightState,
+                        LocalSafeArea provides safeAreaState,
+                        LocalLayoutMargins provides layoutMarginsState,
+                        LocalInterfaceOrientationState provides interfaceOrientationState,
+                        LocalSystemTheme provides systemTheme.value,
+                        LocalUIKitInteropContext provides interopContext,
+                        content = content
+                    )
+                },
+            )
+        }
+
+        windowReadyObserver = Snapshot.registerGlobalWriteObserver {
+            if (readyPropertiesCounter.value == 2) {
+                windowReadyObserver?.dispose()
+                windowReadyObserver = null
+                onReadyToSetContent()
+            }
+        }
 
         attachedComposeContext =
             AttachedComposeContext(scene, skikoUIView, interopContext).also {
@@ -693,8 +702,8 @@ internal actual class ComposeWindow : UIViewController {
             }
 
         skikoUIView.onAttachedToWindow = {
-            attachedComposeContext!!.scene.density = density
-            isReadyToShowContent.value = true
+            scene.density = density
+            readyPropertiesCounter.value++
         }
     }
 }
