@@ -888,6 +888,17 @@ class ComposeScene internal constructor(
          * Pressure of the pointer. 0.0 - no pressure, 1.0 - average pressure
          */
         val pressure: Float = 1.0f,
+
+        /**
+         * High-frequency pointer moves in between the current event and the last event.
+         * can be used for extra accuracy when touchscreen rate exceeds framerate.
+         *
+         * Can be empty, if a platform doesn't provide any.
+         *
+         * For example, on iOS this list is populated using the data of.
+         * https://developer.apple.com/documentation/uikit/uievent/1613808-coalescedtouchesfortouch?language=objc
+         */
+        val historical: List<HistoricalChange> = emptyList()
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -961,6 +972,8 @@ private fun pointerInputEvent(
                 it.pressed,
                 it.pressure,
                 it.type,
+                issuesEnterExit = it.type == PointerType.Mouse,
+                historical = it.historical,
                 scrollDelta = scrollDelta
             )
         },

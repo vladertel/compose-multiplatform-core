@@ -14,18 +14,9 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.window
+package androidx.compose.ui.input.pointer.util
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.InternalComposeApi
-import androidx.compose.ui.platform.PlatformInsets
-
-@OptIn(InternalComposeApi::class)
-@Composable
-internal actual fun platformInsets(): PlatformInsets =
-    PlatformInsets.Zero
-
-@Composable
-internal actual fun platformOwnerContent(content: @Composable () -> Unit) {
-    content()
-}
+/**
+ * Some platforms (e.g. iOS) ignore certain events during velocity calculation.
+ */
+internal actual fun VelocityTracker.shouldUse(event: PointerInputChange): Boolean = true

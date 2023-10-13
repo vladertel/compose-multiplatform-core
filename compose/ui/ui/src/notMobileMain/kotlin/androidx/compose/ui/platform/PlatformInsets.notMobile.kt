@@ -14,16 +14,6 @@
  * limitations under the License.
  */
 
-package bugs
+package androidx.compose.ui.platform
 
-import androidx.compose.mpp.demo.Screen
-
-val IosBugs = Screen.Selection(
-    "IosBugs",
-    UIKitViewAndDropDownMenu,
-    KeyboardEmptyWhiteSpace,
-    KeyboardPasswordType,
-    UIKitRenderSync,
-    DispatchersMainDelayCheck,
-    StartRecompositionCheck,
-)
+internal actual var PlatformInsetsConfig: InsetsConfig = ZeroInsetsConfig

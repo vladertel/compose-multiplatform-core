@@ -14,16 +14,11 @@
  * limitations under the License.
  */
 
-package bugs
+package androidx.compose.ui.input.pointer.util
 
-import androidx.compose.mpp.demo.Screen
+import androidx.compose.ui.input.pointer.PointerInputChange
 
-val IosBugs = Screen.Selection(
-    "IosBugs",
-    UIKitViewAndDropDownMenu,
-    KeyboardEmptyWhiteSpace,
-    KeyboardPasswordType,
-    UIKitRenderSync,
-    DispatchersMainDelayCheck,
-    StartRecompositionCheck,
-)
+/**
+ * Some platforms (e.g. iOS) ignore certain events during velocity calculation.
+ */
+internal actual fun VelocityTracker.shouldUse(event: PointerInputChange): Boolean = true

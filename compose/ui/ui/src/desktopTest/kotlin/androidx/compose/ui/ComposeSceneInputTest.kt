@@ -236,18 +236,18 @@ class ComposeSceneInputTest {
             PointerEventType.Enter, Offset(20f, 20f) - overlappedPopup.origin)
         independentPopup.events.assertReceivedNoEvents()
 
-        scene.sendPointerEvent(PointerEventType.Move, Offset(20f, 20f))
+        scene.sendPointerEvent(PointerEventType.Move, Offset(21f, 21f))
         background.events.assertReceivedNoEvents()
         cutPopup.events.assertReceivedNoEvents()
         overlappedPopup.events.assertReceivedLast(
-            PointerEventType.Move, Offset(20f, 20f) - overlappedPopup.origin)
+            PointerEventType.Move, Offset(21f, 21f) - overlappedPopup.origin)
         independentPopup.events.assertReceivedNoEvents()
 
-        scene.sendPointerEvent(PointerEventType.Press, Offset(20f, 20f))
+        scene.sendPointerEvent(PointerEventType.Press, Offset(21f, 21f))
         background.events.assertReceivedNoEvents()
         cutPopup.events.assertReceivedNoEvents()
         overlappedPopup.events.assertReceivedLast(
-            PointerEventType.Press, Offset(20f, 20f) - overlappedPopup.origin)
+            PointerEventType.Press, Offset(21f, 21f) - overlappedPopup.origin)
         independentPopup.events.assertReceivedNoEvents()
 
         scene.sendPointerEvent(PointerEventType.Move, Offset(-10f, -10f))
@@ -444,16 +444,11 @@ class ComposeSceneInputTest {
             touch(1f, 1f, pressed = false, id = 1),
             touch(1f, 2f, pressed = false, id = 2),
         )
-        // Position is changed, we need to generate a synthetic Move for this position
-        background.events.assertReceived(
-            PointerEventType.Move,
-            touch(1f, 1f, pressed = true, id = 1),
-            touch(1f, 2f, pressed = true, id = 2),
-        )
+
         background.events.assertReceived(
             PointerEventType.Release,
-            touch(1f, 1f, pressed = false, id = 1),
-            touch(1f, 2f, pressed = true, id = 2),
+            touch(10f, 55f, pressed = false, id = 1),
+            touch(1f, 55f, pressed = true, id = 2),
         )
         background.events.assertReceivedLast(
             PointerEventType.Release,

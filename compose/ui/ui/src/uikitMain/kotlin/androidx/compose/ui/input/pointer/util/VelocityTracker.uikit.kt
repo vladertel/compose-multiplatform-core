@@ -14,22 +14,11 @@
  * limitations under the License.
  */
 
-package androidx.compose.mpp.demo
+package androidx.compose.ui.input.pointer.util
 
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.ui.input.pointer.PointerInputChange
 
-
-// https://github.com/JetBrains/compose-multiplatform/issues/3560
-@Composable
-fun CodeViewerReproducer() {
-    SelectionContainer {
-        LazyColumn {
-            items(100) {
-                Text(text = "Text $it",)
-            }
-        }
-    }
-}
+/**
+ * Some platforms (e.g. iOS) ignore certain events during velocity calculation.
+ */
+internal actual fun VelocityTracker.shouldUse(event: PointerInputChange): Boolean = event.pressed

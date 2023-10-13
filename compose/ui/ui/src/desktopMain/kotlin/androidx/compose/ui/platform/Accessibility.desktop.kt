@@ -17,6 +17,7 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.ui.node.LayoutNode
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -55,12 +56,13 @@ internal class AccessibilityControllerImpl(
         }
 
     @Suppress("UNUSED_PARAMETER")
-    fun fireNewNodeEvent(accessible: ComposeAccessible) {}
+    private fun onNodeAdded(accessible: ComposeAccessible) {}
 
-    @Suppress("UNUSED_PARAMETER")
-    fun fireRemovedNodeEvent(accessible: ComposeAccessible) {}
+    private fun onNodeRemoved(accessible: ComposeAccessible) {
+        accessible.removed = true
+    }
 
-    fun fireChangedNodeEvent(
+    private fun onNodeChanged(
         component: ComposeAccessible,
         previousSemanticsNode: SemanticsNode,
         newSemanticsNode: SemanticsNode
@@ -70,21 +72,21 @@ internal class AccessibilityControllerImpl(
             if (entry.value != prev) {
                 when (entry.key) {
                     SemanticsProperties.Text -> {
-                        component.accessibleContext.firePropertyChange(
+                        component.composeAccessibleContext.firePropertyChange(
                             ACCESSIBLE_TEXT_PROPERTY,
                             prev, entry.value
                         )
                     }
 
                     SemanticsProperties.EditableText -> {
-                        component.accessibleContext.firePropertyChange(
+                        component.composeAccessibleContext.firePropertyChange(
                             ACCESSIBLE_TEXT_PROPERTY,
                             prev, entry.value
                         )
                     }
 
                     SemanticsProperties.TextSelectionRange -> {
-                        component.accessibleContext.firePropertyChange(
+                        component.composeAccessibleContext.firePropertyChange(
                             ACCESSIBLE_CARET_PROPERTY,
                             prev, (entry.value as TextRange).start
                         )
@@ -92,13 +94,13 @@ internal class AccessibilityControllerImpl(
 
                     SemanticsProperties.Focused ->
                         if (entry.value as Boolean) {
-                            component.accessibleContext.firePropertyChange(
+                            component.composeAccessibleContext.firePropertyChange(
                                 ACCESSIBLE_STATE_PROPERTY,
                                 null, AccessibleState.FOCUSED
                             )
                             onFocusReceived(component)
                         } else {
-                            component.accessibleContext.firePropertyChange(
+                            component.composeAccessibleContext.firePropertyChange(
                                 ACCESSIBLE_STATE_PROPERTY,
                                 AccessibleState.FOCUSED, null
                             )
@@ -107,17 +109,26 @@ internal class AccessibilityControllerImpl(
                     SemanticsProperties.ToggleableState -> {
                         when (entry.value as ToggleableState) {
                             ToggleableState.On ->
-                                component.accessibleContext.firePropertyChange(
+                                component.composeAccessibleContext.firePropertyChange(
                                     ACCESSIBLE_STATE_PROPERTY,
                                     null, AccessibleState.CHECKED
                                 )
 
                             ToggleableState.Off, ToggleableState.Indeterminate ->
-                                component.accessibleContext.firePropertyChange(
+                                component.composeAccessibleContext.firePropertyChange(
                                     ACCESSIBLE_STATE_PROPERTY,
                                     AccessibleState.CHECKED, null
                                 )
                         }
+                    }
+
+                    SemanticsProperties.ProgressBarRangeInfo -> {
+                        val value = entry.value as ProgressBarRangeInfo
+                        component.composeAccessibleContext.firePropertyChange(
+                            ACCESSIBLE_VALUE_PROPERTY,
+                            prev,
+                            value.current
+                        )
                     }
                 }
             }
@@ -160,10 +171,10 @@ internal class AccessibilityControllerImpl(
             nodes[currentNode.id] = previous[currentNode.id]?.let {
                 val prevSemanticsNode = it.semanticsNode
                 it.semanticsNode = currentNode
-                fireChangedNodeEvent(it, prevSemanticsNode, currentNode)
+                onNodeChanged(it, prevSemanticsNode, currentNode)
                 it
             } ?: ComposeAccessible(currentNode, this).also {
-                fireNewNodeEvent(it)
+                onNodeAdded(it)
             }
 
             // TODO fake nodes?
@@ -178,7 +189,7 @@ internal class AccessibilityControllerImpl(
         findAllSemanticNodesRecursive(rootSemanticNode)
         for ((id, prevNode) in previous.entries) {
             if (nodes[id] == null) {
-                fireRemovedNodeEvent(prevNode)
+                onNodeRemoved(prevNode)
             }
         }
         _currentNodes = nodes

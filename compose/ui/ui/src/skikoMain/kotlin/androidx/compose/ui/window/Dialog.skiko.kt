@@ -34,8 +34,10 @@ import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.InsetsConfig
 import androidx.compose.ui.platform.PlatformInsets
+import androidx.compose.ui.platform.PlatformInsetsConfig
+import androidx.compose.ui.platform.ZeroInsetsConfig
 import androidx.compose.ui.requireCurrent
 import androidx.compose.ui.semantics.dialog
 import androidx.compose.ui.semantics.semantics
@@ -177,11 +179,7 @@ private fun DialogLayout(
     onOutsidePointerEvent: ((PointerInputEvent) -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    val platformInsets = if (properties.usePlatformInsets) {
-        platformInsets()
-    } else {
-        PlatformInsets.Zero
-    }
+    val platformInsets = properties.insetsConfig.safeInsets
     RootLayout(
         modifier = modifier,
         focusable = true,
@@ -193,12 +191,17 @@ private fun DialogLayout(
         ) {
             owner.bounds = it
         }
-        Layout(
-            content = content,
-            measurePolicy = measurePolicy
-        )
+        properties.insetsConfig.excludeSafeInsets {
+            Layout(
+                content = content,
+                measurePolicy = measurePolicy
+            )
+        }
     }
 }
+
+private val DialogProperties.insetsConfig: InsetsConfig
+    get() = if (usePlatformInsets) PlatformInsetsConfig else ZeroInsetsConfig
 
 @Composable
 private fun rememberDialogMeasurePolicy(

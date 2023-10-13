@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package bugs
+package androidx.compose.mpp.demo.bug
 
 import androidx.compose.mpp.demo.Screen
 
-val IosBugs = Screen.Selection(
-    "IosBugs",
-    UIKitViewAndDropDownMenu,
-    KeyboardEmptyWhiteSpace,
-    KeyboardPasswordType,
-    UIKitRenderSync,
-    DispatchersMainDelayCheck,
-    StartRecompositionCheck,
+val BugReproducers = Screen.Selection(
+    "Bug Reproducers",
+    NoRecompositionInLazyGrid,
+    RoundedCornerCrashOnJS,
+    CodeViewerReproducer,
+    SelectionContainerCrash,
 )
