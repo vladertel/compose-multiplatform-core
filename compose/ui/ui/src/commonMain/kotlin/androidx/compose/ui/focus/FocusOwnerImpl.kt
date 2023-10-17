@@ -33,15 +33,15 @@ import androidx.compose.ui.focus.FocusStateImpl.Captured
 import androidx.compose.ui.focus.FocusStateImpl.Inactive
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyInputModifierNode
 import androidx.compose.ui.input.rotary.RotaryScrollEvent
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.NodeKind
 import androidx.compose.ui.node.Nodes
 import androidx.compose.ui.node.ancestors
+import androidx.compose.ui.node.dispatchForKind
 import androidx.compose.ui.node.nearestAncestor
-import androidx.compose.ui.node.visitLocalChildren
+import androidx.compose.ui.node.visitLocalDescendants
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
@@ -53,19 +53,21 @@ import androidx.compose.ui.util.fastForEachReversed
  */
 internal class FocusOwnerImpl(onRequestApplyChangesListener: (() -> Unit) -> Unit) : FocusOwner {
 
-    internal var rootFocusNode = FocusTargetModifierNode()
+    internal var rootFocusNode = FocusTargetNode()
 
     private val focusInvalidationManager = FocusInvalidationManager(onRequestApplyChangesListener)
+
+    override val focusTransactionManager: FocusTransactionManager = FocusTransactionManager()
 
     /**
      * A [Modifier] that can be added to the [Owners][androidx.compose.ui.node.Owner] modifier
      * list that contains the modifiers required by the focus system. (Eg, a root focus modifier).
      */
     // TODO(b/168831247): return an empty Modifier when there are no focusable children.
-    override val modifier: Modifier = object : ModifierNodeElement<FocusTargetModifierNode>() {
+    override val modifier: Modifier = object : ModifierNodeElement<FocusTargetNode>() {
         override fun create() = rootFocusNode
 
-        override fun update(node: FocusTargetModifierNode) = node
+        override fun update(node: FocusTargetNode) {}
 
         override fun InspectorInfo.inspectableProperties() {
             name = "RootFocusTarget"
@@ -87,8 +89,8 @@ internal class FocusOwnerImpl(onRequestApplyChangesListener: (() -> Unit) -> Uni
     override fun takeFocus() {
         // If the focus state is not Inactive, it indicates that the focus state is already
         // set (possibly by dispatchWindowFocusChanged). So we don't update the state.
-        if (rootFocusNode.focusStateImpl == Inactive) {
-            rootFocusNode.focusStateImpl = Active
+        if (rootFocusNode.focusState == Inactive) {
+            rootFocusNode.focusState = Active
             // TODO(b/152535715): propagate focus to children based on child focusability.
             //  moveFocus(FocusDirection.Enter)
         }
@@ -119,22 +121,24 @@ internal class FocusOwnerImpl(onRequestApplyChangesListener: (() -> Unit) -> Uni
 
     @OptIn(ExperimentalComposeUiApi::class)
     override fun clearFocus(force: Boolean, refreshFocusEvents: Boolean) {
-        // Don't clear focus if an item on the focused path has a custom exit specified.
-        if (!force) {
-            when (rootFocusNode.performCustomClearFocus(Exit)) {
-                Redirected, Cancelled, RedirectCancelled -> return
-                None -> { /* Do nothing. */ }
+        focusTransactionManager.withNewTransaction {
+            // Don't clear focus if an item on the focused path has a custom exit specified.
+            if (!force) {
+                when (rootFocusNode.performCustomClearFocus(Exit)) {
+                    Redirected, Cancelled, RedirectCancelled -> return
+                    None -> { /* Do nothing. */ }
+                }
             }
-        }
 
-        // If this hierarchy had focus before clearing it, it indicates that the host view has
-        // focus. So after clearing focus within the compose hierarchy, we should restore focus to
-        // the root focus modifier to maintain consistency with the host view.
-        val rootInitialState = rootFocusNode.focusStateImpl
-        if (rootFocusNode.clearFocus(force, refreshFocusEvents)) {
-            rootFocusNode.focusStateImpl = when (rootInitialState) {
-                Active, ActiveParent, Captured -> Active
-                Inactive -> Inactive
+            // If this hierarchy had focus before clearing it, it indicates that the host view has
+            // focus. So after clearing focus within the compose hierarchy, we should restore focus
+            // to the root focus modifier to maintain consistency with the host view.
+            val rootInitialState = rootFocusNode.focusState
+            if (rootFocusNode.clearFocus(force, refreshFocusEvents)) {
+                rootFocusNode.focusState = when (rootInitialState) {
+                    Active, ActiveParent, Captured -> Active
+                    Inactive -> Inactive
+                }
             }
         }
     }
@@ -166,10 +170,12 @@ internal class FocusOwnerImpl(onRequestApplyChangesListener: (() -> Unit) -> Uni
                 }
                 // If we found a potential next item, move focus to it.
                 // Returning true ends focus search.
-                when (destination.performCustomRequestFocus(focusDirection)) {
-                    Redirected -> true
-                    Cancelled, RedirectCancelled -> { isCancelled = true; true }
-                    None -> destination.performRequestFocus()
+                focusTransactionManager.withNewTransaction {
+                    when (destination.performCustomRequestFocus(focusDirection)) {
+                        Redirected -> true
+                        Cancelled, RedirectCancelled -> { isCancelled = true; true }
+                        None -> destination.performRequestFocus()
+                    }
                 }
             }
         // If we didn't find a potential next item, try to wrap around.
@@ -185,7 +191,7 @@ internal class FocusOwnerImpl(onRequestApplyChangesListener: (() -> Unit) -> Uni
             "Event can't be processed because we do not have an active focus target."
         }
         val focusedKeyInputNode = activeFocusTarget.lastLocalKeyInputNode()
-            ?: activeFocusTarget.nearestAncestor(Nodes.KeyInput)
+            ?: activeFocusTarget.nearestAncestor(Nodes.KeyInput)?.node
 
         focusedKeyInputNode?.traverseAncestors(
             type = Nodes.KeyInput,
@@ -224,7 +230,7 @@ internal class FocusOwnerImpl(onRequestApplyChangesListener: (() -> Unit) -> Uni
         return false
     }
 
-    override fun scheduleInvalidation(node: FocusTargetModifierNode) {
+    override fun scheduleInvalidation(node: FocusTargetNode) {
         focusInvalidationManager.scheduleInvalidation(node)
     }
 
@@ -236,15 +242,15 @@ internal class FocusOwnerImpl(onRequestApplyChangesListener: (() -> Unit) -> Uni
         focusInvalidationManager.scheduleInvalidation(node)
     }
 
-    private inline fun <reified T : DelegatableNode> T.traverseAncestors(
+    private inline fun <reified T : DelegatableNode> DelegatableNode.traverseAncestors(
         type: NodeKind<T>,
         onPreVisit: (T) -> Unit,
         onVisit: (T) -> Unit
     ) {
         val ancestors = ancestors(type)
         ancestors?.fastForEachReversed(onPreVisit)
-        onPreVisit(this)
-        onVisit(this)
+        node.dispatchForKind(type, onPreVisit)
+        node.dispatchForKind(type, onVisit)
         ancestors?.fastForEach(onVisit)
     }
 
@@ -255,12 +261,11 @@ internal class FocusOwnerImpl(onRequestApplyChangesListener: (() -> Unit) -> Uni
         return rootFocusNode.findActiveFocusNode()?.focusRect()
     }
 
-    private fun DelegatableNode.lastLocalKeyInputNode(): KeyInputModifierNode? {
-        var focusedKeyInputNode: KeyInputModifierNode? = null
-        visitLocalChildren(Nodes.FocusTarget or Nodes.KeyInput) { modifierNode ->
+    private fun DelegatableNode.lastLocalKeyInputNode(): Modifier.Node? {
+        var focusedKeyInputNode: Modifier.Node? = null
+        visitLocalDescendants(Nodes.FocusTarget or Nodes.KeyInput) { modifierNode ->
             if (modifierNode.isKind(Nodes.FocusTarget)) return focusedKeyInputNode
 
-            check(modifierNode is KeyInputModifierNode)
             focusedKeyInputNode = modifierNode
         }
         return focusedKeyInputNode

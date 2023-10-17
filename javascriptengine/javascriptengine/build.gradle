@@ -26,7 +26,8 @@ dependencies {
     api("androidx.annotation:annotation:1.3.0")
     api("androidx.concurrent:concurrent-futures:1.0.0")
     api("androidx.core:core:1.1.0")
-    implementation(libs.guavaAndroid)
+    api(libs.guavaAndroid)
+
     androidTestImplementation 'junit:junit:4.12'
     annotationProcessor(libs.nullaway)
     androidTestImplementation(libs.testExtJunit)
@@ -48,6 +49,9 @@ android {
             version 1
         }
     }
+    aaptOptions {
+        noCompress 'js'
+    }
     namespace "androidx.javascriptengine"
 }
 
@@ -56,4 +60,6 @@ androidx {
     type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2022"
     description = "Javascript Engine is a static library you can add to your Android application in order to evaluate JavaScript."
+    additionalDeviceTestApkKeys.add("chrome")
+    metalavaK2UastEnabled = true
 }

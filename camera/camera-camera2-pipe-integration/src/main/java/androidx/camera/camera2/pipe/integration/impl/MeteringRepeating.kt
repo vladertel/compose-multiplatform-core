@@ -78,7 +78,7 @@ class MeteringRepeating(
     override fun onSuggestedStreamSpecUpdated(suggestedStreamSpec: StreamSpec): StreamSpec {
         updateSessionConfig(createPipeline(meteringSurfaceSize).build())
         notifyActive()
-        return StreamSpec.builder(meteringSurfaceSize).build()
+        return suggestedStreamSpec.toBuilder().setResolution(meteringSurfaceSize).build()
     }
 
     override fun onUnbind() {
@@ -193,6 +193,8 @@ class MeteringRepeating(
             )
         }
 
+        override fun getCaptureType() = UseCaseConfigFactory.CaptureType.METERING_REPEATING
+
         override fun getConfig() = config
 
         override fun getInputFormat() = ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE
@@ -229,6 +231,7 @@ class MeteringRepeating(
         override fun setZslDisabled(disabled: Boolean) = this
 
         override fun setHighResolutionDisabled(disabled: Boolean) = this
+        override fun setCaptureType(captureType: UseCaseConfigFactory.CaptureType) = this
 
         override fun build(): MeteringRepeating {
             return MeteringRepeating(cameraProperties, useCaseConfig, displayInfoManager)

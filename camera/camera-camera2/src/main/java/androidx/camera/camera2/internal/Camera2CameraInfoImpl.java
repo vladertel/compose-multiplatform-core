@@ -16,6 +16,9 @@
 
 package androidx.camera.camera2.internal;
 
+import static android.hardware.camera2.CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES;
+import static android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON;
+import static android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION;
 import static android.hardware.camera2.CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING;
 import static android.hardware.camera2.CameraMetadata.SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME;
 import static android.hardware.camera2.CameraMetadata.SENSOR_INFO_TIMESTAMP_SOURCE_UNKNOWN;
@@ -69,6 +72,7 @@ import androidx.lifecycle.Observer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -493,15 +497,45 @@ public final class Camera2CameraInfoImpl implements CameraInfoInternal {
 
     @NonNull
     @Override
-    public List<Range<Integer>> getSupportedFrameRateRanges() {
+    public Set<Range<Integer>> getSupportedFrameRateRanges() {
         Range<Integer>[] availableTargetFpsRanges =
                 mCameraCharacteristicsCompat.get(
                         CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
         if (availableTargetFpsRanges != null) {
-            return Arrays.asList(availableTargetFpsRanges);
+            return new HashSet<>(Arrays.asList(availableTargetFpsRanges));
         } else {
-            return Collections.emptyList();
+            return Collections.emptySet();
         }
+    }
+
+    @Override
+    public boolean isVideoStabilizationSupported() {
+        int[] availableVideoStabilizationModes =
+                mCameraCharacteristicsCompat.get(
+                        CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
+        if (availableVideoStabilizationModes != null) {
+            for (int mode : availableVideoStabilizationModes) {
+                if (mode == CONTROL_VIDEO_STABILIZATION_MODE_ON) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isPreviewStabilizationSupported() {
+        int[] availableVideoStabilizationModes =
+                mCameraCharacteristicsCompat.get(
+                        CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES);
+        if (availableVideoStabilizationModes != null) {
+            for (int mode : availableVideoStabilizationModes) {
+                if (mode == CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

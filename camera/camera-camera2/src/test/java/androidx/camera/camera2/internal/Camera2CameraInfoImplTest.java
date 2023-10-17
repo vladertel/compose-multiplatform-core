@@ -17,11 +17,12 @@
 package androidx.camera.camera2.internal;
 
 import static android.hardware.camera2.CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES;
-
+import static android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF;
+import static android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON;
+import static android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION;
+import static androidx.camera.core.DynamicRange.HLG_10_BIT;
 import static androidx.camera.core.DynamicRange.SDR;
-
 import static com.google.common.truth.Truth.assertThat;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -117,6 +118,8 @@ public class Camera2CameraInfoImplTest {
             new Range<>(30, 30),
             new Range<>(60, 60)
     };
+
+    @RequiresApi(33)
     private static final DynamicRangeProfiles CAMERA0_DYNAMIC_RANGE_PROFILES =
             new DynamicRangeProfiles(new long[]{DynamicRangeProfiles.HLG10, 0, 0});
 
@@ -143,9 +146,6 @@ public class Camera2CameraInfoImplTest {
             new Range<>(12, 30),
             new Range<>(30, 30),
     };
-    private static final DynamicRange HLG10 = new DynamicRange(DynamicRange.FORMAT_HLG,
-            DynamicRange.BIT_DEPTH_10_BIT);
-
     private CameraCharacteristicsCompat mCameraCharacteristics0;
     private CameraManagerCompat mCameraManagerCompat;
     private ZoomControl mMockZoomControl;
@@ -630,19 +630,11 @@ public class Camera2CameraInfoImplTest {
         List<Size> resolutions = cameraInfo.getSupportedResolutions(
                 ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE);
 
-        if (Build.VERSION.SDK_INT == 21) {
-            // TargetAspectRatio workaround should be applied to the StreamConfigurationMapCompat
-            assertThat(resolutions).containsExactly(
-                    new Size(1920, 1080),
-                    new Size(1280, 720)
-            );
-        } else {
-            assertThat(resolutions).containsExactly(
-                    new Size(1920, 1080),
-                    new Size(1280, 720),
-                    new Size(640, 480)
-            );
-        }
+        assertThat(resolutions).containsExactly(
+                new Size(1920, 1080),
+                new Size(1280, 720),
+                new Size(640, 480)
+        );
     }
 
     @Test
@@ -666,8 +658,8 @@ public class Camera2CameraInfoImplTest {
         CameraInfo cameraInfo2 = new Camera2CameraInfoImpl(CAMERA2_ID,
                 mCameraManagerCompat);
 
-        List<Range<Integer>> resultFpsRanges0 = cameraInfo0.getSupportedFrameRateRanges();
-        List<Range<Integer>> resultFpsRanges2 = cameraInfo2.getSupportedFrameRateRanges();
+        Set<Range<Integer>> resultFpsRanges0 = cameraInfo0.getSupportedFrameRateRanges();
+        Set<Range<Integer>> resultFpsRanges2 = cameraInfo2.getSupportedFrameRateRanges();
 
         assertThat(resultFpsRanges0).containsExactly((Object[]) CAMERA0_AE_FPS_RANGES);
         assertThat(resultFpsRanges2).containsExactly((Object[]) CAMERA2_AE_FPS_RANGES);
@@ -681,9 +673,43 @@ public class Camera2CameraInfoImplTest {
         CameraInfo cameraInfo1 = new Camera2CameraInfoImpl(CAMERA1_ID,
                 mCameraManagerCompat);
 
-        List<Range<Integer>> resultFpsRanges1 = cameraInfo1.getSupportedFrameRateRanges();
+        Set<Range<Integer>> resultFpsRanges1 = cameraInfo1.getSupportedFrameRateRanges();
 
         assertThat(resultFpsRanges1).isEmpty();
+    }
+
+    /**
+     * Test for preview stabilization.
+     */
+    @Test
+    public void cameraInfo_isPreviewStabilizationSupported()
+            throws CameraAccessExceptionCompat {
+        init(/* hasAvailableCapabilities = */ false);
+
+        // Camera0
+        Camera2CameraInfoImpl cameraInfo0 = new Camera2CameraInfoImpl(CAMERA0_ID,
+                mCameraManagerCompat);
+
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            assertThat(cameraInfo0.isPreviewStabilizationSupported()).isTrue();
+        } else {
+            assertThat(cameraInfo0.isPreviewStabilizationSupported()).isFalse();
+        }
+        assertThat(cameraInfo0.isVideoStabilizationSupported()).isTrue();
+
+        // Camera1
+        Camera2CameraInfoImpl cameraInfo1 = new Camera2CameraInfoImpl(CAMERA1_ID,
+                mCameraManagerCompat);
+
+        assertThat(cameraInfo1.isPreviewStabilizationSupported()).isFalse();
+        assertThat(cameraInfo0.isVideoStabilizationSupported()).isTrue();
+
+        // Camera2
+        Camera2CameraInfoImpl cameraInfo2 = new Camera2CameraInfoImpl(CAMERA2_ID,
+                mCameraManagerCompat);
+        assertThat(cameraInfo2.isPreviewStabilizationSupported()).isFalse();
+        assertThat(cameraInfo2.isVideoStabilizationSupported()).isFalse();
     }
 
     @Test
@@ -709,7 +735,7 @@ public class Camera2CameraInfoImplTest {
                 CAMERA0_ID, mCameraManagerCompat);
 
         Set<DynamicRange> supportedDynamicRanges = cameraInfo.getSupportedDynamicRanges();
-        assertThat(supportedDynamicRanges).containsExactly(SDR, HLG10);
+        assertThat(supportedDynamicRanges).containsExactly(SDR, HLG_10_BIT);
     }
 
     @Config(maxSdk = 32)
@@ -812,6 +838,24 @@ public class Camera2CameraInfoImplTest {
                     CAMERA0_DYNAMIC_RANGE_PROFILES);
         }
 
+        // Add video stabilization modes
+        if (Build.VERSION.SDK_INT >= 33) {
+            shadowCharacteristics0.set(
+                    CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES,
+                    new int[] {
+                            CONTROL_VIDEO_STABILIZATION_MODE_OFF,
+                            CONTROL_VIDEO_STABILIZATION_MODE_ON,
+                            CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
+                    });
+        } else {
+            shadowCharacteristics0.set(
+                    CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES,
+                    new int[] {
+                            CONTROL_VIDEO_STABILIZATION_MODE_OFF,
+                            CONTROL_VIDEO_STABILIZATION_MODE_ON
+                    });
+        }
+
         // Mock the request capability
         if (hasAvailableCapabilities) {
             shadowCharacteristics0.set(REQUEST_AVAILABLE_CAPABILITIES,
@@ -844,6 +888,14 @@ public class Camera2CameraInfoImplTest {
         // Mock the flash unit availability
         shadowCharacteristics1.set(
                 CameraCharacteristics.FLASH_INFO_AVAILABLE, CAMERA1_FLASH_INFO_BOOLEAN);
+
+        // Add video stabilization modes
+        shadowCharacteristics1.set(
+                CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES,
+                new int[] {
+                        CONTROL_VIDEO_STABILIZATION_MODE_OFF,
+                        CONTROL_VIDEO_STABILIZATION_MODE_ON
+                });
 
         // Mock the supported resolutions
         {
@@ -894,6 +946,13 @@ public class Camera2CameraInfoImplTest {
         shadowCharacteristics2.set(
                 CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
                 CAMERA2_AE_FPS_RANGES);
+
+        // Add video stabilization modes
+        shadowCharacteristics2.set(
+                CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES,
+                new int[] {
+                        CONTROL_VIDEO_STABILIZATION_MODE_OFF
+                });
 
         // Add the camera to the camera service
         ((ShadowCameraManager)

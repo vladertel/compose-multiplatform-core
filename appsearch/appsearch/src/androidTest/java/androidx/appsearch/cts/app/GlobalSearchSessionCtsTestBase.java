@@ -84,9 +84,10 @@ public abstract class GlobalSearchSessionCtsTestBase {
     protected GlobalSearchSession mGlobalSearchSession;
 
     protected abstract ListenableFuture<AppSearchSession> createSearchSessionAsync(
-            @NonNull String dbName);
+            @NonNull String dbName) throws Exception;
 
-    protected abstract ListenableFuture<GlobalSearchSession> createGlobalSearchSessionAsync();
+    protected abstract ListenableFuture<GlobalSearchSession> createGlobalSearchSessionAsync()
+            throws Exception;
 
     @Before
     public void setUp() throws Exception {
@@ -846,17 +847,19 @@ public abstract class GlobalSearchSessionCtsTestBase {
         // Register observer. Note: the type does NOT exist yet!
         mGlobalSearchSession.registerObserverCallback(
                 mContext.getPackageName(),
-                new ObserverSpec.Builder().addFilterSchemas(AppSearchEmail.SCHEMA_TYPE).build(),
+                new ObserverSpec.Builder().addFilterSchemas("TestAddObserver-Type").build(),
                 EXECUTOR,
                 observer);
 
         // Index a document
-        mDb1.setSchemaAsync(
-                new SetSchemaRequest.Builder().addSchemas(AppSearchEmail.SCHEMA).build()).get();
-        AppSearchEmail email1 = new AppSearchEmail.Builder("namespace", "id1").build();
+        mDb1.setSchemaAsync(new SetSchemaRequest.Builder().addSchemas(
+                new AppSearchSchema.Builder("TestAddObserver-Type").build())
+                        .build()).get();
+        GenericDocument document = new GenericDocument.Builder<GenericDocument.Builder<?>>(
+                "namespace", "testAddObserver-id1", "TestAddObserver-Type").build();
         checkIsBatchResultSuccess(
                 mDb1.putAsync(new PutDocumentsRequest.Builder()
-                        .addGenericDocuments(email1).build()));
+                        .addGenericDocuments(document).build()));
 
         // Make sure the notification was received.
         observer.waitForNotificationCount(2);
@@ -864,14 +867,14 @@ public abstract class GlobalSearchSessionCtsTestBase {
                 new SchemaChangeInfo(
                         mContext.getPackageName(),
                         DB_NAME_1,
-                        /*changedSchemaNames=*/ImmutableSet.of(AppSearchEmail.SCHEMA_TYPE)));
+                        /*changedSchemaNames=*/ImmutableSet.of("TestAddObserver-Type")));
         assertThat(observer.getDocumentChanges()).containsExactly(
                 new DocumentChangeInfo(
                         mContext.getPackageName(),
                         DB_NAME_1,
                         "namespace",
-                        AppSearchEmail.SCHEMA_TYPE,
-                        /*changedDocumentIds=*/ImmutableSet.of("id1"))
+                        "TestAddObserver-Type",
+                        /*changedDocumentIds=*/ImmutableSet.of("testAddObserver-id1"))
         );
     }
 
@@ -1837,15 +1840,22 @@ public abstract class GlobalSearchSessionCtsTestBase {
     public void testGlobalQuery_propertyWeights() throws Exception {
         assumeTrue(mDb1.getFeatures().isFeatureSupported(Features.SEARCH_SPEC_PROPERTY_WEIGHTS));
 
-        // Schema registration
+        // RELEVANCE scoring depends on stats for the namespace+type of the scored document, namely
+        // the average document length. This average document length calculation is only updated
+        // when documents are added and when compaction runs. This means that old deleted
+        // documents of the same namespace and type combination *can* affect RELEVANCE scores
+        // through this channel.
+        // To avoid this, we use a unique namespace that will not be shared by any other test
+        // case or any other run of this test.
         mDb1.setSchemaAsync(
                 new SetSchemaRequest.Builder().addSchemas(AppSearchEmail.SCHEMA).build()).get();
         mDb2.setSchemaAsync(
                 new SetSchemaRequest.Builder().addSchemas(AppSearchEmail.SCHEMA).build()).get();
 
+        String namespace = "propertyWeightsNamespace" + System.currentTimeMillis();
         // Put two documents in separate databases.
         AppSearchEmail emailDb1 =
-                new AppSearchEmail.Builder("namespace", "id1")
+                new AppSearchEmail.Builder(namespace, "id1")
                         .setCreationTimestampMillis(1000)
                         .setSubject("foo")
                         .build();
@@ -1853,7 +1863,7 @@ public abstract class GlobalSearchSessionCtsTestBase {
                 new PutDocumentsRequest.Builder()
                         .addGenericDocuments(emailDb1).build()));
         AppSearchEmail emailDb2 =
-                new AppSearchEmail.Builder("namespace", "id2")
+                new AppSearchEmail.Builder(namespace, "id2")
                         .setCreationTimestampMillis(1000)
                         .setBody("foo")
                         .build();
@@ -1868,6 +1878,7 @@ public abstract class GlobalSearchSessionCtsTestBase {
                 .setPropertyWeights(AppSearchEmail.SCHEMA_TYPE,
                         ImmutableMap.of("subject",
                                 2.0, "body", 0.5))
+                .addFilterNamespaces(namespace)
                 .build());
         List<SearchResult> globalResults = retrieveAllSearchResults(searchResults);
 
@@ -1889,6 +1900,7 @@ public abstract class GlobalSearchSessionCtsTestBase {
                         .setTermMatch(SearchSpec.TERM_MATCH_EXACT_ONLY)
                         .setRankingStrategy(SearchSpec.RANKING_STRATEGY_RELEVANCE_SCORE)
                         .setOrder(SearchSpec.ORDER_DESCENDING)
+                        .addFilterNamespaces(namespace)
                         .build());
         List<SearchResult> resultsWithoutWeights =
                 retrieveAllSearchResults(searchResultsWithoutWeights);

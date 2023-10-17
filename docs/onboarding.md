@@ -524,7 +524,7 @@ the prebuilt checked into
 `{androidx-main-checkout}/prebuilts/androidx/internal/androidx/`. We
 colloquially refer to this two step process of (1) updating `docs-public` and
 (2) checking in a prebuilt artifact into the prebuilts directory as
-[The Prebuilts Dance](/company/teams/androidx/releasing_detailed.md#the-prebuilts-dance™).
+[The Prebuilts Dance](/company/teams/androidx/releasing_prebuilts_dance.md#the-prebuilts-dance™).
 So, to build javadocs that will be published to
 https://developer.android.com/reference/androidx/packages, both of these steps
 need to be completed.
@@ -785,20 +785,26 @@ stanza indicating which tests were used to verify correctness. Any CLs
 implementing bug fixes are expected to include new regression tests specific to
 the issue being fixed.
 
-### Running Tests
+### Running tests {#run-tests}
 
-#### Single Test Class or Method
+Generally, tests in the AndroidX repository should be run through the Android
+Studio UI. You can also run tests from the command line or via remote devices on
+FTL, see
+[Running unit and integration tests](/company/teams/androidx/testing.md#running)
+for details.
 
-1.  Open the desired test file in Android Studio.
-2.  Right-click on a test class or @Test method name and select `Run FooBarTest`
+#### Single test class or method
 
-#### Full Test Package
+1.  Open the desired test file in Android Studio
+2.  Right-click on a test class or `@Test` method name and select `Run <name>`
 
-1.  In the project side panel open the desired module.
-2.  Find the directory with the tests
-3.  Right-click on the directory and select `Run androidx.foobar`
+#### Full test package
 
-### Running Sample Apps
+1.  In the `Project` side panel, open the desired module
+2.  Find the package directory with the tests
+3.  Right-click on the directory and select `Run <package>`
+
+### Running sample apps {#run-samples}
 
 The AndroidX repository has a set of Android applications that exercise AndroidX
 code. These applications can be useful when you want to debug a real running
@@ -965,16 +971,20 @@ repository artifact:
 ./gradlew createArchive
 ```
 
-Using for your alternate (non-AndroidX) version of Android Studio open the
-project's 'build.gradle' and add the following within 'repositories' to make
-Android Gradle Plugin look for binaries in newly built repository:
+Using your alternate (non-AndroidX) version of Android Studio open the project's
+`settings.gradle.kts` and add the following within
+`dependencyResolutionManagement` to make your project look for binaries in the
+newly built repository:
 
-```groovy
-allprojects {
+```kotlin
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        ...
+        google()
+        mavenCentral()
+        // Add this
         maven {
-            url "<path-to-sdk>/out/androidx/build/support_repo/"
+            setUrl("<path-to-sdk>/out/androidx/build/support_repo/")
         }
     }
 }
@@ -993,7 +1003,7 @@ that you would like to test. Example:
 ```
 dependencies {
     ...
-    implementation "androidx.appcompat:appcompat::1.0.0-alpha02"
+    implementation "androidx.appcompat:appcompat:1.0.0-alpha02"
 }
 ```
 

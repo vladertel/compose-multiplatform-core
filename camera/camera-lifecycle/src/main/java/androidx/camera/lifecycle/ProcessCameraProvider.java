@@ -37,7 +37,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
-import androidx.annotation.RestrictTo.Scope;
+import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraEffect;
 import androidx.camera.core.CameraFilter;
@@ -281,13 +281,39 @@ public final class ProcessCameraProvider implements LifecycleCameraProvider {
      *
      * @return A {@link ListenableFuture} representing the shutdown status. Cancellation of this
      * future is a no-op.
-     * @hide
      */
-    @RestrictTo(Scope.TESTS)
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    @VisibleForTesting
     @NonNull
     public ListenableFuture<Void> shutdown() {
-        runOnMainSync(this::unbindAll);
-        mLifecycleCameraRepository.clear();
+        return shutdownAsync();
+    }
+
+    /**
+     * Allows shutting down this {@link ProcessCameraProvider} instance so a new instance can be
+     * retrieved by {@link #getInstance(Context)}.
+     *
+     * <p>Once shutdownAsync is invoked, a new instance can be retrieved with
+     * {@link ProcessCameraProvider#getInstance(Context)}.
+     *
+     * <p>This method should be used for testing purposes only. Along with
+     * {@link #configureInstance(CameraXConfig)}, this allows the process camera provider to be
+     * used in test suites which may need to initialize CameraX in different ways in between tests.
+     *
+     * @return A {@link ListenableFuture} representing the shutdown status. Cancellation of this
+     * future is a no-op.
+     */
+    @VisibleForTesting
+    @NonNull
+    public ListenableFuture<Void> shutdownAsync() {
+        runOnMainSync(() -> {
+            unbindAll();
+            mLifecycleCameraRepository.clear();
+        });
+
+        if (mCameraX != null) {
+            mCameraX.getCameraFactory().getCameraCoordinator().shutdown();
+        }
 
         ListenableFuture<Void> shutdownFuture = mCameraX != null ? mCameraX.shutdown() :
                 Futures.immediateFuture(null);

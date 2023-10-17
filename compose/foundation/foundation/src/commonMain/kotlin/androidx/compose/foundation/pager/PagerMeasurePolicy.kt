@@ -22,8 +22,8 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.lazy.LazyListBeyondBoundsInfo
 import androidx.compose.foundation.lazy.layout.LazyLayoutMeasureScope
+import androidx.compose.foundation.lazy.layout.calculateLazyLayoutPinnedIndices
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.Snapshot
@@ -40,7 +40,7 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun rememberPagerMeasurePolicy(
-    itemProvider: PagerLazyLayoutItemProvider,
+    itemProviderLambda: () -> PagerLazyLayoutItemProvider,
     state: PagerState,
     contentPadding: PaddingValues,
     reverseLayout: Boolean,
@@ -51,19 +51,16 @@ internal fun rememberPagerMeasurePolicy(
     horizontalAlignment: Alignment.Horizontal?,
     verticalAlignment: Alignment.Vertical?,
     pageCount: () -> Int,
-    beyondBoundsInfo: LazyListBeyondBoundsInfo
 ) = remember<LazyLayoutMeasureScope.(Constraints) -> MeasureResult>(
-    contentPadding,
-    pageSpacing,
-    pageSize,
     state,
     contentPadding,
     reverseLayout,
     orientation,
     horizontalAlignment,
     verticalAlignment,
+    pageSpacing,
+    pageSize,
     pageCount,
-    beyondBoundsInfo
 ) {
     { containerConstraints ->
         val isVertical = orientation == Orientation.Vertical
@@ -140,17 +137,24 @@ internal fun rememberPagerMeasurePolicy(
                 pageAvailableSize
             }
         )
+        val itemProvider = itemProviderLambda()
 
         val firstVisiblePage: Int
         val firstVisiblePageOffset: Int
         Snapshot.withoutReadObservation {
-            firstVisiblePage = state.firstVisiblePage
+            firstVisiblePage =
+                state.matchScrollPositionWithKey(itemProvider, state.firstVisiblePage)
             firstVisiblePageOffset = if (state.layoutInfo == EmptyLayoutInfo) {
                 (state.initialPageOffsetFraction * pageAvailableSize).roundToInt()
             } else {
                 state.firstVisiblePageOffset
             }
         }
+
+        val pinnedPages = itemProvider.calculateLazyLayoutPinnedIndices(
+            pinnedItemList = state.pinnedPages,
+            beyondBoundsInfo = state.beyondBoundsInfo
+        )
 
         measurePager(
             beforeContentPadding = beforeContentPadding,
@@ -170,8 +174,7 @@ internal fun rememberPagerMeasurePolicy(
             pagerItemProvider = itemProvider,
             reverseLayout = reverseLayout,
             scrollToBeConsumed = state.scrollToBeConsumed,
-            beyondBoundsInfo = beyondBoundsInfo,
-            pinnedPages = state.pinnedPages,
+            pinnedPages = pinnedPages,
             layout = { width, height, placement ->
                 layout(
                     containerConstraints.constrainWidth(width + totalHorizontalPadding),

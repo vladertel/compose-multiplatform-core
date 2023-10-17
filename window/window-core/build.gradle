@@ -36,8 +36,9 @@ android {
 }
 
 androidx {
-    name = "androidx.window:window-core"
+    name = "WindowManager Core"
     type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2022"
     description = "WindowManager Core Library."
+    metalavaK2UastEnabled = true
 }

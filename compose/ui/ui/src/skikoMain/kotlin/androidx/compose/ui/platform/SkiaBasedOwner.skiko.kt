@@ -29,19 +29,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.PrimaryPressedPointerButtons
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
+import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusDirection.Companion.In
+import androidx.compose.ui.focus.FocusDirection.Companion.Enter
+import androidx.compose.ui.focus.FocusDirection.Companion.Exit
 import androidx.compose.ui.focus.FocusDirection.Companion.Next
-import androidx.compose.ui.focus.FocusDirection.Companion.Out
 import androidx.compose.ui.focus.FocusDirection.Companion.Previous
 import androidx.compose.ui.focus.FocusOwner
 import androidx.compose.ui.focus.FocusOwnerImpl
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposeCanvas
+import androidx.compose.ui.input.InputMode.Companion.Keyboard
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.InputModeManagerImpl
-import androidx.compose.ui.input.InputMode.Companion.Keyboard
 import androidx.compose.ui.input.key.Key.Companion.Back
 import androidx.compose.ui.input.key.Key.Companion.DirectionCenter
 import androidx.compose.ui.input.key.Key.Companion.Tab
@@ -57,9 +59,12 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
+import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.ProcessResult
 import androidx.compose.ui.input.pointer.TestPointerInputEventData
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.PlacementScope
 import androidx.compose.ui.layout.RootMeasurePolicy
 import androidx.compose.ui.modifier.ModifierLocalManager
 import androidx.compose.ui.node.InternalCoreApi
@@ -69,22 +74,18 @@ import androidx.compose.ui.node.MeasureAndLayoutDelegate
 import androidx.compose.ui.node.Owner
 import androidx.compose.ui.node.OwnerSnapshotObserver
 import androidx.compose.ui.node.RootForTest
-import androidx.compose.ui.semantics.EmptySemanticsModifierNodeElement
+import androidx.compose.ui.semantics.EmptySemanticsElement
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.ExperimentalTextApi
-import androidx.compose.ui.text.input.PlatformTextInputPluginRegistry
-import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.text.font.createFontFamilyResolver
+import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.text.platform.FontLoader
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
-import androidx.compose.ui.text.InternalTextApi
-import androidx.compose.ui.text.input.PlatformTextInputPluginRegistryImpl
 import kotlin.coroutines.CoroutineContext
 
 private typealias Command = () -> Unit
@@ -123,7 +124,7 @@ internal class SkiaBasedOwner(
 
     override val sharedDrawScope = LayoutNodeDrawScope()
 
-    private val semanticsModifier = EmptySemanticsModifierNodeElement
+    private val semanticsModifier = EmptySemanticsElement
 
     override val focusOwner: FocusOwner = FocusOwnerImpl {
         registerOnEndApplyChangesListener(it)
@@ -202,7 +203,9 @@ internal class SkiaBasedOwner(
     init {
         snapshotObserver.startObserving()
         root.attach(this)
-        focusOwner.takeFocus()
+        focusOwner.focusTransactionManager.withNewTransaction {
+            focusOwner.takeFocus()
+        }
     }
 
     fun dispose() {
@@ -211,13 +214,6 @@ internal class SkiaBasedOwner(
     }
 
     override val textInputService = TextInputService(platformInputService)
-
-    @Suppress("UNUSED_ANONYMOUS_PARAMETER")
-    @OptIn(InternalTextApi::class)
-    override val platformTextInputPluginRegistry: PlatformTextInputPluginRegistry
-        get() = PlatformTextInputPluginRegistryImpl { factory, platformTextInput ->
-            TODO("See https://issuetracker.google.com/267235947")
-        }
 
     @Deprecated(
         "fontLoader is deprecated, use fontFamilyResolver",
@@ -236,6 +232,8 @@ internal class SkiaBasedOwner(
     override val textToolbar = DefaultTextToolbar()
 
     override val semanticsOwner: SemanticsOwner = SemanticsOwner(root)
+
+    override val dragAndDropManager: DragAndDropManager get() = TODO("Not yet implemented")
 
     override val autofillTree = AutofillTree()
 
@@ -299,6 +297,8 @@ internal class SkiaBasedOwner(
     var contentSize = IntSize.Zero
         private set
 
+    override val placementScope: Placeable.PlacementScope = PlacementScope(this)
+
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
         if (
@@ -329,13 +329,18 @@ internal class SkiaBasedOwner(
     override fun onRequestMeasure(
         layoutNode: LayoutNode,
         affectsLookahead: Boolean,
-        forceRequest: Boolean
+        forceRequest: Boolean,
+        scheduleMeasureAndLayout: Boolean
     ) {
         if (affectsLookahead) {
-            if (measureAndLayoutDelegate.requestLookaheadRemeasure(layoutNode, forceRequest)) {
+            if (measureAndLayoutDelegate.requestLookaheadRemeasure(layoutNode, forceRequest) &&
+                scheduleMeasureAndLayout
+            ) {
                 requestLayout()
             }
-        } else if (measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest)) {
+        } else if (measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest) &&
+            scheduleMeasureAndLayout
+        ) {
             requestLayout()
         }
     }
@@ -383,8 +388,8 @@ internal class SkiaBasedOwner(
     override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
         return when (keyEvent.key) {
             Tab -> if (keyEvent.isShiftPressed) Previous else Next
-            DirectionCenter -> In
-            Back -> Out
+            DirectionCenter -> Enter
+            Back -> Exit
             else -> null
         }
     }
@@ -394,6 +399,8 @@ internal class SkiaBasedOwner(
     override fun calculateLocalPosition(positionInWindow: Offset): Offset = positionInWindow
 
     override fun localToScreen(localPosition: Offset): Offset = localPosition
+
+    override fun localToScreen(localTransform: Matrix) {}
 
     override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
 
@@ -500,6 +507,12 @@ internal class SkiaBasedOwner(
     override fun registerOnLayoutCompletedListener(listener: Owner.OnLayoutCompletedListener) {
         measureAndLayoutDelegate.registerOnLayoutCompletedListener(listener)
         requestLayout()
+    }
+
+    override suspend fun textInputSession(
+        session: suspend PlatformTextInputSessionScope.() -> Nothing
+    ): Nothing {
+        component.textInputSession(session)
     }
 
     // A Stub for the PointerIconService required in Owner.kt

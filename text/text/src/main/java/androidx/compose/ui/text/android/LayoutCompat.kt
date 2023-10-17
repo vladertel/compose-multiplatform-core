@@ -28,10 +28,7 @@ import androidx.annotation.IntRange
 /**
  * LayoutCompat class which provides all supported attributes by framework, and also defines
  * default value of those attributes for Compose.
- *
- * @suppress
  */
-@InternalPlatformTextApi
 internal object LayoutCompat {
     const val ALIGN_NORMAL = 0
     const val ALIGN_OPPOSITE = 1
@@ -59,12 +56,17 @@ internal object LayoutCompat {
     const val HYPHENATION_FREQUENCY_NONE = Layout.HYPHENATION_FREQUENCY_NONE
     const val HYPHENATION_FREQUENCY_NORMAL = Layout.HYPHENATION_FREQUENCY_NORMAL
     const val HYPHENATION_FREQUENCY_NORMAL_FAST = Layout.HYPHENATION_FREQUENCY_NORMAL_FAST
+    const val HYPHENATION_FREQUENCY_FULL = Layout.HYPHENATION_FREQUENCY_FULL
+    const val HYPHENATION_FREQUENCY_FULL_FAST = Layout.HYPHENATION_FREQUENCY_FULL_FAST
 
     @Retention(AnnotationRetention.SOURCE)
     @IntDef(
+        HYPHENATION_FREQUENCY_NONE,
         HYPHENATION_FREQUENCY_NORMAL,
         HYPHENATION_FREQUENCY_NORMAL_FAST,
-        HYPHENATION_FREQUENCY_NONE
+        HYPHENATION_FREQUENCY_FULL,
+        HYPHENATION_FREQUENCY_FULL_FAST
+
     )
     internal annotation class HyphenationFrequency
 
@@ -167,9 +169,7 @@ internal object LayoutCompat {
  * if the offset it not a line broken offset.
  * @return the line number
  *
- * @suppress
  */
-@InternalPlatformTextApi
 internal fun Layout.getLineForOffset(@IntRange(from = 0) offset: Int, upstream: Boolean): Int {
     if (offset <= 0) return 0
     if (offset >= text.length) return lineCount - 1

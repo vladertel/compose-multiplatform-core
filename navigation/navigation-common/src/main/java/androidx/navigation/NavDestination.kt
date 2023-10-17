@@ -64,7 +64,6 @@ public open class NavDestination(
     @Target(AnnotationTarget.ANNOTATION_CLASS, AnnotationTarget.CLASS)
     public annotation class ClassType(val value: KClass<*>)
 
-    /** @suppress */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public class DeepLinkMatch(
         public val destination: NavDestination,
@@ -143,7 +142,6 @@ public open class NavDestination(
      * destination is added to a NavGraph via [NavGraph.addDestination].
      */
     public var parent: NavGraph? = null
-        /** @suppress */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public set
     private var idName: String? = null
@@ -232,11 +230,8 @@ public open class NavDestination(
             field = route
         }
 
-    /**
-     * @hide
-     */
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public open val displayName: String
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         get() = idName ?: id.toString()
 
     /**
@@ -385,7 +380,6 @@ public open class NavDestination(
      * [addDeepLink]
      * @return The matching [NavDestination] and the appropriate [Bundle] of arguments
      * extracted from the Uri, or null if no match was found.
-     * @suppress
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public open fun matchDeepLink(navDeepLinkRequest: NavDeepLinkRequest): DeepLinkMatch? {
@@ -439,7 +433,6 @@ public open class NavDestination(
      * @param previousDestination the previous destination we are starting at
      * @return An array containing all of the ids from the previous destination (or the root of
      * the graph if null) to this destination
-     * @suppress
      */
     @JvmOverloads
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -504,7 +497,6 @@ public open class NavDestination(
     /**
      * @return Whether this NavDestination supports outgoing actions
      * @see NavDestination.putAction
-     * @suppress
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public open fun supportsActions(): Boolean {
@@ -587,7 +579,6 @@ public open class NavDestination(
      * Combines the default arguments for this destination with the arguments provided
      * to construct the final set of arguments that should be used to navigate
      * to this destination.
-     * @suppress
      */
     @Suppress("NullableCollection") // Needed for nullable bundle
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -775,7 +766,6 @@ public open class NavDestination(
 
         /**
          * Used internally for NavDestinationTest
-         * @suppress
          */
         @JvmStatic
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -793,7 +783,6 @@ public open class NavDestination(
          * @param id The id to get a display name for
          * @return The resource's name if it is a valid id or just the id itself if it is not
          * a valid resource
-         * @hide
          */
         @JvmStatic
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -809,9 +798,6 @@ public open class NavDestination(
             }
         }
 
-        /**
-         * @hide
-         */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public fun createRoute(route: String?): String =
             if (route != null) "android-app://androidx.navigation/$route" else ""

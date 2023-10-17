@@ -22,9 +22,9 @@ import androidx.room.compiler.processing.XMemberContainer
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.ksp.KspAnnotated.UseSiteFilter.Companion.NO_USE_SITE_OR_METHOD_PARAMETER
 import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticPropertyMethodElement
+import androidx.room.compiler.processing.util.sanitizeAsJavaParameterName
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSPropertySetter
-import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueParameter
 
 internal class KspExecutableParameterElement(
@@ -41,14 +41,19 @@ internal class KspExecutableParameterElement(
 
     override fun isKotlinPropertyParam() = false
 
+    override fun isVarArgs() = parameter.isVararg
+
     override val name: String
         get() = parameter.name?.asString() ?: "_no_param_name"
+
+    override val jvmName: String
+        get() = name.sanitizeAsJavaParameterName(parameterIndex)
 
     override val hasDefaultValue: Boolean
         get() = parameter.hasDefault
 
     override val type: KspType by lazy {
-        asMemberOf(enclosingElement.enclosingElement.type?.ksType)
+        createAsMemberOf(closestMemberContainer.type)
     }
 
     override val closestMemberContainer: XMemberContainer by lazy {
@@ -59,26 +64,28 @@ internal class KspExecutableParameterElement(
         get() = "$name in ${enclosingElement.fallbackLocationText}"
 
     override fun asMemberOf(other: XType): KspType {
-        if (closestMemberContainer.type?.isSameType(other) != false) {
-            return type
+        return if (closestMemberContainer.type?.isSameType(other) != false) {
+            type
+        } else {
+            createAsMemberOf(other)
         }
-        check(other is KspType)
-        return asMemberOf(other.ksType)
     }
 
-    private fun asMemberOf(ksType: KSType?): KspType {
+    private fun createAsMemberOf(container: XType?): KspType {
+        check(container is KspType?)
         return env.wrap(
             originatingReference = parameter.type,
             ksType = parameter.typeAsMemberOf(
                 functionDeclaration = enclosingElement.declaration,
-                ksType = ksType
+                ksType = container?.ksType
             )
         ).copyWithScope(
             KSTypeVarianceResolverScope.MethodParameter(
                 kspExecutableElement = enclosingElement,
                 parameterIndex = parameterIndex,
                 annotated = parameter.type,
-                container = ksType?.declaration
+                container = container?.ksType?.declaration,
+                asMemberOf = container,
             )
         )
     }
@@ -109,7 +116,7 @@ internal class KspExecutableParameterElement(
                     )
                 }
                 is KSPropertySetter -> KspSyntheticPropertyMethodElement.create(
-                    env, parent
+                    env, parent, isSyntheticStatic = false
                 ).parameters.single()
                 else -> error(
                     "Don't know how to create a parameter element whose parent is a " +

@@ -27,7 +27,9 @@ import android.util.Size;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.camera.core.DynamicRange;
 import androidx.camera.core.Logger;
+import androidx.camera.core.impl.stabilization.StabilizationMode;
 import androidx.camera.core.internal.compat.workaround.SurfaceSorter;
 
 import com.google.auto.value.AutoValue;
@@ -110,6 +112,17 @@ public final class SessionConfig {
         public abstract int getSurfaceGroupId();
 
         /**
+         * Returns the dynamic range for this output configuration.
+         *
+         * <p>The dynamic range will determine the dynamic range encoding and profile for pixels in
+         * the surfaces associated with this output configuration.
+         *
+         * <p>If not set, this defaults to {@link DynamicRange#SDR}.
+         */
+        @NonNull
+        public abstract DynamicRange getDynamicRange();
+
+        /**
          * Creates the {@link Builder} instance with specified {@link DeferrableSurface}.
          */
         @NonNull
@@ -118,7 +131,8 @@ public final class SessionConfig {
                     .setSurface(surface)
                     .setSharedSurfaces(Collections.emptyList())
                     .setPhysicalCameraId(null)
-                    .setSurfaceGroupId(SURFACE_GROUP_ID_NONE);
+                    .setSurfaceGroupId(SURFACE_GROUP_ID_NONE)
+                    .setDynamicRange(DynamicRange.SDR);
         }
 
         /**
@@ -155,6 +169,15 @@ public final class SessionConfig {
              */
             @NonNull
             public abstract Builder setSurfaceGroupId(int surfaceGroupId);
+
+            /**
+             * Returns the dynamic range for this output configuration.
+             *
+             * <p>The dynamic range will determine the dynamic range encoding and profile for
+             * pixels in the surfaces associated with this output configuration.
+             */
+            @NonNull
+            public abstract Builder setDynamicRange(@NonNull DynamicRange dynamicRange);
 
             /**
              * Creates the instance.
@@ -409,6 +432,30 @@ public final class SessionConfig {
         }
 
         /**
+         * Set the preview stabilization mode of the SessionConfig.
+         * @param mode {@link StabilizationMode}
+         */
+        @NonNull
+        public Builder setPreviewStabilization(@StabilizationMode.Mode int mode) {
+            if (mode != StabilizationMode.UNSPECIFIED) {
+                mCaptureConfigBuilder.setPreviewStabilization(mode);
+            }
+            return this;
+        }
+
+        /**
+         * Set the video stabilization mode of the SessionConfig.
+         * @param mode {@link StabilizationMode}
+         */
+        @NonNull
+        public Builder setVideoStabilization(@StabilizationMode.Mode int mode) {
+            if (mode != StabilizationMode.UNSPECIFIED) {
+                mCaptureConfigBuilder.setVideoStabilization(mode);
+            }
+            return this;
+        }
+
+        /**
          * Adds a tag to the SessionConfig with a key. For tracking the source.
          */
         @NonNull
@@ -558,10 +605,27 @@ public final class SessionConfig {
         }
 
 
-        /** Add a surface to the set that the session repeatedly writes data to. */
+        /**
+         * Add a surface to the set that the session repeatedly writes data to.
+         *
+         * <p>The dynamic range of this surface will default to {@link DynamicRange#SDR}. To
+         * manually set the dynamic range, use {@link #addSurface(DeferrableSurface, DynamicRange)}.
+         */
         @NonNull
         public Builder addSurface(@NonNull DeferrableSurface surface) {
-            OutputConfig outputConfig = OutputConfig.builder(surface).build();
+            return addSurface(surface, DynamicRange.SDR);
+        }
+
+        /**
+         * Add a surface with the provided dynamic range to the set that the session repeatedly
+         * writes data to.
+         */
+        @NonNull
+        public Builder addSurface(@NonNull DeferrableSurface surface,
+                @NonNull DynamicRange dynamicRange) {
+            OutputConfig outputConfig = OutputConfig.builder(surface)
+                    .setDynamicRange(dynamicRange)
+                    .build();
             mOutputConfigs.add(outputConfig);
             mCaptureConfigBuilder.addSurface(surface);
             return this;
@@ -581,10 +645,28 @@ public final class SessionConfig {
             return this;
         }
 
-        /** Add a surface for the session which only used for single captures. */
+        /**
+         * Add a surface for the session which only used for single captures.
+         *
+         * <p>The dynamic range of this surface will default to {@link DynamicRange#SDR}. To
+         * manually set the dynamic range, use
+         * {@link #addNonRepeatingSurface(DeferrableSurface, DynamicRange)}.
+         */
         @NonNull
         public Builder addNonRepeatingSurface(@NonNull DeferrableSurface surface) {
-            OutputConfig outputConfig = OutputConfig.builder(surface).build();
+            return addNonRepeatingSurface(surface, DynamicRange.SDR);
+        }
+
+        /**
+         * Add a surface with the provided dynamic range for the session which only used for
+         * single captures.
+         */
+        @NonNull
+        public Builder addNonRepeatingSurface(@NonNull DeferrableSurface surface,
+                @NonNull DynamicRange dynamicRange) {
+            OutputConfig outputConfig = OutputConfig.builder(surface)
+                    .setDynamicRange(dynamicRange)
+                    .build();
             mOutputConfigs.add(outputConfig);
             return this;
         }
@@ -637,10 +719,10 @@ public final class SessionConfig {
         public SessionConfig build() {
             return new SessionConfig(
                     new ArrayList<>(mOutputConfigs),
-                    mDeviceStateCallbacks,
-                    mSessionStateCallbacks,
-                    mSingleCameraCaptureCallbacks,
-                    mErrorListeners,
+                    new ArrayList<>(mDeviceStateCallbacks),
+                    new ArrayList<>(mSessionStateCallbacks),
+                    new ArrayList<>(mSingleCameraCaptureCallbacks),
+                    new ArrayList<>(mErrorListeners),
                     mCaptureConfigBuilder.build(),
                     mInputConfiguration);
         }
@@ -691,6 +773,8 @@ public final class SessionConfig {
             }
 
             setOrVerifyExpectFrameRateRange(captureConfig.getExpectedFrameRateRange());
+            setPreviewStabilizationMode(captureConfig.getPreviewStabilizationMode());
+            setVideoStabilizationMode(captureConfig.getVideoStabilizationMode());
 
             TagBundle tagBundle = sessionConfig.getRepeatingCaptureConfig().getTagBundle();
             mCaptureConfigBuilder.addAllTags(tagBundle);
@@ -753,6 +837,18 @@ public final class SessionConfig {
             }
         }
 
+        private void setPreviewStabilizationMode(@StabilizationMode.Mode int mode) {
+            if (mode != StabilizationMode.UNSPECIFIED) {
+                mCaptureConfigBuilder.setPreviewStabilization(mode);
+            }
+        }
+
+        private void setVideoStabilizationMode(@StabilizationMode.Mode int mode) {
+            if (mode != StabilizationMode.UNSPECIFIED) {
+                mCaptureConfigBuilder.setVideoStabilization(mode);
+            }
+        }
+
         private List<DeferrableSurface> getSurfaces() {
             List<DeferrableSurface> surfaces = new ArrayList<>();
             for (OutputConfig outputConfig : mOutputConfigs) {
@@ -790,10 +886,10 @@ public final class SessionConfig {
 
             return new SessionConfig(
                     outputConfigs,
-                    mDeviceStateCallbacks,
-                    mSessionStateCallbacks,
-                    mSingleCameraCaptureCallbacks,
-                    mErrorListeners,
+                    new ArrayList<>(mDeviceStateCallbacks),
+                    new ArrayList<>(mSessionStateCallbacks),
+                    new ArrayList<>(mSingleCameraCaptureCallbacks),
+                    new ArrayList<>(mErrorListeners),
                     mCaptureConfigBuilder.build(),
                     mInputConfiguration);
         }
