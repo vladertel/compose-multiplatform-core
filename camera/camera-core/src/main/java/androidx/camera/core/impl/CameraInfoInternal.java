@@ -18,6 +18,7 @@ package androidx.camera.core.impl;
 
 import android.graphics.ImageFormat;
 import android.graphics.PixelFormat;
+import android.hardware.camera2.CaptureRequest;
 import android.util.Size;
 
 import androidx.annotation.NonNull;
@@ -36,6 +37,10 @@ import java.util.concurrent.Executor;
  * An interface for retrieving camera information.
  *
  * <p>Contains methods for retrieving characteristics for a specific camera.
+ *
+ * <p>{@link #getImplementation()} returns a {@link CameraInfoInternal} instance
+ * that contains the actual implementation and can be cast to an implementation specific class.
+ * If the instance itself is the implementation instance, then it should return <code>this</code>.
  */
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraInfoInternal extends CameraInfo {
@@ -100,6 +105,37 @@ public interface CameraInfoInternal extends CameraInfo {
      */
     @NonNull
     Set<DynamicRange> getSupportedDynamicRanges();
+
+    /**
+     * Returns if preview stabilization is supported on the device.
+     *
+     * @return true if
+     * {@link CaptureRequest#CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION} is supported,
+     * otherwise false.
+     *
+     * @see CaptureRequest#CONTROL_VIDEO_STABILIZATION_MODE
+     */
+    boolean isPreviewStabilizationSupported();
+
+    /**
+     * Returns if video stabilization is supported on the device.
+     *
+     * @return true if {@link CaptureRequest#CONTROL_VIDEO_STABILIZATION_MODE_ON} is supported,
+     * otherwise false.
+     *
+     * @see CaptureRequest#CONTROL_VIDEO_STABILIZATION_MODE
+     */
+    boolean isVideoStabilizationSupported();
+
+    /**
+     * Gets the underlying implementation instance which could be cast into an implementation
+     * specific class for further use in implementation module. Returns <code>this</code> if this
+     * instance is the implementation instance.
+     */
+    @NonNull
+    default CameraInfoInternal getImplementation() {
+        return this;
+    }
 
     /** {@inheritDoc} */
     @NonNull

@@ -19,8 +19,10 @@ package androidx.room.compiler.processing.ksp.synthetic
 import androidx.room.compiler.processing.XExecutableType
 import androidx.room.compiler.processing.XMethodType
 import androidx.room.compiler.processing.XType
+import androidx.room.compiler.processing.XTypeVariableType
 import androidx.room.compiler.processing.ksp.KSTypeVarianceResolverScope
 import androidx.room.compiler.processing.ksp.KspProcessingEnv
+import androidx.room.compiler.processing.ksp.KspType
 import com.google.devtools.ksp.symbol.KSPropertyGetter
 import com.google.devtools.ksp.symbol.KSPropertySetter
 import com.squareup.javapoet.TypeVariableName
@@ -46,6 +48,16 @@ internal sealed class KspSyntheticPropertyMethodType(
         }
     }
 
+    override val typeVariables: List<XTypeVariableType>
+        get() = emptyList()
+
+    @Deprecated(
+        "Use typeVariables property and convert to JavaPoet names.",
+        replaceWith = ReplaceWith(
+            "typeVariables.map { it.asTypeName().toJavaPoet() }",
+            "androidx.room.compiler.codegen.toJavaPoet"
+        )
+    )
     override val typeVariableNames: List<TypeVariableName>
         get() = emptyList()
 
@@ -61,7 +73,7 @@ internal sealed class KspSyntheticPropertyMethodType(
         fun create(
             env: KspProcessingEnv,
             element: KspSyntheticPropertyMethodElement,
-            container: XType?
+            container: KspType?
         ): XMethodType {
             return when (element.accessor) {
                 is KSPropertyGetter ->
@@ -84,7 +96,7 @@ internal sealed class KspSyntheticPropertyMethodType(
     private class Getter(
         env: KspProcessingEnv,
         origin: KspSyntheticPropertyMethodElement,
-        containingType: XType?
+        containingType: KspType?
     ) : KspSyntheticPropertyMethodType(
         env = env,
         origin = origin,
@@ -97,7 +109,8 @@ internal sealed class KspSyntheticPropertyMethodType(
                 origin.field.asMemberOf(containingType)
             }.copyWithScope(
                 KSTypeVarianceResolverScope.PropertyGetterMethodReturnType(
-                    getterMethod = origin as KspSyntheticPropertyMethodElement.Getter
+                    getterMethod = origin as KspSyntheticPropertyMethodElement.Getter,
+                    asMemberOf = containingType
                 )
             )
         }

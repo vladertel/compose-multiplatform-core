@@ -16,11 +16,11 @@
 
 package androidx.camera.video;
 
-import static androidx.camera.core.DynamicRange.FORMAT_HLG;
-import static androidx.camera.core.DynamicRange.HDR_UNSPECIFIED_10_BIT;
-import static androidx.camera.core.DynamicRange.SDR;
-import static androidx.camera.video.internal.BackupHdrProfileEncoderProfilesProvider.DEFAULT_VALIDATOR;
-import static androidx.camera.video.internal.utils.DynamicRangeUtil.VP_TO_DR_FORMAT_MAP;
+import static androidx.camera.core.DynamicRange.BIT_DEPTH_UNSPECIFIED;
+import static androidx.camera.core.DynamicRange.ENCODING_HDR_UNSPECIFIED;
+import static androidx.camera.core.DynamicRange.ENCODING_HLG;
+import static androidx.camera.core.DynamicRange.ENCODING_SDR;
+import static androidx.camera.core.DynamicRange.ENCODING_UNSPECIFIED;
 
 import android.util.Size;
 
@@ -28,35 +28,30 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
-import androidx.annotation.VisibleForTesting;
 import androidx.arch.core.util.Function;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.DynamicRange;
-import androidx.camera.core.Logger;
 import androidx.camera.core.impl.CameraInfoInternal;
 import androidx.camera.core.impl.EncoderProfilesProvider;
 import androidx.camera.core.impl.EncoderProfilesProxy;
 import androidx.camera.core.impl.EncoderProfilesProxy.VideoProfileProxy;
 import androidx.camera.core.impl.Quirks;
 import androidx.camera.core.impl.ResolutionValidatedEncoderProfilesProvider;
-import androidx.camera.core.impl.utils.CompareSizesByArea;
 import androidx.camera.video.internal.BackupHdrProfileEncoderProfilesProvider;
 import androidx.camera.video.internal.DynamicRangeMatchedEncoderProfilesProvider;
 import androidx.camera.video.internal.VideoValidatedEncoderProfilesProxy;
 import androidx.camera.video.internal.compat.quirk.DeviceQuirks;
+import androidx.camera.video.internal.encoder.VideoEncoderConfig;
+import androidx.camera.video.internal.encoder.VideoEncoderInfo;
+import androidx.camera.video.internal.workaround.QualityResolutionModifiedEncoderProfilesProvider;
 import androidx.camera.video.internal.workaround.QualityValidatedEncoderProfilesProvider;
 import androidx.core.util.Preconditions;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 /**
  * RecorderVideoCapabilities is used to query video recording capabilities related to Recorder.
@@ -72,179 +67,146 @@ import java.util.TreeMap;
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public final class RecorderVideoCapabilities implements VideoCapabilities {
 
-    private static final String TAG = "RecorderVideoCapabilities";
+    private final EncoderProfilesProvider mProfilesProvider;
 
-    private final Map<DynamicRange, CapabilitiesByQuality> mCapabilitiesMap = new HashMap<>();
+    private final boolean mIsStabilizationSupported;
+
+    // Mappings of DynamicRange to recording capability information. The mappings are divided
+    // into two collections based on the key's (DynamicRange) category, one for specified
+    // DynamicRange and one for others. Specified DynamicRange means that its bit depth and
+    // format are specified values, not some wildcards, such as: ENCODING_UNSPECIFIED,
+    // ENCODING_HDR_UNSPECIFIED or BIT_DEPTH_UNSPECIFIED.
+    private final Map<DynamicRange, CapabilitiesByQuality>
+            mCapabilitiesMapForFullySpecifiedDynamicRange = new HashMap<>();
+    private final Map<DynamicRange, CapabilitiesByQuality>
+            mCapabilitiesMapForNonFullySpecifiedDynamicRange = new HashMap<>();
 
     /**
      * Creates a RecorderVideoCapabilities.
      *
-     * @param cameraInfoInternal the cameraInfo.
-     * @param backupVideoProfileValidator the validator used to check if the derived backup HDR
-     *                                    {@link VideoProfileProxy} is valid.
+     * @param cameraInfoInternal     the cameraInfo.
+     * @param videoEncoderInfoFinder the VideoEncoderInfo finder.
      * @throws IllegalArgumentException if unable to get the capability information from the
      *                                  CameraInfo.
      */
-    @VisibleForTesting
     RecorderVideoCapabilities(@NonNull CameraInfoInternal cameraInfoInternal,
-            @NonNull Function<VideoProfileProxy, VideoProfileProxy> backupVideoProfileValidator) {
+            @NonNull Function<VideoEncoderConfig, VideoEncoderInfo> videoEncoderInfoFinder) {
         EncoderProfilesProvider encoderProfilesProvider =
                 cameraInfoInternal.getEncoderProfilesProvider();
+
+        // Modify qualities' matching resolution to the value supported by camera.
+        Quirks deviceQuirks = DeviceQuirks.getAll();
+        encoderProfilesProvider = new QualityResolutionModifiedEncoderProfilesProvider(
+                encoderProfilesProvider, deviceQuirks);
 
         // Add backup HDR video information. In the initial version, only HLG10 profile is added.
         if (isHlg10SupportedByCamera(cameraInfoInternal)) {
             encoderProfilesProvider = new BackupHdrProfileEncoderProfilesProvider(
-                    encoderProfilesProvider, backupVideoProfileValidator);
+                    encoderProfilesProvider, videoEncoderInfoFinder);
         }
 
-        // Workaround resolution quirk.
+        // Filter out qualities with unsupported resolutions.
         Quirks cameraQuirks = cameraInfoInternal.getCameraQuirks();
         encoderProfilesProvider = new ResolutionValidatedEncoderProfilesProvider(
                 encoderProfilesProvider, cameraQuirks);
 
-        // Workaround quality quirk.
-        Quirks deviceQuirks = DeviceQuirks.getAll();
+        // Filter out unsupported qualities.
         encoderProfilesProvider = new QualityValidatedEncoderProfilesProvider(
                 encoderProfilesProvider, cameraInfoInternal, deviceQuirks);
+        mProfilesProvider = encoderProfilesProvider;
 
         // Group by dynamic range.
-        for (DynamicRange dynamicRange : getCandidateDynamicRanges(encoderProfilesProvider)) {
-            if (!isDynamicRangeSupported(dynamicRange, cameraInfoInternal)) {
-                continue;
-            }
-
+        for (DynamicRange dynamicRange : cameraInfoInternal.getSupportedDynamicRanges()) {
             // Filter video profiles to include only the profiles match with the target dynamic
             // range.
             EncoderProfilesProvider constrainedProvider =
-                    new DynamicRangeMatchedEncoderProfilesProvider(encoderProfilesProvider,
-                            dynamicRange);
-            CapabilitiesByQuality capabilitiesByQuality =
-                    new CapabilitiesByQuality(constrainedProvider);
+                    new DynamicRangeMatchedEncoderProfilesProvider(mProfilesProvider, dynamicRange);
+            CapabilitiesByQuality capabilities = new CapabilitiesByQuality(constrainedProvider);
 
-            if (!capabilitiesByQuality.getSupportedQualities().isEmpty()) {
-                mCapabilitiesMap.put(dynamicRange, capabilitiesByQuality);
+            if (!capabilities.getSupportedQualities().isEmpty()) {
+                mCapabilitiesMapForFullySpecifiedDynamicRange.put(dynamicRange, capabilities);
             }
         }
-    }
 
-    /**
-     * Gets RecorderVideoCapabilities by the {@link CameraInfo}.
-     *
-     * <p>Should not be called directly, use {@link Recorder#getVideoCapabilities(CameraInfo)}
-     * instead.
-     *
-     * <p>The {@link BackupHdrProfileEncoderProfilesProvider#DEFAULT_VALIDATOR} is used for
-     * validating the derived backup HDR {@link VideoProfileProxy}.
-     */
-    @NonNull
-    static RecorderVideoCapabilities from(@NonNull CameraInfo cameraInfo) {
-        return new RecorderVideoCapabilities((CameraInfoInternal) cameraInfo, DEFAULT_VALIDATOR);
+        // Video stabilization
+        mIsStabilizationSupported = cameraInfoInternal.isVideoStabilizationSupported();
     }
 
     @NonNull
     @Override
     public Set<DynamicRange> getSupportedDynamicRanges() {
-        Set<DynamicRange> dynamicRanges = mCapabilitiesMap.keySet();
-
-        // Remove HDR_UNSPECIFIED_10_BIT from output, since it does not have explicit content.
-        dynamicRanges.remove(HDR_UNSPECIFIED_10_BIT);
-
-        return dynamicRanges;
+        return mCapabilitiesMapForFullySpecifiedDynamicRange.keySet();
     }
 
     @NonNull
     @Override
     public List<Quality> getSupportedQualities(@NonNull DynamicRange dynamicRange) {
-        CapabilitiesByQuality capabilities = mCapabilitiesMap.get(dynamicRange);
+        CapabilitiesByQuality capabilities = getCapabilities(dynamicRange);
         return capabilities == null ? new ArrayList<>() : capabilities.getSupportedQualities();
     }
 
     @Override
     public boolean isQualitySupported(@NonNull Quality quality,
             @NonNull DynamicRange dynamicRange) {
-        CapabilitiesByQuality capabilities = mCapabilitiesMap.get(dynamicRange);
+        CapabilitiesByQuality capabilities = getCapabilities(dynamicRange);
         return capabilities != null && capabilities.isQualitySupported(quality);
+    }
+
+    @Override
+    public boolean isStabilizationSupported() {
+        return mIsStabilizationSupported;
     }
 
     @Nullable
     @Override
     public VideoValidatedEncoderProfilesProxy getProfiles(@NonNull Quality quality,
             @NonNull DynamicRange dynamicRange) {
-        CapabilitiesByQuality capabilities = mCapabilitiesMap.get(dynamicRange);
+        CapabilitiesByQuality capabilities = getCapabilities(dynamicRange);
         return capabilities == null ? null : capabilities.getProfiles(quality);
     }
 
     @Nullable
     @Override
-    public VideoValidatedEncoderProfilesProxy findHighestSupportedEncoderProfilesFor(
+    public VideoValidatedEncoderProfilesProxy findNearestHigherSupportedEncoderProfilesFor(
             @NonNull Size size, @NonNull DynamicRange dynamicRange) {
-        CapabilitiesByQuality capabilities = mCapabilitiesMap.get(dynamicRange);
-        return capabilities == null ? null : capabilities.findHighestSupportedEncoderProfilesFor(
-                size);
+        CapabilitiesByQuality capabilities = getCapabilities(dynamicRange);
+        return capabilities == null ? null
+                : capabilities.findNearestHigherSupportedEncoderProfilesFor(size);
     }
 
     @NonNull
     @Override
-    public Quality findHighestSupportedQualityFor(@NonNull Size size,
+    public Quality findNearestHigherSupportedQualityFor(@NonNull Size size,
             @NonNull DynamicRange dynamicRange) {
-        CapabilitiesByQuality capabilities = mCapabilitiesMap.get(dynamicRange);
-        return capabilities == null ? Quality.NONE : capabilities.findHighestSupportedQualityFor(
-                size);
+        CapabilitiesByQuality capabilities = getCapabilities(dynamicRange);
+        return capabilities == null ? Quality.NONE
+                : capabilities.findNearestHigherSupportedQualityFor(size);
     }
 
-    @NonNull
-    private static Set<DynamicRange> getCandidateDynamicRanges(
-            @NonNull EncoderProfilesProvider provider) {
-        Set<DynamicRange> dynamicRanges = new HashSet<>();
-        for (Quality quality : Quality.getSortedQualities()) {
-            int qualityValue = ((Quality.ConstantQuality) quality).getValue();
-            EncoderProfilesProxy encoderProfiles = provider.getAll(qualityValue);
-
-            if (encoderProfiles != null) {
-                for (VideoProfileProxy videoProfile : encoderProfiles.getVideoProfiles()) {
-                    Integer format = VP_TO_DR_FORMAT_MAP.get(videoProfile.getHdrFormat());
-                    if (format != null) {
-                        dynamicRanges.add(new DynamicRange(format, videoProfile.getBitDepth()));
-                    }
-                }
-            }
+    @Nullable
+    private CapabilitiesByQuality getCapabilities(@NonNull DynamicRange dynamicRange) {
+        if (dynamicRange.isFullySpecified()) {
+            return mCapabilitiesMapForFullySpecifiedDynamicRange.get(dynamicRange);
         }
 
-        dynamicRanges.add(SDR);
-        dynamicRanges.add(HDR_UNSPECIFIED_10_BIT);
-
-        return dynamicRanges;
-    }
-
-    private static boolean isDynamicRangeSupported(@NonNull DynamicRange dynamicRange,
-            @NonNull CameraInfoInternal cameraInfoInternal) {
-        Set<DynamicRange> supportedDynamicRanges = cameraInfoInternal.getSupportedDynamicRanges();
-        if (supportedDynamicRanges.contains(dynamicRange)) {
-            return true;
+        // Handle dynamic range that is not fully specified.
+        if (mCapabilitiesMapForNonFullySpecifiedDynamicRange.containsKey(dynamicRange)) {
+            return mCapabilitiesMapForNonFullySpecifiedDynamicRange.get(dynamicRange);
         } else {
-            return dynamicRange.equals(HDR_UNSPECIFIED_10_BIT) && contains10BitHdrDynamicRange(
-                    supportedDynamicRanges);
+            CapabilitiesByQuality capabilities =
+                    generateCapabilitiesForNonFullySpecifiedDynamicRange(dynamicRange);
+            mCapabilitiesMapForNonFullySpecifiedDynamicRange.put(dynamicRange, capabilities);
+            return capabilities;
         }
-    }
-
-    private static boolean contains10BitHdrDynamicRange(@NonNull Set<DynamicRange> dynamicRanges) {
-        for (DynamicRange dynamicRange : dynamicRanges) {
-            if (dynamicRange.getFormat() != DynamicRange.FORMAT_SDR
-                    && dynamicRange.getBitDepth() == DynamicRange.BIT_DEPTH_10_BIT) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static boolean isHlg10SupportedByCamera(
             @NonNull CameraInfoInternal cameraInfoInternal) {
         Set<DynamicRange> dynamicRanges = cameraInfoInternal.getSupportedDynamicRanges();
         for (DynamicRange dynamicRange : dynamicRanges) {
-            Integer format = dynamicRange.getFormat();
+            Integer encoding = dynamicRange.getEncoding();
             int bitDepth = dynamicRange.getBitDepth();
-            if (format.equals(FORMAT_HLG) && bitDepth == DynamicRange.BIT_DEPTH_10_BIT) {
+            if (encoding.equals(ENCODING_HLG) && bitDepth == DynamicRange.BIT_DEPTH_10_BIT) {
                 return true;
             }
         }
@@ -252,146 +214,69 @@ public final class RecorderVideoCapabilities implements VideoCapabilities {
         return false;
     }
 
+    @Nullable
+    private CapabilitiesByQuality generateCapabilitiesForNonFullySpecifiedDynamicRange(
+            @NonNull DynamicRange dynamicRange) {
+        if (!canResolve(dynamicRange, getSupportedDynamicRanges())) {
+            return null;
+        }
+
+        // Filter video profiles to include only the profiles match with the target dynamic
+        // range.
+        EncoderProfilesProvider constrainedProvider =
+                new DynamicRangeMatchedEncoderProfilesProvider(mProfilesProvider, dynamicRange);
+        return new CapabilitiesByQuality(constrainedProvider);
+    }
+
     /**
-     * This class implements the video capabilities query logic related to quality and resolution.
+     * Returns {@code true} if the test dynamic range can resolve to the fully specified dynamic
+     * range set.
+     *
+     * <p>A range can resolve if test fields are unspecified and appropriately match the fields
+     * of the fully specified dynamic range, or the test fields exactly match the fields of
+     * the fully specified dynamic range.
      */
-    @VisibleForTesting
-    static class CapabilitiesByQuality {
-
-        /**
-         * Maps quality to supported {@link VideoValidatedEncoderProfilesProxy}. The order is from
-         * size large to small.
-         */
-        private final Map<Quality, VideoValidatedEncoderProfilesProxy> mSupportedProfilesMap =
-                new LinkedHashMap<>();
-        private final TreeMap<Size, Quality> mAreaSortedSizeToQualityMap =
-                new TreeMap<>(new CompareSizesByArea());
-        private final VideoValidatedEncoderProfilesProxy mHighestProfiles;
-        private final VideoValidatedEncoderProfilesProxy mLowestProfiles;
-
-        CapabilitiesByQuality(@NonNull EncoderProfilesProvider provider) {
-            // Construct supported profile map.
-            for (Quality quality : Quality.getSortedQualities()) {
-                EncoderProfilesProxy profiles = getEncoderProfiles(quality, provider);
-                if (profiles == null) {
-                    continue;
-                }
-
-                // Validate that EncoderProfiles contain video information.
-                Logger.d(TAG, "profiles = " + profiles);
-                VideoValidatedEncoderProfilesProxy validatedProfiles = toValidatedProfiles(
-                        profiles);
-                if (validatedProfiles == null) {
-                    Logger.w(TAG, "EncoderProfiles of quality " + quality + " has no video "
-                            + "validated profiles.");
-                    continue;
-                }
-
-                EncoderProfilesProxy.VideoProfileProxy videoProfile =
-                        validatedProfiles.getDefaultVideoProfile();
-                Size size = new Size(videoProfile.getWidth(), videoProfile.getHeight());
-                mAreaSortedSizeToQualityMap.put(size, quality);
-
-                // SortedQualities is from size large to small.
-                mSupportedProfilesMap.put(quality, validatedProfiles);
-            }
-            if (mSupportedProfilesMap.isEmpty()) {
-                Logger.e(TAG, "No supported EncoderProfiles");
-                mLowestProfiles = null;
-                mHighestProfiles = null;
-            } else {
-                Deque<VideoValidatedEncoderProfilesProxy> profileQueue = new ArrayDeque<>(
-                        mSupportedProfilesMap.values());
-                mHighestProfiles = profileQueue.peekFirst();
-                mLowestProfiles = profileQueue.peekLast();
-            }
-        }
-
-        @NonNull
-        public List<Quality> getSupportedQualities() {
-            return new ArrayList<>(mSupportedProfilesMap.keySet());
-        }
-
-        public boolean isQualitySupported(@NonNull Quality quality) {
-            checkQualityConstantsOrThrow(quality);
-            return getProfiles(quality) != null;
-        }
-
-        @Nullable
-        public VideoValidatedEncoderProfilesProxy getProfiles(@NonNull Quality quality) {
-            checkQualityConstantsOrThrow(quality);
-            if (quality == Quality.HIGHEST) {
-                return mHighestProfiles;
-            } else if (quality == Quality.LOWEST) {
-                return mLowestProfiles;
-            }
-            return mSupportedProfilesMap.get(quality);
-        }
-
-        @Nullable
-        public VideoValidatedEncoderProfilesProxy findHighestSupportedEncoderProfilesFor(
-                @NonNull Size size) {
-            VideoValidatedEncoderProfilesProxy encoderProfiles = null;
-            Quality highestSupportedQuality = findHighestSupportedQualityFor(size);
-            Logger.d(TAG,
-                    "Using supported quality of " + highestSupportedQuality + " for size " + size);
-            if (highestSupportedQuality != Quality.NONE) {
-                encoderProfiles = getProfiles(highestSupportedQuality);
-                if (encoderProfiles == null) {
-                    throw new AssertionError("Camera advertised available quality but did not "
-                            + "produce EncoderProfiles for advertised quality.");
-                }
-            }
-            return encoderProfiles;
-        }
-
-        @NonNull
-        public Quality findHighestSupportedQualityFor(@NonNull Size size) {
-            Map.Entry<Size, Quality> ceilEntry = mAreaSortedSizeToQualityMap.ceilingEntry(size);
-
-            if (ceilEntry != null) {
-                // The ceiling entry will either be equivalent or higher in size, so always
-                // return it.
-                return ceilEntry.getValue();
-            } else {
-                // If a ceiling entry doesn't exist and a floor entry exists, it is the closest
-                // we have, so return it.
-                Map.Entry<Size, Quality> floorEntry = mAreaSortedSizeToQualityMap.floorEntry(size);
-                if (floorEntry != null) {
-                    return floorEntry.getValue();
+    private static boolean canResolve(@NonNull DynamicRange dynamicRangeToTest,
+            @NonNull Set<DynamicRange> fullySpecifiedDynamicRanges) {
+        if (dynamicRangeToTest.isFullySpecified()) {
+            return fullySpecifiedDynamicRanges.contains(dynamicRangeToTest);
+        } else {
+            for (DynamicRange fullySpecifiedDynamicRange : fullySpecifiedDynamicRanges) {
+                if (canMatchBitDepth(dynamicRangeToTest, fullySpecifiedDynamicRange)
+                        && canMatchEncoding(dynamicRangeToTest, fullySpecifiedDynamicRange)) {
+                    return true;
                 }
             }
 
-            // No supported qualities.
-            return Quality.NONE;
+            return false;
+        }
+    }
+
+    private static boolean canMatchBitDepth(@NonNull DynamicRange dynamicRangeToTest,
+            @NonNull DynamicRange fullySpecifiedDynamicRange) {
+        Preconditions.checkState(fullySpecifiedDynamicRange.isFullySpecified(), "Fully specified "
+                + "range is not actually fully specified.");
+        if (dynamicRangeToTest.getBitDepth() == BIT_DEPTH_UNSPECIFIED) {
+            return true;
         }
 
-        @Nullable
-        private EncoderProfilesProxy getEncoderProfiles(@NonNull Quality quality,
-                @NonNull EncoderProfilesProvider provider) {
-            Preconditions.checkState(quality instanceof Quality.ConstantQuality,
-                    "Currently only support ConstantQuality");
-            int qualityValue = ((Quality.ConstantQuality) quality).getValue();
+        return dynamicRangeToTest.getBitDepth() == fullySpecifiedDynamicRange.getBitDepth();
+    }
 
-            return provider.getAll(qualityValue);
+    private static boolean canMatchEncoding(@NonNull DynamicRange dynamicRangeToTest,
+            @NonNull DynamicRange fullySpecifiedDynamicRange) {
+        Preconditions.checkState(fullySpecifiedDynamicRange.isFullySpecified(), "Fully specified "
+                + "range is not actually fully specified.");
+        int encodingToTest = dynamicRangeToTest.getEncoding();
+        if (encodingToTest == ENCODING_UNSPECIFIED) {
+            return true;
         }
 
-        @Nullable
-        private VideoValidatedEncoderProfilesProxy toValidatedProfiles(
-                @NonNull EncoderProfilesProxy profiles) {
-            // According to the document, the first profile is the default video profile.
-            List<EncoderProfilesProxy.VideoProfileProxy> videoProfiles =
-                    profiles.getVideoProfiles();
-            if (videoProfiles.isEmpty()) {
-                return null;
-            }
-
-            return VideoValidatedEncoderProfilesProxy.from(profiles);
+        int fullySpecifiedEncoding = fullySpecifiedDynamicRange.getEncoding();
+        if (encodingToTest == ENCODING_HDR_UNSPECIFIED && fullySpecifiedEncoding != ENCODING_SDR) {
+            return true;
         }
 
-        private static void checkQualityConstantsOrThrow(@NonNull Quality quality) {
-            Preconditions.checkArgument(Quality.containsQuality(quality),
-                    "Unknown quality: " + quality);
-        }
+        return encodingToTest == fullySpecifiedEncoding;
     }
 }

@@ -19,10 +19,12 @@ package androidx.compose.runtime.benchmark
 import androidx.benchmark.junit4.measureRepeated
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.OrderWith
 import org.junit.runner.RunWith
@@ -44,7 +46,7 @@ class SnapshotStateAutoboxingBenchmark : ComposeBenchmarkBase() {
 
     @Before
     fun setup() {
-        primitiveFloatState = mutableStateOf(-1.0f)
+        primitiveFloatState = mutableFloatStateOf(-1.0f)
         autoboxingFloatState = mutableStateOf(-1.0f)
     }
 
@@ -68,11 +70,13 @@ class SnapshotStateAutoboxingBenchmark : ComposeBenchmarkBase() {
         benchmarkPrimitiveWrites(FramesInTenSecondHighRefreshAnimation)
     }
 
+    @Ignore("b/294259234")
     @Test
     fun benchmarkManyBoxedFloatValueWrites() {
         benchmarkBoxedWrites(ManyWritesCount)
     }
 
+    @Ignore("b/294259234")
     @Test
     fun benchmarkManyPrimitiveFloatValueWrites() {
         benchmarkPrimitiveWrites(ManyWritesCount)

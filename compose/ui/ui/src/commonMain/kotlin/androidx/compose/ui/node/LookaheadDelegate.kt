@@ -16,13 +16,15 @@
 
 package androidx.compose.ui.node
 
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.LookaheadLayoutCoordinatesImpl
+import androidx.compose.ui.layout.LookaheadLayoutCoordinates
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.PlacementScope
 import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
@@ -69,12 +71,37 @@ internal abstract class LookaheadCapablePlaceable : Placeable(), MeasureScopeWit
      */
     internal var isPlacingForAlignment = false
 
+    /**
+     * [PlacementScope] used to place children.
+     */
+    val placementScope = PlacementScope(this)
+
     protected fun NodeCoordinator.invalidateAlignmentLinesFromPositionChange() {
         if (wrapped?.layoutNode != layoutNode) {
             alignmentLinesOwner.alignmentLines.onAlignmentsChanged()
         } else {
             alignmentLinesOwner.parentAlignmentLinesOwner?.alignmentLines?.onAlignmentsChanged()
         }
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    override val isLookingAhead: Boolean
+        get() = false
+
+    override fun layout(
+        width: Int,
+        height: Int,
+        alignmentLines: Map<AlignmentLine, Int>,
+        placementBlock: PlacementScope.() -> Unit
+    ): MeasureResult = object : MeasureResult {
+        override val width: Int
+            get() = width
+        override val height: Int
+            get() = height
+        override val alignmentLines: Map<AlignmentLine, Int>
+            get() = alignmentLines
+
+        override fun placeChildren() = placementScope.placementBlock()
     }
 }
 
@@ -91,6 +118,8 @@ internal abstract class LookaheadDelegate(
         get() = _measureResult ?: error(
             "LookaheadDelegate has not been measured yet when measureResult is requested."
         )
+    override val isLookingAhead: Boolean
+        get() = true
     override val layoutDirection: LayoutDirection
         get() = coordinator.layoutDirection
     override val density: Float
@@ -104,7 +133,7 @@ internal abstract class LookaheadDelegate(
     override val coordinates: LayoutCoordinates
         get() = lookaheadLayoutCoordinates
 
-    val lookaheadLayoutCoordinates = LookaheadLayoutCoordinatesImpl(this)
+    val lookaheadLayoutCoordinates = LookaheadLayoutCoordinates(this)
     override val alignmentLinesOwner: AlignmentLinesOwner
         get() = coordinator.layoutNode.layoutDelegate.lookaheadAlignmentLinesOwner!!
 
@@ -121,6 +150,7 @@ internal abstract class LookaheadDelegate(
                 ) {
                     alignmentLinesOwner.alignmentLines.onAlignmentsChanged()
 
+                    @Suppress("PrimitiveInCollection")
                     val oldLines = oldAlignmentLines
                         ?: (mutableMapOf<AlignmentLine, Int>().also { oldAlignmentLines = it })
                     oldLines.clear()
@@ -144,24 +174,26 @@ internal abstract class LookaheadDelegate(
         zIndex: Float,
         layerBlock: (GraphicsLayerScope.() -> Unit)?
     ) {
+        placeSelf(position)
+        if (isShallowPlacing) return
+        placeChildren()
+    }
+
+    private fun placeSelf(position: IntOffset) {
         if (this.position != position) {
             this.position = position
             layoutNode.layoutDelegate.lookaheadPassDelegate
                 ?.notifyChildrenUsingCoordinatesWhilePlacing()
             coordinator.invalidateAlignmentLinesFromPositionChange()
         }
-        if (isShallowPlacing) return
-        placeChildren()
+    }
+
+    internal fun placeSelfApparentToRealOffset(position: IntOffset) {
+        placeSelf(position + apparentToRealOffset)
     }
 
     protected open fun placeChildren() {
-        PlacementScope.executeWithRtlMirroringValues(
-            measureResult.width,
-            coordinator.layoutDirection,
-            this
-        ) {
-            measureResult.placeChildren()
-        }
+        measureResult.placeChildren()
     }
 
     inline fun performingMeasure(

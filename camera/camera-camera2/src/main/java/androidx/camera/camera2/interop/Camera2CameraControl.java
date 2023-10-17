@@ -25,6 +25,7 @@ import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.internal.Camera2CameraControlImpl;
 import androidx.camera.camera2.internal.annotation.CameraExecutor;
 import androidx.camera.core.CameraControl;
+import androidx.camera.core.impl.CameraControlInternal;
 import androidx.camera.core.impl.Config;
 import androidx.camera.core.impl.TagBundle;
 import androidx.camera.core.impl.annotation.ExecutedBy;
@@ -125,9 +126,11 @@ public final class Camera2CameraControl {
      */
     @NonNull
     public static Camera2CameraControl from(@NonNull CameraControl cameraControl) {
-        Preconditions.checkArgument(cameraControl instanceof Camera2CameraControlImpl,
+        CameraControlInternal cameraControlImpl =
+                ((CameraControlInternal) cameraControl).getImplementation();
+        Preconditions.checkArgument(cameraControlImpl instanceof Camera2CameraControlImpl,
                 "CameraControl doesn't contain Camera2 implementation.");
-        return ((Camera2CameraControlImpl) cameraControl).getCamera2CameraControl();
+        return ((Camera2CameraControlImpl) cameraControlImpl).getCamera2CameraControl();
     }
 
     /**
@@ -196,8 +199,7 @@ public final class Camera2CameraControl {
     }
 
     /**
-     * Gets all the capture request options that is currently applied by the
-     * {@link Camera2CameraControl}.
+     * Gets all existing capture request options.
      *
      * <p>It doesn't include the capture request options applied by
      * the {@link android.hardware.camera2.CameraDevice} templates or by CameraX.
@@ -212,8 +214,7 @@ public final class Camera2CameraControl {
     }
 
     /**
-     * Clears all capture request options that is currently applied by the
-     * {@link Camera2CameraControl}.
+     * Clears all existing capture request options.
      *
      * @return a {@link ListenableFuture} which completes when the repeating
      * {@link android.hardware.camera2.CaptureResult} shows the options have be submitted
@@ -234,9 +235,8 @@ public final class Camera2CameraControl {
     }
 
     /**
-     * Gets the {@link Camera2ImplConfig} that is currently applied by the
-     * {@link Camera2CameraControl}.
-     *
+     * Gets the {@link Camera2ImplConfig} that contains the existing capture request options and
+     * a unique tag.
      */
     @RestrictTo(Scope.LIBRARY)
     @NonNull
@@ -251,14 +251,26 @@ public final class Camera2CameraControl {
         }
     }
 
+    /**
+     * Applies the existing capture request options to a {@link Camera2ImplConfig.Builder}.
+     *
+     * <p>The options is set with
+     * {@link androidx.camera.core.impl.Config.OptionPriority#ALWAYS_OVERRIDE} to ensure the
+     * parameters set by {@link ExperimentalCamera2Interop} features always override as intended.
+     *
+     * @param builder the builder to apply the existing capture request options.
+     */
+    @RestrictTo(Scope.LIBRARY)
+    public void applyOptionsToBuilder(@NonNull Camera2ImplConfig.Builder builder) {
+        synchronized (mLock) {
+            builder.insertAllOptions(mBuilder.getMutableConfig(),
+                    Config.OptionPriority.ALWAYS_OVERRIDE);
+        }
+    }
+
     private void addCaptureRequestOptionsInternal(@NonNull CaptureRequestOptions bundle) {
         synchronized (mLock) {
-            for (Config.Option<?> option : bundle.listOptions()) {
-                @SuppressWarnings("unchecked")
-                Config.Option<Object> objectOpt = (Config.Option<Object>) option;
-                mBuilder.getMutableConfig().insertOption(objectOpt,
-                        bundle.retrieveOption(objectOpt));
-            }
+            mBuilder.insertAllOptions(bundle);
         }
     }
 

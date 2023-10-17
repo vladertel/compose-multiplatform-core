@@ -26,7 +26,10 @@ import android.graphics.drawable.AnimatedVectorDrawable;
 import android.icu.util.ULocale;
 import android.util.Log;
 import android.view.View;
+import android.view.View.MeasureSpec;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.animation.AnimationSet;
 
 import androidx.annotation.NonNull;
@@ -38,15 +41,17 @@ import androidx.annotation.VisibleForTesting;
 import androidx.collection.ArrayMap;
 import androidx.collection.ArraySet;
 import androidx.vectordrawable.graphics.drawable.SeekableAnimatedVectorDrawable;
+import androidx.wear.protolayout.expression.PlatformDataKey;
 import androidx.wear.protolayout.expression.pipeline.BoundDynamicType;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeBindingRequest;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeEvaluator;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeEvaluator.EvaluationException;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeValueReceiver;
 import androidx.wear.protolayout.expression.pipeline.FixedQuotaManagerImpl;
+import androidx.wear.protolayout.expression.pipeline.PlatformDataProvider;
+import androidx.wear.protolayout.expression.pipeline.PlatformTimeUpdateNotifierImpl;
 import androidx.wear.protolayout.expression.pipeline.QuotaManager;
 import androidx.wear.protolayout.expression.pipeline.StateStore;
-import androidx.wear.protolayout.expression.pipeline.sensor.SensorGateway;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DynamicBool;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DynamicColor;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DynamicFloat;
@@ -60,6 +65,8 @@ import androidx.wear.protolayout.proto.ModifiersProto.EnterTransition;
 import androidx.wear.protolayout.proto.ModifiersProto.ExitTransition;
 import androidx.wear.protolayout.proto.TriggerProto.Trigger;
 import androidx.wear.protolayout.renderer.dynamicdata.NodeInfo.ResolvedAvd;
+
+import com.google.common.collect.ImmutableList;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -83,7 +90,7 @@ public class ProtoLayoutDynamicDataPipeline {
 
     @NonNull
     private static final QuotaManager DISABLED_ANIMATIONS_QUOTA_MANAGER =
-            new FixedQuotaManagerImpl(/* quotaCap= */ 0);
+            new FixedQuotaManagerImpl(/* quotaCap= */ 0, "disabled animations");
 
     @NonNull final PositionIdTree<NodeInfo> mPositionIdTree = new PositionIdTree<>();
     @NonNull final List<QuotaAwareAnimationSet> mEnterAnimations = new ArrayList<>();
@@ -92,17 +99,16 @@ public class ProtoLayoutDynamicDataPipeline {
     boolean mFullyVisible;
     @NonNull final QuotaManager mAnimationQuotaManager;
     @NonNull private final DynamicTypeEvaluator mEvaluator;
+    @NonNull private final PlatformTimeUpdateNotifierImpl mTimeNotifier;
 
     /** Creates a {@link ProtoLayoutDynamicDataPipeline} without animation support. */
     @RestrictTo(Scope.LIBRARY_GROUP)
     public ProtoLayoutDynamicDataPipeline(
-            boolean canUpdateGateways,
-            @Nullable SensorGateway sensorGateway,
+            @NonNull Map<PlatformDataProvider, Set<PlatformDataKey<?>>> platformDataProviders,
             @NonNull StateStore stateStore) {
         // Build pipeline with quota that doesn't allow any animations.
         this(
-                canUpdateGateways,
-                sensorGateway,
+                platformDataProviders,
                 stateStore,
                 /* enableAnimations= */ false,
                 DISABLED_ANIMATIONS_QUOTA_MANAGER,
@@ -115,14 +121,12 @@ public class ProtoLayoutDynamicDataPipeline {
      */
     @RestrictTo(Scope.LIBRARY_GROUP)
     public ProtoLayoutDynamicDataPipeline(
-            boolean canUpdateGateways,
-            @Nullable SensorGateway sensorGateway,
+            @NonNull Map<PlatformDataProvider, Set<PlatformDataKey<?>>> platformDataProviders,
             @NonNull StateStore stateStore,
             @NonNull QuotaManager animationQuotaManager,
             @NonNull QuotaManager dynamicNodesQuotaManager) {
         this(
-                canUpdateGateways,
-                sensorGateway,
+                platformDataProviders,
                 stateStore,
                 /* enableAnimations= */ true,
                 animationQuotaManager,
@@ -131,8 +135,7 @@ public class ProtoLayoutDynamicDataPipeline {
 
     /** Creates a {@link ProtoLayoutDynamicDataPipeline}. */
     private ProtoLayoutDynamicDataPipeline(
-            boolean canUpdateGateways,
-            @Nullable SensorGateway sensorGateway,
+            @NonNull Map<PlatformDataProvider, Set<PlatformDataKey<?>>> platformDataProviders,
             @NonNull StateStore stateStore,
             boolean enableAnimations,
             @NonNull QuotaManager animationQuotaManager,
@@ -140,12 +143,14 @@ public class ProtoLayoutDynamicDataPipeline {
         this.mEnableAnimations = enableAnimations;
         this.mAnimationQuotaManager = animationQuotaManager;
         DynamicTypeEvaluator.Config.Builder evaluatorConfigBuilder =
-                new DynamicTypeEvaluator.Config.Builder()
-                        .setPlatformDataSourcesInitiallyEnabled(canUpdateGateways)
-                        .setStateStore(stateStore);
+                new DynamicTypeEvaluator.Config.Builder().setStateStore(stateStore);
         evaluatorConfigBuilder.setDynamicTypesQuotaManager(dynamicNodeQuotaManager);
-        if (sensorGateway != null) {
-            evaluatorConfigBuilder.setSensorGateway(sensorGateway);
+        this.mTimeNotifier = new PlatformTimeUpdateNotifierImpl();
+        evaluatorConfigBuilder.setPlatformTimeUpdateNotifier(this.mTimeNotifier);
+        for (Map.Entry<PlatformDataProvider, Set<PlatformDataKey<?>>> providerEntry :
+                platformDataProviders.entrySet()) {
+            evaluatorConfigBuilder.addPlatformDataProvider(
+                    providerEntry.getKey(), providerEntry.getValue());
         }
         if (enableAnimations) {
             evaluatorConfigBuilder.setAnimationQuotaManager(animationQuotaManager);
@@ -154,8 +159,7 @@ public class ProtoLayoutDynamicDataPipeline {
     }
 
     /** Returns the number of active dynamic types in this pipeline. */
-    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-    @RestrictTo(Scope.TESTS)
+    @VisibleForTesting
     public int size() {
         return mPositionIdTree.getAllNodes().stream().mapToInt(NodeInfo::size).sum();
     }
@@ -186,7 +190,6 @@ public class ProtoLayoutDynamicDataPipeline {
      */
     @VisibleForTesting
     @NonNull
-    @RestrictTo(Scope.TESTS)
     public PipelineMaker newPipelineMaker() {
         return newPipelineMaker(
                 (enterTransition, view) -> new AnimationSet(/* shareInterpolator= */ false),
@@ -201,18 +204,15 @@ public class ProtoLayoutDynamicDataPipeline {
     @SuppressWarnings("RestrictTo")
     @RestrictTo(Scope.LIBRARY_GROUP)
     public void setUpdatesEnabled(boolean canUpdate) {
-        if (canUpdate) {
-            mEvaluator.enablePlatformDataSources();
-        } else {
-            mEvaluator.disablePlatformDataSources();
-        }
+        mTimeNotifier.setUpdatesEnabled(canUpdate);
     }
 
     /** Closes existing gateways. */
     @RestrictTo(Scope.LIBRARY_GROUP)
     @SuppressWarnings("RestrictTo")
     public void close() {
-        mEvaluator.close();
+        mPositionIdTree.clear();
+        mTimeNotifier.setUpdatesEnabled(false);
     }
 
     /**
@@ -372,6 +372,7 @@ public class ProtoLayoutDynamicDataPipeline {
          */
         @UiThread
         @RestrictTo(Scope.LIBRARY_GROUP)
+        @SuppressWarnings("RestrictTo")
         public void commit(@NonNull ViewGroup parentView, boolean isReattaching) {
             for (String nodePosId : mNodesPendingChildrenRemoval) {
                 mPipeline.removeChildNodesFor(nodePosId);
@@ -391,39 +392,75 @@ public class ProtoLayoutDynamicDataPipeline {
                 // Skip content transition animations.
                 mChangedNodes.clear();
             }
-            parentView.post(
+
+            // Capture nodes with EnterTransition animation.
+            Map<String, EnterTransition> enterTransitionNodes = new ArrayMap<>();
+            boolean hasSlideInAnimation = false;
+            if (mPipeline.mEnableAnimations) {
+                for (String changedNode : mChangedNodes) {
+                    List<NodeInfo> nodesAffectedBy =
+                            mPipeline.getNodesAffectedBy(
+                                    changedNode,
+                                    node -> {
+                                        AnimatedVisibility animatedVisibility =
+                                                node.getAnimatedVisibility();
+                                        return animatedVisibility != null
+                                                && animatedVisibility.hasEnterTransition();
+                                    });
+                    for (NodeInfo affectedNode : nodesAffectedBy) {
+                        EnterTransition enterTransition =
+                                checkNotNull(affectedNode.getAnimatedVisibility())
+                                        .getEnterTransition();
+                        enterTransitionNodes.putIfAbsent(affectedNode.getPosId(), enterTransition);
+                        hasSlideInAnimation |= enterTransition.hasSlideIn();
+                    }
+                }
+            }
+
+            Runnable initLayoutRunnable =
                     () -> {
                         mPipeline.initNewLayout();
-                        playEnterAnimations(parentView, isReattaching);
-                    });
+                        playEnterAnimations(parentView, isReattaching, enterTransitionNodes);
+                    };
+
+            // Slide animations need to know the new measurements of the view in order to calculate
+            // start and end positions, so we force a measure pass.
+            if (hasSlideInAnimation) {
+                // The GlobalLayoutListener ensures that initLayoutRunnable will run after the
+                // measure
+                // pass has finished.
+                ViewTreeObserver viewTreeObserver = parentView.getViewTreeObserver();
+                viewTreeObserver.addOnGlobalLayoutListener(
+                        new OnGlobalLayoutListener() {
+                            @Override
+                            public void onGlobalLayout() {
+                                if (viewTreeObserver.isAlive()) {
+                                    viewTreeObserver.removeOnGlobalLayoutListener(this);
+                                    initLayoutRunnable.run();
+                                }
+                            }
+                        });
+                parentView.measure(
+                        MeasureSpec.makeMeasureSpec(
+                                parentView.getMeasuredWidth(), MeasureSpec.EXACTLY),
+                        MeasureSpec.makeMeasureSpec(
+                                parentView.getMeasuredHeight(), MeasureSpec.EXACTLY));
+            } else {
+                initLayoutRunnable.run();
+            }
         }
 
         @UiThread
-        private void playEnterAnimations(@NonNull ViewGroup parentView, boolean isReattaching) {
+        private void playEnterAnimations(
+                @NonNull ViewGroup parentView,
+                boolean isReattaching,
+                Map<String, EnterTransition> animatingNodes) {
             // Cancel any already running Enter animation.
             mPipeline.mEnterAnimations.forEach(QuotaAwareAnimationSet::cancelAnimations);
             mPipeline.mEnterAnimations.clear();
 
             if (isReattaching || !mPipeline.mFullyVisible || !mPipeline.mEnableAnimations) {
                 return;
-            }
-            Map<String, EnterTransition> animatingNodes = new ArrayMap<>();
-            for (String changedNode : mChangedNodes) {
-                List<NodeInfo> nodesAffectedBy =
-                        mPipeline.getNodesAffectedBy(
-                                changedNode,
-                                node -> {
-                                    AnimatedVisibility animatedVisibility =
-                                            node.getAnimatedVisibility();
-                                    return animatedVisibility != null
-                                            && animatedVisibility.hasEnterTransition();
-                                });
-                for (NodeInfo affectedNode : nodesAffectedBy) {
-                    animatingNodes.putIfAbsent(
-                            affectedNode.getPosId(),
-                            checkNotNull(affectedNode.getAnimatedVisibility())
-                                    .getEnterTransition());
-                }
             }
             for (Map.Entry<String, EnterTransition> animatingNode : animatingNodes.entrySet()) {
                 View associatedView = parentView.findViewWithTag(animatingNode.getKey());
@@ -642,8 +679,8 @@ public class ProtoLayoutDynamicDataPipeline {
                 @NonNull String posId,
                 @NonNull DynamicTypeValueReceiver<Float> consumer) {
             DynamicTypeBindingRequest bindingRequest =
-                    DynamicTypeBindingRequest.forDynamicFloatInternal(dpProp.getDynamicValue(),
-                            consumer);
+                    DynamicTypeBindingRequest.forDynamicFloatInternal(
+                            dpProp.getDynamicValue(), consumer);
             tryBindRequest(posId, bindingRequest, consumer::onInvalidated);
             return this;
         }
@@ -953,7 +990,7 @@ public class ProtoLayoutDynamicDataPipeline {
 
     /** Play the animation with the given trigger type. */
     @RestrictTo(Scope.LIBRARY_GROUP)
-    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    @VisibleForTesting
     public void playAvdAnimations(@NonNull Trigger.InnerCase triggerCase) {
         mPositionIdTree.forEach(info -> info.playAvdAnimations(triggerCase));
     }
@@ -964,23 +1001,17 @@ public class ProtoLayoutDynamicDataPipeline {
         mPositionIdTree.forEach(info -> info.setVisibility(visible));
     }
 
-    /**
-     * Reset the avd animations with the given trigger type.
-     *
-     */
+    /** Reset the avd animations with the given trigger type. */
     @UiThread
-    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    @VisibleForTesting
     @RestrictTo(Scope.LIBRARY_GROUP)
     public void resetAvdAnimations(@NonNull Trigger.InnerCase triggerCase) {
         mPositionIdTree.forEach(info -> info.resetAvdAnimations(triggerCase));
     }
 
-    /**
-     * Stops running avd animations and releases their quota.
-     *
-     */
+    /** Stops running avd animations and releases their quota. */
     @UiThread
-    @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
+    @VisibleForTesting
     @RestrictTo(Scope.LIBRARY_GROUP)
     public void stopAvdAnimations(@NonNull Trigger.InnerCase triggerCase) {
         mPositionIdTree.forEach(info -> info.stopAvdAnimations(triggerCase));
@@ -989,7 +1020,7 @@ public class ProtoLayoutDynamicDataPipeline {
     /** Cancel any already running content transition animations. */
     @UiThread
     void cancelContentTransitionAnimations() {
-        mExitAnimations.forEach(QuotaAwareAnimationSet::cancelAnimations);
+        ImmutableList.copyOf(mExitAnimations).forEach(QuotaAwareAnimationSet::cancelAnimations);
         mExitAnimations.clear();
         mEnterAnimations.forEach(QuotaAwareAnimationSet::cancelAnimations);
         mEnterAnimations.clear();
@@ -1062,8 +1093,7 @@ public class ProtoLayoutDynamicDataPipeline {
     }
 
     /** Returns how many animations are running. */
-    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-    @RestrictTo(Scope.TESTS)
+    @VisibleForTesting
     public int getRunningAnimationsCount() {
         return mPositionIdTree.getAllNodes().stream()
                         .mapToInt(NodeInfo::getRunningAnimationCount)
@@ -1077,8 +1107,7 @@ public class ProtoLayoutDynamicDataPipeline {
     }
 
     /** Returns How many dynamic data nodes exist in the pipeline. */
-    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-    @RestrictTo(Scope.TESTS)
+    @VisibleForTesting
     public int getDynamicExpressionsNodesCount() {
         return mPositionIdTree.getAllNodes().stream()
                 .mapToInt(NodeInfo::getExpressionNodesCount)
@@ -1086,8 +1115,7 @@ public class ProtoLayoutDynamicDataPipeline {
     }
 
     /** Returns whether all quota has been released. */
-    @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-    @RestrictTo(Scope.TESTS)
+    @VisibleForTesting
     public boolean isAllQuotaReleased() {
         return mAnimationQuotaManager instanceof FixedQuotaManagerImpl
                 && ((FixedQuotaManagerImpl) mAnimationQuotaManager).isAllQuotaReleased();

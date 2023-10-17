@@ -57,12 +57,16 @@ import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.impl.utils.futures.Futures
+import androidx.camera.integration.extensions.ExtensionTestType.TEST_TYPE_CAMERA2_EXTENSION_STREAM_CONFIG_LATENCY
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_CAMERA_ID
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_ERROR_CODE
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_EXTENSION_MODE
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_IMAGE_ROTATION_DEGREES
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_IMAGE_URI
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_REQUEST_CODE
+import androidx.camera.integration.extensions.TestResultType.TEST_RESULT_FAILED
+import androidx.camera.integration.extensions.TestResultType.TEST_RESULT_NOT_TESTED
+import androidx.camera.integration.extensions.TestResultType.TEST_RESULT_PASSED
 import androidx.camera.integration.extensions.ValidationErrorCode.ERROR_CODE_EXTENSION_MODE_NOT_SUPPORT
 import androidx.camera.integration.extensions.ValidationErrorCode.ERROR_CODE_NONE
 import androidx.camera.integration.extensions.ValidationErrorCode.ERROR_CODE_SAVE_IMAGE_FAILED
@@ -76,6 +80,7 @@ import androidx.camera.integration.extensions.utils.TransformUtil.calculateRelat
 import androidx.camera.integration.extensions.utils.TransformUtil.surfaceRotationToRotationDegrees
 import androidx.camera.integration.extensions.utils.TransformUtil.transformTextureView
 import androidx.camera.integration.extensions.validation.CameraValidationResultActivity
+import androidx.camera.integration.extensions.validation.TestResults
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.concurrent.futures.CallbackToFutureAdapter.Completer
 import androidx.core.util.Preconditions
@@ -99,10 +104,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 
 private const val TAG = "Camera2ExtensionsAct~"
 private const val EXTENSION_MODE_INVALID = -1
 private const val FRAMES_UNTIL_VIEW_IS_READY = 10
+private const val KEY_CAMERA2_LATENCY = "camera2"
+private const val KEY_CAMERA_EXTENSION_LATENCY = "camera_extension"
 
 @RequiresApi(31)
 class Camera2ExtensionsActivity : AppCompatActivity() {
@@ -127,6 +135,16 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
     private lateinit var frontCameraId: String
 
     private var cameraSensorRotationDegrees = 0
+
+    /**
+     * Tracks the stream configuration latency of camera extension and camera2. Each key is
+     * associated with a list of durations. This allows clients to run multiple invocations to
+     * measure the min, avg, and max latency.
+     */
+    private val streamConfigurationLatency = mutableMapOf<String, MutableList<Long>>(
+        KEY_CAMERA2_LATENCY to mutableListOf(),
+        KEY_CAMERA_EXTENSION_LATENCY to mutableListOf()
+    )
 
     /**
      * Still capture image reader
@@ -234,6 +252,12 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
     private var imageSaveTerminationFuture: ListenableFuture<Any?> = Futures.immediateFuture(null)
 
     /**
+     * Tracks the starting timestamp of when a stream configuration operation started. This is used
+     * to measure the stream configuration latency from openCaptureSession to onConfigured.
+     */
+    private var streamConfigurationStartMillis: Long = 0
+
+    /**
      * Used to wait for the capture session is configured.
      */
     private val captureSessionConfiguredIdlingResource =
@@ -290,6 +314,13 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
      * [Handler] corresponding to [normalModeCaptureThread]
      */
     private val normalModeCaptureHandler = Handler(normalModeCaptureThread.looper)
+
+    /**
+     * A toast is shown when an extension is enabled or disabled. Tracking this allows cancelling
+     * the toast before showing a new one. This is specifically for scenarios where toggling an
+     * extension quickly requires cancelling the last toast before showing the new one.
+     */
+    private var toast: Toast? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -382,20 +413,23 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
 
                     lifecycleScope.launch(Dispatchers.Main) {
                         setExtensionToggleButtonResource()
-                        if (extensionEnabled) {
-                            Toast.makeText(
-                                this@Camera2ExtensionsActivity,
-                                "Effect is enabled!",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
 
+                        val newToast = if (extensionEnabled) {
                             Toast.makeText(
                                 this@Camera2ExtensionsActivity,
-                                "Effect is disabled!",
+                                "Extension is enabled!",
                                 Toast.LENGTH_SHORT
-                            ).show()
+                            )
+                        } else {
+                            Toast.makeText(
+                                this@Camera2ExtensionsActivity,
+                                "Extension is disabled!",
+                                Toast.LENGTH_SHORT
+                            )
                         }
+                        toast?.cancel()
+                        newToast.show()
+                        toast = newToast
                     }
                 }
             }
@@ -556,6 +590,47 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
 
         imageSaveTerminationFuture.addListener({ stillImageReader?.close() }, mainExecutor)
         normalModeCaptureThread.quitSafely()
+
+        streamConfigurationLatency[KEY_CAMERA2_LATENCY]?.also {
+            val min = "${it.minOrNull() ?: "n/a"}"
+            val max = "${it.maxOrNull() ?: "n/a"}"
+            val avg = it.average().format(2)
+
+            Log.d(
+                TAG,
+                "Camera2 Stream Configuration Latency: min=${min}ms max=${max}ms avg=${avg}ms"
+            )
+        }
+        var testResultDetails = ""
+        streamConfigurationLatency[KEY_CAMERA_EXTENSION_LATENCY]?.also {
+            val min = "${it.minOrNull() ?: "n/a"}"
+            val max = "${it.maxOrNull() ?: "n/a"}"
+            val avg = it.average().format(2)
+            testResultDetails = "min=${min}ms max=${max}ms avg=${avg}ms"
+
+            Log.d(TAG, "Camera Extensions Stream Configuration Latency: $testResultDetails")
+        }
+
+        val durations = streamConfigurationLatency[KEY_CAMERA_EXTENSION_LATENCY] ?: emptyList()
+        val testResult = if (durations.isNotEmpty()) {
+            if (durations.average() > 300.0) {
+                TEST_RESULT_FAILED
+            } else {
+                TEST_RESULT_PASSED
+            }
+        } else {
+            TEST_RESULT_NOT_TESTED
+        }
+
+        val testResults = TestResults.getInstance(this@Camera2ExtensionsActivity)
+        testResults.updateTestResultAndSave(
+            TEST_TYPE_CAMERA2_EXTENSION_STREAM_CONFIG_LATENCY,
+            currentCameraId,
+            currentExtensionMode,
+            testResult,
+            testResultDetails
+        )
+
         Log.d(TAG, "onDestroy()--")
     }
 
@@ -578,13 +653,12 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
                     } else {
                         (cameraCaptureSession as CameraExtensionSession).close()
                     }
-
-                    cameraCaptureSession = null
                 } catch (e: Exception) {
                     Log.e(TAG, e.toString())
                 }
             }
 
+            cameraCaptureSession = null
             Log.d(TAG, "closeCaptureSession()--")
         }
 
@@ -722,6 +796,7 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
     private suspend fun openCaptureSession(extensionMode: Int): Any =
         suspendCancellableCoroutine { cont ->
             Log.d(TAG, "openCaptureSession")
+            streamConfigurationStartMillis = System.currentTimeMillis()
 
             if (stillImageReader != null) {
                 val imageReaderToClose = stillImageReader!!
@@ -768,8 +843,11 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
 
                 override fun onConfigured(session: CameraCaptureSession) {
                     Log.d(TAG, "CaptureSession - onConfigured: $session")
+                    val duration = System.currentTimeMillis() - streamConfigurationStartMillis
+                    streamConfigurationLatency[KEY_CAMERA2_LATENCY]?.add(duration)
+                    streamConfigurationStartMillis = 0
                     setRepeatingRequestWhenCaptureSessionConfigured(cont, session.device, session)
-                    runOnUiThread {
+                    lifecycleScope.launch(Dispatchers.Main) {
                         enableUiControl(true)
                         if (!captureSessionConfiguredIdlingResource.isIdleNow) {
                             captureSessionConfiguredIdlingResource.decrement()
@@ -779,6 +857,7 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
 
                 override fun onConfigureFailed(session: CameraCaptureSession) {
                     Log.e(TAG, "CaptureSession - onConfigureFailed: $session")
+                    streamConfigurationStartMillis = 0
                     cont.resumeWithException(
                         RuntimeException("Configure failed when creating capture session.")
                     )
@@ -810,6 +889,9 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
 
                 override fun onConfigured(session: CameraExtensionSession) {
                     Log.d(TAG, "Extension CaptureSession - onConfigured: $session")
+                    val duration = System.currentTimeMillis() - streamConfigurationStartMillis
+                    streamConfigurationLatency[KEY_CAMERA_EXTENSION_LATENCY]?.add(duration)
+                    streamConfigurationStartMillis = 0
                     setRepeatingRequestWhenCaptureSessionConfigured(cont, session.device, session)
                     runOnUiThread {
                         enableUiControl(true)
@@ -821,6 +903,7 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
 
                 override fun onConfigureFailed(session: CameraExtensionSession) {
                     Log.e(TAG, "Extension CaptureSession - onConfigureFailed: $session")
+                    streamConfigurationStartMillis = 0
                     cont.resumeWithException(
                         RuntimeException("Configure failed when creating capture session.")
                     )
@@ -851,6 +934,12 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
         try {
             val captureBuilder = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             captureBuilder.addTarget(previewSurface!!)
+            // Some devices enable video stabilization mode by default. For consistent behavior we
+            // explicitly disable this.
+            captureBuilder.set(
+                CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
+                CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF
+            )
 
             if (captureSession is CameraCaptureSession) {
                 captureSession.setRepeatingRequest(
@@ -926,7 +1015,7 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
                         imageSavedIdlingResource.decrement()
                     }
 
-                    lifecycleScope.launch(Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                         if (isRequestMode) {
                             if (imageUri == null) {
                                 result.putExtra(
@@ -1176,7 +1265,7 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
         sessionImageUriSet.deleteAllUris()
     }
 
-    private class SessionMediaUriSet constructor(val contentResolver: ContentResolver) {
+    private class SessionMediaUriSet(val contentResolver: ContentResolver) {
         private val mSessionMediaUris: MutableSet<Uri> = mutableSetOf()
 
         fun add(uri: Uri) {
@@ -1197,3 +1286,5 @@ class Camera2ExtensionsActivity : AppCompatActivity() {
         }
     }
 }
+
+fun Double.format(scale: Int): String = String.format("%.${scale}f", this)

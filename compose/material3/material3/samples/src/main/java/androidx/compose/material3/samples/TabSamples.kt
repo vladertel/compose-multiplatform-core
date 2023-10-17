@@ -19,6 +19,7 @@ package androidx.compose.material3.samples
 import androidx.annotation.Sampled
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.BorderStroke
@@ -29,24 +30,27 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.material3.TabPosition
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.LeadingIconTab
-import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LeadingIconTab
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabPosition
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,13 +64,79 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 @Preview
+@Composable
+@Sampled
+fun PrimaryTextTabs() {
+    var state by remember { mutableStateOf(0) }
+    val titles = listOf("Tab 1", "Tab 2", "Tab 3 with lots of text")
+    Column {
+        PrimaryTabRow(selectedTabIndex = state) {
+            titles.forEachIndexed { index, title ->
+                Tab(
+                    selected = state == index,
+                    onClick = { state = index },
+                    text = { Text(text = title, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                )
+            }
+        }
+        Text(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            text = "Primary tab ${state + 1} selected",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+@Preview
+@Composable
+fun PrimaryIconTabs() {
+    var state by remember { mutableStateOf(0) }
+    val icons = listOf(Icons.Filled.Favorite, Icons.Filled.Favorite, Icons.Filled.Favorite)
+    Column {
+        PrimaryTabRow(selectedTabIndex = state) {
+            icons.forEachIndexed { index, icon ->
+                Tab(
+                    selected = state == index,
+                    onClick = { state = index },
+                    icon = { Icon(icon, contentDescription = "Favorite") }
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+@Sampled
+fun SecondaryTextTabs() {
+    var state by remember { mutableStateOf(0) }
+    val titles = listOf("Tab 1", "Tab 2", "Tab 3 with lots of text")
+    Column {
+        SecondaryTabRow(selectedTabIndex = state) {
+            titles.forEachIndexed { index, title ->
+                Tab(
+                    selected = state == index,
+                    onClick = { state = index },
+                    text = { Text(text = title, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                )
+            }
+        }
+        Text(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            text = "Secondary tab ${state + 1} selected",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+@Preview
 @Sampled
 @Composable
 fun TextTabs() {
     var state by remember { mutableStateOf(0) }
     val titles = listOf("Tab 1", "Tab 2", "Tab 3 with lots of text")
     Column {
-        TabRow(selectedTabIndex = state) {
+        PrimaryTabRow(selectedTabIndex = state) {
             titles.forEachIndexed { index, title ->
                 Tab(
                     selected = state == index,
@@ -83,12 +153,13 @@ fun TextTabs() {
     }
 }
 
+@Preview
 @Composable
-fun IconTabs() {
+fun SecondaryIconTabs() {
     var state by remember { mutableStateOf(0) }
     val icons = listOf(Icons.Filled.Favorite, Icons.Filled.Favorite, Icons.Filled.Favorite)
     Column {
-        TabRow(selectedTabIndex = state) {
+        SecondaryTabRow(selectedTabIndex = state) {
             icons.forEachIndexed { index, icon ->
                 Tab(
                     selected = state == index,
@@ -105,6 +176,7 @@ fun IconTabs() {
     }
 }
 
+@Preview
 @Composable
 fun TextAndIconTabs() {
     var state by remember { mutableStateOf(0) }
@@ -114,7 +186,7 @@ fun TextAndIconTabs() {
         "Tab 3 with lots of text" to Icons.Filled.Favorite
     )
     Column {
-        TabRow(selectedTabIndex = state) {
+        PrimaryTabRow(selectedTabIndex = state) {
             titlesAndIcons.forEachIndexed { index, (title, icon) ->
                 Tab(
                     selected = state == index,
@@ -132,6 +204,7 @@ fun TextAndIconTabs() {
     }
 }
 
+@Preview
 @Composable
 fun LeadingIconTabs() {
     var state by remember { mutableStateOf(0) }
@@ -141,7 +214,7 @@ fun LeadingIconTabs() {
         "Tab 3 with lots of text" to Icons.Filled.Favorite
     )
     Column {
-        ScrollableTabRow(selectedTabIndex = state) {
+        PrimaryScrollableTabRow(selectedTabIndex = state) {
             titlesAndIcons.forEachIndexed { index, (title, icon) ->
                 LeadingIconTab(
                     selected = state == index,
@@ -159,6 +232,83 @@ fun LeadingIconTabs() {
     }
 }
 
+@Preview
+@Composable
+fun ScrollingPrimaryTextTabs() {
+    var state by remember { mutableStateOf(0) }
+    val titles = listOf(
+        "Tab 1",
+        "Tab 2",
+        "Tab 3 with lots of text",
+        "Tab 4",
+        "Tab 5",
+        "Tab 6 with lots of text",
+        "Tab 7",
+        "Tab 8",
+        "Tab 9 with lots of text",
+        "Tab 10"
+    )
+    Column {
+        PrimaryScrollableTabRow(selectedTabIndex = state, indicator = @Composable { tabPositions ->
+            if (state < tabPositions.size) {
+                val width by animateDpAsState(targetValue = tabPositions[state].contentWidth)
+                TabRowDefaults.PrimaryIndicator(
+                    modifier = Modifier.tabIndicatorOffset(tabPositions[state]),
+                    width = width
+                )
+            }
+        }) {
+            titles.forEachIndexed { index, title ->
+                Tab(
+                    selected = state == index,
+                    onClick = { state = index },
+                    text = { Text(title) }
+                )
+            }
+        }
+        Text(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            text = "Scrolling primary tab ${state + 1} selected",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+@Preview
+@Composable
+fun ScrollingSecondaryTextTabs() {
+    var state by remember { mutableStateOf(0) }
+    val titles = listOf(
+        "Tab 1",
+        "Tab 2",
+        "Tab 3 with lots of text",
+        "Tab 4",
+        "Tab 5",
+        "Tab 6 with lots of text",
+        "Tab 7",
+        "Tab 8",
+        "Tab 9 with lots of text",
+        "Tab 10"
+    )
+    Column {
+        SecondaryScrollableTabRow(selectedTabIndex = state) {
+            titles.forEachIndexed { index, title ->
+                Tab(
+                    selected = state == index,
+                    onClick = { state = index },
+                    text = { Text(title) }
+                )
+            }
+        }
+        Text(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            text = "Scrolling secondary tab ${state + 1} selected",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+@Preview
 @Composable
 fun ScrollingTextTabs() {
     var state by remember { mutableStateOf(0) }
@@ -175,7 +325,7 @@ fun ScrollingTextTabs() {
         "Tab 10"
     )
     Column {
-        ScrollableTabRow(selectedTabIndex = state) {
+        PrimaryScrollableTabRow(selectedTabIndex = state) {
             titles.forEachIndexed { index, title ->
                 Tab(
                     selected = state == index,
@@ -199,9 +349,13 @@ fun FancyTabs() {
     var state by remember { mutableStateOf(0) }
     val titles = listOf("Tab 1", "Tab 2", "Tab 3")
     Column {
-        TabRow(selectedTabIndex = state) {
+        SecondaryTabRow(selectedTabIndex = state) {
             titles.forEachIndexed { index, title ->
-                FancyTab(title = title, onClick = { state = index }, selected = (index == state))
+                FancyTab(
+                    title = title,
+                    onClick = { state = index },
+                    selected = (index == state)
+                )
             }
         }
         Text(
@@ -228,7 +382,7 @@ fun FancyIndicatorTabs() {
     }
 
     Column {
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = state,
             indicator = indicator
         ) {
@@ -260,7 +414,7 @@ fun FancyIndicatorContainerTabs() {
     }
 
     Column {
-        TabRow(
+        SecondaryTabRow(
             selectedTabIndex = state,
             indicator = indicator
         ) {
@@ -280,6 +434,7 @@ fun FancyIndicatorContainerTabs() {
     }
 }
 
+@Preview
 @Composable
 fun ScrollingFancyIndicatorContainerTabs() {
     var state by remember { mutableStateOf(0) }
@@ -300,7 +455,7 @@ fun ScrollingFancyIndicatorContainerTabs() {
     }
 
     Column {
-        ScrollableTabRow(
+        SecondaryScrollableTabRow(
             selectedTabIndex = state,
             indicator = indicator
         ) {
@@ -320,7 +475,6 @@ fun ScrollingFancyIndicatorContainerTabs() {
     }
 }
 
-@Preview
 @Sampled
 @Composable
 fun FancyTab(title: String, onClick: () -> Unit, selected: Boolean) {
@@ -334,7 +488,8 @@ fun FancyTab(title: String, onClick: () -> Unit, selected: Boolean) {
                     .align(Alignment.CenterHorizontally)
                     .background(
                         color = if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.background)
+                        else MaterialTheme.colorScheme.background
+                    )
             )
             Text(
                 text = title,
@@ -345,7 +500,6 @@ fun FancyTab(title: String, onClick: () -> Unit, selected: Boolean) {
     }
 }
 
-@Preview
 @Sampled
 @Composable
 fun FancyIndicator(color: Color, modifier: Modifier = Modifier) {
@@ -359,7 +513,6 @@ fun FancyIndicator(color: Color, modifier: Modifier = Modifier) {
     )
 }
 
-@Preview
 @Sampled
 @Composable
 fun FancyAnimatedIndicator(tabPositions: List<TabPosition>, selectedTabIndex: Int) {

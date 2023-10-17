@@ -16,6 +16,13 @@
 
 package androidx.compose.compiler.plugins.kotlin
 
+import androidx.compose.compiler.plugins.kotlin.analysis.StabilityConfigParser
+import androidx.compose.compiler.plugins.kotlin.k1.ComposableCallChecker
+import androidx.compose.compiler.plugins.kotlin.k1.ComposableDeclarationChecker
+import androidx.compose.compiler.plugins.kotlin.k1.ComposableTargetChecker
+import androidx.compose.compiler.plugins.kotlin.k1.ComposeDiagnosticSuppressor
+import androidx.compose.compiler.plugins.kotlin.k1.ComposeTypeResolutionInterceptorExtension
+import androidx.compose.compiler.plugins.kotlin.k2.ComposeFirExtensionRegistrar
 import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityFieldSerializationPlugin
 import com.intellij.mock.MockProject
 import com.intellij.openapi.project.Project
@@ -31,8 +38,10 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import org.jetbrains.kotlin.config.JVMConfigurationKeys
 import org.jetbrains.kotlin.config.KotlinCompilerVersion
+import org.jetbrains.kotlin.config.languageVersionSettings
 import org.jetbrains.kotlin.extensions.StorageComponentContainerContributor
 import org.jetbrains.kotlin.extensions.internal.TypeResolutionInterceptor
+import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrarAdapter
 import org.jetbrains.kotlin.serialization.DescriptorSerializerPlugin
 
 object ComposeConfiguration {
@@ -55,10 +64,16 @@ object ComposeConfiguration {
     val INTRINSIC_REMEMBER_OPTIMIZATION_ENABLED_KEY =
         CompilerConfigurationKey<Boolean>("Enable optimization to treat remember as an intrinsic")
     val SUPPRESS_KOTLIN_VERSION_COMPATIBILITY_CHECK = CompilerConfigurationKey<String?>(
-            "Version of Kotlin for which version compatibility check should be suppressed"
-        )
+        "Version of Kotlin for which version compatibility check should be suppressed"
+    )
     val DECOYS_ENABLED_KEY =
         CompilerConfigurationKey<Boolean>("Generate decoy methods in IR transform")
+    val STRONG_SKIPPING_ENABLED_KEY =
+        CompilerConfigurationKey<Boolean>("Enable strong skipping mode")
+    val STABILITY_CONFIG_PATH_KEY =
+        CompilerConfigurationKey<String>(
+            "Path to stability configuration file"
+        )
 }
 
 @OptIn(ExperimentalCompilerApi::class)
@@ -129,6 +144,20 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
             required = false,
             allowMultipleOccurrences = false
         )
+        val STRONG_SKIPPING_OPTION = CliOption(
+            "experimentalStrongSkipping",
+            "<true|false>",
+            "Enable experimental strong skipping mode",
+            required = false,
+            allowMultipleOccurrences = false
+        )
+        val STABLE_CONFIG_PATH_OPTION = CliOption(
+            "stabilityConfigurationPath",
+            "<path>",
+            "Path to stability configuration file",
+            required = false,
+            allowMultipleOccurrences = true
+        )
     }
 
     override val pluginId = PLUGIN_ID
@@ -142,6 +171,7 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
         INTRINSIC_REMEMBER_OPTIMIZATION_ENABLED_OPTION,
         SUPPRESS_KOTLIN_VERSION_CHECK_ENABLED_OPTION,
         DECOYS_ENABLED_OPTION,
+        STRONG_SKIPPING_OPTION
     )
 
     override fun processOption(
@@ -185,13 +215,25 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
             ComposeConfiguration.DECOYS_ENABLED_KEY,
             value == "true"
         )
+        STRONG_SKIPPING_OPTION -> configuration.put(
+            ComposeConfiguration.STRONG_SKIPPING_ENABLED_KEY,
+            value == "true"
+        )
+        STABLE_CONFIG_PATH_OPTION -> configuration.put(
+            ComposeConfiguration.STABILITY_CONFIG_PATH_KEY,
+            value
+        )
         else -> throw CliOptionProcessingException("Unknown option: ${option.optionName}")
     }
 }
 
+@Suppress("DEPRECATION") // CompilerPluginRegistrar does not expose project (or disposable) causing
+                         // memory leaks, see: https://youtrack.jetbrains.com/issue/KT-60952
 @OptIn(ExperimentalCompilerApi::class)
-class ComposeComponentRegistrar :
-    @Suppress("DEPRECATION") org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar {
+class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar {
+    override val supportsK2: Boolean
+        get() = true
+
     override fun registerProjectComponents(
         project: MockProject,
         configuration: CompilerConfiguration
@@ -208,7 +250,7 @@ class ComposeComponentRegistrar :
     companion object {
         fun checkCompilerVersion(configuration: CompilerConfiguration): Boolean {
             try {
-                val KOTLIN_VERSION_EXPECTATION = "1.8.20"
+                val KOTLIN_VERSION_EXPECTATION = "1.9.10"
                 KotlinCompilerVersion.getVersion()?.let { version ->
                     val msgCollector = configuration.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY)
                     val suppressKotlinVersionCheck = configuration.get(
@@ -296,10 +338,7 @@ class ComposeComponentRegistrar :
                 project,
                 ComposableTargetChecker()
             )
-            ComposeDiagnosticSuppressor.registerExtension(
-                project,
-                ComposeDiagnosticSuppressor()
-            )
+            ComposeDiagnosticSuppressor.registerExtension(project, ComposeDiagnosticSuppressor())
             @Suppress("OPT_IN_USAGE_ERROR")
             TypeResolutionInterceptor.registerExtension(
                 project,
@@ -310,6 +349,7 @@ class ComposeComponentRegistrar :
                 project,
                 ClassStabilityFieldSerializationPlugin()
             )
+            FirExtensionRegistrarAdapter.registerExtension(project, ComposeFirExtensionRegistrar())
         }
 
         fun createComposeIrExtension(
@@ -346,6 +386,28 @@ class ComposeComponentRegistrar :
                 JVMConfigurationKeys.VALIDATE_IR
             )
 
+            val useK2 = configuration.languageVersionSettings.languageVersion.usesK2
+            val strongSkippingEnabled = configuration.get(
+                ComposeConfiguration.STRONG_SKIPPING_ENABLED_KEY,
+                false
+            )
+
+            val stabilityConfigPath = configuration.get(
+                ComposeConfiguration.STABILITY_CONFIG_PATH_KEY,
+                ""
+            )
+
+            val msgCollector = configuration.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY)
+            val stableTypeMatchers = try {
+                StabilityConfigParser.fromFile(stabilityConfigPath).stableTypeMatchers
+            } catch (e: Exception) {
+                msgCollector?.report(
+                    CompilerMessageSeverity.ERROR,
+                    e.message ?: "Error parsing stability configuration"
+                )
+                emptySet()
+            }
+
             return ComposeIrGenerationExtension(
                 liveLiteralsEnabled = liveLiteralsEnabled,
                 liveLiteralsV2Enabled = liveLiteralsV2Enabled,
@@ -356,6 +418,9 @@ class ComposeComponentRegistrar :
                 metricsDestination = metricsDestination,
                 reportsDestination = reportsDestination,
                 validateIr = validateIr,
+                useK2 = useK2,
+                strongSkippingEnabled = strongSkippingEnabled,
+                stableTypeMatchers = stableTypeMatchers
             )
         }
     }

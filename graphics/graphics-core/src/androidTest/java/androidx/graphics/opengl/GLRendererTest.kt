@@ -43,11 +43,11 @@ import androidx.graphics.SurfaceTextureRenderer
 import androidx.graphics.isAllColor
 import androidx.graphics.lowlatency.LineRenderer
 import androidx.graphics.lowlatency.Rectangle
-import androidx.hardware.SyncFenceCompat
 import androidx.graphics.opengl.egl.EGLManager
 import androidx.graphics.opengl.egl.EGLSpec
 import androidx.graphics.opengl.egl.supportsNativeAndroidFence
 import androidx.graphics.verifyQuadrants
+import androidx.hardware.SyncFenceCompat
 import androidx.lifecycle.Lifecycle.State
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -813,7 +813,7 @@ class GLRendererTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q, maxSdkVersion = 32) // b/268117579
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.Q)
     fun testFrontBufferedRenderer() {
         val width = 10
         val height = 10
@@ -987,6 +987,8 @@ class GLRendererTest {
                     width.toFloat(),
                     height.toFloat()
                 )
+                // See: b/236394768 Workaround for ANGLE issue where FBOs with HardwareBuffer
+                GLES20.glFinish()
                 supportsFence = eglManager.supportsNativeAndroidFence()
                 quadRenderer.release()
                 surface.release()
@@ -1125,6 +1127,8 @@ class GLRendererTest {
                     width.toFloat(),
                     height.toFloat()
                 )
+                // See: b/236394768 Workaround for ANGLE issue where FBOs with HardwareBuffer
+                GLES20.glFinish()
                 supportsFence = eglManager.supportsNativeAndroidFence()
                 quadRenderer.release()
                 deleteTexture(texId)

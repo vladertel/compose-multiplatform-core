@@ -39,13 +39,20 @@ import java.util.concurrent.Executor
  *         // ...
  *     }
  *
- *     private val ambientObserver = AmbientLifecycleObserver(this, callbacks)
+ *     private val ambientObserver = AmbientLifecycleObserver(this, mainExecutor, callbacks)
  *
  *     override fun onCreate(savedInstanceState: Bundle) {
+ *         super.onCreate(savedInstanceState)
  *         lifecycle.addObserver(ambientObserver)
  *     }
  * }
  * ```
+ *
+ * If the observer is registered while the device is in ambient mode, the registered callback
+ * will immediately receive a call to
+ * [AmbientLifecycleObserver.AmbientLifecycleCallback.onEnterAmbient]. If the device is in active
+ * mode, the callbacks will be registered, and `onEnterAmbient` will be called when the device next
+ * enters ambient mode.
  *
  * @param activity The activity that this observer is being attached to.
  * @param callbackExecutor The executor to run the provided callbacks on.
@@ -77,9 +84,10 @@ fun AmbientLifecycleObserver(
  *         // ...
  *     }
  *
- *     private val ambientObserver = DefaultAmbientLifecycleObserver(this, callbacks)
+ *     private val ambientObserver = AmbientLifecycleObserver(this, callbacks)
  *
  *     override fun onCreate(savedInstanceState: Bundle) {
+ *         super.onCreate(savedInstanceState)
  *         lifecycle.addObserver(ambientObserver)
  *     }
  * }
