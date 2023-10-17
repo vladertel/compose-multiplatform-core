@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.text.input
+package androidx.datastore.core
 
-import android.view.View
-import android.view.inputmethod.BaseInputConnection
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputConnection
+import java.io.File
 
-internal open class TestInputMethodRequest(view: View) : BaseInputConnection(view, false),
-    PlatformTextInputMethodRequest {
-
-    override fun createInputConnection(outAttributes: EditorInfo): InputConnection {
-        return this
-    }
-}
+/**
+ * Create a coordinator for single process use cases.
+ *
+ * @param file The canonical file managed by [SingleProcessCoordinator]
+ */
+@Suppress("StreamFiles")
+fun createSingleProcessCoordinator(file: File): InterProcessCoordinator =
+    createSingleProcessCoordinator(file.canonicalFile.absolutePath)
