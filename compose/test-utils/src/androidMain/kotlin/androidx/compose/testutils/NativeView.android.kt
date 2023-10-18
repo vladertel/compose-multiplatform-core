@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-package androidx.annotation
+package androidx.compose.testutils
 
-public actual typealias RequiresAndroidApi = RequiresApi
+actual typealias NativeView = android.view.View
