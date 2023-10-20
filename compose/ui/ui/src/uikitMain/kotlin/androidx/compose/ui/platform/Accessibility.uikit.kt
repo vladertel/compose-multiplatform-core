@@ -17,21 +17,147 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.ui.node.LayoutNode
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
+import androidx.compose.ui.toCGRect
+import kotlinx.coroutines.delay
+import platform.UIKit.UIAccessibilityElement
+import platform.UIKit.accessibilityElements
+import platform.UIKit.accessibilityFrame
+import platform.UIKit.accessibilityLabel
+import platform.UIKit.isAccessibilityElement
+import platform.darwin.NSObject
+
+/**
+ * NSObject used as a node in the tree to be used as a data source for iOS accessibility services.
+ */
+internal class ComposeAccessible(
+    container: Any,
+    private val node: SemanticsNode,
+): UIAccessibilityElement(container) {
+    init {
+        isAccessibilityElement = true
+        accessibilityLabel = "${node.id}"
+        accessibilityFrame = node.boundsInWindow.toCGRect()
+    }
+}
 
 internal class AccessibilityControllerImpl(
+    val rootAccessibleContainer: NSObject,
     val owner: SemanticsOwner
 ): AccessibilityController {
+    /**
+     * Represents the current state of the [ComposeAccessible] tree cleanliness.
+     *
+     * A value of true indicates that the Compose accessible tree is dirty, meaning that compose semantics tree was modified since last sync,
+     * false otherwise.
+     */
+    private var isCurrentComposeAccessibleTreeDirty = false
+
+    /**
+     * Cache of current [ComposeAccessible] objects. The key is [SemanticsNode.id] of corresponding [SemanticsNode].
+     */
+    private val composeAccessibleMap = mutableMapOf<Int, ComposeAccessible>()
+
+    /**
+     * Represent a set of [SemanticsNode.id] that are currently in the tree.
+     */
+    private val inUseIds = mutableSetOf<Int>()
+
     override fun onSemanticsChange() {
-        println("onSemanticsChange")
     }
 
     override fun onLayoutChange(layoutNode: LayoutNode) {
-        println("onLayoutChange")
+
     }
 
     override suspend fun syncLoop() {
-        println("syncLoop")
+        while (true) {
+            syncNodes()
+            delay(100)
+        }
     }
 
+    /**
+     * Recursively traverses the [SemanticsNode] tree and invokes [block] with every node except the root one
+     */
+    private fun traverseSemanticsTree(block: (SemanticsNode) -> Unit) {
+        val rootNode = owner.rootSemanticsNode
+
+        rootNode.children.forEach {
+            traverseSemanticsTree(it, block)
+        }
+    }
+
+    /**
+     * Apply [block] to [SemanticsNode] and all its children recursively
+     */
+    private fun traverseSemanticsTree(node: SemanticsNode, block: (SemanticsNode) -> Unit) {
+        block(node)
+
+        node.children.forEach {
+            traverseSemanticsTree(it, block)
+        }
+    }
+
+    private fun syncNodes() {
+        val rootNode = owner.rootSemanticsNode
+        if (!rootNode.layoutNode.isPlaced) {
+            return
+        }
+
+        isCurrentComposeAccessibleTreeDirty = false
+
+        inUseIds.clear()
+
+        traverseSemanticsTree {
+            inUseIds.add(it.id)
+
+            if (!composeAccessibleMap.containsKey(it.id)) {
+                composeAccessibleMap[it.id] = ComposeAccessible(rootAccessibleContainer, it)
+            }
+        }
+
+        composeAccessibleMap.entries.retainAll {
+            inUseIds.contains(it.key)
+        }
+
+        rootAccessibleContainer.accessibilityElements = owner.rootSemanticsNode.children.map {
+            val accessible = composeAccessibleMap[it.id]
+            checkNotNull(accessible)
+        }
+
+
+//        if (!rootSemanticNode.layoutNode.isPlaced) {
+//            return
+//        }
+//
+//        val previous = _currentNodes
+//        val nodes = mutableMapOf<Int, ComposeAccessible>()
+//        fun findAllSemanticNodesRecursive(currentNode: SemanticsNode) {
+//            nodes[currentNode.id] = previous[currentNode.id]?.let {
+//                val prevSemanticsNode = it.semanticsNode
+//                it.semanticsNode = currentNode
+//                onNodeChanged(it, prevSemanticsNode, currentNode)
+//                it
+//            } ?: ComposeAccessible(currentNode, this).also {
+//                onNodeAdded(it)
+//            }
+//
+//
+//            val children = currentNode.replacedChildren
+//            for (i in children.size - 1 downTo 0) {
+//                findAllSemanticNodesRecursive(children[i])
+//            }
+//        }
+//
+//        findAllSemanticNodesRecursive(rootSemanticNode)
+//        for ((id, prevNode) in previous.entries) {
+//            if (nodes[id] == null) {
+//                onNodeRemoved(prevNode)
+//            }
+//        }
+//        _currentNodes = nodes
+//        currentNodesInvalidated = false
+    }
 }

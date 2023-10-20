@@ -545,7 +545,7 @@ internal actual class ComposeWindow : UIViewController {
             override val textInputService: PlatformTextInputService = inputServices
 
             override fun accessibilityController(owner: SemanticsOwner): AccessibilityController =
-                AccessibilityControllerImpl(owner)
+                AccessibilityControllerImpl(skikoUIView, owner)
 
             override val viewConfiguration =
                 object : ViewConfiguration {

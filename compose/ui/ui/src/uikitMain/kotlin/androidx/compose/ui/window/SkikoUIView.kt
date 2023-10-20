@@ -116,6 +116,8 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
     init {
         multipleTouchEnabled = true
+        isAccessibilityElement = false
+        accessibilityContainerType = UIAccessibilityContainerTypeSemanticGroup
 
         _metalLayer.also {
             // Workaround for KN compiler bug
