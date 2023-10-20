@@ -39,6 +39,7 @@ import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.interop.UIKitInteropContext
 import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.platform.*
+import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
 import androidx.compose.ui.unit.*
@@ -542,6 +543,10 @@ internal actual class ComposeWindow : UIViewController {
             override val windowInfo: WindowInfo
                 get() = _windowInfo
             override val textInputService: PlatformTextInputService = inputServices
+
+            override fun accessibilityController(owner: SemanticsOwner): AccessibilityController =
+                AccessibilityControllerImpl(owner)
+
             override val viewConfiguration =
                 object : ViewConfiguration {
                     override val longPressTimeoutMillis: Long get() = 500
