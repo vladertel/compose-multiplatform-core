@@ -23,7 +23,9 @@ import androidx.compose.compiler.plugins.kotlin.lower.AbstractComposeLowering
 import androidx.compose.compiler.plugins.kotlin.lower.includeFileNameInExceptionTrace
 import androidx.compose.compiler.plugins.kotlin.lower.isSyntheticComposableFunction
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.backend.common.ir.isExpect
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
+import org.jetbrains.kotlin.backend.jvm.ir.propertyIfAccessor
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrConstructor
@@ -83,7 +85,8 @@ abstract class AbstractDecoysLowering(
             !isEnumConstructor() &&
             (hasComposableAnnotation() || hasComposableParameter()) &&
             !isSAM() &&
-            !(parentClassOrNull?.defaultType?.isSyntheticComposableFunction() ?: false)
+            !(parentClassOrNull?.defaultType?.isSyntheticComposableFunction() ?: false) &&
+            !isExpect && !propertyIfAccessor.isExpect
 
     }
 
