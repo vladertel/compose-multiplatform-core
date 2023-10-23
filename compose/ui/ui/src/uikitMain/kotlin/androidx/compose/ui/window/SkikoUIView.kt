@@ -142,6 +142,7 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
      */
     fun showTextMenu(targetRect: Rect, textActions: TextActions) {
         _currentTextMenuActions = textActions
+        // FIXME: UIMenuController is deprecated since iOS 17
         val menu: UIMenuController = UIMenuController.sharedMenuController()
         val cgRect = CGRectMake(
             x = targetRect.left.toDouble(),
@@ -151,13 +152,18 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
         )
         val isTargetVisible = CGRectIntersectsRect(bounds, cgRect)
         if (isTargetVisible) {
+            // FIXME: isMenuVisible is deprecated since iOS 14
             if (menu.isMenuVisible()) {
+                // FIXME: setTargetRect is deprecated since iOS 14
                 menu.setTargetRect(cgRect, this)
             } else {
+                // FIXME: Crash on iOS 12, showMenuFromView is available only since iOS 13
                 menu.showMenuFromView(this, cgRect)
             }
         } else {
+            // FIXME: isMenuVisible is deprecated since iOS 14
             if (menu.isMenuVisible()) {
+                // FIXME: Crash on iOS 12, hideMenu is available only since iOS 13
                 menu.hideMenu()
             }
         }
@@ -165,7 +171,9 @@ internal class SkikoUIView : UIView, UIKeyInputProtocol, UITextInputProtocol {
 
     fun hideTextMenu() {
         _currentTextMenuActions = null
+        // FIXME: UIMenuController deprecated since iOS 17
         val menu: UIMenuController = UIMenuController.sharedMenuController()
+        // FIXME: Crash on iOS 12, hideMenu is available only since iOS 13
         menu.hideMenu()
     }
 
