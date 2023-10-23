@@ -17,6 +17,7 @@
 package androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc
 
 import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
+import androidx.compose.compiler.plugins.kotlin.analysis.StabilityInferencer
 import androidx.compose.compiler.plugins.kotlin.lower.AbstractComposeLowering
 import androidx.compose.compiler.plugins.kotlin.lower.ComposableSymbolRemapper
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
@@ -43,8 +44,9 @@ class AddHiddenFromObjCLowering(
     private val pluginContext: IrPluginContext,
     symbolRemapper: ComposableSymbolRemapper,
     metrics: ModuleMetrics,
-    private val hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet
-) : AbstractComposeLowering(pluginContext, symbolRemapper, metrics) {
+    private val hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet,
+    stabilityInferencer: StabilityInferencer,
+) : AbstractComposeLowering(pluginContext, symbolRemapper, metrics, stabilityInferencer) {
 
     private val hiddenFromObjCAnnotation: IrClassSymbol by lazy {
         getTopLevelClass(ClassId.fromString("kotlin/native/HiddenFromObjC"))

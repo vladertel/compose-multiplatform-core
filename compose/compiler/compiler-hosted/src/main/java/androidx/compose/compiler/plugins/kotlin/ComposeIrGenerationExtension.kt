@@ -101,7 +101,8 @@ class ComposeIrGenerationExtension(
                 pluginContext,
                 symbolRemapper,
                 metrics,
-                hideFromObjCDeclarationsSet
+                hideFromObjCDeclarationsSet,
+                stabilityInferencer
             ).lower(moduleFragment)
         }
 
