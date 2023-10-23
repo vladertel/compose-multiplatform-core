@@ -33,6 +33,7 @@ import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irReturn
 import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.expressions.IrDelegatingConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrExpressionBody
 import org.jetbrains.kotlin.ir.expressions.IrGetValue
@@ -164,8 +165,12 @@ class CreateDecoysTransformer(
         super.visitConstructor(copied) as IrConstructor
 
         return declaration.apply {
+            // keep the original delegating constructor call to keep the IR valid (according to kotlin backend expectations)
+            val delegatingConstructorCall = this.body?.statements?.firstOrNull {
+                it is IrDelegatingConstructorCall
+            }
             setDecoyAnnotation(newName.asString())
-            stubBody()
+            stubBody(delegatingConstructorCall)
         }
     }
 
@@ -304,8 +309,9 @@ class CreateDecoysTransformer(
         })
     }
 
-    private fun IrFunction.stubBody() {
+    private fun IrFunction.stubBody(vararg statements: IrStatement?) {
         body = DeclarationIrBuilder(context, symbol).irBlockBody {
+            statements.filterNotNull().forEach { + it }
             + irReturn(
                 irCall(decoyStub).also { call ->
                     call.putValueArgument(0, irConst(name.asString()))
