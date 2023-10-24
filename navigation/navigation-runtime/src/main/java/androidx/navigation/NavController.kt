@@ -1431,6 +1431,7 @@ public open class NavController(
                     }, null
                 )
             }
+            deepLinkHandled = true
             return true
         }
         // Assume we're on another apps' task and only start the final destination
