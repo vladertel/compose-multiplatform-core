@@ -16,11 +16,16 @@
 
 package androidx.compose.ui.platform
 
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.toCGRect
+import kotlinx.cinterop.CValue
 import kotlinx.coroutines.delay
+import platform.CoreGraphics.CGRect
 import platform.UIKit.UIAccessibilityElement
 import platform.UIKit.accessibilityElements
 import platform.UIKit.accessibilityFrame
@@ -34,17 +39,26 @@ import platform.darwin.NSObject
 internal class ComposeAccessible(
     container: Any,
     node: SemanticsNode,
+    val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
 ): UIAccessibilityElement(container) {
     init {
         isAccessibilityElement = true
-        accessibilityLabel = "${node.id}"
-        accessibilityFrame = node.boundsInWindow.toCGRect()
+
+        val text = node.config.getOrNull(SemanticsProperties.Text)
+        if (text != null) {
+            accessibilityLabel = text.joinToString {
+                it.text
+            }
+        }
+        //accessibilityLabel = "${node.id}"
+        accessibilityFrame = convertRectToWindowSpaceCGRect(node.boundsInWindow)
     }
 }
 
 internal class AccessibilityControllerImpl(
     val rootAccessibleContainer: NSObject,
-    val owner: SemanticsOwner
+    val owner: SemanticsOwner,
+    val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
 ): AccessibilityController {
     /**
      * Represents the current state of the [ComposeAccessible] tree cleanliness.
@@ -102,7 +116,12 @@ internal class AccessibilityControllerImpl(
 
     private fun syncNodes() {
         val rootNode = owner.rootSemanticsNode
+
         if (!rootNode.layoutNode.isPlaced) {
+            return
+        }
+
+        if (!isCurrentComposeAccessibleTreeDirty) {
             return
         }
 
@@ -114,7 +133,7 @@ internal class AccessibilityControllerImpl(
             inUseIds.add(it.id)
 
             if (!composeAccessibleMap.containsKey(it.id)) {
-                composeAccessibleMap[it.id] = ComposeAccessible(rootAccessibleContainer, it)
+                composeAccessibleMap[it.id] = ComposeAccessible(rootAccessibleContainer, it, convertRectToWindowSpaceCGRect)
             }
         }
 
@@ -122,9 +141,20 @@ internal class AccessibilityControllerImpl(
             inUseIds.contains(it.key)
         }
 
-        rootAccessibleContainer.accessibilityElements = owner.rootSemanticsNode.children.map {
-            val accessible = composeAccessibleMap[it.id]
-            checkNotNull(accessible)
+        var allNodes = mutableListOf<Any>()
+        traverseSemanticsTree {
+            val accessible = checkNotNull(composeAccessibleMap[it.id])
+            println(it.config)
+            allNodes.add(accessible)
         }
+
+//        rootAccessibleContainer.accessibilityElements = owner.rootSemanticsNode.children.map {
+//            val accessible = composeAccessibleMap[it.id]
+//            println(it)
+//            checkNotNull(accessible)
+//        }
+        rootAccessibleContainer.accessibilityElements = allNodes
+
+        println(rootAccessibleContainer)
     }
 }

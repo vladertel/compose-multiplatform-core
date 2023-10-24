@@ -545,7 +545,23 @@ internal actual class ComposeWindow : UIViewController {
             override val textInputService: PlatformTextInputService = inputServices
 
             override fun accessibilityController(owner: SemanticsOwner): AccessibilityController =
-                AccessibilityControllerImpl(skikoUIView, owner)
+                AccessibilityControllerImpl(view, owner, convertRectToWindowSpaceCGRect =  {
+                    val window = view.window
+
+                    if (window == null) {
+                        CGRectMake(0.0, 0.0, 0.0, 0.0)
+                    } else {
+                        val scale = window.screen.scale
+                        window.convertRect(
+                            CGRectMake(
+                                x = it.left.toDouble() / scale,
+                                y = it.top.toDouble() / scale,
+                                width = it.width.toDouble() / scale,
+                                height = it.height.toDouble() / scale
+                            ), fromView = view
+                        )
+                    }
+                })
 
             override val viewConfiguration =
                 object : ViewConfiguration {
