@@ -33,7 +33,7 @@ import platform.darwin.NSObject
  */
 internal class ComposeAccessible(
     container: Any,
-    private val node: SemanticsNode,
+    node: SemanticsNode,
 ): UIAccessibilityElement(container) {
     init {
         isAccessibilityElement = true
@@ -65,10 +65,10 @@ internal class AccessibilityControllerImpl(
     private val inUseIds = mutableSetOf<Int>()
 
     override fun onSemanticsChange() {
+        isCurrentComposeAccessibleTreeDirty = true
     }
 
     override fun onLayoutChange(layoutNode: LayoutNode) {
-
     }
 
     override suspend fun syncLoop() {
@@ -126,38 +126,5 @@ internal class AccessibilityControllerImpl(
             val accessible = composeAccessibleMap[it.id]
             checkNotNull(accessible)
         }
-
-
-//        if (!rootSemanticNode.layoutNode.isPlaced) {
-//            return
-//        }
-//
-//        val previous = _currentNodes
-//        val nodes = mutableMapOf<Int, ComposeAccessible>()
-//        fun findAllSemanticNodesRecursive(currentNode: SemanticsNode) {
-//            nodes[currentNode.id] = previous[currentNode.id]?.let {
-//                val prevSemanticsNode = it.semanticsNode
-//                it.semanticsNode = currentNode
-//                onNodeChanged(it, prevSemanticsNode, currentNode)
-//                it
-//            } ?: ComposeAccessible(currentNode, this).also {
-//                onNodeAdded(it)
-//            }
-//
-//
-//            val children = currentNode.replacedChildren
-//            for (i in children.size - 1 downTo 0) {
-//                findAllSemanticNodesRecursive(children[i])
-//            }
-//        }
-//
-//        findAllSemanticNodesRecursive(rootSemanticNode)
-//        for ((id, prevNode) in previous.entries) {
-//            if (nodes[id] == null) {
-//                onNodeRemoved(prevNode)
-//            }
-//        }
-//        _currentNodes = nodes
-//        currentNodesInvalidated = false
     }
 }
