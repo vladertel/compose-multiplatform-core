@@ -7,7 +7,6 @@ language = Objective-C
 
 // This protocol helps to override ObjC UIView extensions in Kotlin
 @protocol UIAccessibilityContainerWorkaround
-//- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event;
 - (NSInteger)accessibilityElementCount;
 - (id)accessibilityElementAtIndex:(NSInteger)index;
 - (NSInteger)indexOfAccessibilityElement:(id)element;
