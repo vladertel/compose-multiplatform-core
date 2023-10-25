@@ -25,23 +25,25 @@ import androidx.compose.ui.semantics.getOrNull
 import kotlinx.cinterop.CValue
 import kotlinx.coroutines.delay
 import platform.CoreGraphics.CGRect
+import platform.Foundation.NSNotFound
 import platform.UIKit.UIAccessibilityElement
 import platform.UIKit.accessibilityElements
 import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
+import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
+import platform.darwin.NSInteger
 
-private class ComposeAccessibleElement: UIAccessibilityElement() {
-    /**
-     * NSObject containing information which is fed to iOS Accessibility Services to allow user interact with the app
-     */
-    val accessibilityObject: NSObject
-        get() = this
-
-    var id = 0
-    var parent: ComposeAccessibleElement? = null
-    var hasChildren = false
-    val children = mutableListOf<ComposeAccessibleElement>()
-    var semanticsNode: SemanticsNode? = null
+private class ComposeAccessibleElement(
+    container: Any,
+    semanticsNode: SemanticsNode,
+): UIAccessibilityElement(container) {
+    init {
+        semanticsNode.config.forEach {
+            when (it.key) {
+                else -> {}
+            }
+        }
+    }
 }
 
 /**
@@ -59,8 +61,41 @@ private class ComposeAccessibleElement: UIAccessibilityElement() {
  *         ComposeAccessibleElement_C
  */
 private class ComposeAccessibleContainer(
+    container: Any,
     val wrappedElement: ComposeAccessibleElement
-): UIAccessibilityElement() {
+): UIAccessibilityElement(container), UIAccessibilityContainerWorkaroundProtocol {
+    val children = mutableListOf<Any>()
+
+    override fun accessibilityElementAtIndex(index: NSInteger): Any? {
+        if (index == 0L) {
+            return wrappedElement
+        } else if (index < children.size + 1) {
+            return children[index.toInt() - 1]
+        } else {
+            return null
+        }
+    }
+
+    override fun accessibilityElementCount(): NSInteger =
+        (children.size + 1).toLong()
+
+    override fun indexOfAccessibilityElement(element: Any?): NSInteger {
+        if (element == null) {
+            return NSNotFound
+        }
+
+        if (element == wrappedElement) {
+            return 0
+        }
+
+        val index = children.indexOf(element)
+
+        return if (index == -1) {
+            NSNotFound
+        } else {
+            (index + 1).toLong()
+        }
+    }
 }
 
 /**
@@ -171,7 +206,7 @@ internal class AccessibilityControllerImpl(
             inUseIds.contains(it.key)
         }
 
-        var allNodes = mutableListOf<Any>()
+        val allNodes = mutableListOf<Any>()
         traverseSemanticsTree {
             val accessible = checkNotNull(composeAccessibleMap[it.id])
             println(it.config)
