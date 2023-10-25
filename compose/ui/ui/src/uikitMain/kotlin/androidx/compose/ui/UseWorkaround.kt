@@ -16,11 +16,15 @@
 
 package androidx.compose.ui
 
+import platform.UIKit.UIAccessibilityElement
 import platform.darwin.NSInteger
 import platform.darwin.NSObject
 
-class UseWorkaround : NSObject(),
+class UseWorkaround(container: Any) : UIAccessibilityElement(container),
     androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol {
+        init {
+            isAccessibilityElement = false
+        }
 
     override fun accessibilityElementAtIndex(index: NSInteger /* = Long */): Any? {
         println("call accessibilityElementAtIndex")
