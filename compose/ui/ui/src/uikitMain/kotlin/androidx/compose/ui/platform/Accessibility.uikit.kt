@@ -47,17 +47,16 @@ private class ComposeAccessibleElement: UIAccessibilityElement() {
 /**
  * UIAccessibilityElement can't be a container and an element at the same time.
  * Thus, semantics tree like
- * + SemanticsNode_A
- * | + SemanticsNode_B
- * | | -SemanticsNode_C
+ * SemanticsNode_A
+ *     SemanticsNode_B
+ *         SemanticsNode_C
  *
  * Will be represented like:
- * + ComposeAccessibleContainer_A
- * | - ComposeAccessibleElement_A
- * | + ComposeAccessibleContainer_B
- * | | + ComposeAccessibleElement_B
- * | | - ComposeAccessibleElement_C
- *
+ * ComposeAccessibleContainer_A
+ *     ComposeAccessibleElement_A
+ *     ComposeAccessibleContainer_B
+ *         ComposeAccessibleElement_B
+ *         ComposeAccessibleElement_C
  */
 private class ComposeAccessibleContainer(
     val wrappedElement: ComposeAccessibleElement
