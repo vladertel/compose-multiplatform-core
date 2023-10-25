@@ -22,21 +22,52 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.toCGRect
 import kotlinx.cinterop.CValue
 import kotlinx.coroutines.delay
 import platform.CoreGraphics.CGRect
 import platform.UIKit.UIAccessibilityElement
 import platform.UIKit.accessibilityElements
-import platform.UIKit.accessibilityFrame
-import platform.UIKit.accessibilityLabel
 import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
+
+private class ComposeAccessibleElement: UIAccessibilityElement() {
+    /**
+     * NSObject containing information which is fed to iOS Accessibility Services to allow user interact with the app
+     */
+    val accessibilityObject: NSObject
+        get() = this
+
+    var id = 0
+    var parent: ComposeAccessibleElement? = null
+    var hasChildren = false
+    val children = mutableListOf<ComposeAccessibleElement>()
+    var semanticsNode: SemanticsNode? = null
+}
+
+/**
+ * UIAccessibilityElement can't be a container and an element at the same time.
+ * Thus, semantics tree like
+ * + SemanticsNode_A
+ * | + SemanticsNode_B
+ * | | -SemanticsNode_C
+ *
+ * Will be represented like:
+ * + ComposeAccessibleContainer_A
+ * | - ComposeAccessibleElement_A
+ * | + ComposeAccessibleContainer_B
+ * | | + ComposeAccessibleElement_B
+ * | | - ComposeAccessibleElement_C
+ *
+ */
+private class ComposeAccessibleContainer(
+    val wrappedElement: ComposeAccessibleElement
+): UIAccessibilityElement() {
+}
 
 /**
  * NSObject used as a node in the tree to be used as a data source for iOS accessibility services.
  */
-internal class ComposeAccessible(
+internal class ComposeAccessibleTemp(
     container: Any,
     node: SemanticsNode,
     val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
@@ -61,7 +92,7 @@ internal class AccessibilityControllerImpl(
     val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
 ): AccessibilityController {
     /**
-     * Represents the current state of the [ComposeAccessible] tree cleanliness.
+     * Represents the current state of the [ComposeAccessibleTemp] tree cleanliness.
      *
      * A value of true indicates that the Compose accessible tree is dirty, meaning that compose semantics tree was modified since last sync,
      * false otherwise.
@@ -69,9 +100,9 @@ internal class AccessibilityControllerImpl(
     private var isCurrentComposeAccessibleTreeDirty = false
 
     /**
-     * Cache of current [ComposeAccessible] objects. The key is [SemanticsNode.id] of corresponding [SemanticsNode].
+     * Cache of current [ComposeAccessibleTemp] objects. The key is [SemanticsNode.id] of corresponding [SemanticsNode].
      */
-    private val composeAccessibleMap = mutableMapOf<Int, ComposeAccessible>()
+    private val composeAccessibleMap = mutableMapOf<Int, ComposeAccessibleTemp>()
 
     /**
      * Represent a set of [SemanticsNode.id] that are currently in the tree.
@@ -133,7 +164,7 @@ internal class AccessibilityControllerImpl(
             inUseIds.add(it.id)
 
             if (!composeAccessibleMap.containsKey(it.id)) {
-                composeAccessibleMap[it.id] = ComposeAccessible(rootAccessibleContainer, it, convertRectToWindowSpaceCGRect)
+                composeAccessibleMap[it.id] = ComposeAccessibleTemp(rootAccessibleContainer, it, convertRectToWindowSpaceCGRect)
             }
         }
 
