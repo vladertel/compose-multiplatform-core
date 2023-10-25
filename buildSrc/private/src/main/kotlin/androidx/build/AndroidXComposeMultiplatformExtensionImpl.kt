@@ -26,10 +26,9 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinAndroidTarget
 import kotlin.reflect.full.memberProperties
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.gradle.api.publish.PublishingExtension
-import org.gradle.api.publish.maven.internal.dependencies.DefaultMavenDependency
-import org.gradle.api.publish.maven.internal.dependencies.MavenDependencyInternal
 import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication
-import org.gradle.api.attributes.Usage
+import org.gradle.kotlin.dsl.creating
+import org.gradle.kotlin.dsl.provideDelegate
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
@@ -190,6 +189,23 @@ open class AndroidXComposeMultiplatformExtensionImpl @Inject constructor(
             iosX64("uikitX64") { configureFreeCompilerArgs() }
             iosArm64("uikitArm64") { configureFreeCompilerArgs() }
             iosSimulatorArm64("uikitSimArm64") { configureFreeCompilerArgs() }
+        }
+    }
+
+    override fun configureUIKitCInterop() {
+        fun KotlinNativeTarget.configureCInterop() {
+            compilations.getByName("main") {
+                it.cinterops.create("uikit") {
+                    it.defFile("src/uikitMain/objc/ios.def")
+                    it.packageName("androidx.compose.objc")
+                }
+            }
+        }
+
+        multiplatformExtension.run {
+            iosX64("uikitX64") { configureCInterop() }
+            iosArm64("uikitArm64") { configureCInterop() }
+            iosSimulatorArm64("uikitSimArm64") { configureCInterop() }
         }
     }
 }
