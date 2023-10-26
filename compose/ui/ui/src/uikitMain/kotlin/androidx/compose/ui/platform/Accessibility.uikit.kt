@@ -34,10 +34,12 @@ import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
 import platform.darwin.NSInteger
 
 private class ComposeAccessibleElement(
-    container: Any,
+    val controller: AccessibilityControllerImpl,
     semanticsNode: SemanticsNode,
-): UIAccessibilityElement(container) {
+): UIAccessibilityElement(controller.rootAccessibleContainer) {
     init {
+        accessibilityLabel = "SemanticsNode ID = ${semanticsNode.id}"
+        accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInRoot)
         semanticsNode.config.forEach {
             when (it.key) {
                 else -> {}
@@ -48,6 +50,8 @@ private class ComposeAccessibleElement(
 
 /**
  * UIAccessibilityElement can't be a container and an element at the same time.
+ * If [isAccessibilityElement] is true, iOS accessibility services won't access the object
+ * UIAccessibilityContainer methods.
  * Thus, semantics tree like
  * SemanticsNode_A
  *     SemanticsNode_B
@@ -61,25 +65,33 @@ private class ComposeAccessibleElement(
  *         ComposeAccessibleElement_C
  */
 private class ComposeAccessibleContainer(
-    container: Any,
     val wrappedElement: ComposeAccessibleElement
-): UIAccessibilityElement(container), UIAccessibilityContainerWorkaroundProtocol {
-    val children = mutableListOf<Any>()
+): UIAccessibilityElement(wrappedElement.controller.rootAccessibleContainer), UIAccessibilityContainerWorkaroundProtocol /* K/N doesn't import categories in ObjC*/{
+    private val children = mutableListOf<Any>()
+
+    init {
+        isAccessibilityElement = false
+    }
 
     override fun accessibilityElementAtIndex(index: NSInteger): Any? {
-        if (index == 0L) {
-            return wrappedElement
-        } else if (index < children.size + 1) {
-            return children[index.toInt() - 1]
-        } else {
+        val idx = index.toInt()
+
+        if (idx < 0 || idx >= accessibilityElementCount().toInt()) {
             return null
         }
+
+        if (idx == 0) {
+            return wrappedElement
+        }
+
+        return children[idx - 1]
     }
 
     override fun accessibilityElementCount(): NSInteger =
         (children.size + 1).toLong()
 
     override fun indexOfAccessibilityElement(element: Any?): NSInteger {
+        // TODO: cache element to Int->Any map, if that lookup takes significant time
         if (element == null) {
             return NSNotFound
         }
@@ -98,27 +110,36 @@ private class ComposeAccessibleContainer(
     }
 }
 
-/**
- * NSObject used as a node in the tree to be used as a data source for iOS accessibility services.
- */
-internal class ComposeAccessibleTemp(
-    container: Any,
-    node: SemanticsNode,
-    val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
-): UIAccessibilityElement(container) {
-    init {
-        isAccessibilityElement = true
-
-        val text = node.config.getOrNull(SemanticsProperties.Text)
-        if (text != null) {
-            accessibilityLabel = text.joinToString {
-                it.text
-            }
-        }
-        //accessibilityLabel = "${node.id}"
-        accessibilityFrame = convertRectToWindowSpaceCGRect(node.boundsInWindow)
+private fun createComposeAccessibleObject(controller: AccessibilityControllerImpl, semanticsNode: SemanticsNode): Any {
+    val element = ComposeAccessibleElement(controller, semanticsNode)
+    return if (semanticsNode.children.size == 0) {
+        element
+    } else {
+        ComposeAccessibleContainer(element)
     }
 }
+
+///**
+// * NSObject used as a node in the tree to be used as a data source for iOS accessibility services.
+// */
+//internal class ComposeAccessibleTemp(
+//    container: Any,
+//    node: SemanticsNode,
+//    val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
+//): UIAccessibilityElement(container) {
+//    init {
+//        isAccessibilityElement = true
+//
+//        val text = node.config.getOrNull(SemanticsProperties.Text)
+//        if (text != null) {
+//            accessibilityLabel = text.joinToString {
+//                it.text
+//            }
+//        }
+//        //accessibilityLabel = "${node.id}"
+//        accessibilityFrame = convertRectToWindowSpaceCGRect(node.boundsInWindow)
+//    }
+//}
 
 internal class AccessibilityControllerImpl(
     val rootAccessibleContainer: NSObject,
@@ -132,16 +153,6 @@ internal class AccessibilityControllerImpl(
      * false otherwise.
      */
     private var isCurrentComposeAccessibleTreeDirty = false
-
-    /**
-     * Cache of current [ComposeAccessibleTemp] objects. The key is [SemanticsNode.id] of corresponding [SemanticsNode].
-     */
-    private val composeAccessibleMap = mutableMapOf<Int, ComposeAccessibleTemp>()
-
-    /**
-     * Represent a set of [SemanticsNode.id] that are currently in the tree.
-     */
-    private val inUseIds = mutableSetOf<Int>()
 
     override fun onSemanticsChange() {
         isCurrentComposeAccessibleTreeDirty = true
@@ -157,32 +168,10 @@ internal class AccessibilityControllerImpl(
         }
     }
 
-    /**
-     * Recursively traverses the [SemanticsNode] tree and invokes [block] with every node except the root one
-     */
-    private fun traverseSemanticsTree(block: (SemanticsNode) -> Unit) {
-        val rootNode = owner.rootSemanticsNode
-
-        rootNode.children.forEach {
-            traverseSemanticsTree(it, block)
-        }
-    }
-
-    /**
-     * Apply [block] to [SemanticsNode] and all its children recursively
-     */
-    private fun traverseSemanticsTree(node: SemanticsNode, block: (SemanticsNode) -> Unit) {
-        block(node)
-
-        node.children.forEach {
-            traverseSemanticsTree(it, block)
-        }
-    }
-
     private fun syncNodes() {
-        val rootNode = owner.rootSemanticsNode
+        val rooSemanticstNode = owner.rootSemanticsNode
 
-        if (!rootNode.layoutNode.isPlaced) {
+        if (!rooSemanticstNode.layoutNode.isPlaced) {
             return
         }
 
@@ -192,34 +181,28 @@ internal class AccessibilityControllerImpl(
 
         isCurrentComposeAccessibleTreeDirty = false
 
-        inUseIds.clear()
+        rootAccessibleContainer.accessibilityElements = rooSemanticstNode.children
+            // Sort top-down, left-to-right
+            .sortedWith { lhs, rhs ->
+                val a = lhs.boundsInWindow
+                val b = rhs.boundsInWindow
 
-        traverseSemanticsTree {
-            inUseIds.add(it.id)
-
-            if (!composeAccessibleMap.containsKey(it.id)) {
-                composeAccessibleMap[it.id] = ComposeAccessibleTemp(rootAccessibleContainer, it, convertRectToWindowSpaceCGRect)
+                if (a.topLeft.y < b.topLeft.y) {
+                    -1
+                } else if (a.topLeft.y > b.topLeft.y) {
+                    1
+                } else {
+                    // TODO: RTL languages
+                    if (a.topLeft.x < b.topLeft.x) {
+                        -1
+                    } else if (a.topLeft.x > b.topLeft.x) {
+                        1
+                    } else {
+                        0
+                    }
+                }
+            }.map {
+                createComposeAccessibleObject(this, rooSemanticstNode)
             }
-        }
-
-        composeAccessibleMap.entries.retainAll {
-            inUseIds.contains(it.key)
-        }
-
-        val allNodes = mutableListOf<Any>()
-        traverseSemanticsTree {
-            val accessible = checkNotNull(composeAccessibleMap[it.id])
-            println(it.config)
-            allNodes.add(accessible)
-        }
-
-//        rootAccessibleContainer.accessibilityElements = owner.rootSemanticsNode.children.map {
-//            val accessible = composeAccessibleMap[it.id]
-//            println(it)
-//            checkNotNull(accessible)
-//        }
-        rootAccessibleContainer.accessibilityElements = allNodes
-
-        println(rootAccessibleContainer)
     }
 }
