@@ -33,13 +33,19 @@ import platform.darwin.NSObject
 import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
 import platform.darwin.NSInteger
 
+private fun <R> debugPrint(name: String, block: () -> R): R {
+    val value = block()
+    println("$name: $value")
+    return value
+}
+
 private class ComposeAccessibleElement(
     val controller: AccessibilityControllerImpl,
-    semanticsNode: SemanticsNode,
-): UIAccessibilityElement(controller.rootAccessibleContainer) {
+    val semanticsNode: SemanticsNode,
+) : UIAccessibilityElement(controller.rootAccessibleContainer) {
     init {
         accessibilityLabel = "SemanticsNode ID = ${semanticsNode.id}"
-        accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInRoot)
+        accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
         semanticsNode.config.forEach {
             when (it.key) {
                 else -> {}
@@ -66,11 +72,18 @@ private class ComposeAccessibleElement(
  */
 private class ComposeAccessibleContainer(
     val wrappedElement: ComposeAccessibleElement
-): UIAccessibilityElement(wrappedElement.controller.rootAccessibleContainer), UIAccessibilityContainerWorkaroundProtocol /* K/N doesn't import categories in ObjC*/{
-    private val children = mutableListOf<Any>()
+) : UIAccessibilityElement(wrappedElement.controller.rootAccessibleContainer),
+    UIAccessibilityContainerWorkaroundProtocol /* K/N doesn't import categories in ObjC*/ {
+    private val children: List<Any>
 
     init {
         isAccessibilityElement = false
+        accessibilityFrame = wrappedElement.accessibilityFrame
+
+        wrappedElement.semanticsNode.children.reversed()
+        children = wrappedElement.semanticsNode.children.reversed().map {
+            createComposeAccessibleObject(wrappedElement.controller, it)
+        }
     }
 
     override fun accessibilityElementAtIndex(index: NSInteger): Any? {
@@ -87,8 +100,7 @@ private class ComposeAccessibleContainer(
         return children[idx - 1]
     }
 
-    override fun accessibilityElementCount(): NSInteger =
-        (children.size + 1).toLong()
+    override fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
 
     override fun indexOfAccessibilityElement(element: Any?): NSInteger {
         // TODO: cache element to Int->Any map, if that lookup takes significant time
@@ -110,7 +122,10 @@ private class ComposeAccessibleContainer(
     }
 }
 
-private fun createComposeAccessibleObject(controller: AccessibilityControllerImpl, semanticsNode: SemanticsNode): Any {
+private fun createComposeAccessibleObject(
+    controller: AccessibilityControllerImpl,
+    semanticsNode: SemanticsNode
+): Any {
     val element = ComposeAccessibleElement(controller, semanticsNode)
     return if (semanticsNode.children.size == 0) {
         element
@@ -145,7 +160,7 @@ internal class AccessibilityControllerImpl(
     val rootAccessibleContainer: NSObject,
     val owner: SemanticsOwner,
     val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
-): AccessibilityController {
+) : AccessibilityController {
     /**
      * Represents the current state of the [ComposeAccessibleTemp] tree cleanliness.
      *
@@ -163,8 +178,8 @@ internal class AccessibilityControllerImpl(
 
     override suspend fun syncLoop() {
         while (true) {
-            syncNodes()
             delay(100)
+            syncNodes()
         }
     }
 
@@ -182,27 +197,9 @@ internal class AccessibilityControllerImpl(
         isCurrentComposeAccessibleTreeDirty = false
 
         rootAccessibleContainer.accessibilityElements = rooSemanticstNode.children
-            // Sort top-down, left-to-right
-            .sortedWith { lhs, rhs ->
-                val a = lhs.boundsInWindow
-                val b = rhs.boundsInWindow
-
-                if (a.topLeft.y < b.topLeft.y) {
-                    -1
-                } else if (a.topLeft.y > b.topLeft.y) {
-                    1
-                } else {
-                    // TODO: RTL languages
-                    if (a.topLeft.x < b.topLeft.x) {
-                        -1
-                    } else if (a.topLeft.x > b.topLeft.x) {
-                        1
-                    } else {
-                        0
-                    }
-                }
-            }.map {
-                createComposeAccessibleObject(this, rooSemanticstNode)
+            .reversed()
+            .map {
+                createComposeAccessibleObject(this, it)
             }
     }
 }
