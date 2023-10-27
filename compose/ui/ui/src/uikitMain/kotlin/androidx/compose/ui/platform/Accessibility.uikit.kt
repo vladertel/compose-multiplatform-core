@@ -31,8 +31,11 @@ import platform.UIKit.accessibilityElements
 import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
 import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import kotlin.test.todo
 import platform.UIKit.UIView
+import platform.UIKit.accessibilityLabel
+import platform.UIKit.accessibilityTextualContext
 import platform.darwin.NSInteger
 
 private fun <R> debugPrint(name: String, block: () -> R): R {
@@ -41,12 +44,56 @@ private fun <R> debugPrint(name: String, block: () -> R): R {
     return value
 }
 
-fun NSObject.fillAccessibilityProperties(semanticsNode: SemanticsNode) {
-    semanticsNode.config.forEach {
-        when (it.key) {
-            else -> {}
+/**
+ * Set current object UIAccessibility properties using the [SemanticsNode] properties
+ */
+private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode) {
+    var hasAnyMeaningfulSemantics = false
+
+    fun <T> withKey(key: SemanticsPropertyKey<T>, block: (T) -> Unit): Boolean {
+        val property = semanticsNode.config.getOrNull(key)
+
+        if (property == null) {
+            return false
+        } else {
+            block(property)
+            return true
         }
     }
+
+    // TODO: investigate how this semantic should affect a node with children
+    val isInvisibleToUser = withKey(SemanticsProperties.InvisibleToUser) {
+        isAccessibilityElement = false
+    }
+
+    if (isInvisibleToUser) {
+        return
+    }
+
+    val accessibilityLabelStrings = mutableListOf<String>()
+
+    withKey(SemanticsProperties.ContentDescription) { list ->
+        accessibilityLabelStrings.addAll(list)
+    }
+
+    withKey(SemanticsProperties.PaneTitle) {
+        accessibilityLabelStrings.add(it)
+    }
+
+    if (accessibilityLabelStrings.isNotEmpty()) {
+        accessibilityLabel = accessibilityLabelStrings.joinToString("\n") { it }
+    }
+
+    withKey(SemanticsProperties.TestTag) { tag ->
+        // TODO: introduce UIAccessibilityIdentification workaround
+        //accessibilityIdentifier = tag
+    }
+
+    withKey(SemanticsProperties.Text) { list ->
+        accessibilityTextualContext = list.joinToString { it.text }
+    }
+
+    isAccessibilityElement = hasAnyMeaningfulSemantics
 }
 
 private class ComposeAccessibilityElement(
@@ -56,13 +103,9 @@ private class ComposeAccessibilityElement(
 ) : UIAccessibilityElement(parent) {
     init {
         accessibilityIdentifier = "Element for ${semanticsNode.id}"
-
-        if (semanticsNode.children.size == 0) {
-            accessibilityLabel = "SemanticsNode ID = ${semanticsNode.id}"
-        }
-
         accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
-        fillAccessibilityProperties(semanticsNode)
+
+        fillInAccessibilityProperties(semanticsNode)
     }
 }
 
