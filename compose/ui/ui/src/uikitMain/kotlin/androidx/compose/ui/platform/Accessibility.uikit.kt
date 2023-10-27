@@ -41,10 +41,18 @@ private fun <R> debugPrint(name: String, block: () -> R): R {
     return value
 }
 
+fun NSObject.fillAccessibilityProperties(semanticsNode: SemanticsNode) {
+    semanticsNode.config.forEach {
+        when (it.key) {
+            else -> {}
+        }
+    }
+}
+
 private class ComposeAccessibilityElement(
     val controller: AccessibilityControllerImpl,
     val semanticsNode: SemanticsNode,
-    val parent: Any,
+    parent: Any,
 ) : UIAccessibilityElement(parent) {
     init {
         accessibilityIdentifier = "Element for ${semanticsNode.id}"
@@ -54,11 +62,7 @@ private class ComposeAccessibilityElement(
         }
 
         accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
-        semanticsNode.config.forEach {
-            when (it.key) {
-                else -> {}
-            }
-        }
+        fillAccessibilityProperties(semanticsNode)
     }
 }
 
@@ -96,7 +100,7 @@ private class ComposeAccessibilityContainer(
         accessibilityFrame = wrappedElement.accessibilityFrame
         accessibilityContainer = parent
 
-        children = wrappedElement.semanticsNode.children.reversed().map {
+        children = wrappedElement.semanticsNode.replacedChildren.map {
             createComposeAccessibleObject(wrappedElement.controller, it, this)
         }
     }
@@ -118,7 +122,7 @@ private class ComposeAccessibilityContainer(
     override fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
 
     override fun indexOfAccessibilityElement(element: Any?): NSInteger {
-        // TODO: cache element to Int->Any map, if that lookup takes significant time
+        // TODO: store the elements in Int->Any map, if that lookup takes significant time
         if (element == null) {
             return NSNotFound
         }
@@ -148,28 +152,6 @@ private fun createComposeAccessibleObject(
         ComposeAccessibilityContainer(controller, semanticsNode, parent)
     }
 }
-
-///**
-// * NSObject used as a node in the tree to be used as a data source for iOS accessibility services.
-// */
-//internal class ComposeAccessibleTemp(
-//    container: Any,
-//    node: SemanticsNode,
-//    val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
-//): UIAccessibilityElement(container) {
-//    init {
-//        isAccessibilityElement = true
-//
-//        val text = node.config.getOrNull(SemanticsProperties.Text)
-//        if (text != null) {
-//            accessibilityLabel = text.joinToString {
-//                it.text
-//            }
-//        }
-//        //accessibilityLabel = "${node.id}"
-//        accessibilityFrame = convertRectToWindowSpaceCGRect(node.boundsInWindow)
-//    }
-//}
 
 internal class AccessibilityControllerImpl(
     val rootAccessibleContainer: UIView,
@@ -211,7 +193,7 @@ internal class AccessibilityControllerImpl(
 
         isCurrentComposeAccessibleTreeDirty = false
 
-        val accessibilityElements = rooSemanticstNode.children
+        val accessibilityElements = rooSemanticstNode.replacedChildren
             .reversed()
             .map {
                 createComposeAccessibleObject(this, it, rootAccessibleContainer)
