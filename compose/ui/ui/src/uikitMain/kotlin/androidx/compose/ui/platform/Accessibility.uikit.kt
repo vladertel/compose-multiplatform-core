@@ -81,6 +81,7 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
     }
 
     if (accessibilityLabelStrings.isNotEmpty()) {
+        hasAnyMeaningfulSemantics = true
         accessibilityLabel = accessibilityLabelStrings.joinToString("\n") { it }
     }
 
