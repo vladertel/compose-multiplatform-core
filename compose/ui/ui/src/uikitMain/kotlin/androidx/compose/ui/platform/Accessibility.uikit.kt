@@ -31,6 +31,8 @@ import platform.UIKit.accessibilityElements
 import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
 import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
+import kotlin.test.todo
+import platform.UIKit.UIView
 import platform.darwin.NSInteger
 
 private fun <R> debugPrint(name: String, block: () -> R): R {
@@ -39,12 +41,18 @@ private fun <R> debugPrint(name: String, block: () -> R): R {
     return value
 }
 
-private class ComposeAccessibleElement(
+private class ComposeAccessibilityElement(
     val controller: AccessibilityControllerImpl,
     val semanticsNode: SemanticsNode,
-) : UIAccessibilityElement(controller.rootAccessibleContainer) {
+    val parent: Any,
+) : UIAccessibilityElement(parent) {
     init {
-        accessibilityLabel = "SemanticsNode ID = ${semanticsNode.id}"
+        accessibilityIdentifier = "Element for ${semanticsNode.id}"
+
+        if (semanticsNode.children.size == 0) {
+            accessibilityLabel = "SemanticsNode ID = ${semanticsNode.id}"
+        }
+
         accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
         semanticsNode.config.forEach {
             when (it.key) {
@@ -59,30 +67,37 @@ private class ComposeAccessibleElement(
  * If [isAccessibilityElement] is true, iOS accessibility services won't access the object
  * UIAccessibilityContainer methods.
  * Thus, semantics tree like
+ * ```
  * SemanticsNode_A
  *     SemanticsNode_B
  *         SemanticsNode_C
- *
+ * ```
  * Will be represented like:
- * ComposeAccessibleContainer_A
- *     ComposeAccessibleElement_A
- *     ComposeAccessibleContainer_B
- *         ComposeAccessibleElement_B
- *         ComposeAccessibleElement_C
+ * ```
+ * ComposeAccessibilityContainer_A
+ *     ComposeAccessibilityElement_A
+ *     ComposeAccessibilityContainer_B
+ *         ComposeAccessibilityElement_B
+ *         ComposeAccessibilityElement_C
+ * ```
  */
-private class ComposeAccessibleContainer(
-    val wrappedElement: ComposeAccessibleElement
-) : UIAccessibilityElement(wrappedElement.controller.rootAccessibleContainer),
-    UIAccessibilityContainerWorkaroundProtocol /* K/N doesn't import categories in ObjC*/ {
+private class ComposeAccessibilityContainer(
+    controller: AccessibilityControllerImpl,
+    semanticsNode: SemanticsNode,
+    parent: Any,
+) : UIAccessibilityElement(parent),
+    UIAccessibilityContainerWorkaroundProtocol {
     private val children: List<Any>
+    private val wrappedElement = ComposeAccessibilityElement(controller, semanticsNode, this)
 
     init {
         isAccessibilityElement = false
+        accessibilityIdentifier = "Container for ${semanticsNode.id}"
         accessibilityFrame = wrappedElement.accessibilityFrame
+        accessibilityContainer = parent
 
-        wrappedElement.semanticsNode.children.reversed()
         children = wrappedElement.semanticsNode.children.reversed().map {
-            createComposeAccessibleObject(wrappedElement.controller, it)
+            createComposeAccessibleObject(wrappedElement.controller, it, this)
         }
     }
 
@@ -124,13 +139,13 @@ private class ComposeAccessibleContainer(
 
 private fun createComposeAccessibleObject(
     controller: AccessibilityControllerImpl,
-    semanticsNode: SemanticsNode
+    semanticsNode: SemanticsNode,
+    parent: Any
 ): Any {
-    val element = ComposeAccessibleElement(controller, semanticsNode)
     return if (semanticsNode.children.size == 0) {
-        element
+        ComposeAccessibilityElement(controller, semanticsNode, parent)
     } else {
-        ComposeAccessibleContainer(element)
+        ComposeAccessibilityContainer(controller, semanticsNode, parent)
     }
 }
 
@@ -157,7 +172,7 @@ private fun createComposeAccessibleObject(
 //}
 
 internal class AccessibilityControllerImpl(
-    val rootAccessibleContainer: NSObject,
+    val rootAccessibleContainer: UIView,
     val owner: SemanticsOwner,
     val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
 ) : AccessibilityController {
@@ -178,8 +193,8 @@ internal class AccessibilityControllerImpl(
 
     override suspend fun syncLoop() {
         while (true) {
-            delay(100)
             syncNodes()
+            delay(100)
         }
     }
 
@@ -196,10 +211,29 @@ internal class AccessibilityControllerImpl(
 
         isCurrentComposeAccessibleTreeDirty = false
 
-        rootAccessibleContainer.accessibilityElements = rooSemanticstNode.children
+        val accessibilityElements = rooSemanticstNode.children
             .reversed()
             .map {
-                createComposeAccessibleObject(this, it)
+                createComposeAccessibleObject(this, it, rootAccessibleContainer)
             }
+
+        fun traverse(any: Any, depth: Int = 0) {
+            fun gap(): String =
+                "  ".repeat(depth)
+
+            println("${gap()} $any")
+
+            if (any is UIAccessibilityContainerWorkaroundProtocol) {
+                for (i in 0..any.accessibilityElementCount() - 1) {
+                    any.accessibilityElementAtIndex(i.toLong())?.let {
+                        traverse(it, depth + 1)
+                    }
+                }
+            }
+        }
+
+        accessibilityElements.forEach { traverse(it) }
+
+        rootAccessibleContainer.accessibilityElements = accessibilityElements
     }
 }
