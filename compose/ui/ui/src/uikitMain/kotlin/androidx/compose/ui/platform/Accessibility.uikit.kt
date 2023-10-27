@@ -50,6 +50,8 @@ private fun <R> debugPrint(name: String, block: () -> R): R {
 private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode) {
     var hasAnyMeaningfulSemantics = false
 
+    println(semanticsNode.config)
+
     fun <T> withKey(key: SemanticsPropertyKey<T>, block: (T) -> Unit): Boolean {
         val property = semanticsNode.config.getOrNull(key)
 
@@ -91,6 +93,7 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
     }
 
     withKey(SemanticsProperties.Text) { list ->
+        hasAnyMeaningfulSemantics = true
         accessibilityTextualContext = list.joinToString { it.text }
     }
 
