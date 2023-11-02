@@ -19,12 +19,9 @@ package androidx.compose.foundation.text2.input.internal
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.InternalFoundationTextApi
 import androidx.compose.foundation.text.TextDelegate
-import androidx.compose.foundation.text2.input.CodepointTransformation
-import androidx.compose.foundation.text2.input.SingleLineCodepointTransformation
 import androidx.compose.foundation.text2.input.TextFieldState
 import androidx.compose.foundation.text2.input.internal.TextFieldLayoutStateCache.MeasureInputs
 import androidx.compose.foundation.text2.input.internal.TextFieldLayoutStateCache.NonMeasureInputs
-import androidx.compose.foundation.text2.input.toVisualText
 import androidx.compose.runtime.SnapshotMutationPolicy
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -36,6 +33,7 @@ import androidx.compose.runtime.snapshots.StateRecord
 import androidx.compose.runtime.snapshots.withCurrent
 import androidx.compose.runtime.snapshots.writable
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -103,15 +101,13 @@ internal class TextFieldLayoutStateCache : State<TextLayoutResult?>, StateObject
      * @see layoutWithNewMeasureInputs
      */
     fun updateNonMeasureInputs(
-        textFieldState: TextFieldState,
-        codepointTransformation: CodepointTransformation?,
+        textFieldState: TransformedTextFieldState,
         textStyle: TextStyle,
         singleLine: Boolean,
         softWrap: Boolean,
     ) {
         nonMeasureInputs = NonMeasureInputs(
             textFieldState = textFieldState,
-            codepointTransformation = codepointTransformation,
             textStyle = textStyle,
             singleLine = singleLine,
             softWrap = softWrap,
@@ -150,16 +146,7 @@ internal class TextFieldLayoutStateCache : State<TextLayoutResult?>, StateObject
         nonMeasureInputs: NonMeasureInputs,
         measureInputs: MeasureInputs
     ): TextLayoutResult {
-        // If there's a transformation, we need to apply it every time, since it may contain state
-        // reads and conditional logic that we can't check avoid running.
-        // First prefer provided codepointTransformation if not null, e.g. BasicSecureTextField
-        // would send PasswordTransformation. Second, apply a SingleLineCodepointTransformation if
-        // text field is configured to be single line. Else, don't apply any visual transformation.
-        val appliedCodepointTransformation = nonMeasureInputs.codepointTransformation
-            ?: SingleLineCodepointTransformation.takeIf { nonMeasureInputs.singleLine }
-        // This will return untransformedText if the transformation is null.
         val visualText = nonMeasureInputs.textFieldState.text
-            .toVisualText(appliedCodepointTransformation)
 
         // Use withCurrent here so the cache itself is never reported as a read state object. It
         // doesn't need to be, because it's always guaranteed to return the same value for the same
@@ -172,8 +159,6 @@ internal class TextFieldLayoutStateCache : State<TextLayoutResult?>, StateObject
                 cachedRecord.visualText?.contentEquals(visualText) == true &&
                 cachedRecord.singleLine == nonMeasureInputs.singleLine &&
                 cachedRecord.softWrap == nonMeasureInputs.softWrap &&
-                cachedRecord.textStyle
-                    ?.hasSameLayoutAffectingAttributes(nonMeasureInputs.textStyle) == true &&
                 cachedRecord.layoutDirection == measureInputs.layoutDirection &&
                 cachedRecord.densityValue == measureInputs.density.density &&
                 cachedRecord.fontScale == measureInputs.density.fontScale &&
@@ -181,7 +166,26 @@ internal class TextFieldLayoutStateCache : State<TextLayoutResult?>, StateObject
                 cachedRecord.fontFamilyResolver == measureInputs.fontFamilyResolver
             ) {
                 // Fast path: None of the inputs changed.
-                return cachedResult
+                if (cachedRecord.textStyle == nonMeasureInputs.textStyle) return cachedResult
+                // Slightly slower than fast path: Layout did not change but TextLayoutInput did
+                if (cachedRecord.textStyle
+                        ?.hasSameDrawAffectingAttributes(nonMeasureInputs.textStyle) == true
+                ) {
+                    return cachedResult.copy(
+                        layoutInput = TextLayoutInput(
+                            cachedResult.layoutInput.text,
+                            nonMeasureInputs.textStyle,
+                            cachedResult.layoutInput.placeholders,
+                            cachedResult.layoutInput.maxLines,
+                            cachedResult.layoutInput.softWrap,
+                            cachedResult.layoutInput.overflow,
+                            cachedResult.layoutInput.density,
+                            cachedResult.layoutInput.layoutDirection,
+                            cachedResult.layoutInput.fontFamilyResolver,
+                            cachedResult.layoutInput.constraints
+                        )
+                    )
+                }
             }
 
             // Slow path: Some input changed, need to re-layout.
@@ -324,8 +328,7 @@ internal class TextFieldLayoutStateCache : State<TextLayoutResult?>, StateObject
 
     // region Input holders
     private class NonMeasureInputs(
-        val textFieldState: TextFieldState,
-        val codepointTransformation: CodepointTransformation?,
+        val textFieldState: TransformedTextFieldState,
         val textStyle: TextStyle,
         val singleLine: Boolean,
         val softWrap: Boolean,
@@ -333,7 +336,6 @@ internal class TextFieldLayoutStateCache : State<TextLayoutResult?>, StateObject
 
         override fun toString(): String = "NonMeasureInputs(" +
             "textFieldState=$textFieldState, " +
-            "codepointTransformation=$codepointTransformation, " +
             "textStyle=$textStyle, " +
             "singleLine=$singleLine, " +
             "softWrap=$softWrap" +
@@ -355,8 +357,7 @@ internal class TextFieldLayoutStateCache : State<TextLayoutResult?>, StateObject
                         // invalidating if the TextFieldState is a different instance but with the same
                         // text, but that is unlikely to happen.
                         a.textFieldState === b.textFieldState &&
-                            a.codepointTransformation == b.codepointTransformation &&
-                            a.textStyle.hasSameLayoutAffectingAttributes(b.textStyle) &&
+                            a.textStyle == b.textStyle &&
                             a.singleLine == b.singleLine &&
                             a.softWrap == b.softWrap
                     } else {

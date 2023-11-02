@@ -77,14 +77,31 @@ public class GenericDocument {
     private static final String TTL_MILLIS_FIELD = "ttlMillis";
     private static final String CREATION_TIMESTAMP_MILLIS_FIELD = "creationTimestampMillis";
     private static final String NAMESPACE_FIELD = "namespace";
+    private static final String PARENT_TYPES_FIELD = "parentTypes";
+
+    /**
+     * <!--@exportToFramework:hide-->
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public static final String PARENT_TYPES_SYNTHETIC_PROPERTY = "$$__AppSearch__parentTypes";
 
     /**
      * The maximum number of indexed properties a document can have.
      *
      * <p>Indexed properties are properties which are strings where the
      * {@link AppSearchSchema.StringPropertyConfig#getIndexingType} value is anything other
-     * than {@link AppSearchSchema.StringPropertyConfig#INDEXING_TYPE_NONE}.
+     * than {@link AppSearchSchema.StringPropertyConfig#INDEXING_TYPE_NONE}, as well as long
+     * properties where the {@link AppSearchSchema.LongPropertyConfig#getIndexingType} value is
+     * {@link AppSearchSchema.LongPropertyConfig#INDEXING_TYPE_RANGE}.
+     *
+     * <!--@exportToFramework:ifJetpack()-->
+     * @deprecated This is no longer a static value, but depends on SDK version and what AppSearch
+     * implementation is being used. Use {@link Features#getMaxIndexedProperties} instead.
+     * <!--@exportToFramework:else()-->
      */
+// @exportToFramework:startStrip()
+    @Deprecated
+// @exportToFramework:endStrip()
     public static int getMaxIndexedProperties() {
         return MAX_INDEXED_PROPERTIES;
     }
@@ -187,6 +204,22 @@ public class GenericDocument {
     @NonNull
     public String getSchemaType() {
         return mSchemaType;
+    }
+
+    /**
+     * Returns the list of parent types of the {@link GenericDocument}'s type.
+     *
+     * <p>It is guaranteed that child types appear before parent types in the list.
+     * <!--@exportToFramework:hide-->
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    @Nullable
+    public List<String> getParentTypes() {
+        List<String> result = mBundle.getStringArrayList(PARENT_TYPES_FIELD);
+        if (result == null) {
+            return null;
+        }
+        return Collections.unmodifiableList(result);
     }
 
     /**
@@ -979,6 +1012,10 @@ public class GenericDocument {
         builder.append("id: \"").append(getId()).append("\",\n");
         builder.append("score: ").append(getScore()).append(",\n");
         builder.append("schemaType: \"").append(getSchemaType()).append("\",\n");
+        List<String> parentTypes = getParentTypes();
+        if (parentTypes != null) {
+            builder.append("parentTypes: ").append(parentTypes).append("\n");
+        }
         builder
                 .append("creationTimestampMillis: ")
                 .append(getCreationTimestampMillis())
@@ -1120,6 +1157,18 @@ public class GenericDocument {
         }
 
         /**
+         * Creates a new {@link GenericDocument.Builder} from the given GenericDocument.
+         *
+         * <p>The GenericDocument is deep copied, i.e. changes to the new GenericDocument
+         * returned by this function will NOT affect the original GenericDocument.
+         * <!--@exportToFramework:hide-->
+         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        public Builder(@NonNull GenericDocument document) {
+            this(BundleUtil.deepCopy(document.getBundle()));
+        }
+
+        /**
          * Sets the app-defined namespace this document resides in, changing the value provided
          * in the constructor. No special values are reserved or understood by the infrastructure.
          *
@@ -1166,6 +1215,23 @@ public class GenericDocument {
             Preconditions.checkNotNull(schemaType);
             resetIfBuilt();
             mBundle.putString(GenericDocument.SCHEMA_TYPE_FIELD, schemaType);
+            return mBuilderTypeInstance;
+        }
+
+        /**
+         * Sets the list of parent types of the {@link GenericDocument}'s type.
+         *
+         * <p>Child types must appear before parent types in the list.
+         * <!--@exportToFramework:hide-->
+         */
+        @CanIgnoreReturnValue
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        @NonNull
+        public BuilderType setParentTypes(@NonNull List<String> parentTypes) {
+            Preconditions.checkNotNull(parentTypes);
+            resetIfBuilt();
+            mBundle.putStringArrayList(GenericDocument.PARENT_TYPES_FIELD,
+                    new ArrayList<>(parentTypes));
             return mBuilderTypeInstance;
         }
 

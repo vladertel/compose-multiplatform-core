@@ -16,7 +16,6 @@
 
 package androidx.slidingpanelayout.widget
 
-import android.R
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.PixelFormat
@@ -27,11 +26,14 @@ import android.os.Parcel
 import android.os.Parcelable
 import android.os.Parcelable.ClassLoaderCreator
 import android.util.AttributeSet
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.view.View.MeasureSpec
+import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.ViewGroup.getChildMeasureSpec
 import android.view.accessibility.AccessibilityEvent
 import android.widget.FrameLayout
@@ -39,17 +41,22 @@ import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import androidx.annotation.IntDef
 import androidx.annotation.Px
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import androidx.core.content.withStyledAttributes
 import androidx.core.graphics.Insets
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.os.HandlerCompat
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.animation.PathInterpolatorCompat
 import androidx.core.view.forEach
+import androidx.core.view.forEachIndexed
 import androidx.customview.view.AbsSavedState
 import androidx.customview.widget.Openable
 import androidx.customview.widget.ViewDragHelper
+import androidx.slidingpanelayout.R
 import androidx.transition.ChangeBounds
 import androidx.transition.Transition
 import androidx.transition.TransitionManager
@@ -59,6 +66,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -101,20 +109,30 @@ private fun getMinimumWidth(child: View): Int {
     } else ViewCompat.getMinimumWidth(child)
 }
 
-private fun measureChildHeight(child: View, spec: Int, padding: Int): Int {
-    val lp = child.layoutParams as SlidingPaneLayout.LayoutParams
-    val childHeightSpec: Int
-    val skippedFirstPass = lp.width == 0 && lp.weight > 0
-    childHeightSpec = if (skippedFirstPass) {
+private fun getChildHeightMeasureSpec(
+    child: View,
+    skippedFirstPass: Boolean,
+    spec: Int,
+    padding: Int
+): Int {
+    val lp = child.layoutParams
+    return if (skippedFirstPass) {
         // This was skipped the first time; figure out a real height spec.
         getChildMeasureSpec(spec, padding, lp.height)
     } else {
-        View.MeasureSpec.makeMeasureSpec(
-            child.measuredHeight, View.MeasureSpec.EXACTLY
-        )
+        MeasureSpec.makeMeasureSpec(child.measuredHeight, MeasureSpec.EXACTLY)
     }
-    return childHeightSpec
 }
+
+private inline val SlidingPaneLayout.LayoutParams.canInfluenceParentSize: Boolean
+    get() = (width != MATCH_PARENT && width != 0) ||
+        (height != MATCH_PARENT && height != 0)
+
+private inline val SlidingPaneLayout.LayoutParams.weightOnlyWidth: Boolean
+    get() = width == 0 && weight > 0
+
+private inline val SlidingPaneLayout.LayoutParams.canExpandWidth: Boolean
+    get() = width == MATCH_PARENT || weight > 0
 
 /**
  * Utility for calculating layout positioning of child views relative to a [FoldingFeature].
@@ -247,6 +265,7 @@ private class TouchBlocker(view: View) : FrameLayout(view.context) {
  * how to divide leftover space after measurement is complete. It is only relevant for width.
  * When views do not overlap weight behaves as it does in a LinearLayout.
  */
+@Suppress("LeakingThis")
 open class SlidingPaneLayout @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -319,19 +338,7 @@ open class SlidingPaneLayout @JvmOverloads constructor(
      */
     private var slideRange = 0
 
-    /**
-     * A panel view is locked into internal scrolling or another condition that
-     * is preventing a drag.
-     */
-    private var isUnableToDrag = false
-
-    private var initialMotionX = 0f
-    private var initialMotionY = 0f
-    private val slideableStateListeners: MutableList<SlideableStateListener> =
-        CopyOnWriteArrayList()
-    private val panelSlideListeners: MutableList<PanelSlideListener> = CopyOnWriteArrayList()
-    private var singlePanelSlideListener: PanelSlideListener? = null
-    private val dragHelper: ViewDragHelper
+    private val overlappingPaneHandler = OverlappingPaneHandler()
 
     /**
      * Stores whether or not the pane was open the last time it was slideable.
@@ -379,6 +386,23 @@ open class SlidingPaneLayout @JvmOverloads constructor(
             requestLayout()
         }
 
+    /**
+     * When set, if sufficient space is not available to present child panes side by side
+     * while respecting the child pane's [LayoutParams.width] or
+     * [minimum width][View.getMinimumWidth], the [SlidingPaneLayout] may allow the child panes
+     * to overlap. When child panes overlap [lockMode] determines whether the user can drag
+     * the top pane to one side to make the lower pane available for viewing or interaction.
+     *
+     * Defaults to `true`.
+     */
+    var isOverlappingEnabled: Boolean = true
+        set(value) {
+            if (value != field) {
+                field = value
+                requestLayout()
+            }
+        }
+
     private val systemGestureInsets: Insets?
         // Get system gesture insets when SDK version is larger than 29. Otherwise, return null.
         get() {
@@ -398,13 +422,70 @@ open class SlidingPaneLayout @JvmOverloads constructor(
 
     private val windowInfoTracker = WindowInfoTracker.getOrCreate(context)
 
+    private var userResizingDividerDrawable: Drawable? = null
+
+    /**
+     * Set a [Drawable] to display when [isUserResizingEnabled] is `true` and multiple panes are
+     * visible without overlapping. This forms the visual touch target for dragging.
+     * This may also be set from the `userResizingDividerDrawable` XML attribute during
+     * view inflation.
+     */
+    fun setUserResizingDividerDrawable(drawable: Drawable?) {
+        val old = userResizingDividerDrawable
+        if (drawable !== old) {
+            if (old != null) {
+                old.callback = null
+                unscheduleDrawable(old)
+            }
+            userResizingDividerDrawable = drawable
+            if (drawable != null) {
+                drawable.callback = this
+                if (drawable.isStateful) drawable.setState(drawableState)
+                drawable.setVisible(visibility == VISIBLE, false)
+            }
+        }
+    }
+
+    /**
+     * Set to `true` to enable user resizing of side by side panes through gestures or other inputs.
+     * This may also be set from the `isUserResizingEnabled` XML attribute during
+     * view inflation. A divider drawable must be provided; see [setUserResizingDividerDrawable]
+     * and [isUserResizable].
+     */
+    var isUserResizingEnabled: Boolean = false
+        set(value) {
+            if (value != field) {
+                field = value
+                requestLayout()
+            }
+        }
+
+    /**
+     * `true` if user resizing of side-by-side panes is currently available.
+     * This means that:
+     *
+     * - [isSlideable] is `false` (otherwise panes are overlapping, not side-by-side)
+     * - [isUserResizingEnabled] is `true`
+     * - A divider drawable has been [set][setUserResizingDividerDrawable]
+     *
+     * and not necessarily that the user themselves can change in size.
+     */
+    val isUserResizable: Boolean
+        get() = !isSlideable && isUserResizingEnabled && userResizingDividerDrawable != null
+
     init {
-        val density = context.resources.displayMetrics.density
         setWillNotDraw(false)
         ViewCompat.setAccessibilityDelegate(this, AccessibilityDelegate())
         ViewCompat.setImportantForAccessibility(this, ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_YES)
-        dragHelper = ViewDragHelper.create(this, 0.5f, DragHelperCallback())
-        dragHelper.minVelocity = MIN_FLING_VELOCITY * density
+
+        context.withStyledAttributes(attrs, R.styleable.SlidingPaneLayout) {
+            isOverlappingEnabled =
+                getBoolean(R.styleable.SlidingPaneLayout_isOverlappingEnabled, true)
+            isUserResizingEnabled =
+                getBoolean(R.styleable.SlidingPaneLayout_isUserResizingEnabled, false)
+            userResizingDividerDrawable =
+                getDrawable(R.styleable.SlidingPaneLayout_userResizingDividerDrawable)
+        }
     }
 
     /**
@@ -420,13 +501,7 @@ open class SlidingPaneLayout @JvmOverloads constructor(
      */
     @Deprecated("Use {@link #addPanelSlideListener(PanelSlideListener)}")
     open fun setPanelSlideListener(listener: PanelSlideListener?) {
-        // The logic in this method emulates what we had before support for multiple
-        // registered listeners.
-        singlePanelSlideListener?.let { removePanelSlideListener(it) }
-        listener?.let { addPanelSlideListener(it) }
-        // Update the deprecated field so that we can remove the passed listener the next
-        // time we're called
-        singlePanelSlideListener = listener
+        overlappingPaneHandler.setPanelSlideListener(listener)
     }
 
     /**
@@ -436,7 +511,7 @@ open class SlidingPaneLayout @JvmOverloads constructor(
      * @see removeSlideableStateListener
      */
     open fun addSlideableStateListener(listener: SlideableStateListener) {
-        slideableStateListeners.add(listener)
+        overlappingPaneHandler.addSlideableStateListener(listener)
     }
 
     /**
@@ -445,7 +520,7 @@ open class SlidingPaneLayout @JvmOverloads constructor(
      * @param listener Listener to notify when sliding state events occur
      */
     open fun removeSlideableStateListener(listener: SlideableStateListener) {
-        slideableStateListeners.remove(listener)
+        overlappingPaneHandler.removeSlideableStateListener(listener)
     }
 
     /**
@@ -456,7 +531,7 @@ open class SlidingPaneLayout @JvmOverloads constructor(
      * @see removePanelSlideListener
      */
     open fun addPanelSlideListener(listener: PanelSlideListener) {
-        panelSlideListeners.add(listener)
+        overlappingPaneHandler.addPanelSlideListener(listener)
     }
 
     /**
@@ -467,27 +542,19 @@ open class SlidingPaneLayout @JvmOverloads constructor(
      * @see addPanelSlideListener
      */
     open fun removePanelSlideListener(listener: PanelSlideListener) {
-        panelSlideListeners.remove(listener)
+        overlappingPaneHandler.removePanelSlideListener(listener)
     }
 
     private fun dispatchOnPanelSlide(panel: View) {
-        for (listener in panelSlideListeners) {
-            listener.onPanelSlide(panel, currentSlideOffset)
-        }
+        overlappingPaneHandler.dispatchOnPanelSlide(panel, currentSlideOffset)
     }
 
     private fun dispatchOnPanelOpened(panel: View) {
-        for (listener in panelSlideListeners) {
-            listener.onPanelOpened(panel)
-        }
-        sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+        overlappingPaneHandler.dispatchOnPanelOpened(panel)
     }
 
     private fun dispatchOnPanelClosed(panel: View) {
-        for (listener in panelSlideListeners) {
-            listener.onPanelClosed(panel)
-        }
-        sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);
+        overlappingPaneHandler.dispatchOnPanelClosed(panel)
     }
 
     private fun updateObscuredViewsVisibility(panel: View?) {
@@ -538,6 +605,33 @@ open class SlidingPaneLayout @JvmOverloads constructor(
                 child.visibility = VISIBLE
             }
         }
+    }
+
+    override fun drawableStateChanged() {
+        super.drawableStateChanged()
+
+        userResizingDividerDrawable?.apply {
+            if (isStateful && setState(drawableState)) {
+                invalidateDrawable(this)
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    override fun drawableHotspotChanged(x: Float, y: Float) {
+        super.drawableHotspotChanged(x, y)
+
+        userResizingDividerDrawable?.let {
+            DrawableCompat.setHotspot(it, x, y)
+        }
+    }
+
+    override fun verifyDrawable(who: Drawable): Boolean =
+        super.verifyDrawable(who) || who === userResizingDividerDrawable
+
+    override fun jumpDrawablesToCurrentState() {
+        super.jumpDrawablesToCurrentState()
+        userResizingDividerDrawable?.jumpToCurrentState()
     }
 
     override fun addView(child: View, index: Int, params: ViewGroup.LayoutParams?) {
@@ -622,107 +716,126 @@ open class SlidingPaneLayout @JvmOverloads constructor(
         var widthRemaining = widthAvailable
         val childCount = childCount
         if (childCount > 2) {
-            Log.e(TAG, "onMeasure: More than two child views are not supported.")
+            error("SlidingPaneLayout: More than two child views are not supported.")
         }
 
         // We'll find the current one below.
         slideableView = null
 
+        // Make kotlinc happy that this can't change while we run measurement
+        val allowOverlappingPanes = isOverlappingEnabled
+
+        var skippedChildMeasure = false
+
         // First pass. Measure based on child LayoutParams width/height.
-        // Weight will incur a second pass.
-        for (i in 0 until childCount) {
-            val child = getChildAt(i)
+        // Weight will incur a second pass; distributing leftover space in the event of overlap
+        // behaves similar to weight and will also incur a second pass.
+        forEachIndexed { i, child ->
             val lp = child.layoutParams as LayoutParams
             if (child.visibility == GONE) {
                 lp.dimWhenOffset = false
-                continue
+                return@forEachIndexed
             }
             if (lp.weight > 0) {
                 weightSum += lp.weight
 
                 // If we have no width, weight is the only contributor to the final size.
                 // Measure this view on the weight pass only.
-                if (lp.width == 0) continue
+                // If we do have width, then we need to measure this child to see how much space
+                // is left for other children.
+                if (lp.width == 0) {
+                    skippedChildMeasure = true
+                    return@forEachIndexed
+                }
             }
-            var childWidthSpec: Int
             val horizontalMargin = lp.leftMargin + lp.rightMargin
-            val childWidthSize = (widthAvailable - horizontalMargin).coerceAtLeast(0)
+            val widthAvailableToChild =
+                if (allowOverlappingPanes) widthAvailable else widthRemaining
             // When the parent width spec is UNSPECIFIED, measure each of child to get its
             // desired width.
-            childWidthSpec = when (lp.width) {
-                ViewGroup.LayoutParams.WRAP_CONTENT -> {
-                    MeasureSpec.makeMeasureSpec(
-                        childWidthSize,
-                        if (widthMode == MeasureSpec.UNSPECIFIED) widthMode else MeasureSpec.AT_MOST
-                    )
-                }
-                ViewGroup.LayoutParams.MATCH_PARENT -> {
-                    MeasureSpec.makeMeasureSpec(childWidthSize, widthMode)
-                }
-                else -> {
-                    MeasureSpec.makeMeasureSpec(lp.width, MeasureSpec.EXACTLY)
-                }
+            val childWidthSpec = when (lp.width) {
+                WRAP_CONTENT -> MeasureSpec.makeMeasureSpec(
+                    (widthAvailableToChild - horizontalMargin).coerceAtLeast(0),
+                    if (widthMode == MeasureSpec.UNSPECIFIED) widthMode else MeasureSpec.AT_MOST
+                )
+                MATCH_PARENT -> MeasureSpec.makeMeasureSpec(
+                    (widthAvailableToChild - horizontalMargin).coerceAtLeast(0),
+                    widthMode
+                )
+                else -> MeasureSpec.makeMeasureSpec(lp.width, MeasureSpec.EXACTLY)
             }
+            val childWidthSize = MeasureSpec.getSize(childWidthSpec)
             val childHeightSpec = getChildMeasureSpec(
                 heightMeasureSpec,
-                paddingTop + paddingBottom, lp.height
+                paddingTop + paddingBottom + lp.topMargin + lp.bottomMargin,
+                lp.height
             )
-            child.measure(childWidthSpec, childHeightSpec)
-            val childWidth = child.measuredWidth
-            val childHeight = child.measuredHeight
-            if (childHeight > layoutHeight) {
-                if (heightMode == MeasureSpec.AT_MOST) {
-                    layoutHeight = childHeight.coerceAtMost(maxLayoutHeight)
-                } else if (heightMode == MeasureSpec.UNSPECIFIED) {
-                    layoutHeight = childHeight
+            if (allowOverlappingPanes || lp.canInfluenceParentSize ||
+                MeasureSpec.getMode(childWidthSpec) != MeasureSpec.EXACTLY) {
+                child.measure(childWidthSpec, childHeightSpec)
+                val childWidth = child.measuredWidth
+                val childHeight = child.measuredHeight
+                if (childHeight > layoutHeight) {
+                    if (heightMode == MeasureSpec.AT_MOST) {
+                        layoutHeight = childHeight.coerceAtMost(maxLayoutHeight)
+                    } else if (heightMode == MeasureSpec.UNSPECIFIED) {
+                        layoutHeight = childHeight
+                    }
                 }
+                widthRemaining -= childWidth
+            } else {
+                // Skip actually measuring, but record how much width it will consume
+                widthRemaining -= childWidthSize
+                skippedChildMeasure = true
             }
-            widthRemaining -= childWidth
             // Skip first child (list pane), the list pane is always a non-sliding pane.
-            if (i == 0) {
-                continue
-            }
-            lp.slideable = widthRemaining < 0
-            canSlide = canSlide or lp.slideable
-            if (lp.slideable) {
-                slideableView = child
+            if (i > 0) {
+                lp.slideable = allowOverlappingPanes && widthRemaining < 0
+                canSlide = canSlide or lp.slideable
+                if (lp.slideable) {
+                    slideableView = child
+                }
             }
         }
-        // Second pass. Resolve weight.
-        // Child views overlap when the combined width of child views cannot fit into the
-        // available width. Each of child views is sized to fill all available space. If there is
-        // no overlap, distribute the extra width proportionally to weight.
-        if (canSlide || weightSum > 0) {
-            for (i in 0 until childCount) {
-                val child = getChildAt(i)
-                if (child.visibility == GONE) {
-                    continue
-                }
+
+        // Second pass. Resolve weight. This can still affect the size of the SlidingPaneLayout.
+        // Ideally we only measure any given child view once, but if a child has both nonzero
+        // lp.width and weight, we have to do both.
+        // If overlapping is permitted by [allowOverlappingPanes], child views overlap when
+        // the combined width of child views cannot fit into the available width.
+        // Each of child views is sized to fill all available space. If there is no overlap,
+        // distribute the extra width proportionally to weight.
+        if (canSlide || weightSum > 0 || skippedChildMeasure) {
+            var totalMeasuredWidth = 0
+            forEach { child ->
+                if (child.visibility == GONE) return@forEach
                 val lp = child.layoutParams as LayoutParams
-                val skippedFirstPass = lp.width == 0 && lp.weight > 0
+                val skippedFirstPass = !lp.canInfluenceParentSize || lp.weightOnlyWidth
                 val measuredWidth = if (skippedFirstPass) 0 else child.measuredWidth
-                var newWidth = measuredWidth
-                var childWidthSpec = 0
-                if (canSlide) {
+                val newWidth = when {
                     // Child view consumes available space if the combined width cannot fit into
                     // the layout available width.
-                    val horizontalMargin = lp.leftMargin + lp.rightMargin
-                    newWidth = widthAvailable - horizontalMargin
-                    childWidthSpec = MeasureSpec.makeMeasureSpec(
-                        newWidth, MeasureSpec.EXACTLY
-                    )
-                } else if (lp.weight > 0) {
-                    // Distribute the extra width proportionally similar to LinearLayout
-                    val widthToDistribute = widthRemaining.coerceAtLeast(0)
-                    val addedWidth = (lp.weight * widthToDistribute / weightSum).toInt()
-                    newWidth = measuredWidth + addedWidth
-                    childWidthSpec = MeasureSpec.makeMeasureSpec(newWidth, MeasureSpec.EXACTLY)
+                    canSlide -> widthAvailable - lp.horizontalMargin
+                    lp.weight > 0 -> {
+                        // Distribute the extra width proportionally similar to LinearLayout
+                        val widthToDistribute = widthRemaining.coerceAtLeast(0)
+                        val addedWidth = (lp.weight * widthToDistribute / weightSum).roundToInt()
+                        measuredWidth + addedWidth
+                    }
+                    lp.width == MATCH_PARENT -> {
+                        widthAvailable - lp.horizontalMargin - totalMeasuredWidth
+                    }
+                    lp.width > 0 -> lp.width
+                    else -> measuredWidth
                 }
-                val childHeightSpec = measureChildHeight(
-                    child, heightMeasureSpec,
-                    paddingTop + paddingBottom
-                )
                 if (measuredWidth != newWidth) {
+                    val childWidthSpec = MeasureSpec.makeMeasureSpec(newWidth, MeasureSpec.EXACTLY)
+                    val childHeightSpec = getChildHeightMeasureSpec(
+                        child,
+                        skippedFirstPass,
+                        heightMeasureSpec,
+                        paddingTop + paddingBottom + lp.topMargin + lp.bottomMargin
+                    )
                     child.measure(childWidthSpec, childHeightSpec)
                     val childHeight = child.measuredHeight
                     if (childHeight > layoutHeight) {
@@ -733,25 +846,62 @@ open class SlidingPaneLayout @JvmOverloads constructor(
                         }
                     }
                 }
+                totalMeasuredWidth += newWidth + lp.leftMargin + lp.rightMargin
             }
         }
 
+        // All children have been measured at least once.
+
+        // By this point we know the parent size and whether we have any sliding panes.
+        // Set the parent size now and notify observers.
+        val measuredHeight = layoutHeight + paddingTop + paddingBottom
+        setMeasuredDimension(widthSize, measuredHeight)
+        if (canSlide != isSlideable) {
+            _isSlideable = canSlide
+            overlappingPaneHandler.dispatchSlideableState(canSlide)
+        }
+        if (!overlappingPaneHandler.isIdle && !canSlide) {
+            // Cancel scrolling in progress, it's no longer relevant.
+            overlappingPaneHandler.abort()
+        }
+    }
+
+    /**
+     * Returns `true` if any measurement was performed, `false` otherwise
+     */
+    private fun remeasureForFoldingFeature(foldingFeature: FoldingFeature): Boolean {
         // At this point, all child views have been measured. Calculate the device fold position
         // in the view. Update the split position to where the fold when it exists.
         val leftSplitBounds = tmpRect
         val rightSplitBounds = tmpRect2
-        val splitViews = foldBoundsCalculator.splitViewPositions(
+        val hasFold = foldBoundsCalculator.splitViewPositions(
             foldingFeature,
             this,
             leftSplitBounds,
             rightSplitBounds
         )
-        if (splitViews && !canSlide) {
-            for (i in 0 until childCount) {
-                val child = getChildAt(i)
-                if (child.visibility == GONE) {
-                    continue
+        if (hasFold) {
+            // Determine if child configuration would prevent following the fold position;
+            // if so, make no changes.
+            forEachIndexed { i, child ->
+                if (child.visibility == GONE) return@forEachIndexed
+                val splitView = when (i) {
+                    0 -> leftSplitBounds
+                    1 -> rightSplitBounds
+                    else -> error("too many children to split")
                 }
+                val lp = child.layoutParams as LayoutParams
+                // If the child has been given exact width settings, don't make changes
+                if (!lp.canExpandWidth) return false
+                // minimumWidth will always be >= 0 so this coerceAtLeast is safe
+                val minChildWidth = getMinimumWidth(child).coerceAtLeast(lp.width)
+                // If the child has a minimum size larger than the area left by the fold's division,
+                // don't make changes
+                if (minChildWidth + lp.horizontalMargin > splitView.width()) return false
+            }
+
+            forEachIndexed { i, child ->
+                if (child.visibility == GONE) return@forEachIndexed
                 val splitView = when (i) {
                     0 -> leftSplitBounds
                     1 -> rightSplitBounds
@@ -759,57 +909,35 @@ open class SlidingPaneLayout @JvmOverloads constructor(
                 }
                 val lp = child.layoutParams as LayoutParams
 
-                // If child view cannot fit in the separating view, expand the child view to fill
-                // available space.
-                val horizontalMargin = lp.leftMargin + lp.rightMargin
+                val childWidthSpec = MeasureSpec.makeMeasureSpec(
+                    (splitView.width() - lp.horizontalMargin).coerceAtLeast(0),
+                    MeasureSpec.EXACTLY
+                )
+
+                // Use the child's existing height; all children have been measured once since
+                // their last layout
                 val childHeightSpec = MeasureSpec.makeMeasureSpec(
                     child.measuredHeight,
                     MeasureSpec.EXACTLY
                 )
-                var childWidthSpec = MeasureSpec.makeMeasureSpec(
-                    splitView.width(),
-                    MeasureSpec.AT_MOST
-                )
+
                 child.measure(childWidthSpec, childHeightSpec)
-                if (child.measuredWidthAndState and MEASURED_STATE_TOO_SMALL == 1 ||
-                    (getMinimumWidth(child) != 0 && splitView.width() < getMinimumWidth(child))
-                ) {
-                    childWidthSpec = MeasureSpec.makeMeasureSpec(
-                        widthAvailable - horizontalMargin,
-                        MeasureSpec.EXACTLY
-                    )
-                    child.measure(childWidthSpec, childHeightSpec)
-                    // Skip first child (list pane), the list pane is always a non-sliding pane.
-                    if (i == 0) {
-                        continue
-                    }
-                    lp.slideable = true
-                    canSlide = true
-                    slideableView = child
-                } else {
-                    childWidthSpec = MeasureSpec.makeMeasureSpec(
-                        splitView.width(),
-                        MeasureSpec.EXACTLY
-                    )
-                    child.measure(childWidthSpec, childHeightSpec)
-                }
             }
         }
-        val measuredHeight = layoutHeight + paddingTop + paddingBottom
-        setMeasuredDimension(widthSize, measuredHeight)
-        if (canSlide != isSlideable) {
-            _isSlideable = canSlide
-            for (listener in slideableStateListeners) {
-                listener.onSlideableStateChanged(isSlideable)
-            }
-        }
-        if (dragHelper.viewDragState != ViewDragHelper.STATE_IDLE && !canSlide) {
-            // Cancel scrolling in progress, it's no longer relevant.
-            dragHelper.abort()
-        }
+        return hasFold
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        val foldingFeature = foldingFeature
+        if (!isSlideable) {
+            if (foldingFeature != null) {
+                // We can't determine the position of the screen fold relative to the placed
+                // SlidingPaneLayout until the SlidingPaneLayout is placed, which is complete
+                // when onLayout is called.
+                remeasureForFoldingFeature(foldingFeature)
+            }
+        }
+
         val isLayoutRtl = isLayoutRtlSupport
         val width = r - l
         val paddingStart = if (isLayoutRtl) paddingRight else paddingLeft
@@ -861,10 +989,10 @@ open class SlidingPaneLayout @JvmOverloads constructor(
             // offset for the next child, in order to avoid rendering the content under it.
             var nextXOffset = 0
             if (foldingFeature != null &&
-                foldingFeature!!.orientation == FoldingFeature.Orientation.VERTICAL &&
-                foldingFeature!!.isSeparating
+                foldingFeature.orientation == FoldingFeature.Orientation.VERTICAL &&
+                foldingFeature.isSeparating
             ) {
-                nextXOffset = foldingFeature!!.bounds.width()
+                nextXOffset = foldingFeature.bounds.width()
             }
             nextXStart += child.width + abs(nextXOffset)
         }
@@ -897,90 +1025,13 @@ open class SlidingPaneLayout @JvmOverloads constructor(
     override fun onInterceptTouchEvent(
         @Suppress("InvalidNullabilityOverride") ev: MotionEvent
     ): Boolean {
-        val action = ev.actionMasked
-
-        // Preserve the open state based on the last view that was touched.
-        if (!isSlideable && action == MotionEvent.ACTION_DOWN && childCount > 1) {
-            // After the first things will be slideable.
-            val secondChild = getChildAt(1)
-            if (secondChild != null) {
-                preservedOpenState =
-                    dragHelper.isViewUnder(secondChild, ev.x.toInt(), ev.y.toInt())
-            }
-        }
-        if (!isSlideable || isUnableToDrag && action != MotionEvent.ACTION_DOWN) {
-            dragHelper.cancel()
-            return super.onInterceptTouchEvent(ev)
-        }
-        if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
-            dragHelper.cancel()
-            return false
-        }
-        var interceptTap = false
-        when (action) {
-            MotionEvent.ACTION_DOWN -> {
-                isUnableToDrag = false
-                val x = ev.x
-                val y = ev.y
-                initialMotionX = x
-                initialMotionY = y
-                if (dragHelper.isViewUnder(slideableView, x.toInt(), y.toInt()) &&
-                    isDimmed(slideableView)
-                ) {
-                    interceptTap = true
-                }
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                val x = ev.x
-                val y = ev.y
-                val adx = abs(x - initialMotionX)
-                val ady = abs(y - initialMotionY)
-                val slop = dragHelper.touchSlop
-                if (adx > slop && ady > adx) {
-                    dragHelper.cancel()
-                    isUnableToDrag = true
-                    return false
-                }
-            }
-        }
-        val interceptForDrag = dragHelper.shouldInterceptTouchEvent(ev)
-        return interceptForDrag || interceptTap
+        return overlappingPaneHandler.onInterceptTouchEvent(ev)
     }
 
     override fun onTouchEvent(
         @Suppress("InvalidNullabilityOverride") ev: MotionEvent
     ): Boolean {
-        if (!isSlideable) {
-            return super.onTouchEvent(ev)
-        }
-        dragHelper.processTouchEvent(ev)
-        val wantTouchEvents = true
-        when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                val x = ev.x
-                val y = ev.y
-                initialMotionX = x
-                initialMotionY = y
-            }
-
-            MotionEvent.ACTION_UP -> {
-                if (isDimmed(slideableView)) {
-                    val x = ev.x
-                    val y = ev.y
-                    val dx = x - initialMotionX
-                    val dy = y - initialMotionY
-                    val slop = dragHelper.touchSlop
-                    if (dx * dx + dy * dy < slop * slop &&
-                        dragHelper.isViewUnder(slideableView, x.toInt(), y.toInt())
-                    ) {
-                        // Taps close a dimmed open pane.
-                        closePane(0)
-                    }
-                }
-            }
-        }
-        return wantTouchEvents
+        return overlappingPaneHandler.onTouchEvent(ev)
     }
 
     private fun closePane(initialVelocity: Int): Boolean {
@@ -1100,23 +1151,21 @@ open class SlidingPaneLayout @JvmOverloads constructor(
         @Suppress("InvalidNullabilityOverride") child: View,
         drawingTime: Long
     ): Boolean {
-        val isLayoutRtl = isLayoutRtlSupport
-        val enableEdgeLeftTracking = isLayoutRtl xor isOpen
-        if (enableEdgeLeftTracking) {
-            dragHelper.setEdgeTrackingEnabled(ViewDragHelper.EDGE_LEFT)
+        if (isSlideable) {
             val gestureInsets = systemGestureInsets
-            if (gestureInsets != null) {
-                // Gesture insets will be 0 if the device doesn't have gesture navigation enabled.
-                dragHelper.edgeSize = gestureInsets.left.coerceAtLeast(dragHelper.defaultEdgeSize)
+            if (isLayoutRtlSupport xor isOpen) {
+                overlappingPaneHandler.setEdgeTrackingEnabled(
+                    ViewDragHelper.EDGE_LEFT,
+                    gestureInsets?.left ?: 0
+                )
+            } else {
+                overlappingPaneHandler.setEdgeTrackingEnabled(
+                    ViewDragHelper.EDGE_RIGHT,
+                    gestureInsets?.right ?: 0
+                )
             }
         } else {
-            dragHelper.setEdgeTrackingEnabled(ViewDragHelper.EDGE_RIGHT)
-            val gestureInsets = systemGestureInsets
-            if (gestureInsets != null) {
-                // Gesture insets will be 0 if the device doesn't have gesture navigation enabled.
-                dragHelper.edgeSize =
-                    gestureInsets.right.coerceAtLeast(dragHelper.defaultEdgeSize)
-            }
+            overlappingPaneHandler.disableEdgeTracking()
         }
         val lp = child.layoutParams as LayoutParams
         val save = canvas.save()
@@ -1147,17 +1196,18 @@ open class SlidingPaneLayout @JvmOverloads constructor(
             // Nothing to do.
             return false
         }
+        val slideableView = slideableView ?: return false
         val isLayoutRtl = isLayoutRtlSupport
-        val lp = slideableView!!.layoutParams as LayoutParams
+        val lp = slideableView.layoutParams as LayoutParams
         val x: Int = if (isLayoutRtl) {
             val startBound = paddingRight + lp.rightMargin
-            val childWidth = slideableView!!.width
+            val childWidth = slideableView.width
             (width - (startBound + slideOffset * slideRange + childWidth)).toInt()
         } else {
             val startBound = paddingLeft + lp.leftMargin
             (startBound + slideOffset * slideRange).toInt()
         }
-        if (dragHelper.smoothSlideViewTo(slideableView!!, x, slideableView!!.top)) {
+        if (overlappingPaneHandler.smoothSlideViewTo(slideableView, x, slideableView.top)) {
             setAllChildrenVisible()
             ViewCompat.postInvalidateOnAnimation(this)
             return true
@@ -1166,13 +1216,7 @@ open class SlidingPaneLayout @JvmOverloads constructor(
     }
 
     override fun computeScroll() {
-        if (dragHelper.continueSettling(true)) {
-            if (!isSlideable) {
-                dragHelper.abort()
-                return
-            }
-            ViewCompat.postInvalidateOnAnimation(this)
-        }
+        overlappingPaneHandler.onComputeScroll()
     }
 
     /**
@@ -1294,15 +1338,14 @@ open class SlidingPaneLayout @JvmOverloads constructor(
      */
     protected open fun canScroll(v: View, checkV: Boolean, dx: Int, x: Int, y: Int): Boolean {
         if (v is ViewGroup) {
-            val group = v
             val scrollX = v.getScrollX()
             val scrollY = v.getScrollY()
-            val count = group.childCount
+            val count = v.childCount
             // Count backwards - let topmost views consume scroll distance first.
             for (i in count - 1 downTo 0) {
                 // TODO: Add versioned support here for transformed views.
                 // This will not work for transformed views in Honeycomb+
-                val child = group.getChildAt(i)
+                val child = v.getChildAt(i)
                 if (x + scrollX >= child.left &&
                     x + scrollX < child.right &&
                     y + scrollY >= child.top &&
@@ -1346,7 +1389,7 @@ open class SlidingPaneLayout @JvmOverloads constructor(
         val superState = super.onSaveInstanceState()
         val ss = SavedState(superState)
         ss.isOpen = if (isSlideable) isOpen else preservedOpenState
-        ss.mLockMode = lockMode
+        ss.lockMode = lockMode
         return ss
     }
 
@@ -1362,111 +1405,7 @@ open class SlidingPaneLayout @JvmOverloads constructor(
             closePane()
         }
         preservedOpenState = state.isOpen
-        lockMode = state.mLockMode
-    }
-
-    private inner class DragHelperCallback() : ViewDragHelper.Callback() {
-        override fun tryCaptureView(child: View, pointerId: Int): Boolean {
-            return if (!isDraggable) {
-                false
-            } else (child.layoutParams as LayoutParams).slideable
-        }
-
-        override fun onViewDragStateChanged(state: Int) {
-            if (dragHelper.viewDragState == ViewDragHelper.STATE_IDLE) {
-                preservedOpenState = if (currentSlideOffset == 1f) {
-                    updateObscuredViewsVisibility(slideableView)
-                    dispatchOnPanelClosed(slideableView!!)
-                    false
-                } else {
-                    dispatchOnPanelOpened(slideableView!!)
-                    true
-                }
-            }
-        }
-
-        override fun onViewCaptured(capturedChild: View, activePointerId: Int) {
-            // Make all child views visible in preparation for sliding things around
-            setAllChildrenVisible()
-        }
-
-        override fun onViewPositionChanged(
-            changedView: View,
-            left: Int,
-            top: Int,
-            dx: Int,
-            dy: Int
-        ) {
-            onPanelDragged(left)
-            invalidate()
-        }
-
-        override fun onViewReleased(releasedChild: View, xvel: Float, yvel: Float) {
-            val lp = releasedChild.layoutParams as LayoutParams
-            var left: Int
-            if (isLayoutRtlSupport) {
-                var startToRight = paddingRight + lp.rightMargin
-                if (xvel < 0 || xvel == 0f && currentSlideOffset > 0.5f) {
-                    startToRight += slideRange
-                }
-                val childWidth = slideableView!!.width
-                left = width - startToRight - childWidth
-            } else {
-                left = paddingLeft + lp.leftMargin
-                if (xvel > 0 || xvel == 0f && currentSlideOffset > 0.5f) {
-                    left += slideRange
-                }
-            }
-            dragHelper.settleCapturedViewAt(left, releasedChild.top)
-            invalidate()
-        }
-
-        override fun getViewHorizontalDragRange(child: View): Int {
-            return slideRange
-        }
-
-        override fun clampViewPositionHorizontal(child: View, left: Int, dx: Int): Int {
-            var newLeft = left
-            val lp = slideableView!!.layoutParams as LayoutParams
-            newLeft = if (isLayoutRtlSupport) {
-                val startBound = (width - (paddingRight + lp.rightMargin + slideableView!!.width))
-                val endBound = startBound - slideRange
-                newLeft.coerceIn(endBound, startBound)
-            } else {
-                val startBound = paddingLeft + lp.leftMargin
-                val endBound = startBound + slideRange
-                newLeft.coerceIn(startBound, endBound)
-            }
-            return newLeft
-        }
-
-        override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
-            // Make sure we never move views vertically.
-            // This could happen if the child has less height than its parent.
-            return child.top
-        }
-
-        override fun onEdgeTouched(edgeFlags: Int, pointerId: Int) {
-            if (!isDraggable) {
-                return
-            }
-            dragHelper.captureChildView(slideableView!!, pointerId)
-        }
-
-        override fun onEdgeDragStarted(edgeFlags: Int, pointerId: Int) {
-            if (!isDraggable) {
-                return
-            }
-            dragHelper.captureChildView(slideableView!!, pointerId)
-        }
-
-        private val isDraggable: Boolean
-            get() {
-                if (isUnableToDrag) return false
-                if (lockMode == LOCK_MODE_LOCKED) return false
-                if (isOpen && lockMode == LOCK_MODE_LOCKED_OPEN) return false
-                return !(!isOpen && lockMode == LOCK_MODE_LOCKED_CLOSED)
-            }
+        lockMode = state.lockMode
     }
 
     open class LayoutParams : MarginLayoutParams {
@@ -1490,6 +1429,9 @@ open class SlidingPaneLayout @JvmOverloads constructor(
         @JvmField
         internal var dimWhenOffset = false
 
+        internal inline val horizontalMargin: Int
+            get() = leftMargin + rightMargin
+
         constructor() : super(MATCH_PARENT, MATCH_PARENT)
         constructor(width: Int, height: Int) : super(width, height)
         constructor(source: ViewGroup.LayoutParams) : super(source)
@@ -1499,15 +1441,9 @@ open class SlidingPaneLayout @JvmOverloads constructor(
         }
 
         constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) {
-            val a = context.obtainStyledAttributes(attrs, ATTRS)
-            weight = a.getFloat(0, 0f)
-            a.recycle()
-        }
-
-        companion object {
-            private val ATTRS = intArrayOf(
-                R.attr.layout_weight
-            )
+            context.withStyledAttributes(attrs, R.styleable.SlidingPaneLayout_Layout) {
+                weight = getFloat(R.styleable.SlidingPaneLayout_Layout_android_layout_weight, 0f)
+            }
         }
     }
 
@@ -1515,18 +1451,18 @@ open class SlidingPaneLayout @JvmOverloads constructor(
         var isOpen = false
 
         @LockMode
-        var mLockMode = 0
+        var lockMode = 0
 
         constructor(superState: Parcelable?) : super(superState!!)
-        constructor(`in`: Parcel, loader: ClassLoader?) : super(`in`, loader) {
-            isOpen = `in`.readInt() != 0
-            mLockMode = `in`.readInt()
+        constructor(parcel: Parcel, loader: ClassLoader?) : super(parcel, loader) {
+            isOpen = parcel.readInt() != 0
+            lockMode = parcel.readInt()
         }
 
         override fun writeToParcel(out: Parcel, flags: Int) {
             super.writeToParcel(out, flags)
             out.writeInt(if (isOpen) 1 else 0)
-            out.writeInt(mLockMode)
+            out.writeInt(lockMode)
         }
 
         companion object {
@@ -1678,6 +1614,299 @@ open class SlidingPaneLayout @JvmOverloads constructor(
         override fun onPanelSlide(panel: View, slideOffset: Float) {}
         override fun onPanelOpened(panel: View) {}
         override fun onPanelClosed(panel: View) {}
+    }
+
+    private interface TouchHandler {
+        fun onInterceptTouchEvent(ev: MotionEvent): Boolean
+        fun onTouchEvent(ev: MotionEvent): Boolean
+    }
+
+    private inner class OverlappingPaneHandler : ViewDragHelper.Callback(), TouchHandler {
+        /**
+         * A panel view is locked into internal scrolling or another condition that
+         * is preventing a drag.
+         */
+        private var isUnableToDrag = false
+
+        private var initialMotionX = 0f
+        private var initialMotionY = 0f
+        private val slideableStateListeners: MutableList<SlideableStateListener> =
+            CopyOnWriteArrayList()
+        private val panelSlideListeners: MutableList<PanelSlideListener> = CopyOnWriteArrayList()
+        private var singlePanelSlideListener: PanelSlideListener? = null
+        private val dragHelper = ViewDragHelper.create(
+            this@SlidingPaneLayout,
+            0.5f,
+            this
+        ).apply {
+            minVelocity = MIN_FLING_VELOCITY * context.resources.displayMetrics.density
+        }
+
+        val isIdle: Boolean
+            get() = dragHelper.viewDragState == ViewDragHelper.STATE_IDLE
+
+        fun abort() = dragHelper.abort()
+
+        fun onComputeScroll() {
+            if (dragHelper.continueSettling(true)) {
+                if (!isSlideable) {
+                    dragHelper.abort()
+                    return
+                }
+                ViewCompat.postInvalidateOnAnimation(this@SlidingPaneLayout)
+            }
+        }
+
+        fun smoothSlideViewTo(view: View, left: Int, top: Int): Boolean =
+            dragHelper.smoothSlideViewTo(view, left, top)
+
+        fun setPanelSlideListener(listener: PanelSlideListener?) {
+            // The logic in this method emulates what we had before support for multiple
+            // registered listeners.
+            singlePanelSlideListener?.let { removePanelSlideListener(it) }
+            listener?.let { addPanelSlideListener(it) }
+            // Update the deprecated field so that we can remove the passed listener the next
+            // time we're called
+            singlePanelSlideListener = listener
+        }
+
+        fun addSlideableStateListener(listener: SlideableStateListener) {
+            slideableStateListeners.add(listener)
+        }
+
+        fun removeSlideableStateListener(listener: SlideableStateListener) {
+            slideableStateListeners.remove(listener)
+        }
+
+        fun dispatchSlideableState(isSlideable: Boolean) {
+            for (listener in slideableStateListeners) {
+                listener.onSlideableStateChanged(isSlideable)
+            }
+        }
+
+        fun addPanelSlideListener(listener: PanelSlideListener) {
+            panelSlideListeners.add(listener)
+        }
+
+        fun removePanelSlideListener(listener: PanelSlideListener) {
+            panelSlideListeners.remove(listener)
+        }
+
+        fun dispatchOnPanelSlide(panel: View, slideOffset: Float) {
+            for (listener in panelSlideListeners) {
+                listener.onPanelSlide(panel, slideOffset)
+            }
+        }
+
+        fun dispatchOnPanelOpened(panel: View) {
+            for (listener in panelSlideListeners) {
+                listener.onPanelOpened(panel)
+            }
+            sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+        }
+
+        fun dispatchOnPanelClosed(panel: View) {
+            for (listener in panelSlideListeners) {
+                listener.onPanelClosed(panel)
+            }
+            sendAccessibilityEvent(AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+        }
+
+        override fun tryCaptureView(child: View, pointerId: Int): Boolean {
+            return if (!isDraggable) {
+                false
+            } else (child.layoutParams as LayoutParams).slideable
+        }
+
+        override fun onViewDragStateChanged(state: Int) {
+            if (dragHelper.viewDragState == ViewDragHelper.STATE_IDLE) {
+                preservedOpenState = if (currentSlideOffset == 1f) {
+                    updateObscuredViewsVisibility(slideableView)
+                    dispatchOnPanelClosed(slideableView!!)
+                    false
+                } else {
+                    dispatchOnPanelOpened(slideableView!!)
+                    true
+                }
+            }
+        }
+
+        override fun onViewCaptured(capturedChild: View, activePointerId: Int) {
+            // Make all child views visible in preparation for sliding things around
+            setAllChildrenVisible()
+        }
+
+        override fun onViewPositionChanged(
+            changedView: View,
+            left: Int,
+            top: Int,
+            dx: Int,
+            dy: Int
+        ) {
+            onPanelDragged(left)
+            invalidate()
+        }
+
+        override fun onViewReleased(releasedChild: View, xvel: Float, yvel: Float) {
+            val lp = releasedChild.layoutParams as LayoutParams
+            var left: Int
+            if (isLayoutRtlSupport) {
+                var startToRight = paddingRight + lp.rightMargin
+                if (xvel < 0 || xvel == 0f && currentSlideOffset > 0.5f) {
+                    startToRight += slideRange
+                }
+                val childWidth = slideableView!!.width
+                left = width - startToRight - childWidth
+            } else {
+                left = paddingLeft + lp.leftMargin
+                if (xvel > 0 || xvel == 0f && currentSlideOffset > 0.5f) {
+                    left += slideRange
+                }
+            }
+            dragHelper.settleCapturedViewAt(left, releasedChild.top)
+            invalidate()
+        }
+
+        override fun getViewHorizontalDragRange(child: View): Int {
+            return slideRange
+        }
+
+        override fun clampViewPositionHorizontal(child: View, left: Int, dx: Int): Int {
+            var newLeft = left
+            val lp = slideableView!!.layoutParams as LayoutParams
+            newLeft = if (isLayoutRtlSupport) {
+                val startBound = (width - (paddingRight + lp.rightMargin + slideableView!!.width))
+                val endBound = startBound - slideRange
+                newLeft.coerceIn(endBound, startBound)
+            } else {
+                val startBound = paddingLeft + lp.leftMargin
+                val endBound = startBound + slideRange
+                newLeft.coerceIn(startBound, endBound)
+            }
+            return newLeft
+        }
+
+        override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
+            // Make sure we never move views vertically.
+            // This could happen if the child has less height than its parent.
+            return child.top
+        }
+
+        override fun onEdgeTouched(edgeFlags: Int, pointerId: Int) {
+            if (!isDraggable) {
+                return
+            }
+            dragHelper.captureChildView(slideableView!!, pointerId)
+        }
+
+        override fun onEdgeDragStarted(edgeFlags: Int, pointerId: Int) {
+            if (!isDraggable) {
+                return
+            }
+            dragHelper.captureChildView(slideableView!!, pointerId)
+        }
+
+        val isDraggable: Boolean
+            get() {
+                if (isUnableToDrag) return false
+                if (lockMode == LOCK_MODE_LOCKED) return false
+                if (isOpen && lockMode == LOCK_MODE_LOCKED_OPEN) return false
+                return !(!isOpen && lockMode == LOCK_MODE_LOCKED_CLOSED)
+            }
+
+        fun setEdgeTrackingEnabled(edgeFlags: Int, size: Int) {
+            dragHelper.setEdgeTrackingEnabled(edgeFlags)
+            dragHelper.edgeSize = size.coerceAtLeast(dragHelper.defaultEdgeSize)
+        }
+
+        fun disableEdgeTracking() {
+            dragHelper.setEdgeTrackingEnabled(0)
+        }
+
+        override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+            val action = ev.actionMasked
+
+            // Preserve the open state based on the last view that was touched.
+            if (!isSlideable && action == MotionEvent.ACTION_DOWN && childCount > 1) {
+                // After the first things will be slideable.
+                val secondChild = getChildAt(1)
+                if (secondChild != null) {
+                    preservedOpenState =
+                        dragHelper.isViewUnder(secondChild, ev.x.toInt(), ev.y.toInt())
+                }
+            }
+            if (!isSlideable || isUnableToDrag && action != MotionEvent.ACTION_DOWN) {
+                dragHelper.cancel()
+                return super@SlidingPaneLayout.onInterceptTouchEvent(ev)
+            }
+            if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
+                dragHelper.cancel()
+                return false
+            }
+            var interceptTap = false
+            when (action) {
+                MotionEvent.ACTION_DOWN -> {
+                    isUnableToDrag = false
+                    val x = ev.x
+                    val y = ev.y
+                    initialMotionX = x
+                    initialMotionY = y
+                    if (dragHelper.isViewUnder(slideableView, x.toInt(), y.toInt()) &&
+                        isDimmed(slideableView)
+                    ) {
+                        interceptTap = true
+                    }
+                }
+
+                MotionEvent.ACTION_MOVE -> {
+                    val x = ev.x
+                    val y = ev.y
+                    val adx = abs(x - initialMotionX)
+                    val ady = abs(y - initialMotionY)
+                    val slop = dragHelper.touchSlop
+                    if (adx > slop && ady > adx) {
+                        dragHelper.cancel()
+                        isUnableToDrag = true
+                        return false
+                    }
+                }
+            }
+            val interceptForDrag = dragHelper.shouldInterceptTouchEvent(ev)
+            return interceptForDrag || interceptTap
+        }
+
+        override fun onTouchEvent(ev: MotionEvent): Boolean {
+            if (!isSlideable) {
+                return super@SlidingPaneLayout.onTouchEvent(ev)
+            }
+            dragHelper.processTouchEvent(ev)
+            val wantTouchEvents = true
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    val x = ev.x
+                    val y = ev.y
+                    initialMotionX = x
+                    initialMotionY = y
+                }
+
+                MotionEvent.ACTION_UP -> {
+                    if (isDimmed(slideableView)) {
+                        val x = ev.x
+                        val y = ev.y
+                        val dx = x - initialMotionX
+                        val dy = y - initialMotionY
+                        val slop = dragHelper.touchSlop
+                        if (dx * dx + dy * dy < slop * slop &&
+                            dragHelper.isViewUnder(slideableView, x.toInt(), y.toInt())
+                        ) {
+                            // Taps close a dimmed open pane.
+                            closePane(0)
+                        }
+                    }
+                }
+            }
+            return wantTouchEvents
+        }
     }
 
     companion object {

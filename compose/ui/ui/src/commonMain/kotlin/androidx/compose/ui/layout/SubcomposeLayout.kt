@@ -495,7 +495,11 @@ internal class LayoutNodeSubcompositionsState(
             existing
         }
             .apply {
-                setContent(reuseContent, composable)
+                if (!reuseContent) {
+                    setContent(composable)
+                } else {
+                    setContentWithReuse(composable)
+                }
             }
     }
 
@@ -739,7 +743,7 @@ internal class LayoutNodeSubcompositionsState(
         "layouts is not supported. This includes components that are built on top of " +
         "SubcomposeLayout, such as lazy lists, BoxWithConstraints, TabRow, etc. To mitigate " +
         "this:\n" +
-        "- if intrinsic measurements are used to achieve 'match parent' sizing,, consider " +
+        "- if intrinsic measurements are used to achieve 'match parent' sizing, consider " +
         "replacing the parent of the component with a custom layout which controls the order in " +
         "which children are measured, making intrinsic measurement not needed\n" +
         "- adding a size modifier to the component, in order to fast return the queried " +
@@ -860,6 +864,33 @@ internal class LayoutNodeSubcompositionsState(
 
         override fun subcompose(slotId: Any?, content: @Composable () -> Unit) =
             this@LayoutNodeSubcompositionsState.subcompose(slotId, content)
+
+        override fun layout(
+            width: Int,
+            height: Int,
+            alignmentLines: Map<AlignmentLine, Int>,
+            placementBlock: Placeable.PlacementScope.() -> Unit
+        ): MeasureResult {
+            return object : MeasureResult {
+                override val width: Int
+                    get() = width
+                override val height: Int
+                    get() = height
+                override val alignmentLines: Map<AlignmentLine, Int>
+                    get() = alignmentLines
+
+                override fun placeChildren() {
+                    if (isLookingAhead) {
+                        val delegate = root.innerCoordinator.lookaheadDelegate
+                        if (delegate != null) {
+                            delegate.placementScope.placementBlock()
+                            return
+                        }
+                    }
+                    root.innerCoordinator.placementScope.placementBlock()
+                }
+            }
+        }
     }
 
     private inner class PostLookaheadMeasureScopeImpl :

@@ -149,11 +149,12 @@ package androidx.core.app {
 
   @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public class ComponentActivity extends android.app.Activity implements androidx.core.view.KeyEventDispatcher.Component androidx.lifecycle.LifecycleOwner {
     ctor public ComponentActivity();
-    method @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public <T extends androidx.core.app.ComponentActivity.ExtraData> T! getExtraData(Class<T!>!);
+    method @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public <T extends androidx.core.app.ComponentActivity.ExtraData> T? getExtraData(Class<T> extraDataClass);
     method public androidx.lifecycle.Lifecycle getLifecycle();
-    method @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public void putExtraData(androidx.core.app.ComponentActivity.ExtraData!);
-    method protected final boolean shouldDumpInternalState(String![]?);
-    method @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public boolean superDispatchKeyEvent(android.view.KeyEvent);
+    method @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public void putExtraData(androidx.core.app.ComponentActivity.ExtraData extraData);
+    method protected final boolean shouldDumpInternalState(String![]? args);
+    method @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public boolean superDispatchKeyEvent(android.view.KeyEvent event);
+    property public androidx.lifecycle.Lifecycle lifecycle;
   }
 
   @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public static class ComponentActivity.ExtraData {
@@ -230,10 +231,12 @@ package androidx.core.app {
   }
 
   public final class MultiWindowModeChangedInfo {
-    ctor public MultiWindowModeChangedInfo(boolean);
-    ctor @RequiresApi(26) public MultiWindowModeChangedInfo(boolean, android.content.res.Configuration);
+    ctor public MultiWindowModeChangedInfo(boolean isInMultiWindowMode);
+    ctor @RequiresApi(26) public MultiWindowModeChangedInfo(boolean isInMultiWindowMode, android.content.res.Configuration newConfig);
     method @RequiresApi(26) public android.content.res.Configuration getNewConfig();
     method public boolean isInMultiWindowMode();
+    property public final boolean isInMultiWindowMode;
+    property @RequiresApi(26) public final android.content.res.Configuration newConfig;
   }
 
   public final class NavUtils {
@@ -960,18 +963,18 @@ package androidx.core.app {
   }
 
   public interface OnMultiWindowModeChangedProvider {
-    method public void addOnMultiWindowModeChangedListener(androidx.core.util.Consumer<androidx.core.app.MultiWindowModeChangedInfo!>);
-    method public void removeOnMultiWindowModeChangedListener(androidx.core.util.Consumer<androidx.core.app.MultiWindowModeChangedInfo!>);
+    method public void addOnMultiWindowModeChangedListener(androidx.core.util.Consumer<androidx.core.app.MultiWindowModeChangedInfo> listener);
+    method public void removeOnMultiWindowModeChangedListener(androidx.core.util.Consumer<androidx.core.app.MultiWindowModeChangedInfo> listener);
   }
 
   public interface OnNewIntentProvider {
-    method public void addOnNewIntentListener(androidx.core.util.Consumer<android.content.Intent!>);
-    method public void removeOnNewIntentListener(androidx.core.util.Consumer<android.content.Intent!>);
+    method public void addOnNewIntentListener(androidx.core.util.Consumer<android.content.Intent> listener);
+    method public void removeOnNewIntentListener(androidx.core.util.Consumer<android.content.Intent> listener);
   }
 
   public interface OnPictureInPictureModeChangedProvider {
-    method public void addOnPictureInPictureModeChangedListener(androidx.core.util.Consumer<androidx.core.app.PictureInPictureModeChangedInfo!>);
-    method public void removeOnPictureInPictureModeChangedListener(androidx.core.util.Consumer<androidx.core.app.PictureInPictureModeChangedInfo!>);
+    method public void addOnPictureInPictureModeChangedListener(androidx.core.util.Consumer<androidx.core.app.PictureInPictureModeChangedInfo> listener);
+    method public void removeOnPictureInPictureModeChangedListener(androidx.core.util.Consumer<androidx.core.app.PictureInPictureModeChangedInfo> listener);
   }
 
   public final class PendingIntentCompat {
@@ -1016,10 +1019,12 @@ package androidx.core.app {
   }
 
   public final class PictureInPictureModeChangedInfo {
-    ctor public PictureInPictureModeChangedInfo(boolean);
-    ctor @RequiresApi(26) public PictureInPictureModeChangedInfo(boolean, android.content.res.Configuration);
+    ctor public PictureInPictureModeChangedInfo(boolean isInPictureInPictureMode);
+    ctor @RequiresApi(26) public PictureInPictureModeChangedInfo(boolean isInPictureInPictureMode, android.content.res.Configuration newConfig);
     method @RequiresApi(26) public android.content.res.Configuration getNewConfig();
     method public boolean isInPictureInPictureMode();
+    property public final boolean isInPictureInPictureMode;
+    property @RequiresApi(26) public final android.content.res.Configuration newConfig;
   }
 
   @androidx.versionedparcelable.VersionedParcelize(jetifyAs="android.support.v4.app.RemoteActionCompat") public final class RemoteActionCompat implements androidx.versionedparcelable.VersionedParcelable {
@@ -1210,6 +1215,7 @@ package androidx.core.content {
   public class ContextCompat {
     ctor protected ContextCompat();
     method public static int checkSelfPermission(android.content.Context, String);
+    method public static android.content.Context createAttributionContext(android.content.Context, String?);
     method public static android.content.Context? createDeviceProtectedStorageContext(android.content.Context);
     method public static String? getAttributionTag(android.content.Context);
     method public static java.io.File getCodeCacheDir(android.content.Context);
@@ -1322,13 +1328,13 @@ package androidx.core.content {
   }
 
   public interface OnConfigurationChangedProvider {
-    method public void addOnConfigurationChangedListener(androidx.core.util.Consumer<android.content.res.Configuration!>);
-    method public void removeOnConfigurationChangedListener(androidx.core.util.Consumer<android.content.res.Configuration!>);
+    method public void addOnConfigurationChangedListener(androidx.core.util.Consumer<android.content.res.Configuration> listener);
+    method public void removeOnConfigurationChangedListener(androidx.core.util.Consumer<android.content.res.Configuration> listener);
   }
 
   public interface OnTrimMemoryProvider {
-    method public void addOnTrimMemoryListener(androidx.core.util.Consumer<java.lang.Integer!>);
-    method public void removeOnTrimMemoryListener(androidx.core.util.Consumer<java.lang.Integer!>);
+    method public void addOnTrimMemoryListener(androidx.core.util.Consumer<java.lang.Integer> listener);
+    method public void removeOnTrimMemoryListener(androidx.core.util.Consumer<java.lang.Integer> listener);
   }
 
   public final class PackageManagerCompat {
@@ -1743,6 +1749,22 @@ package androidx.core.graphics {
   public final class PaintCompat {
     method public static boolean hasGlyph(android.graphics.Paint, String);
     method public static boolean setBlendMode(android.graphics.Paint, androidx.core.graphics.BlendModeCompat?);
+  }
+
+  public class PathParser {
+    method public static boolean canMorph(androidx.core.graphics.PathParser.PathDataNode![]?, androidx.core.graphics.PathParser.PathDataNode![]?);
+    method public static androidx.core.graphics.PathParser.PathDataNode![] createNodesFromPathData(String);
+    method public static android.graphics.Path createPathFromPathData(String);
+    method public static androidx.core.graphics.PathParser.PathDataNode![] deepCopyNodes(androidx.core.graphics.PathParser.PathDataNode![]);
+    method public static boolean interpolatePathDataNodes(androidx.core.graphics.PathParser.PathDataNode![], androidx.core.graphics.PathParser.PathDataNode![], androidx.core.graphics.PathParser.PathDataNode![], float);
+    method public static void updateNodes(androidx.core.graphics.PathParser.PathDataNode![], androidx.core.graphics.PathParser.PathDataNode![]);
+  }
+
+  public static class PathParser.PathDataNode {
+    method public float[] getParams();
+    method public char getType();
+    method public void interpolatePathDataNode(androidx.core.graphics.PathParser.PathDataNode, androidx.core.graphics.PathParser.PathDataNode, float);
+    method public static void nodesToPath(androidx.core.graphics.PathParser.PathDataNode![], android.graphics.Path);
   }
 
   public final class PathSegment {

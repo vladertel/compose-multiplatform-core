@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastForEachReversed
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 import kotlin.math.abs
@@ -64,7 +65,6 @@ internal fun measureLazyList(
     hasLookaheadPassOccurred: Boolean,
     isLookingAhead: Boolean,
     postLookaheadLayoutInfo: TvLazyListLayoutInfo?,
-    @Suppress("PrimitiveInLambda")
     layout: (Int, Int, Placeable.PlacementScope.() -> Unit) -> MeasureResult
 ): LazyListMeasureResult {
     require(beforeContentPadding >= 0) { "invalid beforeContentPadding" }
@@ -459,7 +459,7 @@ private fun createItemsBeforeList(
         list.add(measuredItemProvider.getAndMeasure(i))
     }
 
-    pinnedItems.fastForEach { index ->
+    pinnedItems.fastForEachReversed { index ->
         if (index < start) {
             if (list == null) list = mutableListOf()
             list?.add(measuredItemProvider.getAndMeasure(index))

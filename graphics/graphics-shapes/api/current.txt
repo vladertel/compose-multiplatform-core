@@ -15,7 +15,6 @@ package androidx.graphics.shapes {
   }
 
   public class Cubic {
-    ctor public Cubic(float anchor0X, float anchor0Y, float control0X, float control0Y, float control1X, float control1Y, float anchor1X, float anchor1Y);
     method public static final androidx.graphics.shapes.Cubic circularArc(float centerX, float centerY, float x0, float y0, float x1, float y1);
     method public final operator androidx.graphics.shapes.Cubic div(float x);
     method public final operator androidx.graphics.shapes.Cubic div(int x);
@@ -50,14 +49,20 @@ package androidx.graphics.shapes {
     method public androidx.graphics.shapes.Cubic straightLine(float x0, float y0, float x1, float y1);
   }
 
+  public final class CubicKt {
+    method public static androidx.graphics.shapes.Cubic Cubic(float anchor0X, float anchor0Y, float control0X, float control0Y, float control1X, float control1Y, float anchor1X, float anchor1Y);
+  }
+
   public final class Morph {
     ctor public Morph(androidx.graphics.shapes.RoundedPolygon start, androidx.graphics.shapes.RoundedPolygon end);
     method public java.util.List<androidx.graphics.shapes.Cubic> asCubics(float progress);
-    method public kotlin.sequences.Sequence<androidx.graphics.shapes.MutableCubic> asMutableCubics(float progress);
-    method public kotlin.sequences.Sequence<androidx.graphics.shapes.MutableCubic> asMutableCubics(float progress, optional androidx.graphics.shapes.MutableCubic mutableCubic);
+    method public inline void forEachCubic(float progress, optional androidx.graphics.shapes.MutableCubic mutableCubic, kotlin.jvm.functions.Function1<? super androidx.graphics.shapes.MutableCubic,kotlin.Unit> callback);
+    method public inline void forEachCubic(float progress, kotlin.jvm.functions.Function1<? super androidx.graphics.shapes.MutableCubic,kotlin.Unit> callback);
   }
 
   public final class MutableCubic extends androidx.graphics.shapes.Cubic {
+    ctor public MutableCubic();
+    method public void interpolate(androidx.graphics.shapes.Cubic c1, androidx.graphics.shapes.Cubic c2, float progress);
     method public void transform(androidx.graphics.shapes.PointTransformer f);
   }
 
@@ -71,7 +76,7 @@ package androidx.graphics.shapes {
   }
 
   public fun interface PointTransformer {
-    method public void transform(androidx.graphics.shapes.MutablePoint);
+    method public long transform(float x, float y);
   }
 
   public final class RoundedPolygon {
@@ -120,6 +125,13 @@ package androidx.graphics.shapes {
     method public static androidx.graphics.shapes.RoundedPolygon star(androidx.graphics.shapes.RoundedPolygon.Companion, int numVerticesPerRadius, optional float radius, optional float innerRadius, optional androidx.graphics.shapes.CornerRounding rounding, optional androidx.graphics.shapes.CornerRounding? innerRounding, optional java.util.List<androidx.graphics.shapes.CornerRounding>? perVertexRounding);
     method public static androidx.graphics.shapes.RoundedPolygon star(androidx.graphics.shapes.RoundedPolygon.Companion, int numVerticesPerRadius, optional float radius, optional float innerRadius, optional androidx.graphics.shapes.CornerRounding rounding, optional androidx.graphics.shapes.CornerRounding? innerRounding, optional java.util.List<androidx.graphics.shapes.CornerRounding>? perVertexRounding, optional float centerX);
     method public static androidx.graphics.shapes.RoundedPolygon star(androidx.graphics.shapes.RoundedPolygon.Companion, int numVerticesPerRadius, optional float radius, optional float innerRadius, optional androidx.graphics.shapes.CornerRounding rounding, optional androidx.graphics.shapes.CornerRounding? innerRounding, optional java.util.List<androidx.graphics.shapes.CornerRounding>? perVertexRounding, optional float centerX, optional float centerY);
+  }
+
+  public final class Shapes_androidKt {
+    method public static android.graphics.Path toPath(androidx.graphics.shapes.Morph, float progress, optional android.graphics.Path path);
+    method public static android.graphics.Path toPath(androidx.graphics.shapes.RoundedPolygon);
+    method public static android.graphics.Path toPath(androidx.graphics.shapes.RoundedPolygon, optional android.graphics.Path path);
+    method public static androidx.graphics.shapes.RoundedPolygon transformed(androidx.graphics.shapes.RoundedPolygon, android.graphics.Matrix matrix);
   }
 
 }

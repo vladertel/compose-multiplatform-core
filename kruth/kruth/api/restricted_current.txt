@@ -11,7 +11,9 @@ package androidx.kruth {
     method public final void isAtMost(T? other);
     method public void isEquivalentAccordingToCompareTo(T? other);
     method public final void isGreaterThan(T? other);
+    method public final void isIn(com.google.common.collect.Range<T> range);
     method public final void isLessThan(T? other);
+    method public final void isNotIn(com.google.common.collect.Range<T> range);
   }
 
   public final class DoubleSubject extends androidx.kruth.ComparableSubject<java.lang.Double> {
@@ -128,9 +130,14 @@ package androidx.kruth {
   public final class MapSubject<K, V> extends androidx.kruth.Subject<java.util.Map<K,? extends V>> {
     method public androidx.kruth.Ordered containsAtLeast(kotlin.Pair<? extends K,? extends V>... entries);
     method public androidx.kruth.Ordered containsAtLeastEntriesIn(java.util.Map<K,? extends V> expectedMap);
+    method public void containsEntry(K key, V value);
+    method public void containsEntry(kotlin.Pair<? extends K,? extends V> entry);
     method public androidx.kruth.Ordered containsExactly(kotlin.Pair<? extends K,? extends V>... entries);
     method public androidx.kruth.Ordered containsExactlyEntriesIn(java.util.Map<K,? extends V> expectedMap);
     method public void containsKey(Object? key);
+    method public void doesNotContainEntry(K key, V value);
+    method public void doesNotContainEntry(kotlin.Pair<? extends K,? extends V> entry);
+    method public void doesNotContainKey(Object? key);
     method public void hasSize(int expectedSize);
     method public void isEmpty();
     method public void isNotEmpty();
@@ -166,12 +173,20 @@ package androidx.kruth {
 
   public final class StringSubject extends androidx.kruth.ComparableSubject<java.lang.String> {
     method public void contains(CharSequence charSequence);
+    method public void containsMatch(String regex);
+    method public void containsMatch(kotlin.text.Regex regex);
     method public void doesNotContain(CharSequence string);
+    method public void doesNotContainMatch(String regex);
+    method public void doesNotContainMatch(kotlin.text.Regex regex);
+    method public void doesNotMatch(String regex);
+    method public void doesNotMatch(kotlin.text.Regex regex);
     method public void endsWith(String string);
     method public void hasLength(int expectedLength);
     method public androidx.kruth.StringSubject.CaseInsensitiveStringComparison ignoringCase();
     method public void isEmpty();
     method public void isNotEmpty();
+    method public void matches(String regex);
+    method public void matches(kotlin.text.Regex regex);
     method public void startsWith(String string);
   }
 

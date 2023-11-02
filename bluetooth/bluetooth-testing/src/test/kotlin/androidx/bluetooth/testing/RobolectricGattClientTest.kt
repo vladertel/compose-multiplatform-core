@@ -28,18 +28,24 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService as FwkService
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.os.Build
 import androidx.bluetooth.BluetoothDevice
 import androidx.bluetooth.BluetoothLe
 import androidx.bluetooth.GattClient
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import junit.framework.TestCase.fail
-import kotlinx.coroutines.CompletableDeferred
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.test.assertFailsWith
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -105,33 +111,49 @@ class RobolectricGattClientTest {
     @Test
     fun connectGatt() = runTest {
         val device = createDevice("00:11:22:33:44:55")
-        val closed = CompletableDeferred<Unit>()
 
         acceptConnect()
 
-        Assert.assertEquals(true, bluetoothLe.connectGatt(device) {
-            Assert.assertEquals(sampleServices.size, getServices().size)
-            sampleServices.forEachIndexed { index, service ->
-                Assert.assertEquals(service.uuid, getServices()[index].uuid)
-            }
-            awaitClose { closed.complete(Unit) }
-            true
-        }.getOrNull())
+        bluetoothLe.connectGatt(device) {
+            assertTrue(clientAdapter.shadowBluetoothGatt.isConnected)
 
-        Assert.assertTrue(closed.isCompleted)
+            Assert.assertEquals(sampleServices.size, services.size)
+            sampleServices.forEachIndexed { index, service ->
+                Assert.assertEquals(service.uuid, services[index].uuid)
+            }
+        }
+
+        assertTrue(clientAdapter.shadowBluetoothGatt.isClosed)
+        assertFalse(clientAdapter.shadowBluetoothGatt.isConnected)
+    }
+
+    @Test
+    fun connectGatt_throwException_closeGatt() = runTest {
+        val device = createDevice("00:11:22:33:44:55")
+
+        acceptConnect()
+
+        assertFailsWith<RuntimeException> {
+            bluetoothLe.connectGatt(device) {
+                assertTrue(clientAdapter.shadowBluetoothGatt.isConnected)
+                throw RuntimeException()
+            }
+        }
+
+        assertTrue(clientAdapter.shadowBluetoothGatt.isClosed)
+        assertFalse(clientAdapter.shadowBluetoothGatt.isConnected)
     }
 
     @Test
     fun connectFail() = runTest {
         val device = createDevice("00:11:22:33:44:55")
         rejectConnect()
-        Assert.assertEquals(true, bluetoothLe.connectGatt(device) { true }.isFailure)
+        assertFailsWith<CancellationException> { bluetoothLe.connectGatt(device) { } }
     }
 
     @Test
     fun readCharacteristic() = runTest {
         val testValue = 48
-        val closed = CompletableDeferred<Unit>()
         val device = createDevice("00:11:22:33:44:55")
         acceptConnect()
 
@@ -141,7 +163,7 @@ class RobolectricGattClientTest {
                     // Check if awaitClose waits for the callback is finished
                     delay(100)
                     clientAdapter.callback?.onCharacteristicRead(
-                        clientAdapter.bluetoothGatt!!,
+                        clientAdapter.fwkBluetoothGatt!!,
                         char,
                         testValue.toByteArray(),
                         BluetoothGatt.GATT_SUCCESS
@@ -150,16 +172,14 @@ class RobolectricGattClientTest {
         }
 
         bluetoothLe.connectGatt(device) {
-            Assert.assertEquals(sampleServices.size, getServices().size)
+            Assert.assertEquals(sampleServices.size, services.size)
             Assert.assertEquals(testValue,
                 readCharacteristic(
-                    getServices()[0].getCharacteristic(readCharUuid)!!
+                    services[0].getCharacteristic(readCharUuid)!!
                 ).getOrNull()?.toInt())
-            awaitClose {
-                closed.complete(Unit)
-            }
         }
-        Assert.assertTrue(closed.isCompleted)
+        assertTrue(clientAdapter.shadowBluetoothGatt.isClosed)
+        assertFalse(clientAdapter.shadowBluetoothGatt.isConnected)
     }
 
     @Test
@@ -174,10 +194,10 @@ class RobolectricGattClientTest {
             }
 
         bluetoothLe.connectGatt(device) {
-            Assert.assertEquals(sampleServices.size, getServices().size)
-            Assert.assertTrue(
+            Assert.assertEquals(sampleServices.size, services.size)
+            assertTrue(
                 readCharacteristic(
-                    getServices()[0].getCharacteristic(noPropertyCharUuid)!!
+                    services[0].getCharacteristic(noPropertyCharUuid)!!
                 ).exceptionOrNull()
                 is IllegalArgumentException)
         }
@@ -187,7 +207,6 @@ class RobolectricGattClientTest {
     fun writeCharacteristic() = runTest {
         val initialValue = 48
         val valueToWrite = 96
-        val closed = CompletableDeferred<Unit>()
         val device = createDevice("00:11:22:33:44:55")
         val currentValue = AtomicInteger(initialValue)
 
@@ -199,7 +218,7 @@ class RobolectricGattClientTest {
                     // For the callback being invoked after waiting
                     delay(0)
                     clientAdapter.callback?.onCharacteristicRead(
-                        clientAdapter.bluetoothGatt!!,
+                        clientAdapter.fwkBluetoothGatt!!,
                         char,
                         currentValue.get().toByteArray(),
                         BluetoothGatt.GATT_SUCCESS
@@ -213,14 +232,14 @@ class RobolectricGattClientTest {
                     delay(0)
                     currentValue.set(value.toInt())
                     clientAdapter.callback?.onCharacteristicWrite(
-                        clientAdapter.bluetoothGatt!!, char, BluetoothGatt.GATT_SUCCESS
+                        clientAdapter.fwkBluetoothGatt!!, char, BluetoothGatt.GATT_SUCCESS
                     )
                 }
         }
 
         bluetoothLe.connectGatt(device) {
-            Assert.assertEquals(sampleServices.size, getServices().size)
-            val characteristic = getServices()[0].getCharacteristic(writeCharUuid)!!
+            Assert.assertEquals(sampleServices.size, services.size)
+            val characteristic = services[0].getCharacteristic(writeCharUuid)!!
 
             Assert.assertEquals(initialValue,
                 readCharacteristic(characteristic).getOrNull()?.toInt())
@@ -228,15 +247,13 @@ class RobolectricGattClientTest {
                 valueToWrite.toByteArray())
             Assert.assertEquals(valueToWrite,
                 readCharacteristic(characteristic).getOrNull()?.toInt())
-            awaitClose {
-                closed.complete(Unit)
-            }
         }
-        Assert.assertTrue(closed.isCompleted)
+        assertTrue(clientAdapter.shadowBluetoothGatt.isClosed)
+        assertFalse(clientAdapter.shadowBluetoothGatt.isConnected)
     }
 
     @Test
-    fun writeCharacteristicWithoutWriteProperty_returnsException() = runTest {
+    fun writeCharacteristicWithoutWriteProperty_throwsException() = runTest {
         acceptConnect()
         val device = createDevice("00:11:22:33:44:55")
 
@@ -247,13 +264,13 @@ class RobolectricGattClientTest {
             }
 
         bluetoothLe.connectGatt(device) {
-            Assert.assertEquals(sampleServices.size, getServices().size)
-            Assert.assertTrue(
+            Assert.assertEquals(sampleServices.size, services.size)
+            assertFailsWith<IllegalArgumentException> {
                 writeCharacteristic(
-                    getServices()[0].getCharacteristic(readCharUuid)!!,
+                    services[0].getCharacteristic(readCharUuid)!!,
                     48.toByteArray()
-                ).exceptionOrNull()
-                is IllegalArgumentException)
+                )
+            }
         }
     }
 
@@ -261,7 +278,6 @@ class RobolectricGattClientTest {
     fun subscribeToCharacteristic() = runTest {
         val initialValue = 48
         val valueToNotify = 96
-        val closed = CompletableDeferred<Unit>()
         val device = createDevice("00:11:22:33:44:55")
         val currentValue = AtomicInteger(initialValue)
 
@@ -273,7 +289,7 @@ class RobolectricGattClientTest {
                     // For the callback being invoked after waiting
                     delay(0)
                     clientAdapter.callback?.onCharacteristicRead(
-                        clientAdapter.bluetoothGatt!!,
+                        clientAdapter.fwkBluetoothGatt!!,
                         char,
                         currentValue.get().toByteArray(),
                         BluetoothGatt.GATT_SUCCESS
@@ -287,7 +303,7 @@ class RobolectricGattClientTest {
                     delay(100)
                     currentValue.set(valueToNotify)
                     clientAdapter.callback?.onCharacteristicChanged(
-                        clientAdapter.bluetoothGatt!!,
+                        clientAdapter.fwkBluetoothGatt!!,
                         desc.characteristic,
                         valueToNotify.toByteArray()
                     )
@@ -295,8 +311,8 @@ class RobolectricGattClientTest {
         }
 
         bluetoothLe.connectGatt(device) {
-            Assert.assertEquals(sampleServices.size, getServices().size)
-            val characteristic = getServices()[0].getCharacteristic(notifyCharUuid)!!
+            Assert.assertEquals(sampleServices.size, services.size)
+            val characteristic = services[0].getCharacteristic(notifyCharUuid)!!
 
             Assert.assertEquals(initialValue,
                 readCharacteristic(characteristic).getOrNull()?.toInt())
@@ -305,11 +321,9 @@ class RobolectricGattClientTest {
                 subscribeToCharacteristic(characteristic).first().toInt())
             Assert.assertEquals(valueToNotify,
                 readCharacteristic(characteristic).getOrNull()?.toInt())
-            awaitClose {
-                closed.complete(Unit)
-            }
         }
-        Assert.assertTrue(closed.isCompleted)
+        assertTrue(clientAdapter.shadowBluetoothGatt.isClosed)
+        assertFalse(clientAdapter.shadowBluetoothGatt.isConnected)
     }
 
     @Test
@@ -324,9 +338,9 @@ class RobolectricGattClientTest {
             }
 
         bluetoothLe.connectGatt(device) {
-            Assert.assertEquals(sampleServices.size, getServices().size)
+            Assert.assertEquals(sampleServices.size, services.size)
             subscribeToCharacteristic(
-                getServices()[0].getCharacteristic(readCharUuid)!!,
+                services[0].getCharacteristic(readCharUuid)!!,
             ).collect {
                 // Should not be notified
                 fail()
@@ -334,36 +348,69 @@ class RobolectricGattClientTest {
         }
     }
 
-    private fun acceptConnect() {
-        clientAdapter.onConnectListener =
-            StubClientFrameworkAdapter.OnConnectListener { device, _ ->
-            shadowOf(device).simulateGattConnectionChange(
-                BluetoothGatt.GATT_SUCCESS, BluetoothGatt.STATE_CONNECTED
-            )
-            true
-        }
+    @Test
+    fun servicesFlow_emittedWhenServicesChange() = runTest {
+        val device = createDevice("00:11:22:33:44:55")
 
-        clientAdapter.onRequestMtuListener =
-            StubClientFrameworkAdapter.OnRequestMtuListener { mtu ->
-            clientAdapter.callback?.onMtuChanged(clientAdapter.bluetoothGatt, mtu,
-                BluetoothGatt.GATT_SUCCESS)
-        }
+        val newServiceUuid = UUID.randomUUID()
+        val newService = FwkService(newServiceUuid, FwkService.SERVICE_TYPE_PRIMARY)
+        val newServices = sampleServices + newService
+
+        acceptConnect()
 
         clientAdapter.onDiscoverServicesListener =
             StubClientFrameworkAdapter.OnDiscoverServicesListener {
-            clientAdapter.gattServices = sampleServices
-            clientAdapter.callback?.onServicesDiscovered(clientAdapter.bluetoothGatt,
-                BluetoothGatt.GATT_SUCCESS)
+                if (clientAdapter.gattServices.isEmpty()) {
+                    clientAdapter.gattServices = sampleServices
+                }
+                clientAdapter.callback?.onServicesDiscovered(
+                    clientAdapter.fwkBluetoothGatt,
+                    BluetoothGatt.GATT_SUCCESS
+                )
+            }
+
+        bluetoothLe.connectGatt(device) {
+            launch {
+                clientAdapter.gattServices = newServices
+                if (Build.VERSION.SDK_INT >= 31) {
+                    clientAdapter.callback?.onServiceChanged(clientAdapter.fwkBluetoothGatt!!)
+                }
+            }
+            val servicesEmitted = servicesFlow.take(2).toList()
+            Assert.assertEquals(sampleServices.size, servicesEmitted[0].size)
+            Assert.assertEquals(sampleServices.size + 1, servicesEmitted[1].size)
+            Assert.assertEquals(newServiceUuid, servicesEmitted[1][sampleServices.size].uuid)
         }
+    }
+
+    private fun acceptConnect() {
+        clientAdapter.onConnectListener =
+            StubClientFrameworkAdapter.OnConnectListener { device, _ ->
+                clientAdapter.shadowBluetoothGatt.notifyConnection(device.address)
+                true
+            }
+
+        clientAdapter.onRequestMtuListener =
+            StubClientFrameworkAdapter.OnRequestMtuListener { mtu ->
+                clientAdapter.callback?.onMtuChanged(clientAdapter.fwkBluetoothGatt, mtu,
+                    BluetoothGatt.GATT_SUCCESS)
+            }
+
+        clientAdapter.onDiscoverServicesListener =
+            StubClientFrameworkAdapter.OnDiscoverServicesListener {
+                clientAdapter.gattServices = sampleServices
+                clientAdapter.callback?.onServicesDiscovered(clientAdapter.fwkBluetoothGatt,
+                    BluetoothGatt.GATT_SUCCESS)
+            }
     }
 
     private fun rejectConnect() {
         clientAdapter.onConnectListener =
             StubClientFrameworkAdapter.OnConnectListener { device, _ ->
-            shadowOf(device).simulateGattConnectionChange(
-                BluetoothGatt.GATT_FAILURE, BluetoothGatt.STATE_DISCONNECTED
-            )
-            false
+                shadowOf(device).simulateGattConnectionChange(
+                    BluetoothGatt.GATT_FAILURE, BluetoothGatt.STATE_DISCONNECTED
+                )
+                false
         }
     }
 
@@ -376,11 +423,11 @@ class RobolectricGattClientTest {
     ) : GattClient.FrameworkAdapter {
         var gattServices: List<FwkService> = listOf()
         var callback: BluetoothGattCallback? = null
-        override var bluetoothGatt: BluetoothGatt?
-            get() = baseAdapter.bluetoothGatt
-            set(value) { baseAdapter.bluetoothGatt = value }
+        override var fwkBluetoothGatt: BluetoothGatt?
+            get() = baseAdapter.fwkBluetoothGatt
+            set(value) { baseAdapter.fwkBluetoothGatt = value }
         val shadowBluetoothGatt: ShadowBluetoothGatt
-            get() = shadowOf(bluetoothGatt)
+            get() = shadowOf(fwkBluetoothGatt)
 
         var onConnectListener: OnConnectListener? = null
         var onRequestMtuListener: OnRequestMtuListener? = null
@@ -392,12 +439,12 @@ class RobolectricGattClientTest {
 
         override fun connectGatt(
             context: Context,
-            device: FwkDevice,
-            callback: BluetoothGattCallback
+            fwkDevice: FwkDevice,
+            fwkCallback: BluetoothGattCallback
         ): Boolean {
-            this.callback = callback
-            baseAdapter.connectGatt(context, device, callback)
-            return onConnectListener?.onConnect(device, callback) ?: false
+            this.callback = fwkCallback
+            baseAdapter.connectGatt(context, fwkDevice, fwkCallback)
+            return onConnectListener?.onConnect(fwkDevice, fwkCallback) ?: false
         }
 
         override fun requestMtu(mtu: Int) {
@@ -418,32 +465,40 @@ class RobolectricGattClientTest {
             return gattServices.find { it.uuid == uuid }
         }
 
-        override fun readCharacteristic(characteristic: FwkCharacteristic) {
-            baseAdapter.readCharacteristic(characteristic)
-            onReadCharacteristicListener?.onReadCharacteristic(characteristic)
+        override fun readCharacteristic(fwkCharacteristic: FwkCharacteristic) {
+            baseAdapter.readCharacteristic(fwkCharacteristic)
+            onReadCharacteristicListener?.onReadCharacteristic(fwkCharacteristic)
         }
 
         override fun writeCharacteristic(
-            characteristic: FwkCharacteristic,
+            fwkCharacteristic: FwkCharacteristic,
             value: ByteArray,
             writeType: Int
         ) {
-            baseAdapter.writeCharacteristic(characteristic, value, writeType)
-            onWriteCharacteristicListener?.onWriteCharacteristic(characteristic, value, writeType)
+            baseAdapter.writeCharacteristic(fwkCharacteristic, value, writeType)
+            onWriteCharacteristicListener?.onWriteCharacteristic(
+                fwkCharacteristic,
+                value,
+                writeType
+            )
         }
 
-        override fun writeDescriptor(descriptor: BluetoothGattDescriptor, value: ByteArray) {
-            baseAdapter.writeDescriptor(descriptor, value)
-            onWriteDescriptorListener?.onWriteDescriptor(descriptor, value)
+        override fun writeDescriptor(fwkSescriptor: BluetoothGattDescriptor, value: ByteArray) {
+            baseAdapter.writeDescriptor(fwkSescriptor, value)
+            onWriteDescriptorListener?.onWriteDescriptor(fwkSescriptor, value)
         }
 
         override fun setCharacteristicNotification(
-            characteristic: FwkCharacteristic,
+            fwkCharacteristic: FwkCharacteristic,
             enable: Boolean
         ) {
-            baseAdapter.setCharacteristicNotification(characteristic, enable)
+            baseAdapter.setCharacteristicNotification(fwkCharacteristic, enable)
             onSetCharacteristicNotifiationListener
-                ?.onSetCharacteristicNotification(characteristic, enable)
+                ?.onSetCharacteristicNotification(fwkCharacteristic, enable)
+        }
+
+        override fun closeGatt() {
+            baseAdapter.closeGatt()
         }
 
         fun interface OnConnectListener {

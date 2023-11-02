@@ -29,11 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.PrimaryPressedPointerButtons
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
-import androidx.compose.ui.draganddrop.DragAndDropInfo
+import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusDirection.Companion.In
+import androidx.compose.ui.focus.FocusDirection.Companion.Enter
+import androidx.compose.ui.focus.FocusDirection.Companion.Exit
 import androidx.compose.ui.focus.FocusDirection.Companion.Next
-import androidx.compose.ui.focus.FocusDirection.Companion.Out
 import androidx.compose.ui.focus.FocusDirection.Companion.Previous
 import androidx.compose.ui.focus.FocusOwner
 import androidx.compose.ui.focus.FocusOwnerImpl
@@ -63,6 +63,8 @@ import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.ProcessResult
 import androidx.compose.ui.input.pointer.TestPointerInputEventData
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.PlacementScope
 import androidx.compose.ui.layout.RootMeasurePolicy
 import androidx.compose.ui.modifier.ModifierLocalManager
 import androidx.compose.ui.node.InternalCoreApi
@@ -231,6 +233,8 @@ internal class SkiaBasedOwner(
 
     override val semanticsOwner: SemanticsOwner = SemanticsOwner(root)
 
+    override val dragAndDropManager: DragAndDropManager get() = TODO("Not yet implemented")
+
     override val autofillTree = AutofillTree()
 
     override val autofill: Autofill? get() = null
@@ -292,6 +296,8 @@ internal class SkiaBasedOwner(
 
     var contentSize = IntSize.Zero
         private set
+
+    override val placementScope: Placeable.PlacementScope = PlacementScope(this)
 
     override fun measureAndLayout(sendPointerUpdate: Boolean) {
         measureAndLayoutDelegate.updateRootConstraints(constraints)
@@ -382,8 +388,8 @@ internal class SkiaBasedOwner(
     override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
         return when (keyEvent.key) {
             Tab -> if (keyEvent.isShiftPressed) Previous else Next
-            DirectionCenter -> In
-            Back -> Out
+            DirectionCenter -> Enter
+            Back -> Exit
             else -> null
         }
     }
@@ -507,10 +513,6 @@ internal class SkiaBasedOwner(
         session: suspend PlatformTextInputSessionScope.() -> Nothing
     ): Nothing {
         component.textInputSession(session)
-    }
-
-    override fun drag(dragAndDropInfo: DragAndDropInfo): Boolean {
-        TODO("Not yet implemented")
     }
 
     // A Stub for the PointerIconService required in Owner.kt

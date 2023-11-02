@@ -74,45 +74,29 @@ import java.util.Set;
 
     static final String TAG = "GlobalMediaRouter";
     static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
-    final Context mApplicationContext;
-    SystemMediaRouteProvider mSystemProvider;
+
+    final CallbackHandler mCallbackHandler = new CallbackHandler();
+    // A map from unique route ID to RouteController for the member routes in the currently
+    // selected route group.
+    final Map<String, MediaRouteProvider.RouteController> mRouteControllerMap = new HashMap<>();
+
     @VisibleForTesting
     RegisteredMediaRouteProviderWatcher mRegisteredProviderWatcher;
-    boolean mTransferReceiverDeclared;
-    MediaRoute2Provider mMr2Provider;
+    MediaRouter.RouteInfo mSelectedRoute;
+    MediaRouteProvider.RouteController mSelectedRouteController;
+    MediaRouter.OnPrepareTransferListener mOnPrepareTransferListener;
+    MediaRouter.PrepareTransferNotifier mTransferNotifier;
 
-    final ArrayList<WeakReference<MediaRouter>> mRouters = new ArrayList<>();
+    private final Context mApplicationContext;
+    private final ArrayList<WeakReference<MediaRouter>> mRouters = new ArrayList<>();
     private final ArrayList<MediaRouter.RouteInfo> mRoutes = new ArrayList<>();
     private final Map<Pair<String, String>, String> mUniqueIdMap = new HashMap<>();
     private final ArrayList<MediaRouter.ProviderInfo> mProviders = new ArrayList<>();
     private final ArrayList<RemoteControlClientRecord> mRemoteControlClients = new ArrayList<>();
-    final RemoteControlClientCompat.PlaybackInfo mPlaybackInfo =
+    private final RemoteControlClientCompat.PlaybackInfo mPlaybackInfo =
             new RemoteControlClientCompat.PlaybackInfo();
     private final ProviderCallback mProviderCallback = new ProviderCallback();
-    final CallbackHandler mCallbackHandler = new CallbackHandler();
-    private DisplayManagerCompat mDisplayManager;
     private final boolean mLowRam;
-    private MediaRouterActiveScanThrottlingHelper mActiveScanThrottlingHelper;
-
-    private MediaRouterParams mRouterParams;
-    MediaRouter.RouteInfo mDefaultRoute;
-    private MediaRouter.RouteInfo mBluetoothRoute;
-    MediaRouter.RouteInfo mSelectedRoute;
-    MediaRouteProvider.RouteController mSelectedRouteController;
-    // Represents a route that are requested to be selected asynchronously.
-    MediaRouter.RouteInfo mRequestedRoute;
-    MediaRouteProvider.RouteController mRequestedRouteController;
-    // A map from unique route ID to RouteController for the member routes in the currently
-    // selected route group.
-    final Map<String, MediaRouteProvider.RouteController> mRouteControllerMap = new HashMap<>();
-    private MediaRouteDiscoveryRequest mDiscoveryRequest;
-    private MediaRouteDiscoveryRequest mDiscoveryRequestForMr2Provider;
-    private int mCallbackCount;
-    MediaRouter.OnPrepareTransferListener mOnPrepareTransferListener;
-    MediaRouter.PrepareTransferNotifier mTransferNotifier;
-    private MediaSessionRecord mMediaSession;
-    MediaSessionCompat mRccMediaSession;
-    private MediaSessionCompat mCompatSession;
     private final MediaSessionCompat.OnActiveChangeListener mSessionActiveListener =
             new MediaSessionCompat.OnActiveChangeListener() {
                 @Override
@@ -130,6 +114,25 @@ import java.util.Set;
                 }
             };
 
+    private boolean mTransferReceiverDeclared;
+    private boolean mUseMediaRouter2ForSystemRouting;
+    private MediaRoute2Provider mMr2Provider;
+    private SystemMediaRouteProvider mSystemProvider;
+    private DisplayManagerCompat mDisplayManager;
+    private MediaRouterActiveScanThrottlingHelper mActiveScanThrottlingHelper;
+    private MediaRouterParams mRouterParams;
+    private MediaRouter.RouteInfo mDefaultRoute;
+    private MediaRouter.RouteInfo mBluetoothRoute;
+    // Represents a route that are requested to be selected asynchronously.
+    private MediaRouter.RouteInfo mRequestedRoute;
+    private MediaRouteProvider.RouteController mRequestedRouteController;
+    private MediaRouteDiscoveryRequest mDiscoveryRequest;
+    private MediaRouteDiscoveryRequest mDiscoveryRequestForMr2Provider;
+    private int mCallbackCount;
+    private MediaSessionRecord mMediaSession;
+    private MediaSessionCompat mRccMediaSession;
+    private MediaSessionCompat mCompatSession;
+
     /* package */ GlobalMediaRouter(Context applicationContext) {
         mApplicationContext = applicationContext;
         mLowRam =
@@ -140,6 +143,15 @@ import java.util.Set;
         mTransferReceiverDeclared =
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
                         && MediaTransferReceiver.isDeclared(mApplicationContext);
+        mUseMediaRouter2ForSystemRouting =
+                SystemRoutingUsingMediaRouter2Receiver.isDeclared(mApplicationContext);
+
+        if (DEBUG && mUseMediaRouter2ForSystemRouting) {
+            // This is only added to skip the presubmit check for UnusedVariable
+            // TODO: Remove it once mUseMediaRouter2ForSystemRouting is actually used
+            Log.d(TAG, "Using MediaRouter2 for system routing");
+        }
+
         mMr2Provider =
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && mTransferReceiverDeclared
                         ? new MediaRoute2Provider(mApplicationContext, new Mr2ProviderCallback())
@@ -881,7 +893,7 @@ import java.util.Set;
                             + mDefaultRoute);
             mDefaultRoute = null;
         }
-        if (mDefaultRoute == null && !mRoutes.isEmpty()) {
+        if (mDefaultRoute == null) {
             for (MediaRouter.RouteInfo route : mRoutes) {
                 if (isSystemDefaultRoute(route) && route.isSelectable()) {
                     mDefaultRoute = route;
@@ -900,7 +912,7 @@ import java.util.Set;
                             + mBluetoothRoute);
             mBluetoothRoute = null;
         }
-        if (mBluetoothRoute == null && !mRoutes.isEmpty()) {
+        if (mBluetoothRoute == null) {
             for (MediaRouter.RouteInfo route : mRoutes) {
                 if (isSystemLiveAudioOnlyRoute(route) && route.isSelectable()) {
                     mBluetoothRoute = route;

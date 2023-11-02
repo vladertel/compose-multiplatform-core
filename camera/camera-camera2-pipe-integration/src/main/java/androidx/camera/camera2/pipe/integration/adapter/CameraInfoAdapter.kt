@@ -20,6 +20,8 @@ package androidx.camera.camera2.pipe.integration.adapter
 
 import android.annotation.SuppressLint
 import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_ON
+import android.hardware.camera2.CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.params.DynamicRangeProfiles
 import android.os.Build
@@ -208,6 +210,22 @@ class CameraInfoAdapter @Inject constructor(
             }
         }
         return setOf(SDR)
+    }
+
+    override fun isPreviewStabilizationSupported(): Boolean {
+        val availableVideoStabilizationModes = cameraProperties.metadata[
+            CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES]
+        return availableVideoStabilizationModes != null &&
+            availableVideoStabilizationModes.contains(
+            CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION)
+    }
+
+    override fun isVideoStabilizationSupported(): Boolean {
+        val availableVideoStabilizationModes = cameraProperties.metadata[
+            CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES]
+        return availableVideoStabilizationModes != null &&
+            availableVideoStabilizationModes.contains(
+            CONTROL_VIDEO_STABILIZATION_MODE_ON)
     }
 
     private fun profileSetToDynamicRangeSet(profileSet: Set<Long>): Set<DynamicRange> {

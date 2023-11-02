@@ -35,6 +35,7 @@ import static androidx.camera.core.impl.UseCaseConfig.OPTION_HIGH_RESOLUTION_DIS
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_SESSION_CONFIG_UNPACKER;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_SURFACE_OCCUPANCY_PRIORITY;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_TARGET_FRAME_RATE;
+import static androidx.camera.core.impl.UseCaseConfig.OPTION_VIDEO_STABILIZATION_MODE;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_ZSL_DISABLED;
 import static androidx.camera.core.impl.utils.Threads.isMainThread;
 import static androidx.camera.core.impl.utils.TransformUtils.rectToString;
@@ -104,6 +105,7 @@ import androidx.camera.core.impl.StreamSpec;
 import androidx.camera.core.impl.Timebase;
 import androidx.camera.core.impl.UseCaseConfig;
 import androidx.camera.core.impl.UseCaseConfigFactory;
+import androidx.camera.core.impl.stabilization.StabilizationMode;
 import androidx.camera.core.impl.utils.Threads;
 import androidx.camera.core.impl.utils.TransformUtils;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
@@ -124,7 +126,6 @@ import androidx.camera.video.internal.compat.quirk.PreviewDelayWhenVideoCaptureI
 import androidx.camera.video.internal.compat.quirk.PreviewStretchWhenVideoCaptureIsBoundQuirk;
 import androidx.camera.video.internal.compat.quirk.VideoQualityQuirk;
 import androidx.camera.video.internal.config.VideoMimeInfo;
-import androidx.camera.video.internal.encoder.InvalidConfigException;
 import androidx.camera.video.internal.encoder.VideoEncoderConfig;
 import androidx.camera.video.internal.encoder.VideoEncoderInfo;
 import androidx.camera.video.internal.encoder.VideoEncoderInfoImpl;
@@ -223,8 +224,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
      */
     @NonNull
     public static <T extends VideoOutput> VideoCapture<T> withOutput(@NonNull T videoOutput) {
-        return new VideoCapture.Builder<>(Preconditions.checkNotNull(videoOutput)).setCaptureType(
-                UseCaseConfigFactory.CaptureType.VIDEO_CAPTURE).build();
+        return new VideoCapture.Builder<>(Preconditions.checkNotNull(videoOutput)).build();
     }
 
     /**
@@ -279,6 +279,13 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     @NonNull
     public Range<Integer> getTargetFrameRate() {
         return getTargetFrameRateInternal();
+    }
+
+    /**
+     * Returns whether video stabilization is enabled.
+     */
+    public boolean isVideoStabilizationEnabled() {
+        return getCurrentConfig().getVideoStabilizationMode() == StabilizationMode.ON;
     }
 
     /**
@@ -684,6 +691,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         // Use the frame rate range directly from the StreamSpec here (don't resolve it to the
         // default if unresolved).
         sessionConfigBuilder.setExpectedFrameRateRange(streamSpec.getExpectedFrameRateRange());
+        sessionConfigBuilder.setVideoStabilization(config.getVideoStabilizationMode());
         sessionConfigBuilder.addErrorListener(
                 (sessionConfig, error) -> resetPipeline(cameraId, config, streamSpec));
         if (USE_TEMPLATE_PREVIEW_BY_QUIRK) {
@@ -776,7 +784,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         private static final VideoCaptureConfig<?> DEFAULT_CONFIG;
 
         private static final Function<VideoEncoderConfig, VideoEncoderInfo>
-                DEFAULT_VIDEO_ENCODER_INFO_FINDER = createFinder();
+                DEFAULT_VIDEO_ENCODER_INFO_FINDER = VideoEncoderInfoImpl.FINDER;
 
         static final Range<Integer> DEFAULT_FPS_RANGE = new Range<>(30, 30);
 
@@ -790,22 +798,9 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             Builder<?> builder = new Builder<>(DEFAULT_VIDEO_OUTPUT)
                     .setSurfaceOccupancyPriority(DEFAULT_SURFACE_OCCUPANCY_PRIORITY)
                     .setVideoEncoderInfoFinder(DEFAULT_VIDEO_ENCODER_INFO_FINDER)
-                    .setDynamicRange(DEFAULT_DYNAMIC_RANGE)
-                    .setCaptureType(UseCaseConfigFactory.CaptureType.VIDEO_CAPTURE);
+                    .setDynamicRange(DEFAULT_DYNAMIC_RANGE);
 
             DEFAULT_CONFIG = builder.getUseCaseConfig();
-        }
-
-        @NonNull
-        private static Function<VideoEncoderConfig, VideoEncoderInfo> createFinder() {
-            return encoderConfig -> {
-                try {
-                    return VideoEncoderInfoImpl.from(encoderConfig);
-                } catch (InvalidConfigException e) {
-                    Logger.w(TAG, "Unable to find VideoEncoderInfo", e);
-                    return null;
-                }
-            };
         }
 
         @NonNull
@@ -894,7 +889,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
         sessionConfigBuilder.clearSurfaces();
         DynamicRange dynamicRange = streamSpec.getDynamicRange();
-        if (!isStreamError) {
+        if (!isStreamError && mDeferrableSurface != null) {
             if (isStreamActive) {
                 sessionConfigBuilder.addSurface(mDeferrableSurface, dynamicRange);
             } else {
@@ -1126,7 +1121,8 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
 
         // Find the nearest EncoderProfiles
         VideoValidatedEncoderProfilesProxy encoderProfiles =
-                videoCapabilities.findHighestSupportedEncoderProfilesFor(resolution, dynamicRange);
+                videoCapabilities.findNearestHigherSupportedEncoderProfilesFor(resolution,
+                        dynamicRange);
         VideoEncoderInfo videoEncoderInfo = resolveVideoEncoderInfo(videoEncoderInfoFinder,
                 encoderProfiles, mediaSpec, resolution, dynamicRange, expectedFrameRate);
         if (videoEncoderInfo == null) {
@@ -1415,6 +1411,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
                                 + oldConfigClass);
             }
 
+            setCaptureType(UseCaseConfigFactory.CaptureType.VIDEO_CAPTURE);
             setTargetClass((Class<VideoCapture<T>>) (Type) VideoCapture.class);
         }
 
@@ -1786,15 +1783,78 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
          *
          * <p>This target will be used as a part of the heuristics for the algorithm that determines
          * the final frame rate range and resolution of all concurrently bound use cases.
+         *
          * <p>It is not guaranteed that this target frame rate will be the final range,
          * as other use cases as well as frame rate restrictions of the device may affect the
          * outcome of the algorithm that chooses the actual frame rate.
+         *
+         * <p>For supported frame rates, see {@link CameraInfo#getSupportedFrameRateRanges()}.
          *
          * @param targetFrameRate the target frame rate range.
          */
         @NonNull
         public Builder<T> setTargetFrameRate(@NonNull Range<Integer> targetFrameRate) {
             getMutableConfig().insertOption(OPTION_TARGET_FRAME_RATE, targetFrameRate);
+            return this;
+        }
+
+        /**
+         * Enable video stabilization.
+         *
+         * <p>It will enable stabilization for the video capture use case. However, it is not
+         * guaranteed the stabilization will be enabled for the preview use case. If you want to
+         * enable preview stabilization, use
+         * {@link Preview.Builder#setPreviewStabilizationEnabled(boolean)} instead.
+         *
+         * <p>Preview stabilization, where streams are stabilized with the same quality of
+         * stabilization for {@link Preview} and {@link VideoCapture} use cases, is enabled. This
+         * mode aims to give clients a 'what you see is what you get' effect. In this mode, the
+         * FoV reduction will be a maximum of 20 % both horizontally and vertically (10% from
+         * left, right, top, bottom) for the given zoom ratio / crop region. The resultant FoV
+         * will also be the same across all use cases (that have the same aspect ratio). This is
+         * the tradeoff between video stabilization and preview stabilization.
+         *
+         * <p>It is recommended to query the device capability via
+         * {@link VideoCapabilities#isStabilizationSupported()} before enabling this
+         * feature, otherwise HAL error might be thrown.
+         *
+         * <p> If both preview stabilization and video stabilization are enabled or disabled, the
+         * final result will be
+         *
+         * <p>
+         * <table>
+         * <tr> <th id="rb">Preview</th> <th id="rb">VideoCapture</th>   <th id="rb">Result</th>
+         * </tr>
+         * <tr> <td>ON</td> <td>ON</td> <td>Both Preview and VideoCapture will be stabilized,
+         * VideoCapture quality might be worse than only VideoCapture stabilized</td>
+         * </tr>
+         * <tr> <td>ON</td> <td>OFF</td> <td>None of Preview and VideoCapture will be
+         * stabilized</td>  </tr>
+         * <tr> <td>ON</td> <td>NOT SPECIFIED</td> <td>Both Preview and VideoCapture will be
+         * stabilized</td>  </tr>
+         * <tr> <td>OFF</td> <td>ON</td> <td>None of Preview and VideoCapture will be
+         * stabilized</td>  </tr>
+         * <tr> <td>OFF</td> <td>OFF</td> <td>None of Preview and VideoCapture will be
+         * stabilized</td>  </tr>
+         * <tr> <td>OFF</td> <td>NOT SPECIFIED</td> <td>None of Preview and VideoCapture will be
+         * stabilized</td>  </tr>
+         * <tr> <td>NOT SPECIFIED</td> <td>ON</td> <td>Only VideoCapture will be stabilized,
+         * Preview might be stabilized depending on devices</td>
+         * </tr>
+         * <tr> <td>NOT SPECIFIED</td> <td>OFF</td> <td>None of Preview and VideoCapture will be
+         * stabilized</td>  </tr>
+         * </table><br>
+         *
+         * @param enabled True if enable, otherwise false.
+         * @return the current Builder.
+         *
+         * @see VideoCapabilities#isStabilizationSupported()
+         * @see Preview.Builder#setPreviewStabilizationEnabled(boolean)
+         */
+        @NonNull
+        public Builder<T> setVideoStabilizationEnabled(boolean enabled) {
+            getMutableConfig().insertOption(OPTION_VIDEO_STABILIZATION_MODE,
+                    enabled ? StabilizationMode.ON : StabilizationMode.OFF);
             return this;
         }
 

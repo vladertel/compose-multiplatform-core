@@ -16,14 +16,14 @@
 
 package androidx.compose.runtime.snapshots
 
+import androidx.collection.MutableObjectIntMap
+import androidx.collection.MutableScatterMap
+import androidx.collection.MutableScatterSet
 import androidx.compose.runtime.AtomicReference
 import androidx.compose.runtime.DerivedState
 import androidx.compose.runtime.DerivedStateObserver
 import androidx.compose.runtime.TestOnly
-import androidx.compose.runtime.collection.IdentityArrayIntMap
-import androidx.compose.runtime.collection.IdentityArrayMap
-import androidx.compose.runtime.collection.IdentityArraySet
-import androidx.compose.runtime.collection.IdentityScopeMap
+import androidx.compose.runtime.collection.ScopeMap
 import androidx.compose.runtime.collection.fastForEach
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.composeRuntimeError
@@ -367,7 +367,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
          * key: State reads observed in current scope.
          * value: [currentToken] at the time the read was observed in.
          */
-        private var currentScopeReads: IdentityArrayIntMap? = null
+        private var currentScopeReads: MutableObjectIntMap<Any>? = null
 
         /**
          * Token for current observation cycle; usually corresponds to snapshot ID at the time when
@@ -378,18 +378,18 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
         /**
          * Values that have been read during the scope's [SnapshotStateObserver.observeReads].
          */
-        private val valueToScopes = IdentityScopeMap<Any>()
+        private val valueToScopes = ScopeMap<Any>()
 
         /**
          * Reverse index (scope -> values) for faster scope invalidation.
          */
-        private val scopeToValues: IdentityArrayMap<Any, IdentityArrayIntMap> =
-            IdentityArrayMap()
+        private val scopeToValues: MutableScatterMap<Any, MutableObjectIntMap<Any>> =
+            MutableScatterMap()
 
         /**
          * Scopes that were invalidated during previous apply step.
          */
-        private val invalidated = IdentityArraySet<Any>()
+        private val invalidated = MutableScatterSet<Any>()
 
         /**
          * Reusable vector for re-recording states inside [recordInvalidation]
@@ -422,7 +422,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
         /**
          * Invalidation index from state objects to derived states reading them.
          */
-        private val dependencyToDerivedStates = IdentityScopeMap<DerivedState<*>>()
+        private val dependencyToDerivedStates = ScopeMap<DerivedState<*>>()
 
         /**
          * Last derived state value recorded during read.
@@ -435,7 +435,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
                 value = value,
                 currentToken = currentToken,
                 currentScope = scope,
-                recordedValues = currentScopeReads ?: IdentityArrayIntMap().also {
+                recordedValues = currentScopeReads ?: MutableObjectIntMap<Any>().also {
                     currentScopeReads = it
                     scopeToValues[scope] = it
                 }
@@ -449,14 +449,14 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
             value: Any,
             currentToken: Int,
             currentScope: Any,
-            recordedValues: IdentityArrayIntMap
+            recordedValues: MutableObjectIntMap<Any>
         ) {
             if (deriveStateScopeCount > 0) {
                 // Reads coming from derivedStateOf block
                 return
             }
 
-            val previousToken = recordedValues.add(value, currentToken)
+            val previousToken = recordedValues.put(value, currentToken, -1)
             if (value is DerivedState<*> && previousToken != currentToken) {
                 val record = value.currentRecord
                 // re-read the value before removing dependencies, in case the new value wasn't read
@@ -466,9 +466,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
                 val dependencyToDerivedStates = dependencyToDerivedStates
 
                 dependencyToDerivedStates.removeScope(value)
-                for (dependency in dependencies) {
-                    // skip over dependency array
-                    if (dependency == null) break
+                dependencies.forEachKey { dependency ->
                     dependencyToDerivedStates.add(dependency, value)
                 }
             }
@@ -505,7 +503,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
 
         private fun clearObsoleteStateReads(scope: Any) {
             val currentToken = currentToken
-            currentScopeReads?.removeValueIf { value, token ->
+            currentScopeReads?.removeIf { value, token ->
                 (token != currentToken).also { willRemove ->
                     if (willRemove) {
                         removeObservation(scope, value)
@@ -622,7 +620,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
                     value = derivedState,
                     currentToken = token,
                     currentScope = scope,
-                    recordedValues = scopeToValues[scope] ?: IdentityArrayIntMap().also {
+                    recordedValues = scopeToValues[scope] ?: MutableObjectIntMap<Any>().also {
                         scopeToValues[scope] = it
                     }
                 )
@@ -634,7 +632,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
          */
         fun notifyInvalidatedScopes() {
             val invalidated = invalidated
-            invalidated.fastForEach(onChanged)
+            invalidated.forEach(onChanged)
             invalidated.clear()
         }
     }

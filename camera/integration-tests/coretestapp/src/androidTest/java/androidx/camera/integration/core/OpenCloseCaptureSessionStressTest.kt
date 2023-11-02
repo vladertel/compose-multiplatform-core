@@ -124,7 +124,7 @@ class OpenCloseCaptureSessionStressTest(
     fun cleanUp(): Unit = runBlocking {
         if (::cameraProvider.isInitialized) {
             withContext(Dispatchers.Main) {
-                cameraProvider.shutdown()[10000, TimeUnit.MILLISECONDS]
+                cameraProvider.shutdownAsync()[10000, TimeUnit.MILLISECONDS]
             }
         }
     }
@@ -183,7 +183,7 @@ class OpenCloseCaptureSessionStressTest(
         runBlocking {
             val videoCapture = VideoCapture.withOutput(Recorder.Builder().build())
             val imageAnalysis = ImageAnalysis.Builder().build()
-            assumeTrue(camera.isUseCasesCombinationSupported(preview, videoCapture, imageAnalysis))
+            assumeTrue(camera.isUseCasesCombinationSupported(preview, videoCapture, imageCapture))
             bindUseCase_unbindAll_toCheckCameraSession_repeatedly(
                 preview,
                 videoCapture = videoCapture,

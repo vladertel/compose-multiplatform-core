@@ -91,10 +91,10 @@ class GLFrameBufferRenderer internal constructor(
          * instance as the [GLFrameBufferRenderer] will consume but not release it.
          *
          * @param parentSurfaceControl Parent [SurfaceControlCompat] instance.
-         * @param width Logical width of the buffers to be rendered into. This would correspond to
-         * the width of a [android.view.View].
-         * @param height Logical height of the buffers to be rendered into. This would correspond to
-         * the height of a [android.view.View].
+         * @param width Logical width of the content to render. This dimension matches what is
+         * provided from [SurfaceHolder.Callback.surfaceChanged].
+         * @param height Logical height of the content to render. This dimension matches what is
+         * provided from [SurfaceHolder.Callback.surfaceChanged].
          * @param transformHint Hint used to specify how to pre-rotate content to optimize
          * consumption of content by the display without having to introduce an additional GPU pass
          * to handle rotation.
@@ -369,6 +369,9 @@ class GLFrameBufferRenderer internal constructor(
     ): FrameBufferRenderer = FrameBufferRenderer(
         object : FrameBufferRenderer.RenderCallback {
 
+            private val width = bufferTransformer.logicalWidth
+            private val height = bufferTransformer.logicalHeight
+
             private val bufferInfo = BufferInfo().apply {
                 this.width = bufferTransformer.glWidth
                 this.height = bufferTransformer.glHeight
@@ -390,7 +393,13 @@ class GLFrameBufferRenderer internal constructor(
             override fun onDraw(eglManager: EGLManager) {
                 val buffer = mCurrentFrameBuffer
                 if (buffer != null && !buffer.isClosed) {
-                    callback.onDrawFrame(eglManager, bufferInfo, bufferTransformer.transform)
+                    callback.onDrawFrame(
+                        eglManager,
+                        width,
+                        height,
+                        bufferInfo,
+                        bufferTransformer.transform
+                    )
                 }
             }
 
@@ -403,6 +412,11 @@ class GLFrameBufferRenderer internal constructor(
                         .setVisibility(surfaceControl, true)
                         .setBuffer(surfaceControl, frameBuffer.hardwareBuffer, syncFenceCompat) {
                                 releaseFence ->
+                            if (mGLRenderer.isRunning()) {
+                                mGLRenderer.execute {
+                                    callback.onBufferReleased(frameBuffer, releaseFence)
+                                }
+                            }
                             if (mMaxBuffers > 1 || frameBufferPool.isClosed) {
                                 // Release the previous buffer only if we are not in single buffered
                                 // mode
@@ -531,6 +545,10 @@ class GLFrameBufferRenderer internal constructor(
          * buffer with the specified parameters.
          * @param eglManager [EGLManager] useful in configuring EGL objects to be used when issuing
          * OpenGL commands to render into the front buffered layer
+         * @param width Logical width of the content to render. This dimension matches what is
+         * provided from [SurfaceHolder.Callback.surfaceChanged]
+         * @param height Logical height of the content to render. This dimension matches what is
+         * provided from [SurfaceHolder.Callback.surfaceChanged]
          * @param bufferInfo [BufferInfo] about the buffer that is being rendered into. This
          * includes the width and height of the buffer which can be different than the corresponding
          * dimensions of the [SurfaceView] provided to the [GLFrameBufferRenderer] as pre-rotation
@@ -568,6 +586,8 @@ class GLFrameBufferRenderer internal constructor(
         @WorkerThread
         fun onDrawFrame(
             eglManager: EGLManager,
+            width: Int,
+            height: Int,
             bufferInfo: BufferInfo,
             transform: FloatArray
         )
@@ -599,6 +619,21 @@ class GLFrameBufferRenderer internal constructor(
             frameBuffer: FrameBuffer,
             syncFence: SyncFenceCompat?
         ) {
+            // NO-OP
+        }
+
+        /**
+         * Optional callback invoked the thread backed by the [GLRenderer] when the provided
+         * framebuffer is released. That is the given [FrameBuffer] instance is no longer being
+         * presented and is not visible.
+         * @param frameBuffer The buffer that is no longer being presented and has returned to the
+         * buffer allocation pool
+         * @param releaseFence Optional fence that must be waited upon before the [FrameBuffer] can
+         * be reused. The framework will invoke this callback early to improve performance and
+         * signal the fence when it is ready to be re-used.
+         */
+        @WorkerThread
+        fun onBufferReleased(frameBuffer: FrameBuffer, releaseFence: SyncFenceCompat?) {
             // NO-OP
         }
     }

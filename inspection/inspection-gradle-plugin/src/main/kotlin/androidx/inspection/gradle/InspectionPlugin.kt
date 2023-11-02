@@ -216,6 +216,7 @@ fun packageInspector(libraryProject: Project, inspectorProjectPath: String) {
 fun Project.createConsumeInspectionConfiguration(): Configuration =
     configurations.create("consumeInspector") {
         it.setupInspectorAttribute()
+        it.isCanBeConsumed = false
     }
 
 private fun Configuration.setupInspectorAttribute() {
@@ -227,6 +228,7 @@ private fun Configuration.setupInspectorAttribute() {
 fun Project.createConsumeNonDexedInspectionConfiguration(): Configuration =
     configurations.create("consumeNonDexedInspector") {
         it.setupNonDexedInspectorAttribute()
+        it.isCanBeConsumed = false
     }
 
 private fun Configuration.setupNonDexedInspectorAttribute() {

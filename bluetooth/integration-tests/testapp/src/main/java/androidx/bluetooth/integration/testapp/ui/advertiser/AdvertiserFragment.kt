@@ -26,15 +26,10 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.CheckBox
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
-import androidx.bluetooth.AdvertiseResult
 import androidx.bluetooth.BluetoothLe
-import androidx.bluetooth.GattCharacteristic
-import androidx.bluetooth.GattServerRequest
-import androidx.bluetooth.GattService
 import androidx.bluetooth.integration.testapp.R
 import androidx.bluetooth.integration.testapp.databinding.FragmentAdvertiserBinding
 import androidx.bluetooth.integration.testapp.ui.common.getColor
@@ -44,33 +39,28 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.recyclerview.widget.DividerItemDecoration
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.tabs.TabLayout
-import java.nio.ByteBuffer
+import dagger.hilt.android.AndroidEntryPoint
 import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class AdvertiserFragment : Fragment() {
 
     private companion object {
         private const val TAG = "AdvertiserFragment"
-
-        private const val TAB_ADVERTISER_POSITION = 0
     }
 
-    private lateinit var bluetoothLe: BluetoothLe
+    @Inject
+    lateinit var bluetoothLe: BluetoothLe
 
     private var advertiseDataAdapter: AdvertiseDataAdapter? = null
 
     private val advertiseScope = CoroutineScope(Dispatchers.Main + Job())
     private var advertiseJob: Job? = null
-
-    private val gattServerScope = CoroutineScope(Dispatchers.Main + Job())
-    private var gattServerJob: Job? = null
 
     private var isAdvertising: Boolean = false
         set(value) {
@@ -91,41 +81,6 @@ class AdvertiserFragment : Fragment() {
             _binding?.viewRecyclerViewOverlay?.isVisible = value
         }
 
-    private var gattServerServicesAdapter: GattServerServicesAdapter? = null
-
-    private var isGattServerOpen: Boolean = false
-        set(value) {
-            field = value
-            if (value) {
-                _binding?.buttonGattServer?.text = getString(R.string.stop_gatt_server)
-                _binding?.buttonGattServer?.backgroundTintList = getColor(R.color.red_500)
-            } else {
-                _binding?.buttonGattServer?.text = getString(R.string.open_gatt_server)
-                _binding?.buttonGattServer?.backgroundTintList = getColor(R.color.indigo_500)
-                gattServerJob?.cancel()
-                gattServerJob = null
-            }
-        }
-
-    private var showingAdvertiser: Boolean = false
-        set(value) {
-            field = value
-            _binding?.layoutAdvertiser?.isVisible = value
-            _binding?.layoutGattServer?.isVisible = !value
-        }
-
-    private val onTabSelectedListener = object : TabLayout.OnTabSelectedListener {
-        override fun onTabSelected(tab: TabLayout.Tab) {
-            showingAdvertiser = tab.position == TAB_ADVERTISER_POSITION
-        }
-
-        override fun onTabUnselected(tab: TabLayout.Tab) {
-        }
-
-        override fun onTabReselected(tab: TabLayout.Tab) {
-        }
-    }
-
     private val viewModel: AdvertiserViewModel by viewModels()
 
     private var _binding: FragmentAdvertiserBinding? = null
@@ -136,11 +91,12 @@ class AdvertiserFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        bluetoothLe = BluetoothLe(requireContext())
-
         _binding = FragmentAdvertiserBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        binding.tabLayout.addOnTabSelectedListener(onTabSelectedListener)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         binding.checkBoxIncludeDeviceName.setOnCheckedChangeListener { _, isChecked ->
             viewModel.includeDeviceName = isChecked
@@ -182,37 +138,13 @@ class AdvertiserFragment : Fragment() {
             }
         }
 
-        binding.buttonAddService.setOnClickListener {
-            onAddGattService()
-        }
-
-        gattServerServicesAdapter =
-            GattServerServicesAdapter(
-                viewModel.gattServerServices,
-                ::onAddGattCharacteristic
-            )
-        binding.recyclerViewGattServerServices.adapter = gattServerServicesAdapter
-        binding.recyclerViewGattServerServices.addItemDecoration(
-            DividerItemDecoration(context, LinearLayoutManager.VERTICAL)
-        )
-
-        binding.buttonGattServer.setOnClickListener {
-            if (gattServerJob?.isActive == true) {
-                isGattServerOpen = false
-            } else {
-                openGattServer()
-            }
-        }
-
         initData()
-
-        return binding.root
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
         isAdvertising = false
+        _binding = null
     }
 
     private fun initData() {
@@ -322,165 +254,38 @@ class AdvertiserFragment : Fragment() {
     // Permissions are handled by MainActivity requestBluetoothPermissions
     @SuppressLint("MissingPermission")
     private fun startAdvertise() {
+        Log.d(TAG, "startAdvertise() called")
+
         advertiseJob = advertiseScope.launch {
+            Log.d(
+                TAG, "bluetoothLe.advertise() called with: " +
+                    "viewModel.advertiseParams = ${viewModel.advertiseParams}"
+            )
             isAdvertising = true
 
-            bluetoothLe.advertise(viewModel.advertiseParams)
-                .collect {
-                    Log.d(TAG, "AdvertiseResult collected: $it")
+            bluetoothLe.advertise(viewModel.advertiseParams) {
+                Log.d(TAG, "bluetoothLe.advertise result: AdvertiseResult = $it")
 
-                    when (it) {
-                        AdvertiseResult.ADVERTISE_STARTED -> {
-                            toast("ADVERTISE_STARTED").show()
-                        }
-                        AdvertiseResult.ADVERTISE_FAILED_DATA_TOO_LARGE -> {
-                            isAdvertising = false
-                            toast("ADVERTISE_FAILED_DATA_TOO_LARGE").show()
-                        }
-                        AdvertiseResult.ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> {
-                            isAdvertising = false
-                            toast("ADVERTISE_FAILED_FEATURE_UNSUPPORTED").show()
-                        }
-                        AdvertiseResult.ADVERTISE_FAILED_INTERNAL_ERROR -> {
-                            isAdvertising = false
-                            toast("ADVERTISE_FAILED_INTERNAL_ERROR").show()
-                        }
-                        AdvertiseResult.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> {
-                            isAdvertising = false
-                            toast("ADVERTISE_FAILED_TOO_MANY_ADVERTISERS").show()
-                        }
-                    }
-                }
-        }
-    }
+                when (it) {
+                    BluetoothLe.ADVERTISE_STARTED ->
+                        toast("ADVERTISE_STARTED").show()
 
-    private fun onAddGattService() {
-        val editTextUuid = EditText(requireActivity())
-        editTextUuid.hint = getString(R.string.service_uuid)
+                    BluetoothLe.ADVERTISE_FAILED_DATA_TOO_LARGE ->
+                        toast("ADVERTISE_FAILED_DATA_TOO_LARGE").show()
 
-        AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.add_service))
-            .setViewEditText(editTextUuid)
-            .setPositiveButton(getString(R.string.add)) { _, _ ->
-                val editTextInput = editTextUuid.text.toString()
-                try {
-                    val uuid = UUID.fromString(
-                        when (editTextInput.length) {
-                            4 -> "0000$editTextInput-0000-1000-8000-00805F9B34FB"
-                            8 -> "$editTextInput-0000-1000-8000-00805F9B34FB"
-                            else -> editTextInput
-                        }
-                    )
-                    val service = GattService(uuid, listOf())
-                    viewModel.addGattService(service)
-                    gattServerServicesAdapter
-                        ?.notifyItemInserted(viewModel.gattServerServices.size - 1)
-                } catch (e: Exception) {
-                    Log.d(TAG, e.toString())
-                    toast(getString(R.string.invalid_uuid)).show()
+                    BluetoothLe.ADVERTISE_FAILED_FEATURE_UNSUPPORTED ->
+                        toast("ADVERTISE_FAILED_FEATURE_UNSUPPORTED").show()
+
+                    BluetoothLe.ADVERTISE_FAILED_INTERNAL_ERROR ->
+                        toast("ADVERTISE_FAILED_INTERNAL_ERROR").show()
+
+                    BluetoothLe.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS ->
+                        toast("ADVERTISE_FAILED_TOO_MANY_ADVERTISERS").show()
                 }
             }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .create()
-            .show()
-    }
 
-    private fun onAddGattCharacteristic(bluetoothGattService: GattService) {
-        val view = layoutInflater.inflate(R.layout.dialog_add_characteristic, null)
-        val editTextUuid = view.findViewById<EditText>(R.id.edit_text_uuid)
-
-        val checkBoxPropertiesBroadcast =
-            view.findViewById<CheckBox>(R.id.check_box_properties_broadcast)
-        val checkBoxPropertiesIndicate =
-            view.findViewById<CheckBox>(R.id.check_box_properties_indicate)
-        val checkBoxPropertiesNotify = view.findViewById<CheckBox>(R.id.check_box_properties_notify)
-        val checkBoxPropertiesRead = view.findViewById<CheckBox>(R.id.check_box_properties_read)
-        val checkBoxPropertiesSignedWrite =
-            view.findViewById<CheckBox>(R.id.check_box_properties_signed_write)
-        val checkBoxPropertiesWrite = view.findViewById<CheckBox>(R.id.check_box_properties_write)
-        val checkBoxPropertiesWriteNoResponse =
-            view.findViewById<CheckBox>(R.id.check_box_properties_write_no_response)
-
-        AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.add_characteristic))
-            .setView(view)
-            .setPositiveButton(getString(R.string.add)) { _, _ ->
-                val uuidText = editTextUuid.text.toString()
-
-                var properties = 0
-                if (checkBoxPropertiesBroadcast.isChecked) {
-                    properties = properties or GattCharacteristic.PROPERTY_BROADCAST
-                }
-                if (checkBoxPropertiesIndicate.isChecked) {
-                    properties = properties or GattCharacteristic.PROPERTY_INDICATE
-                }
-                if (checkBoxPropertiesNotify.isChecked) {
-                    properties = properties or GattCharacteristic.PROPERTY_NOTIFY
-                }
-                if (checkBoxPropertiesRead.isChecked) {
-                    properties = properties or GattCharacteristic.PROPERTY_READ
-                }
-                if (checkBoxPropertiesSignedWrite.isChecked) {
-                    properties = properties or GattCharacteristic.PROPERTY_SIGNED_WRITE
-                }
-                if (checkBoxPropertiesWrite.isChecked) {
-                    properties = properties or GattCharacteristic.PROPERTY_WRITE
-                }
-                if (checkBoxPropertiesWriteNoResponse.isChecked) {
-                    properties = properties or GattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
-                }
-
-                try {
-                    val uuid = UUID.fromString(
-                        when (uuidText.length) {
-                            4 -> "0000$uuidText-0000-1000-8000-00805F9B34FB"
-                            8 -> "$uuidText-0000-1000-8000-00805F9B34FB"
-                            else -> uuidText
-                        }
-                    )
-                    val sampleCharacteristic = GattCharacteristic(uuid, properties)
-
-                    val index = viewModel.gattServerServices.indexOf(bluetoothGattService)
-                    viewModel.addGattCharacteristic(bluetoothGattService, sampleCharacteristic)
-
-                    gattServerServicesAdapter?.notifyItemChanged(index)
-                } catch (e: Exception) {
-                    toast(getString(R.string.invalid_uuid)).show()
-                }
-            }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .create()
-            .show()
-    }
-
-    private fun openGattServer() {
-        Log.d(TAG, "openGattServer() called")
-
-        gattServerJob = gattServerScope.launch {
-            isGattServerOpen = true
-
-            bluetoothLe.openGattServer(viewModel.gattServerServices) {
-                connectRequest.collect {
-                    launch {
-                        it.accept {
-                            requests.collect {
-                                when (it) {
-                                    is GattServerRequest.ReadCharacteristicRequest ->
-                                        it.sendResponse(/*success=*/true,
-                                            ByteBuffer.allocate(Int.SIZE_BYTES).putInt(1)
-                                                .array()
-                                        )
-
-                                    is GattServerRequest.WriteCharacteristicRequest ->
-                                        it.sendResponse(/*success=*/true, null)
-
-                                    else -> throw NotImplementedError("unknown request")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            Log.d(TAG, "bluetoothLe.advertise completed")
+            isAdvertising = false
         }
     }
 }

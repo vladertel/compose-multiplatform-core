@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 8.2.0-alpha15" type="baseline" client="cli" dependencies="false" name="AGP (8.2.0-alpha15)" variant="all" version="8.2.0-alpha15">
+<issues format="6" by="lint 8.3.0-alpha04" type="baseline" client="gradle" dependencies="false" name="AGP (8.3.0-alpha04)" variant="all" version="8.3.0-alpha04">
 
     <issue
         id="OnClick"
@@ -51,7 +51,7 @@
 
     <issue
         id="NewApi"
-        message="Call requires API level 29 (current min is 14): `android.os.StrictMode.VmPolicy.Builder#detectImplicitDirectBoot`"
+        message="Call requires API level 29 (current min is 19): `android.os.StrictMode.VmPolicy.Builder#detectImplicitDirectBoot`"
         errorLine1="                        .detectImplicitDirectBoot()"
         errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -60,142 +60,7 @@
 
     <issue
         id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatLocalNightModeActivity.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_NO);"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatLocalNightModeActivity.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES);"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatLocalNightModeActivity.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_TIME);"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatLocalNightModeActivity.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);"
-        errorLine2="                      ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatLocalNightModeActivity.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeAlertDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_NO);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeAlertDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeAlertDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_TIME);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeAlertDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeAlertDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_NO);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_YES);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_TIME);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Call requires API level 17 (current min is 14): `setLocalNightMode`"
-        errorLine1="        dialog.getDelegate().setLocalNightMode(AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY);"
-        errorLine2="                             ~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/app/AppCompatNightModeDialog.java"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="`&lt;class>` requires API level 24 (current min is 14)"
+        message="`&lt;class>` requires API level 24 (current min is 19)"
         errorLine1="    class=&quot;com.example.androidx.drawable.MyDrawable&quot;"
         errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -293,24 +158,6 @@
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="            Thread.sleep(1000)"
-        errorLine2="                   ~~~~~">
-        <location
-            file="src/androidTest/java/androidx/viewpager2/widget/BaseTest.kt"/>
-    </issue>
-
-    <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="                Thread.sleep(eventTime - now - 10);"
-        errorLine2="                       ~~~~~">
-        <location
-            file="src/androidTest/java/androidx/viewpager2/widget/swipe/ManualSwipeInjector.java"/>
-    </issue>
-
-    <issue
         id="ClassVerificationFailure"
         message="This call references a method added in API level 29; however, the containing class com.example.androidx.app.AppCompatDefaultNightModeBootAwareActivity is reachable from earlier API levels and will fail run-time class verification."
         errorLine1="                        .detectImplicitDirectBoot()"
@@ -356,34 +203,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
-        message="Preconditions.checkArgument can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`androidx`)"
-        errorLine1="        checkArgument(selectionTracker != null);"
-        errorLine2="        ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/widget/selection/simple/DemoAdapter.java"/>
-    </issue>
-
-    <issue
-        id="RestrictedApi"
-        message="Preconditions.checkArgument can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`androidx`)"
-        errorLine1="        checkArgument(selectionTracker != null);"
-        errorLine2="        ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/widget/selection/single/DemoAdapter.java"/>
-    </issue>
-
-    <issue
-        id="RestrictedApi"
-        message="Preconditions.checkArgument can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`androidx`)"
-        errorLine1="        checkArgument(tracker != null);"
-        errorLine2="        ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/widget/selection/fancy/DemoAdapter.java"/>
-    </issue>
-
-    <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="SelectionObserver.onSelectionCleared can only be called from within the same library (androidx.recyclerview:recyclerview-selection)"
         errorLine1="                    public void onSelectionCleared() {"
         errorLine2="                                ~~~~~~~~~~~~~~~~~~">
@@ -392,28 +212,26 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
-        message="Preconditions.checkArgument can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`androidx`)"
-        errorLine1="        Preconditions.checkArgument(group != null);"
-        errorLine2="                      ~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="                if (SDK_INT >= 16) {"
+        errorLine2="                    ~~~~~~~~~~~~~">
         <location
-            file="src/main/java/com/example/androidx/widget/selection/fancy/Uris.java"/>
-    </issue>
-
-    <issue
-        id="RestrictedApi"
-        message="Preconditions.checkArgument can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`androidx`)"
-        errorLine1="        Preconditions.checkArgument(isCheese(uri));"
-        errorLine2="                      ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/example/androidx/widget/selection/fancy/Uris.java"/>
+            file="src/main/java/com/example/androidx/view/SystemUIModes.java"/>
     </issue>
 
     <issue
         id="ObsoleteSdkInt"
-        message="This folder configuration (`v11`) is unnecessary; `minSdkVersion` is 14. Merge all the resources in this folder into `layout`.">
+        message="This folder configuration (`v11`) is unnecessary; `minSdkVersion` is 19. Merge all the resources in this folder into `layout`.">
         <location
             file="src/main/res/layout-v11"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="This folder configuration (`v18`) is unnecessary; `minSdkVersion` is 19. Merge all the resources in this folder into `values`.">
+        <location
+            file="src/main/res/values-v18"/>
     </issue>
 
     <issue

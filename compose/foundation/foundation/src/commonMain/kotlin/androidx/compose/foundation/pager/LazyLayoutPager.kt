@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.layout.LazyLayoutKeyIndexMap
 import androidx.compose.foundation.lazy.layout.LazyLayoutPinnableItem
 import androidx.compose.foundation.lazy.layout.MutableIntervalList
 import androidx.compose.foundation.lazy.layout.NearestRangeKeyIndexMap
+import androidx.compose.foundation.lazy.layout.lazyLayoutBeyondBoundsModifier
 import androidx.compose.foundation.lazy.layout.lazyLayoutSemantics
 import androidx.compose.foundation.overscroll
 import androidx.compose.runtime.Composable
@@ -45,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -116,7 +118,8 @@ internal fun Pager(
         horizontalAlignment = horizontalAlignment,
         verticalAlignment = verticalAlignment,
         itemProviderLambda = pagerItemProvider,
-        pageCount = { state.pageCount },
+        snapPositionInLayout = SnapAlignmentStartToStart,
+        pageCount = { state.pageCount }
     )
 
     val pagerFlingBehavior = remember(flingBehavior, state) {
@@ -143,11 +146,16 @@ internal fun Pager(
                 reverseScrolling = reverseLayout
             )
             .clipScrollableContainer(orientation)
-            .pagerBeyondBoundsModifier(
-                state,
-                beyondBoundsPageCount,
-                reverseLayout,
-                orientation
+            .lazyLayoutBeyondBoundsModifier(
+                state = rememberPagerBeyondBoundsState(
+                    state = state,
+                    beyondBoundsPageCount = beyondBoundsPageCount
+                ),
+                beyondBoundsInfo = state.beyondBoundsInfo,
+                reverseLayout = reverseLayout,
+                layoutDirection = LocalLayoutDirection.current,
+                orientation = orientation,
+                enabled = userScrollEnabled
             )
             .overscroll(overscrollEffect)
             .scrollable(
@@ -268,6 +276,7 @@ private fun Modifier.dragDirectionDetector(state: PagerState) =
                 val downEvent =
                     awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 var upEventOrCancellation: PointerInputChange? = null
+                state.upDownDifference = Offset.Zero // Reset
                 while (upEventOrCancellation == null) {
                     val event = awaitPointerEvent(pass = PointerEventPass.Initial)
                     if (event.changes.fastAll { it.changedToUp() }) {

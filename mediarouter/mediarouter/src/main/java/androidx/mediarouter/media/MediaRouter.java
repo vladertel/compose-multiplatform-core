@@ -894,8 +894,11 @@ public final class MediaRouter {
      * <p>Must be called on the main thread.
      *
      * @param remoteControlClient The {@link android.media.RemoteControlClient} to unregister.
+     * @deprecated Call {@link #setMediaSessionCompat(MediaSessionCompat)} instead of
+     * {@link #addRemoteControlClient(Object)} so that there is no need to call this method.
      */
     @MainThread
+    @Deprecated
     public void removeRemoteControlClient(@NonNull Object remoteControlClient) {
         if (remoteControlClient == null) {
             throw new IllegalArgumentException("remoteControlClient must not be null");
@@ -1158,6 +1161,7 @@ public final class MediaRouter {
             DEVICE_TYPE_GAME_CONSOLE,
             DEVICE_TYPE_CAR,
             DEVICE_TYPE_SMARTWATCH,
+            DEVICE_TYPE_SMARTPHONE,
             DEVICE_TYPE_GROUP
         })
         @Retention(RetentionPolicy.SOURCE)
@@ -1245,6 +1249,13 @@ public final class MediaRouter {
          * @see #getDeviceType
          */
         public static final int DEVICE_TYPE_SMARTWATCH = 10;
+        /**
+         * A receiver device type indicating that the presentation of the media is happening on a
+         * smartphone.
+         *
+         * @see #getDeviceType
+         */
+        public static final int DEVICE_TYPE_SMARTPHONE = 11;
         /**
          * A receiver device type indicating that the presentation of the media is happening on a
          * group of devices.

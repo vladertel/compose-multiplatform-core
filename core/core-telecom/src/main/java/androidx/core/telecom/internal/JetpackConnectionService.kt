@@ -16,6 +16,7 @@
 package androidx.core.telecom.internal
 
 import android.os.Build
+import android.os.Bundle
 import android.os.ParcelUuid
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
@@ -27,6 +28,8 @@ import android.telecom.VideoProfile
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import androidx.core.telecom.CallAttributesCompat
+import androidx.core.telecom.CallsManager
+import androidx.core.telecom.extensions.voip.VoipExtensionManager
 import androidx.core.telecom.internal.utils.Utils
 import java.util.UUID
 import kotlin.coroutines.CoroutineContext
@@ -42,11 +45,12 @@ internal class JetpackConnectionService : ConnectionService() {
         val callChannel: CallChannels,
         val coroutineContext: CoroutineContext,
         val completableDeferred: CompletableDeferred<CallSessionLegacy>?,
-        val onAnswer: suspend (callType: Int) -> Boolean,
-        val onDisconnect: suspend (disconnectCause: DisconnectCause) -> Boolean,
-        val onSetActive: suspend () -> Boolean,
-        val onSetInactive: suspend () -> Boolean,
-        val execution: CompletableDeferred<Unit>
+        val onAnswer: suspend (callType: Int) -> Unit,
+        val onDisconnect: suspend (disconnectCause: DisconnectCause) -> Unit,
+        val onSetActive: suspend () -> Unit,
+        val onSetInactive: suspend () -> Unit,
+        val execution: CompletableDeferred<Unit>,
+        val voipExtensionManager: VoipExtensionManager
     )
 
     companion object {
@@ -152,7 +156,8 @@ internal class JetpackConnectionService : ConnectionService() {
             targetRequest.onDisconnect,
             targetRequest.onSetActive,
             targetRequest.onSetInactive,
-            targetRequest.execution
+            targetRequest.execution,
+            targetRequest.voipExtensionManager
         )
 
         // set display name
@@ -166,6 +171,11 @@ internal class JetpackConnectionService : ConnectionService() {
             targetRequest.callAttributes.address,
             TelecomManager.PRESENTATION_ALLOWED
         )
+
+        // set the extra EXTRA_VOIP_BACKWARDS_COMPATIBILITY_SUPPORTED to true
+        val extras = Bundle()
+        extras.putBoolean(CallsManager.EXTRA_VOIP_BACKWARDS_COMPATIBILITY_SUPPORTED, true)
+        jetpackConnection.putExtras(extras)
 
         // set the call state for the given direction
         if (direction == CallAttributesCompat.DIRECTION_OUTGOING) {
@@ -189,6 +199,9 @@ internal class JetpackConnectionService : ConnectionService() {
                 Connection.CAPABILITY_HOLD or Connection.CAPABILITY_SUPPORT_HOLD
             )
         }
+
+        // Explicitly set voip audio mode on connection side
+        jetpackConnection.audioModeIsVoip = true
 
         targetRequest.completableDeferred?.complete(jetpackConnection)
         mPendingConnectionRequests.remove(targetRequest)

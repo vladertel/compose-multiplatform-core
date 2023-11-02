@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
@@ -66,6 +67,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastFirst
+import androidx.compose.ui.util.fastFirstOrNull
 import kotlin.math.roundToInt
 
 /**
@@ -184,9 +187,11 @@ fun NavigationRailItem(
         @Composable {
             val style = MaterialTheme.typography.fromToken(NavigationRailTokens.LabelTextFont)
             val textColor by colors.textColor(selected = selected, enabled = enabled)
-            CompositionLocalProvider(LocalContentColor provides textColor) {
-                ProvideTextStyle(style, content = label)
-            }
+            ProvideContentColorTextStyle(
+                contentColor = textColor,
+                textStyle = style,
+                content = label
+            )
         }
     }
 
@@ -205,7 +210,7 @@ fun NavigationRailItem(
         contentAlignment = Alignment.Center,
         propagateMinConstraints = true,
     ) {
-        val animationProgress: Float by animateFloatAsState(
+        val animationProgress: State<Float> = animateFloatAsState(
             targetValue = if (selected) 1f else 0f,
             animationSpec = tween(ItemAnimationDurationMillis)
         )
@@ -243,8 +248,9 @@ fun NavigationRailItem(
             Box(
                 Modifier
                     .layoutId(IndicatorLayoutIdTag)
+                    .graphicsLayer { alpha = animationProgress.value }
                     .background(
-                        color = colors.indicatorColor.copy(alpha = animationProgress),
+                        color = colors.indicatorColor,
                         shape = indicatorShape
                     )
             )
@@ -256,7 +262,7 @@ fun NavigationRailItem(
             icon = styledIcon,
             label = styledLabel,
             alwaysShowLabel = alwaysShowLabel,
-            animationProgress = animationProgress,
+            animationProgress = { animationProgress.value },
         )
     }
 }
@@ -394,7 +400,6 @@ class NavigationRailItemColors constructor(
 
     /** Represents the color of the indicator used for selected items. */
     internal val indicatorColor: Color
-        @Composable
         get() = selectedIndicatorColor
 
     override fun equals(other: Any?): Boolean {
@@ -445,13 +450,11 @@ private fun NavigationRailItemLayout(
     icon: @Composable () -> Unit,
     label: @Composable (() -> Unit)?,
     alwaysShowLabel: Boolean,
-    animationProgress: Float,
+    animationProgress: () -> Float,
 ) {
     Layout({
         indicatorRipple()
-        if (animationProgress > 0) {
-            indicator()
-        }
+        indicator()
 
         Box(Modifier.layoutId(IconLayoutIdTag)) { icon() }
 
@@ -459,13 +462,15 @@ private fun NavigationRailItemLayout(
             Box(
                 Modifier
                     .layoutId(LabelLayoutIdTag)
-                    .alpha(if (alwaysShowLabel) 1f else animationProgress)
+                    .graphicsLayer { alpha = if (alwaysShowLabel) 1f else animationProgress() }
             ) { label() }
         }
     }) { measurables, constraints ->
+        @Suppress("NAME_SHADOWING")
+        val animationProgress = animationProgress()
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
         val iconPlaceable =
-            measurables.first { it.layoutId == IconLayoutIdTag }.measure(looseConstraints)
+            measurables.fastFirst { it.layoutId == IconLayoutIdTag }.measure(looseConstraints)
 
         val totalIndicatorWidth = iconPlaceable.width + (IndicatorHorizontalPadding * 2).roundToPx()
         val animatedIndicatorWidth = (totalIndicatorWidth * animationProgress).roundToInt()
@@ -478,7 +483,7 @@ private fun NavigationRailItemLayout(
 
         val indicatorRipplePlaceable =
             measurables
-                .first { it.layoutId == IndicatorRippleLayoutIdTag }
+                .fastFirst { it.layoutId == IndicatorRippleLayoutIdTag }
                 .measure(
                     Constraints.fixed(
                         width = totalIndicatorWidth,
@@ -487,7 +492,7 @@ private fun NavigationRailItemLayout(
                 )
         val indicatorPlaceable =
             measurables
-                .firstOrNull { it.layoutId == IndicatorLayoutIdTag }
+                .fastFirstOrNull { it.layoutId == IndicatorLayoutIdTag }
                 ?.measure(
                     Constraints.fixed(
                         width = animatedIndicatorWidth,
@@ -498,7 +503,7 @@ private fun NavigationRailItemLayout(
         val labelPlaceable =
             label?.let {
                 measurables
-                    .first { it.layoutId == LabelLayoutIdTag }
+                    .fastFirst { it.layoutId == LabelLayoutIdTag }
                     .measure(looseConstraints)
             }
 

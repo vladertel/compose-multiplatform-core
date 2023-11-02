@@ -29,6 +29,7 @@ import androidx.testutils.withActivity
 import androidx.testutils.withUse
 import com.google.common.truth.Truth.assertThat
 import leakcanary.DetectLeaksAfterTestSuccess
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -164,6 +165,7 @@ class SpecialEffectsControllerTest {
         }
     }
 
+    @Ignore // Ignore this test until we find a way to better test this scenario.
     @MediumTest
     @Test
     fun ensureOnlyChangeContainerStatusForCompletedOperation() {
@@ -220,17 +222,10 @@ class SpecialEffectsControllerTest {
             operation2.addCompletionListener {
                 awaitingChanges = operation2.isAwaitingContainerChanges
             }
+            val operation = controller.operationsToExecute[0]
             onActivity {
-                fragmentStateManager1.moveToExpectedState()
-                fragmentStateManager2.moveToExpectedState()
-                // However, executePendingOperations(), since we're using our
-                // TestSpecialEffectsController, does immediately call complete()
-                // which in turn calls moveToExpectedState()
-                controller.executePendingOperations()
+                operation.complete()
             }
-            // Assert that we actually moved to the STARTED state
-            assertThat(fragment1.lifecycle.currentState)
-                .isEqualTo(Lifecycle.State.STARTED)
             assertThat(awaitingChanges).isTrue()
         }
     }

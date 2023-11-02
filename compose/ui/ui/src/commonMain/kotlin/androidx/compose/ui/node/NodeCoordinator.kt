@@ -57,8 +57,7 @@ internal abstract class NodeCoordinator(
     LookaheadCapablePlaceable(),
     Measurable,
     LayoutCoordinates,
-    OwnerScope,
-        (Canvas) -> Unit {
+    OwnerScope {
 
     abstract val tail: Modifier.Node
 
@@ -148,7 +147,7 @@ internal abstract class NodeCoordinator(
         get() = _measureResult != null
 
     override val isAttached: Boolean
-        get() = !released && layoutNode.isAttached
+        get() = tail.isAttached
 
     private var _measureResult: MeasureResult? = null
     override var measureResult: MeasureResult
@@ -378,7 +377,7 @@ internal abstract class NodeCoordinator(
 
     // implementation of draw block passed to the OwnedLayer
     @Suppress("LiftReturnOrAssignment")
-    override fun invoke(canvas: Canvas) {
+    private val drawBlock: (Canvas) -> Unit = { canvas ->
         if (layoutNode.isPlaced) {
             snapshotObserver.observeReads(this, onCommitAffectingLayer) {
                 drawContainedDrawModifiers(canvas)
@@ -403,10 +402,10 @@ internal abstract class NodeCoordinator(
         this.layerDensity = layoutNode.density
         this.layerLayoutDirection = layoutNode.layoutDirection
 
-        if (isAttached && layerBlock != null) {
+        if (layoutNode.isAttached && layerBlock != null) {
             if (layer == null) {
                 layer = layoutNode.requireOwner().createLayer(
-                    this,
+                    drawBlock,
                     invalidateParentLayer
                 ).apply {
                     resize(measuredSize)
@@ -448,25 +447,9 @@ internal abstract class NodeCoordinator(
                 ?: LayerPositionalProperties().also { layerPositionalProperties = it }
             layerPositionalProperties.copyFrom(graphicsLayerScope)
             layer.updateLayerProperties(
-                scaleX = graphicsLayerScope.scaleX,
-                scaleY = graphicsLayerScope.scaleY,
-                alpha = graphicsLayerScope.alpha,
-                translationX = graphicsLayerScope.translationX,
-                translationY = graphicsLayerScope.translationY,
-                shadowElevation = graphicsLayerScope.shadowElevation,
-                ambientShadowColor = graphicsLayerScope.ambientShadowColor,
-                spotShadowColor = graphicsLayerScope.spotShadowColor,
-                rotationX = graphicsLayerScope.rotationX,
-                rotationY = graphicsLayerScope.rotationY,
-                rotationZ = graphicsLayerScope.rotationZ,
-                cameraDistance = graphicsLayerScope.cameraDistance,
-                transformOrigin = graphicsLayerScope.transformOrigin,
-                shape = graphicsLayerScope.shape,
-                clip = graphicsLayerScope.clip,
-                renderEffect = graphicsLayerScope.renderEffect,
-                compositingStrategy = graphicsLayerScope.compositingStrategy,
-                layoutDirection = layoutNode.layoutDirection,
-                density = layoutNode.density
+                graphicsLayerScope,
+                layoutNode.layoutDirection,
+                layoutNode.density,
             )
             isClipping = graphicsLayerScope.clip
             lastLayerAlpha = graphicsLayerScope.alpha
@@ -474,7 +457,7 @@ internal abstract class NodeCoordinator(
                 layoutNode.owner?.onLayoutChange(layoutNode)
             }
         } else {
-            check(layerBlock == null) { "non-null layer with a null layerBlock" }
+            check(layerBlock == null) { "null layer with a non-null layerBlock" }
         }
     }
 
@@ -493,7 +476,7 @@ internal abstract class NodeCoordinator(
         private set
 
     override val isValidOwnerScope: Boolean
-        get() = layer != null && isAttached
+        get() = layer != null && !released && layoutNode.isAttached
 
     val minimumTouchTargetSize: Size
         get() = with(layerDensity) { layoutNode.viewConfiguration.minimumTouchTargetSize.toSize() }
@@ -935,6 +918,13 @@ internal abstract class NodeCoordinator(
      */
     fun onRelease() {
         released = true
+        // It is important to call invalidateParentLayer() here, even though updateLayerBlock() may
+        // call it. The reason is because we end up calling this from the bottom up, which means
+        // that if we have two layout modifiers getting removed, where the parent one has a layer
+        // and the bottom one doesn't, the parent layer gets invalidated but then removed, leaving
+        // no layers invalidated. By always calling this, we ensure that after all nodes are
+        // removed at least one layer is invalidated.
+        invalidateParentLayer()
         if (layer != null) {
             updateLayerBlock(null)
         }

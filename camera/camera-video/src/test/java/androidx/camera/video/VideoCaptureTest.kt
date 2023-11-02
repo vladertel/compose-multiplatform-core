@@ -94,6 +94,7 @@ import androidx.camera.testing.impl.fakes.FakeCameraFactory
 import androidx.camera.testing.impl.fakes.FakeEncoderProfilesProvider
 import androidx.camera.testing.impl.fakes.FakeSurfaceEffect
 import androidx.camera.testing.impl.fakes.FakeSurfaceProcessorInternal
+import androidx.camera.testing.impl.fakes.FakeUseCaseConfigFactory
 import androidx.camera.testing.impl.fakes.FakeVideoEncoderInfo
 import androidx.camera.video.Quality.FHD
 import androidx.camera.video.Quality.HD
@@ -102,7 +103,6 @@ import androidx.camera.video.Quality.LOWEST
 import androidx.camera.video.Quality.NONE
 import androidx.camera.video.Quality.SD
 import androidx.camera.video.Quality.UHD
-import androidx.camera.video.RecorderVideoCapabilities.CapabilitiesByQuality
 import androidx.camera.video.StreamInfo.StreamState
 import androidx.camera.video.impl.VideoCaptureConfig
 import androidx.camera.video.internal.VideoValidatedEncoderProfilesProxy
@@ -200,7 +200,11 @@ class VideoCaptureTest {
         videoCapture.effect = createFakeEffect()
         camera.hasTransform = false
         // Act: set no transform and create pipeline.
-        videoCapture.bindToCamera(camera, null, null)
+        videoCapture.bindToCamera(
+            camera,
+            null,
+            videoCapture.getDefaultConfig(true, FakeUseCaseConfigFactory())
+        )
         videoCapture.updateSuggestedStreamSpec(StreamSpec.builder(Size(640, 480)).build())
         videoCapture.onStateAttached()
         // Assert: camera edge does not have transform.
@@ -1349,6 +1353,14 @@ class VideoCaptureTest {
         ).isEqualTo(newImplementationOptionValue)
     }
 
+    @Test
+    fun canSetVideoStabilization() {
+        val videoCapture = VideoCapture.Builder(Recorder.Builder().build())
+            .setVideoStabilizationEnabled(true)
+            .build()
+        assertThat(videoCapture.isVideoStabilizationEnabled).isTrue()
+    }
+
     private fun testSurfaceRequestContainsExpected(
         quality: Quality = HD, // HD maps to 1280x720 (4:3)
         videoEncoderInfo: VideoEncoderInfo = createVideoEncoderInfo(),
@@ -1703,6 +1715,10 @@ class VideoCaptureTest {
                     return videoCapabilitiesMap[dynamicRange]?.isQualitySupported(quality) ?: false
                 }
 
+                override fun isStabilizationSupported(): Boolean {
+                    return false
+                }
+
                 override fun getProfiles(
                     quality: Quality,
                     dynamicRange: DynamicRange
@@ -1710,20 +1726,20 @@ class VideoCaptureTest {
                     return videoCapabilitiesMap[dynamicRange]?.getProfiles(quality)
                 }
 
-                override fun findHighestSupportedEncoderProfilesFor(
+                override fun findNearestHigherSupportedEncoderProfilesFor(
                     size: Size,
                     dynamicRange: DynamicRange
                 ): VideoValidatedEncoderProfilesProxy? {
                     return videoCapabilitiesMap[dynamicRange]
-                        ?.findHighestSupportedEncoderProfilesFor(size)
+                        ?.findNearestHigherSupportedEncoderProfilesFor(size)
                 }
 
-                override fun findHighestSupportedQualityFor(
+                override fun findNearestHigherSupportedQualityFor(
                     size: Size,
                     dynamicRange: DynamicRange
                 ): Quality {
                     return videoCapabilitiesMap[dynamicRange]
-                        ?.findHighestSupportedQualityFor(size) ?: NONE
+                        ?.findNearestHigherSupportedQualityFor(size) ?: NONE
                 }
             }
         }

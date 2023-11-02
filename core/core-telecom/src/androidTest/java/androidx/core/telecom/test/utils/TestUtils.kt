@@ -19,6 +19,7 @@ package androidx.core.telecom.test.utils
 import android.content.Context
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.os.Build.VERSION_CODES
 import android.os.UserHandle
 import android.os.UserManager
@@ -28,6 +29,7 @@ import android.telecom.PhoneAccountHandle
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.telecom.CallAttributesCompat
+import androidx.core.telecom.internal.CallCompat
 import androidx.core.telecom.internal.utils.BuildVersionAdapter
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.FileInputStream
@@ -55,12 +57,13 @@ object TestUtils {
     const val WAIT_ON_ASSERTS_TO_FINISH_TIMEOUT = 10000L
     const val WAIT_ON_CALL_STATE_TIMEOUT = 8000L
     const val WAIT_ON_IN_CALL_SERVICE_CALL_COUNT_TIMEOUT = 5000L
+    const val WAIT_ON_IN_CALL_SERVICE_CALL_COMPAT_COUNT_TIMEOUT = 5000L
     const val ALL_CALL_CAPABILITIES = (CallAttributesCompat.SUPPORTS_SET_INACTIVE
         or CallAttributesCompat.SUPPORTS_STREAM or CallAttributesCompat.SUPPORTS_TRANSFER)
     val VERIFICATION_TIMEOUT_MSG =
         "Timed out before asserting all values. This most likely means the platform failed to" +
             " add the call or hung on a CallControl operation."
-
+    val CALLBACK_FAILED_EXCEPTION_MSG = "callback failed to be completed in the lambda function"
     // non-primitive constants
     val TEST_PHONE_NUMBER_9001 = Uri.parse("tel:6506959001")
     val TEST_PHONE_NUMBER_8985 = Uri.parse("tel:6506958985")
@@ -132,28 +135,37 @@ object TestUtils {
         }
     }
 
-    val mOnSetActiveLambda: suspend () -> Boolean = {
+    val mOnSetActiveLambda: suspend () -> Unit = {
         Log.i(LOG_TAG, "onSetActive: completing")
         mOnSetActiveCallbackCalled = true
-        mCompleteOnSetActive
+        if (!mCompleteOnSetActive) {
+            throw Exception(CALLBACK_FAILED_EXCEPTION_MSG)
+        }
     }
 
-    val mOnSetInActiveLambda: suspend () -> Boolean = {
+    val mOnSetInActiveLambda: suspend () -> Unit = {
         Log.i(LOG_TAG, "onSetInactive: completing")
         mOnSetInactiveCallbackCalled = true
-        mCompleteOnSetInactive
+        if (!mCompleteOnSetInactive) {
+            throw Exception(CALLBACK_FAILED_EXCEPTION_MSG)
+        }
     }
 
-    val mOnAnswerLambda: suspend (type: Int) -> Boolean = {
+    val mOnAnswerLambda: suspend (type: Int) -> Unit = {
         Log.i(LOG_TAG, "onAnswer: callType=[$it]")
         mOnAnswerCallbackCalled = true
-        mCompleteOnAnswer
+        if (!mCompleteOnAnswer) {
+            throw Exception(CALLBACK_FAILED_EXCEPTION_MSG)
+        }
     }
 
-    val mOnDisconnectLambda: suspend (cause: DisconnectCause) -> Boolean = {
+    val mOnDisconnectLambda: suspend (cause: DisconnectCause) -> Unit = {
         Log.i(LOG_TAG, "onDisconnect: disconnectCause=[$it]")
         mOnDisconnectCallbackCalled = true
         mCompleteOnDisconnect
+        if (!mCompleteOnDisconnect) {
+            throw Exception(CALLBACK_FAILED_EXCEPTION_MSG)
+        }
     }
 
     // Flags for determining whether the given callback was invoked or not
@@ -309,5 +321,73 @@ object TestUtils {
                     " but the Actual call state was <${call.state}>"
             )
         }
+    }
+
+    internal suspend fun waitOnInCallServiceToReachXCallCompats(targetCallCompatCount: Int):
+        CallCompat? {
+        var targetCallCompat: CallCompat? = null
+        try {
+            val callCompatList = MockInCallService.getService()?.mCallCompats
+            if (callCompatList != null) {
+                withTimeout(WAIT_ON_IN_CALL_SERVICE_CALL_COMPAT_COUNT_TIMEOUT) {
+                    while (isActive && callCompatList.size < targetCallCompatCount) {
+                        delay(1)
+                    }
+                    targetCallCompat = callCompatList.last()
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            Log.i(LOG_TAG, "waitOnInCallServiceToReachXCallCompats: timeout reached")
+            dumpTelecom()
+            MockInCallService.destroyAllCalls()
+            throw AssertionError(
+                "Expected call count to be <$targetCallCompatCount> but the actual" +
+                    " call count was <${MockInCallService.getService()?.mCallCompats?.size}>"
+            )
+        }
+        return targetCallCompat
+    }
+
+    /**
+     * Helper to wait on the call detail extras to be populated from the connection service
+     */
+    suspend fun waitOnCallExtras(call: Call) {
+        try {
+            withTimeout(WAIT_ON_CALL_STATE_TIMEOUT) {
+                while (isActive /* aka  within timeout window */ && isCallDetailExtrasEmpty(call)) {
+                    yield() // another mechanism to stop the while loop if the coroutine is dead
+                    delay(1) // sleep x millisecond(s) instead of spamming check
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            Log.i(LOG_TAG, "waitOnCallExtras: timeout reached")
+            dumpTelecom()
+            MockInCallService.destroyAllCalls()
+            throw AssertionError("Expected call detail extras to be non-null.")
+        }
+    }
+
+    /**
+     * Helper used to determine if the call detail extras is empty or null, which is used as a basis
+     * for waiting in the voip app action tests (around capability exchange).
+     */
+    private fun isCallDetailExtrasEmpty(call: Call): Boolean {
+        return call.details?.extras == null || call.details.extras.isEmpty
+    }
+
+    /**
+     * Used for testing in V. The build version is not available for referencing so this helper
+     * performs a manual check instead.
+     */
+    fun buildIsAtLeastV(): Boolean {
+        // V is not referencable as a valid build version yet. Enforce strict manual check instead.
+        return Build.VERSION.SDK_INT > 34
+    }
+
+    /**
+     * Determine if the current build supports at least U.
+     */
+    fun buildIsAtLeastU(): Boolean {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
     }
 }

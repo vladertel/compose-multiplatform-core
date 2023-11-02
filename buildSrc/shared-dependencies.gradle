@@ -19,6 +19,7 @@ dependencies {
     implementation(libs.androidToolsSdkCommon) // com.android.ide.common for Stable AIDL plugin
     implementation(libs.kotlinGradlePluginz)
     implementation(libs.spdxGradlePluginz)
+    implementation(libs.kotlinCompilerEmbeddable) // for clang compiler
 
     // variety of json parsers
     implementation(libs.gson)
@@ -52,4 +53,5 @@ dependencies {
     runtimeOnly(libs.javapoet) // for hiltAndroidGradlePluginz to workaround https://github.com/google/dagger/issues/3068
     runtimeOnly(libs.kspGradlePluginz)
     runtimeOnly(libs.wireGradlePluginz)
+    runtimeOnly(libs.roomGradlePlugin)
 }

@@ -50,7 +50,7 @@ class SdkLoaderTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         sdkLoader = SdkLoader.create(
             context = context,
-            controller = NoOpImpl(),
+            controllerFactory = NoOpFactory,
         )
         testSdkConfig = TestSdkConfigs.CURRENT_WITH_RESOURCES
 
@@ -118,7 +118,8 @@ class SdkLoaderTest {
         val packageIdField = rPackageClass.getDeclaredField("packageId")
         val value = packageIdField.get(null)
 
-        assertThat(value).isEqualTo(42)
+        // 42 (0x2A) -> (0x2A000000)
+        assertThat(value).isEqualTo(0x2A000000)
     }
 
     @Test
@@ -127,7 +128,7 @@ class SdkLoaderTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val sdkLoaderWithLowSpaceMode = SdkLoader.create(
             context = context,
-            controller = NoOpImpl(),
+            controllerFactory = NoOpFactory,
             lowSpaceThreshold = Long.MAX_VALUE
         )
 
@@ -141,7 +142,7 @@ class SdkLoaderTest {
     fun testLowSpace_notFailApi27() {
         val sdkLoaderWithLowSpaceMode = SdkLoader.create(
             context = ApplicationProvider.getApplicationContext(),
-            controller = NoOpImpl(),
+            controllerFactory = NoOpFactory,
             lowSpaceThreshold = Long.MAX_VALUE
         )
 
@@ -150,6 +151,10 @@ class SdkLoaderTest {
 
         val entryPointClass = classLoader.loadClass(testSdkConfig.entryPoint)
         assertThat(entryPointClass).isNotNull()
+    }
+
+    private object NoOpFactory : SdkLoader.ControllerFactory {
+        override fun createControllerFor(sdkConfig: LocalSdkConfig) = NoOpImpl()
     }
 
     private class NoOpImpl : SdkSandboxControllerCompat.SandboxControllerImpl {

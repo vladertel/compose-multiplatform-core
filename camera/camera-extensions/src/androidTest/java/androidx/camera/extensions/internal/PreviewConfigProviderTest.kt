@@ -82,7 +82,7 @@ class PreviewConfigProviderTest {
     @After
     fun cleanUp(): Unit = runBlocking {
         if (::cameraProvider.isInitialized) {
-            cameraProvider.shutdown()[10000, TimeUnit.MILLISECONDS]
+            cameraProvider.shutdownAsync()[10000, TimeUnit.MILLISECONDS]
         }
     }
 
@@ -138,8 +138,8 @@ class PreviewConfigProviderTest {
             basicVendorExtender.init(camera.cameraInfo)
         }
         return Preview.Builder().also {
-            PreviewConfigProvider(extensionMode, basicVendorExtender).apply {
-                updateBuilderConfig(it, extensionMode, basicVendorExtender)
+            PreviewConfigProvider(basicVendorExtender).apply {
+                updateBuilderConfig(it, basicVendorExtender)
             }
         }.build()
     }

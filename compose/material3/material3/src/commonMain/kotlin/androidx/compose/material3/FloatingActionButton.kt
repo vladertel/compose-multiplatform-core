@@ -45,7 +45,6 @@ import androidx.compose.material3.tokens.FabPrimarySmallTokens
 import androidx.compose.material3.tokens.FabPrimaryTokens
 import androidx.compose.material3.tokens.MotionTokens
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
@@ -108,27 +107,22 @@ fun FloatingActionButton(
         shape = shape,
         color = containerColor,
         contentColor = contentColor,
-        tonalElevation = elevation.tonalElevation(interactionSource = interactionSource).value,
+        tonalElevation = elevation.tonalElevation(),
         shadowElevation = elevation.shadowElevation(interactionSource = interactionSource).value,
         interactionSource = interactionSource,
     ) {
-        CompositionLocalProvider(LocalContentColor provides contentColor) {
-            // Adding the text style from [ExtendedFloatingActionButton] to all FAB variations. In
-            // the majority of cases this will have no impact, because icons are expected, but if a
-            // developer decides to put some short text to emulate an icon, (like "?") then it will
-            // have the correct styling.
-            ProvideTextStyle(
-                MaterialTheme.typography.fromToken(ExtendedFabPrimaryTokens.LabelTextFont),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .defaultMinSize(
-                            minWidth = FabPrimaryTokens.ContainerWidth,
-                            minHeight = FabPrimaryTokens.ContainerHeight,
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) { content() }
-            }
+        ProvideContentColorTextStyle(
+            contentColor = contentColor,
+            textStyle = MaterialTheme.typography.fromToken(ExtendedFabPrimaryTokens.LabelTextFont)
+        ) {
+            Box(
+                modifier = Modifier
+                    .defaultMinSize(
+                        minWidth = FabPrimaryTokens.ContainerWidth,
+                        minHeight = FabPrimaryTokens.ContainerHeight,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) { content() }
         }
     }
 }
@@ -496,9 +490,8 @@ object FloatingActionButtonDefaults {
         return animateElevation(interactionSource = interactionSource)
     }
 
-    @Composable
-    internal fun tonalElevation(interactionSource: InteractionSource): State<Dp> {
-        return animateElevation(interactionSource = interactionSource)
+    internal fun tonalElevation(): Dp {
+        return defaultElevation
     }
 
     @Composable

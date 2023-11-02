@@ -48,10 +48,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastFirst
+import androidx.compose.ui.util.fastFirstOrNull
 import kotlin.math.roundToInt
 
 /**
@@ -183,9 +185,11 @@ fun RowScope.NavigationBarItem(
         @Composable {
             val style = MaterialTheme.typography.fromToken(NavigationBarTokens.LabelTextFont)
             val textColor by colors.textColor(selected = selected, enabled = enabled)
-            CompositionLocalProvider(LocalContentColor provides textColor) {
-                ProvideTextStyle(style, content = label)
-            }
+            ProvideContentColorTextStyle(
+                contentColor = textColor,
+                textStyle = style,
+                content = label
+            )
         }
     }
 
@@ -209,7 +213,7 @@ fun RowScope.NavigationBarItem(
         contentAlignment = Alignment.Center,
         propagateMinConstraints = true,
     ) {
-        val animationProgress: Float by animateFloatAsState(
+        val animationProgress: State<Float> = animateFloatAsState(
             targetValue = if (selected) 1f else 0f,
             animationSpec = tween(ItemAnimationDurationMillis)
         )
@@ -243,8 +247,9 @@ fun RowScope.NavigationBarItem(
             Box(
                 Modifier
                     .layoutId(IndicatorLayoutIdTag)
+                    .graphicsLayer { alpha = animationProgress.value }
                     .background(
-                        color = colors.indicatorColor.copy(alpha = animationProgress),
+                        color = colors.indicatorColor,
                         shape = NavigationBarTokens.ActiveIndicatorShape.value,
                     )
             )
@@ -256,7 +261,7 @@ fun RowScope.NavigationBarItem(
             icon = styledIcon,
             label = styledLabel,
             alwaysShowLabel = alwaysShowLabel,
-            animationProgress = animationProgress
+            animationProgress = { animationProgress.value },
         )
     }
 }
@@ -447,13 +452,11 @@ private fun NavigationBarItemLayout(
     icon: @Composable () -> Unit,
     label: @Composable (() -> Unit)?,
     alwaysShowLabel: Boolean,
-    animationProgress: Float,
+    animationProgress: () -> Float,
 ) {
     Layout({
         indicatorRipple()
-        if (animationProgress > 0) {
-            indicator()
-        }
+        indicator()
 
         Box(Modifier.layoutId(IconLayoutIdTag)) { icon() }
 
@@ -461,21 +464,23 @@ private fun NavigationBarItemLayout(
             Box(
                 Modifier
                     .layoutId(LabelLayoutIdTag)
-                    .alpha(if (alwaysShowLabel) 1f else animationProgress)
+                    .graphicsLayer { alpha = if (alwaysShowLabel) 1f else animationProgress() }
                     .padding(horizontal = NavigationBarItemHorizontalPadding / 2)
             ) { label() }
         }
     }) { measurables, constraints ->
+        @Suppress("NAME_SHADOWING")
+        val animationProgress = animationProgress()
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
         val iconPlaceable =
-            measurables.first { it.layoutId == IconLayoutIdTag }.measure(looseConstraints)
+            measurables.fastFirst { it.layoutId == IconLayoutIdTag }.measure(looseConstraints)
 
         val totalIndicatorWidth = iconPlaceable.width + (IndicatorHorizontalPadding * 2).roundToPx()
         val animatedIndicatorWidth = (totalIndicatorWidth * animationProgress).roundToInt()
         val indicatorHeight = iconPlaceable.height + (IndicatorVerticalPadding * 2).roundToPx()
         val indicatorRipplePlaceable =
             measurables
-                .first { it.layoutId == IndicatorRippleLayoutIdTag }
+                .fastFirst { it.layoutId == IndicatorRippleLayoutIdTag }
                 .measure(
                     Constraints.fixed(
                         width = totalIndicatorWidth,
@@ -484,7 +489,7 @@ private fun NavigationBarItemLayout(
                 )
         val indicatorPlaceable =
             measurables
-                .firstOrNull { it.layoutId == IndicatorLayoutIdTag }
+                .fastFirstOrNull { it.layoutId == IndicatorLayoutIdTag }
                 ?.measure(
                     Constraints.fixed(
                         width = animatedIndicatorWidth,
@@ -495,7 +500,7 @@ private fun NavigationBarItemLayout(
         val labelPlaceable =
             label?.let {
                 measurables
-                    .first { it.layoutId == LabelLayoutIdTag }
+                    .fastFirst { it.layoutId == LabelLayoutIdTag }
                     .measure(looseConstraints)
             }
 

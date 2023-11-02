@@ -81,8 +81,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalTextInputService
 import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.semantics.copyText
 import androidx.compose.ui.semantics.cutText
 import androidx.compose.ui.semantics.disabled
@@ -217,6 +220,8 @@ internal fun CoreTextField(
     val fontFamilyResolver = LocalFontFamilyResolver.current
     val selectionBackgroundColor = LocalTextSelectionColors.current.backgroundColor
     val focusManager = LocalFocusManager.current
+    val windowInfo = LocalWindowInfo.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // Scroll state
     val singleLine = maxLines == 1 && !softWrap && imeOptions.singleLine
@@ -240,7 +245,7 @@ internal fun CoreTextField(
     // If developer doesn't pass new value to TextField, recompose won't happen but internal state
     // and IME may think it is updated. To fix this inconsistent state, enforce recompose.
     val scope = currentRecomposeScope
-    val state = remember {
+    val state = remember(keyboardController) {
         TextFieldState(
             TextDelegate(
                 text = visualText,
@@ -249,7 +254,8 @@ internal fun CoreTextField(
                 density = density,
                 fontFamilyResolver = fontFamilyResolver
             ),
-            recomposeScope = scope
+            recomposeScope = scope,
+            keyboardController = keyboardController
         )
     }
     state.update(
@@ -410,7 +416,7 @@ internal fun CoreTextField(
         state.layoutResult?.innerTextFieldCoordinates = it
         if (enabled) {
             if (state.handleState == HandleState.Selection) {
-                if (state.showFloatingToolbar) {
+                if (state.showFloatingToolbar && windowInfo.isWindowFocused) {
                     manager.showSelectionToolbar()
                 } else {
                     manager.hideSelectionToolbar()
@@ -576,8 +582,8 @@ internal fun CoreTextField(
         }
     }
 
-    val cursorModifier =
-        Modifier.cursor(state, value, offsetMapping, cursorBrush, enabled && !readOnly)
+    val showCursor = enabled && !readOnly && windowInfo.isWindowFocused
+    val cursorModifier = Modifier.cursor(state, value, offsetMapping, cursorBrush, showCursor)
 
     DisposableEffect(manager) {
         onDispose { manager.hideSelectionToolbar() }
@@ -624,7 +630,8 @@ internal fun CoreTextField(
             state.layoutResult?.decorationBoxCoordinates = it
         }
 
-    val showHandleAndMagnifier = enabled && state.hasFocus && state.isInTouchMode
+    val showHandleAndMagnifier =
+        enabled && state.hasFocus && state.isInTouchMode && windowInfo.isWindowFocused
     val magnifierModifier = if (showHandleAndMagnifier) {
         Modifier.textFieldMagnifier(manager)
     } else {
@@ -713,13 +720,17 @@ internal fun CoreTextField(
 
                 SelectionToolbarAndHandles(
                     manager = manager,
-                    show = state.handleState == HandleState.Selection &&
+                    show = state.handleState != HandleState.None &&
                         state.layoutCoordinates != null &&
                         state.layoutCoordinates!!.isAttached &&
                         showHandleAndMagnifier
                 )
 
-                if (!readOnly && showHandleAndMagnifier) {
+                if (
+                    state.handleState == HandleState.Cursor &&
+                    !readOnly &&
+                    showHandleAndMagnifier
+                ) {
                     TextFieldCursorHandle(manager = manager)
                 }
             }
@@ -799,7 +810,8 @@ private fun Modifier.previewKeyEventToDeselectOnBack(
 @OptIn(InternalFoundationTextApi::class)
 internal class TextFieldState(
     var textDelegate: TextDelegate,
-    val recomposeScope: RecomposeScope
+    val recomposeScope: RecomposeScope,
+    val keyboardController: SoftwareKeyboardController?,
 ) {
     val processor = EditProcessor()
     var inputSession: TextInputSession? = null
@@ -877,6 +889,11 @@ internal class TextFieldState(
 
     /**
      * A flag to check if the floating toolbar should show.
+     *
+     * This state is meant to represent the floating toolbar status regardless of if all touch
+     * behaviors are disabled (like if the user is using a mouse). This is so that when touch
+     * behaviors are re-enabled, the toolbar status will still reflect whether it should be shown
+     * at that point.
      */
     var showFloatingToolbar by mutableStateOf(false)
 
@@ -910,7 +927,8 @@ internal class TextFieldState(
 
     var isInTouchMode: Boolean by mutableStateOf(true)
 
-    private val keyboardActionRunner: KeyboardActionRunner = KeyboardActionRunner()
+    private val keyboardActionRunner: KeyboardActionRunner =
+        KeyboardActionRunner(keyboardController)
 
     /**
      * DO NOT USE, use [onValueChange] instead. This is original callback provided to the TextField.
@@ -952,7 +970,6 @@ internal class TextFieldState(
         this.keyboardActionRunner.apply {
             this.keyboardActions = keyboardActions
             this.focusManager = focusManager
-            this.inputSession = this@TextFieldState.inputSession
         }
         this.untransformedText = untransformedText
 
@@ -982,7 +999,7 @@ private fun tapToFocus(
     if (!state.hasFocus) {
         focusRequester.requestFocus()
     } else if (allowKeyboard) {
-        state.inputSession?.showSoftwareKeyboard()
+        state.keyboardController?.show()
     }
 }
 

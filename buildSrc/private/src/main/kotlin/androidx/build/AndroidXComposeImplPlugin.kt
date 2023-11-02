@@ -109,9 +109,7 @@ class AndroidXComposeImplPlugin : Plugin<Project> {
 
                     // Disable ListIterator if we are not in a matching path, or we are in an
                     // unpublished project
-                    if (
-                        ignoreListIteratorFilter.any { path.contains(it) } || !isPublished
-                    ) {
+                    if (ignoreListIteratorFilter.any { path.contains(it) } || !isPublished) {
                         disable.add("ListIterator")
                     }
                 }
@@ -195,7 +193,9 @@ private fun configureComposeCompilerPlugin(project: Project, extension: AndroidX
         val shouldPublish = androidXExtension.shouldPublish()
 
         // Create configuration that we'll use to load Compose compiler plugin
-        val configuration = project.configurations.create(COMPILER_PLUGIN_CONFIGURATION)
+        val configuration = project.configurations.create(COMPILER_PLUGIN_CONFIGURATION) {
+            it.isCanBeConsumed = false
+        }
         // Add Compose compiler plugin to kotlinPlugin configuration, making sure it works
         // for Playground builds as well
         project.dependencies.add(

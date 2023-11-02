@@ -26,17 +26,18 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.autofill.AutofillValue;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
-import androidx.appcompat.widget.AppCompatEditText;
 import androidx.core.widget.TextViewCompat;
 
 /**
  * A custom EditText that satisfies the IME key monitoring requirements of GuidedStepFragment.
  */
-public class GuidedActionEditText extends AppCompatEditText implements ImeKeyMonitor,
+@SuppressLint("AppCompatCustomView")
+public class GuidedActionEditText extends EditText implements ImeKeyMonitor,
         GuidedActionAutofillSupport {
 
     /**
@@ -108,8 +109,7 @@ public class GuidedActionEditText extends AppCompatEditText implements ImeKeyMon
     @Override
     public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
         super.onInitializeAccessibilityNodeInfo(info);
-        info.setClassName(isFocused() ?
-                AppCompatEditText.class.getName() : TextView.class.getName());
+        info.setClassName(isFocused() ? EditText.class.getName() : TextView.class.getName());
     }
 
     @Override
@@ -121,7 +121,7 @@ public class GuidedActionEditText extends AppCompatEditText implements ImeKeyMon
             setBackground(mNoPaddingDrawable);
         }
         // Make the TextView focusable during editing, avoid the TextView gets accessibility focus
-        // before editing started. see also GuidedActionAdapterGroup where setFocusable(true).
+        // before editing started. See also GuidedActionAdapterGroup where setFocusable(true).
         if (!focused) {
             setFocusable(false);
         }
@@ -130,7 +130,7 @@ public class GuidedActionEditText extends AppCompatEditText implements ImeKeyMon
     @RequiresApi(26)
     @Override
     public int getAutofillType() {
-        // make it always autofillable as Guided fragment switches InputType when user clicks
+        // Make it always autofillable as Guided fragment switches InputType when user clicks
         // on the field.
         return AUTOFILL_TYPE_TEXT;
     }

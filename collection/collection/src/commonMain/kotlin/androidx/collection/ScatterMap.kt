@@ -28,6 +28,7 @@ package androidx.collection
 
 import androidx.collection.internal.EMPTY_OBJECTS
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.math.max
 
 // A "flat" hash map based on abseil's flat_hash_map
@@ -482,6 +483,47 @@ public sealed class ScatterMap<K, V> {
     }
 
     /**
+     * Creates a String from the elements separated by [separator] and using [prefix] before
+     * and [postfix] after, if supplied.
+     *
+     * When a non-negative value of [limit] is provided, a maximum of [limit] items are used
+     * to generate the string. If the collection holds more than [limit] items, the string
+     * is terminated with [truncated].
+     *
+     * [transform] may be supplied to convert each element to a custom String.
+     */
+    @JvmOverloads
+    public fun joinToString(
+        separator: CharSequence = ", ",
+        prefix: CharSequence = "",
+        postfix: CharSequence = "", // I know this should be suffix, but this is kotlin's name
+        limit: Int = -1,
+        truncated: CharSequence = "...",
+        transform: ((key: K, value: V) -> CharSequence)? = null
+    ): String = buildString {
+        append(prefix)
+        var index = 0
+        this@ScatterMap.forEach { key, value ->
+            if (index == limit) {
+                append(truncated)
+                return@buildString
+            }
+            if (index != 0) {
+                append(separator)
+            }
+            if (transform == null) {
+                append(key)
+                append('=')
+                append(value)
+            } else {
+                append(transform(key, value))
+            }
+            index++
+        }
+        append(postfix)
+    }
+
+    /**
      * Returns the hash code value for this map. The hash code the sum of the hash
      * codes of each key/value pair.
      */
@@ -798,6 +840,34 @@ public class MutableScatterMap<K, V>(
     }
 
     /**
+     * Retrieves a value for [key] and computes a new value based on the existing value (or
+     * `null` if the key is not in the map). The computed value is then stored in the map for the
+     * given [key].
+     *
+     * @return value computed by `computeBlock`.
+     */
+    public inline fun compute(key: K, computeBlock: (key: K, value: V?) -> V): V {
+        val index = findInsertIndex(key)
+        val inserting = index < 0
+
+        @Suppress("UNCHECKED_CAST")
+        val computedValue = computeBlock(
+            key,
+            if (inserting) null else values[index] as V
+        )
+
+        // Skip Array.set() if key is already there
+        if (inserting) {
+            val insertionIndex = index.inv()
+            keys[insertionIndex] = key
+            values[insertionIndex] = computedValue
+        } else {
+            values[index] = computedValue
+        }
+        return computedValue
+    }
+
+    /**
      * Creates a new mapping from [key] to [value] in this map. If [key] is
      * already present in the map, the association is modified and the previously
      * associated value is replaced with [value]. If [key] is not present, a new
@@ -805,7 +875,9 @@ public class MutableScatterMap<K, V>(
      * and cause allocations.
      */
     public operator fun set(key: K, value: V) {
-        val index = findAbsoluteInsertIndex(key)
+        val index = findInsertIndex(key).let { index ->
+            if (index < 0) index.inv() else index
+        }
         keys[index] = key
         values[index] = value
     }
@@ -819,16 +891,11 @@ public class MutableScatterMap<K, V>(
      * or `null` if the key was not present in the map.
      */
     public fun put(key: K, value: V): V? {
-        var index = findInsertIndex(key)
-        val oldValue = if (index < 0) {
-            index = -index
-            // New entry, we must add the key
-            keys[index] = key
-            null
-        } else {
-            // Existing entry, we can keep the key
-            values[index]
+        val index = findInsertIndex(key).let { index ->
+            if (index < 0) index.inv() else index
         }
+        val oldValue = values[index]
+        keys[index] = key
         values[index] = value
 
         @Suppress("UNCHECKED_CAST")
@@ -952,7 +1019,7 @@ public class MutableScatterMap<K, V>(
     /**
      * Removes any mapping for which the specified [predicate] returns true.
      */
-    public fun removeIf(predicate: (K, V) -> Boolean) {
+    public inline fun removeIf(predicate: (K, V) -> Boolean) {
         forEachIndexed { index ->
             @Suppress("UNCHECKED_CAST")
             if (predicate(keys[index] as K, values[index] as V)) {
@@ -995,7 +1062,26 @@ public class MutableScatterMap<K, V>(
         }
     }
 
-    private fun removeValueAt(index: Int): V? {
+    /**
+     * Removes the specified [keys] and their associated value from the map.
+     */
+    public inline operator fun minusAssign(keys: ScatterSet<K>) {
+        keys.forEach { key ->
+            remove(key)
+        }
+    }
+
+    /**
+     * Removes the specified [keys] and their associated value from the map.
+     */
+    public inline operator fun minusAssign(keys: ObjectList<K>) {
+        keys.forEach { key ->
+            remove(key)
+        }
+    }
+
+    @PublishedApi
+    internal fun removeValueAt(index: Int): V? {
         _size -= 1
 
         // TODO: We could just mark the entry as empty if there's a group
@@ -1026,11 +1112,12 @@ public class MutableScatterMap<K, V>(
     /**
      * Scans the hash table to find the index at which we can store a value
      * for the give [key]. If the key already exists in the table, its index
-     * will be returned, otherwise the index of an empty slot will be returned.
+     * will be returned, otherwise the `index.inv()` of an empty slot will be returned.
      * Calling this function may cause the internal storage to be reallocated
      * if the table is full.
      */
-    private fun findAbsoluteInsertIndex(key: K): Int {
+    @PublishedApi
+    internal fun findInsertIndex(key: K): Int {
         val hash = hash(key)
         val hash1 = h1(hash)
         val hash2 = h2(hash)
@@ -1068,53 +1155,7 @@ public class MutableScatterMap<K, V>(
         growthLimit -= if (isEmpty(metadata, index)) 1 else 0
         writeMetadata(index, hash2.toLong())
 
-        return index
-    }
-
-    /**
-     * Equivalent of [findInsertIndex] but the returned index is *negative*
-     * if insertion requires a new mapping, and positive if the value takes
-     * place of an existing mapping.
-     */
-    private fun findInsertIndex(key: K): Int {
-        val hash = hash(key)
-        val hash1 = h1(hash)
-        val hash2 = h2(hash)
-
-        val probeMask = _capacity
-        var probeOffset = hash1 and probeMask
-        var probeIndex = 0
-
-        while (true) {
-            val g = group(metadata, probeOffset)
-            var m = g.match(hash2)
-            while (m.hasNext()) {
-                val index = (probeOffset + m.get()) and probeMask
-                if (keys[index] == key) {
-                    return index
-                }
-                m = m.next()
-            }
-
-            if (g.maskEmpty() != 0L) {
-                break
-            }
-
-            probeIndex += GroupWidth
-            probeOffset = (probeOffset + probeIndex) and probeMask
-        }
-
-        var index = findFirstAvailableSlot(hash1)
-        if (growthLimit == 0 && !isDeleted(metadata, index)) {
-            adjustStorage()
-            index = findFirstAvailableSlot(hash1)
-        }
-
-        _size += 1
-        growthLimit -= if (isEmpty(metadata, index)) 1 else 0
-        writeMetadata(index, hash2.toLong())
-
-        return -index
+        return index.inv()
     }
 
     /**
@@ -1695,7 +1736,7 @@ internal inline fun group(metadata: LongArray, offset: Int): Group {
     // |_________Long0_______ _|  |_________Long1_______ _|
     //
     // To retrieve the Group we first find the index of Long0 by taking the
-    // offset divided by 0. Then offset modulo 8 gives us how many bits we
+    // offset divided by 8. Then offset modulo 8 gives us how many bits we
     // need to shift by. With offset = 1:
     //
     // index = offset / 8 == 0

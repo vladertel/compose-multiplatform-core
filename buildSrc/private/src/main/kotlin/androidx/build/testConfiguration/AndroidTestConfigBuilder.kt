@@ -41,10 +41,13 @@ class ConfigBuilder {
 
     fun applicationId(applicationId: String) = apply { this.applicationId = applicationId }
 
-    fun isMicrobenchmark(isMicrobenchmark: Boolean) =
-        apply { this.isMicrobenchmark = isMicrobenchmark }
-    fun isMacrobenchmark(isMacrobenchmark: Boolean) =
-        apply { this.isMacrobenchmark = isMacrobenchmark }
+    fun isMicrobenchmark(isMicrobenchmark: Boolean) = apply {
+        this.isMicrobenchmark = isMicrobenchmark
+    }
+
+    fun isMacrobenchmark(isMacrobenchmark: Boolean) = apply {
+        this.isMacrobenchmark = isMacrobenchmark
+    }
 
     fun isPostsubmit(isPostsubmit: Boolean) = apply { this.isPostsubmit = isPostsubmit }
 
@@ -251,7 +254,8 @@ private fun benchmarkPostInstallCommandOption(packageName: String) =
     <option name="run-command-timeout" value="240000" />
     </target_preparer>
 
-""".trimIndent()
+"""
+        .trimIndent()
 
 private fun benchmarkPostInstallCommand(packageName: String): String {
     return "cmd package compile -f -m speed $packageName"
@@ -331,7 +335,6 @@ private val MICROBENCHMARK_POSTSUBMIT_OPTIONS =
     """
     <option name="instrumentation-arg" key="listener" value="androidx.benchmark.junit4.InstrumentationResultsRunListener" />
     <option name="instrumentation-arg" key="listener" value="androidx.benchmark.junit4.SideEffectRunListener" />
-    <option name="instrumentation-arg" key="androidx.benchmark.profiling.mode" value="MethodTracing" />
 
 """
         .trimIndent()

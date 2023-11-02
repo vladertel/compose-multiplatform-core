@@ -17,85 +17,17 @@
 package androidx.compose.ui.draganddrop
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.DrawScope
 
 /**
  * Definition for a type representing transferable data. It could be a remote URI,
  * rich text data on the clip board, a local file, or more.
  */
-expect class DragAndDropTransfer
-
-@kotlin.jvm.JvmInline
-value class DragAndDropEventType private constructor(private val value: Int) {
-
-    override fun toString(): String = when (value) {
-        1 -> "Started"
-        2 -> "Entered"
-        3 -> "Moved"
-        4 -> "Exited"
-        5 -> "Changed"
-        6 -> "Dropped"
-        7 -> "Ended"
-        else -> "Unknown"
-    }
-    companion object {
-        /**
-         * An unknown drag and drop type.
-         */
-        val Unknown = DragAndDropEventType(0)
-
-        /**
-         * A drag and drop session has just been started. All eligible listeners will be notified and
-         * allowed to register their intent to keep receiving drag and drop events.
-         */
-        val Started = DragAndDropEventType(1)
-
-        /**
-         * A drag and drop event has just entered the bounds of this listener.
-         */
-        val Entered = DragAndDropEventType(2)
-
-        /**
-         * A drag and drop event has moved within the bounds of this listener.
-         */
-        val Moved = DragAndDropEventType(3)
-
-        /**
-         * A drag and drop event has just left the bounds of this listener.
-         */
-        val Exited = DragAndDropEventType(4)
-
-        /**
-         * A drag and drop event has changed within the bounds of this listener. Perhaps a modifier
-         * key has been pressed or released.
-         */
-        val Changed = DragAndDropEventType(5)
-
-        /**
-         * A drag and drop event is being concluded inside the bounds of this listener. The listener
-         * has the option to accept or reject the drag.
-         */
-        val Dropped = DragAndDropEventType(6)
-
-        /**
-         * A previously started drag and drop session has been concluded. All eligible listeners
-         * will be notified of this event. This gives an opportunity to reset a listener's state.
-         */
-        val Ended = DragAndDropEventType(7)
-    }
-}
+expect class DragAndDropTransferData
 
 /**
  * A representation of an event sent by the platform during a drag and drop operation.
  */
-expect class DragAndDropEvent {
-    /**
-     * An indication of the reason the drag and drop event was sent
-     */
-    var type: DragAndDropEventType
-        private set
-}
+expect class DragAndDropEvent
 
 /**
  * Returns the position of this [DragAndDropEvent] relative to the root Compose View in the
@@ -104,19 +36,110 @@ expect class DragAndDropEvent {
 internal expect val DragAndDropEvent.positionInRoot: Offset
 
 /**
- * Metadata summarizing the properties used during a drag event
+ * A factory method for creating a [DragAndDropTarget] to receive transfer data from a
+ * drag and drop session.
+ *
+ * @param onDropped The item has been dropped inside this [DragAndDropTarget].
+ * returning true indicates that the [DragAndDropEvent] was consumed, false indicates it was
+ * rejected.
+ * @see [DragAndDropTarget.onDropped]
+ *
+ * @param onStarted The drag and drop session has begun. This gives this [DragAndDropTarget]
+ * an opportunity to present itself in a way to indicate it is capable of receiving a
+ * drag and drop gesture.
+ * @see [DragAndDropTarget.onStarted]
+ *
+ * @param onEntered The item being dropped has entered into the bounds of this [DragAndDropTarget].
+ * @see [DragAndDropTarget.onEntered]
+ *
+ * @param onMoved The item being dropped has moved within the bounds of this [DragAndDropTarget].
+ * @see [DragAndDropTarget.onMoved]
+ *
+ * @param onChanged The event in the current drag and drop session has changed within
+ * the bounds of this [DragAndDropTarget].
+ * @see [DragAndDropTarget.onChanged]
+ *
+ * @param onExited The item being dropped has moved outside the bounds of this [DragAndDropTarget].
+ * @see [DragAndDropTarget.onExited]
+ *
+ * @param onEnded The drag and drop gesture is complete.
+ * @see [DragAndDropTarget.onEnded]
  */
-class DragAndDropInfo(
-    /**
-     * The size of the drag shadow for the item that was dragged
+fun DragAndDropTarget(
+    onDropped: (event: DragAndDropEvent) -> Boolean,
+    onStarted: (event: DragAndDropEvent) -> Unit = {},
+    onEntered: (event: DragAndDropEvent) -> Unit = {},
+    onMoved: (event: DragAndDropEvent) -> Unit = {},
+    onChanged: (event: DragAndDropEvent) -> Unit = {},
+    onExited: (event: DragAndDropEvent) -> Unit = {},
+    onEnded: (event: DragAndDropEvent) -> Unit = {},
+): DragAndDropTarget = object : DragAndDropTarget {
+    override fun onStarted(event: DragAndDropEvent) =
+        onStarted.invoke(event)
+
+    override fun onDropped(event: DragAndDropEvent): Boolean =
+        onDropped.invoke(event)
+
+    override fun onEntered(event: DragAndDropEvent) =
+        onEntered.invoke(event)
+
+    override fun onMoved(event: DragAndDropEvent) =
+        onMoved.invoke(event)
+
+    override fun onExited(event: DragAndDropEvent) =
+        onExited.invoke(event)
+
+    override fun onChanged(event: DragAndDropEvent) =
+        onChanged.invoke(event)
+
+    override fun onEnded(event: DragAndDropEvent) =
+        onEnded.invoke(event)
+}
+
+/**
+ * Provides a means of receiving a transfer data from a drag and drop session.
+ */
+interface DragAndDropTarget {
+
+    /** A drag and drop session has just been started and this [DragAndDropTarget] is eligible
+     * to receive it. This gives an opportunity to set the state for a [DragAndDropTarget] in
+     * preparation for consuming a drag and drop session.
      */
-    val size: Size,
+    fun onStarted(event: DragAndDropEvent)
+
     /**
-     * The data to transfer after the drag and drop event completes
+     * An item has been dropped inside this [DragAndDropTarget].
+     *
+     * @return true to indicate that the [DragAndDropEvent] was consumed; false indicates it was
+     * rejected.
      */
-    val transfer: DragAndDropTransfer,
+    fun onDropped(event: DragAndDropEvent): Boolean
+
     /**
-     * A [DrawScope] receiving lambda to draw the drag shadow for the drag and drop operation
+     * An item being dropped has entered into the bounds of this [DragAndDropTarget].
      */
-    val onDrawDragShadow: DrawScope.() -> Unit,
-)
+    fun onEntered(event: DragAndDropEvent)
+
+    /**
+     * An item being dropped has moved within the bounds of this [DragAndDropTarget].
+     */
+    fun onMoved(event: DragAndDropEvent)
+
+    /**
+     * An item being dropped has moved outside the bounds of this [DragAndDropTarget].
+     */
+    fun onExited(event: DragAndDropEvent)
+
+    /**
+     * An event in the current drag and drop session has changed within this [DragAndDropTarget]
+     * bounds. Perhaps a modifier key has been pressed or released.
+     */
+    fun onChanged(event: DragAndDropEvent)
+
+    /**
+     * The drag and drop session has been completed. All [DragAndDropTarget] instances in the
+     * hierarchy that previously received an [onStarted] event will receive this event. This gives
+     * an opportunity to reset the state for a [DragAndDropTarget].
+     */
+    fun onEnded(event: DragAndDropEvent)
+}

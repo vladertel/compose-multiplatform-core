@@ -27,16 +27,8 @@ if [ -n "$DIST_DIR" ]; then
     mkdir -p "$DIST_DIR"
     DIST_DIR="$(cd $DIST_DIR && pwd -P)"
 
-    #Set the initial heap size to match the max heap size,
-    #by replacing a string like "-Xmx1g" with one like "-Xms1g -Xmx1g"
-    MAX_MEM=24g
-    ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s/-Xmx\([^ ]*\)/-Xms$MAX_MEM -Xmx$MAX_MEM/")"
-
     # tell Gradle where to put a heap dump on failure
     ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s|$| -XX:HeapDumpPath=$DIST_DIR|")"
-
-    # Increase the compiler cache size: b/260643754 . Remove when updating to JDK 20 ( https://bugs.openjdk.org/browse/JDK-8295724 )
-    ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s|$| -XX:ReservedCodeCacheSize=576M|")"
 
     # We don't set a default DIST_DIR in an else clause here because Studio doesn't use gradlew
     # and doesn't set DIST_DIR and we want gradlew and Studio to match
@@ -128,7 +120,6 @@ fi
 export ANDROID_HOME="$APP_HOME/../../prebuilts/fullsdk-$plat"
 # override JAVA_HOME, because CI machines have it and it points to very old JDK
 export JAVA_HOME="$APP_HOME/../../prebuilts/jdk/jdk17/$plat-$platform_suffix"
-export JAVA_TOOLS_JAR="$APP_HOME/../../prebuilts/jdk/jdk8/$plat-x86/lib/tools.jar"
 export STUDIO_GRADLE_JDK=$JAVA_HOME
 
 # Warn developers if they try to build top level project without the full checkout
@@ -272,7 +263,9 @@ for compact in "--ci" "--strict" "--clean" "--no-ci"; do
        --stacktrace\
        -Pandroidx.summarizeStderr\
        -Pandroidx.enableAffectedModuleDetection\
-       --no-watch-fs"
+       -Pandroidx.printTimestamps\
+       --no-watch-fs\
+       -Pandroidx.highMemory"
     fi
   fi
   if [ "$compact" == "--strict" ]; then
@@ -315,6 +308,16 @@ for compact in "--ci" "--strict" "--clean" "--no-ci"; do
     done
   fi
 done
+
+if [[ " ${@} " =~ " -Pandroidx.highMemory " ]]; then
+    #Set the initial heap size to match the max heap size,
+    #by replacing a string like "-Xmx1g" with one like "-Xms1g -Xmx1g"
+    MAX_MEM=32g
+    ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s/-Xmx\([^ ]*\)/-Xms$MAX_MEM -Xmx$MAX_MEM/")"
+
+    # Increase the compiler cache size: b/260643754 . Remove when updating to JDK 20 ( https://bugs.openjdk.org/browse/JDK-8295724 )
+    ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s|$| -XX:ReservedCodeCacheSize=576M|")"
+fi
 
 # check whether the user has requested profiling via yourkit
 yourkitArgPrefix="androidx.profile.yourkitAgentPath"
@@ -400,6 +403,9 @@ function runGradle() {
     processOutput=true
   fi
   if [[ " ${@} " =~ " -Pandroidx.summarizeStderr " ]]; then
+    processOutput=true
+  fi
+  if [[ "${@} " =~ " -Pandroidx.printTimestamps " ]]; then
     processOutput=true
   fi
   if [ "$processOutput" == "true" ]; then
