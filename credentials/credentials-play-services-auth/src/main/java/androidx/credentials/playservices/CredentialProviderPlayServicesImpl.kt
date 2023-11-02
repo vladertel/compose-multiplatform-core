@@ -37,9 +37,11 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.playservices.controllers.BeginSignIn.CredentialProviderBeginSignInController
 import androidx.credentials.playservices.controllers.CreatePassword.CredentialProviderCreatePasswordController
 import androidx.credentials.playservices.controllers.CreatePublicKeyCredential.CredentialProviderCreatePublicKeyCredentialController
+import androidx.credentials.playservices.controllers.GetSignInIntent.CredentialProviderGetSignInIntentController
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import java.util.concurrent.Executor
 
 /**
@@ -60,8 +62,15 @@ class CredentialProviderPlayServicesImpl(private val context: Context) : Credent
         callback: CredentialManagerCallback<GetCredentialResponse, GetCredentialException>
     ) {
         if (cancellationReviewer(cancellationSignal)) { return }
-        CredentialProviderBeginSignInController(context).invokePlayServices(
-            request, callback, executor, cancellationSignal)
+        if (isGetSignInIntentRequest(request)) {
+            CredentialProviderGetSignInIntentController(context).invokePlayServices(
+                request, callback, executor, cancellationSignal
+            )
+        } else {
+            CredentialProviderBeginSignInController(context).invokePlayServices(
+                request, callback, executor, cancellationSignal
+            )
+        }
     }
 
     @SuppressWarnings("deprecated")
@@ -99,7 +108,13 @@ class CredentialProviderPlayServicesImpl(private val context: Context) : Credent
     }
     override fun isAvailableOnDevice(): Boolean {
         val resultCode = isGooglePlayServicesAvailable(context)
-        return resultCode == ConnectionResult.SUCCESS
+        val isSuccessful = resultCode == ConnectionResult.SUCCESS
+        if (!isSuccessful) {
+            val connectionResult = ConnectionResult(resultCode)
+            Log.w(TAG, "Connection with Google Play Services was not " +
+                "successful. Connection result is: " + connectionResult.toString())
+        }
+        return isSuccessful
     }
 
     // https://developers.google.com/android/reference/com/google/android/gms/common/ConnectionResult
@@ -159,6 +174,15 @@ class CredentialProviderPlayServicesImpl(private val context: Context) : Credent
                 }
             } else {
                 Log.i(TAG, "No cancellationSignal found")
+            }
+            return false
+        }
+
+        internal fun isGetSignInIntentRequest(request: GetCredentialRequest): Boolean {
+            for (option in request.credentialOptions) {
+                if (option is GetSignInWithGoogleOption) {
+                    return true
+                }
             }
             return false
         }

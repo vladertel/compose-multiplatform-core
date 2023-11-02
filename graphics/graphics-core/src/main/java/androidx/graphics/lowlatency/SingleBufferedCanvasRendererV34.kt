@@ -18,10 +18,12 @@ package androidx.graphics.lowlatency
 
 import android.graphics.BlendMode
 import android.graphics.Color
+import android.graphics.ColorSpace
 import android.graphics.HardwareBufferRenderer
 import android.graphics.RenderNode
 import android.hardware.HardwareBuffer
 import androidx.annotation.RequiresApi
+import androidx.graphics.BufferedRendererImpl
 import androidx.graphics.RenderQueue
 import androidx.graphics.utils.HandlerThreadExecutor
 import androidx.hardware.SyncFenceCompat
@@ -56,6 +58,7 @@ internal class SingleBufferedCanvasRendererV34<T>(
                     if (mInverseTransform != BufferTransformHintResolver.UNKNOWN_TRANSFORM) {
                         setBufferTransform(mInverseTransform)
                     }
+                    setColorSpace(colorSpace)
                     draw(executor) { result ->
                         requestComplete.invoke(mHardwareBuffer, SyncFenceCompat(result.fence))
                     }
@@ -115,24 +118,38 @@ internal class SingleBufferedCanvasRendererV34<T>(
             mRenderNode.endRecording()
         }
 
+        override fun onComplete() {
+            // NO-OP
+        }
+
         override val id: Int = RENDER
     }
 
-    private val clearRequest = object : RenderQueue.Request {
+    private inner class ClearRequest(val clearRequest: (() -> Unit)?) : RenderQueue.Request {
         override fun execute() {
             val canvas = mRenderNode.beginRecording()
             canvas.drawColor(Color.BLACK, BlendMode.CLEAR)
             mRenderNode.endRecording()
         }
 
+        override fun onComplete() {
+            clearRequest?.invoke()
+        }
+
+        override fun isMergeable(): Boolean = clearRequest == null
+
         override val id: Int = CLEAR
     }
+
+    private val defaultClearRequest = ClearRequest(null)
 
     override fun render(param: T) {
         mRenderQueue.enqueue(DrawParamRequest(param))
     }
 
     override var isVisible: Boolean = false
+
+    override var colorSpace: ColorSpace = BufferedRendererImpl.DefaultColorSpace
 
     override fun release(cancelPending: Boolean, onReleaseComplete: (() -> Unit)?) {
         mRenderQueue.release(cancelPending) {
@@ -141,7 +158,12 @@ internal class SingleBufferedCanvasRendererV34<T>(
         }
     }
 
-    override fun clear() {
+    override fun clear(clearComplete: (() -> Unit)?) {
+        val clearRequest = if (clearComplete == null) {
+            defaultClearRequest
+        } else {
+            ClearRequest(clearComplete)
+        }
         mRenderQueue.enqueue(clearRequest)
     }
 

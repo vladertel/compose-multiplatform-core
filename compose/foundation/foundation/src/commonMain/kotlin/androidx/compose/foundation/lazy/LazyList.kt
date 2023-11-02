@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.lazy.layout.LazyLayout
 import androidx.compose.foundation.lazy.layout.LazyLayoutMeasureScope
 import androidx.compose.foundation.lazy.layout.calculateLazyLayoutPinnedIndices
+import androidx.compose.foundation.lazy.layout.lazyLayoutBeyondBoundsModifier
 import androidx.compose.foundation.lazy.layout.lazyLayoutSemantics
 import androidx.compose.foundation.overscroll
 import androidx.compose.runtime.Composable
@@ -96,8 +97,6 @@ internal fun LazyList(
         verticalArrangement
     )
 
-    ScrollPositionUpdater(itemProviderLambda, state)
-
     val overscrollEffect = ScrollableDefaults.overscrollEffect()
     val orientation = if (isVertical) Orientation.Vertical else Orientation.Horizontal
     LazyLayout(
@@ -112,11 +111,16 @@ internal fun LazyList(
                 reverseScrolling = reverseLayout
             )
             .clipScrollableContainer(orientation)
-            .lazyListBeyondBoundsModifier(
-                state,
-                beyondBoundsItemCount,
-                reverseLayout,
-                orientation
+            .lazyLayoutBeyondBoundsModifier(
+                state = rememberLazyListBeyondBoundsState(
+                    state = state,
+                    beyondBoundsItemCount = beyondBoundsItemCount
+                ),
+                beyondBoundsInfo = state.beyondBoundsInfo,
+                reverseLayout = reverseLayout,
+                layoutDirection = LocalLayoutDirection.current,
+                orientation = orientation,
+                enabled = userScrollEnabled
             )
             .overscroll(overscrollEffect)
             .scrollable(
@@ -136,19 +140,6 @@ internal fun LazyList(
         measurePolicy = measurePolicy,
         itemProvider = itemProviderLambda
     )
-}
-
-/** Extracted to minimize the recomposition scope */
-@ExperimentalFoundationApi
-@Composable
-private fun ScrollPositionUpdater(
-    itemProviderLambda: () -> LazyListItemProvider,
-    state: LazyListState
-) {
-    val itemProvider = itemProviderLambda()
-    if (itemProvider.itemCount > 0) {
-        state.updateScrollPositionIfTheFirstItemWasMoved(itemProvider)
-    }
 }
 
 @ExperimentalFoundationApi
@@ -345,6 +336,7 @@ private fun rememberLazyListMeasurePolicy(
             coroutineScope = requireNotNull(state.coroutineScope) {
                 "coroutineScope should be not null"
             },
+            placementScopeInvalidator = state.placementScopeInvalidator,
             layout = { width, height, placement ->
                 layout(
                     containerConstraints.constrainWidth(width + totalHorizontalPadding),

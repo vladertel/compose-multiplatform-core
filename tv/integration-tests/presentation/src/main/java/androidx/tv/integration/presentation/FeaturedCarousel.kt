@@ -31,7 +31,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowRight
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,9 +83,10 @@ fun FeaturedCarousel(
                 LandscapeImageBackground(movie)
             },
             actions = {
+                @Suppress("DEPRECATION")
                 AppButton(
                     text = "Watch on YouTube",
-                    icon = Icons.Outlined.ArrowRight,
+                    icon = Icons.AutoMirrored.Outlined.ArrowForward,
                 )
             },
         )

@@ -31,6 +31,7 @@ import androidx.navigation.fragment.test.EmptyFragment
 import androidx.navigation.fragment.test.NavigationActivity
 import androidx.navigation.fragment.test.R
 import androidx.navigation.navOptions
+import androidx.navigation.navigation
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
@@ -77,6 +78,9 @@ class NavControllerWithFragmentTest {
         assertWithMessage("New Entry should be RESUMED")
             .that(navController.currentBackStackEntry!!.lifecycle.currentState)
             .isEqualTo(Lifecycle.State.RESUMED)
+        assertThat(navController.visibleEntries.value).containsExactly(
+            navController.currentBackStackEntry!!
+        )
     }
 
     @Test
@@ -217,6 +221,7 @@ class NavControllerWithFragmentTest {
         // ensure original Fragment is dismissed and backStacks are in sync
         assertThat(navigator.backStack.value.size).isEqualTo(1)
         assertThat(fm.fragments.size).isEqualTo(2) // start + dialog fragment
+        assertThat(navController.visibleEntries.value.size).isEqualTo(2)
     }
 
     @Test
@@ -310,6 +315,27 @@ class NavControllerWithFragmentTest {
         fm?.executePendingTransactions()
 
         assertThat(navController.currentBackStackEntry?.destination?.route).isEqualTo("first")
+        assertThat(navController.visibleEntries.value).containsExactly(
+            navController.currentBackStackEntry
+        )
+    }
+
+    @Test
+    fun testPopEntryInFragmentStarted() = withNavigationActivity {
+        navController.graph = navController.createGraph("first") {
+            fragment<EmptyFragment>("first")
+            fragment<PopInOnStartedFragment>("second")
+            fragment<EmptyFragment>("third")
+        }
+        navController.navigate("second")
+
+        val fm = supportFragmentManager.findFragmentById(R.id.nav_host)?.childFragmentManager
+        fm?.executePendingTransactions()
+
+        assertThat(navController.currentBackStackEntry?.destination?.route).isEqualTo("third")
+        assertThat(navController.visibleEntries.value).containsExactly(
+            navController.currentBackStackEntry
+        )
     }
 
     @LargeTest
@@ -335,6 +361,9 @@ class NavControllerWithFragmentTest {
         onBackPressedDispatcher.onBackPressed()
 
         assertThat(navController.currentBackStackEntry?.destination?.route).isEqualTo("third")
+        assertThat(navController.visibleEntries.value).containsExactly(
+            navController.currentBackStackEntry!!
+        )
     }
 
     @LargeTest
@@ -364,6 +393,33 @@ class NavControllerWithFragmentTest {
         onBackPressedDispatcher.onBackPressed()
 
         assertThat(navController.currentBackStackEntry?.destination?.route).isEqualTo("fourth")
+        assertThat(navController.visibleEntries.value).containsExactly(
+            navController.currentBackStackEntry!!
+        )
+    }
+
+    @LargeTest
+    @Test
+    fun testSystemBackPressWithNavigatePopUpTo() = withNavigationActivity {
+        navController.graph = navController.createGraph("first") {
+            fragment<EmptyFragment>("first")
+            navigation("second", "graph_2") {
+                fragment<PopInOnStartedFragment>("second")
+                fragment<EmptyFragment>("third")
+            }
+        }
+        navController.navigate("second")
+        navController.navigate("third")
+        val fm = supportFragmentManager.findFragmentById(R.id.nav_host)?.childFragmentManager
+        fm?.executePendingTransactions()
+
+        onBackPressedDispatcher.onBackPressed()
+        fm?.executePendingTransactions()
+
+        assertThat(navController.currentBackStackEntry?.destination?.route).isEqualTo("third")
+        assertThat(navController.visibleEntries.value).containsExactly(
+            navController.currentBackStackEntry!!
+        )
     }
 
     private fun withNavigationActivity(
@@ -382,6 +438,17 @@ class PopInOnResumeFragment : Fragment(R.layout.strict_view_fragment) {
         super.onResume()
         findNavController().navigate("first") {
             popUpTo("first")
+        }
+    }
+}
+
+class PopInOnStartedFragment : Fragment(R.layout.strict_view_fragment) {
+    override fun onStart() {
+        super.onStart()
+        findNavController().navigate("third") {
+            popUpTo("second") {
+                inclusive = true
+            }
         }
     }
 }

@@ -275,14 +275,16 @@ internal class MeasureAndLayoutDelegate(private val root: LayoutNode) {
             }
 
             Idle -> {
-                if (!forced && (layoutNode.measurePending || layoutNode.layoutPending)) {
+                if (!forced && (layoutNode.isPlaced == layoutNode.isPlacedByParent) &&
+                    (layoutNode.measurePending || layoutNode.layoutPending)
+                ) {
                     // don't need to do anything else since the parent is already scheduled
                     // for a relayout (measure will trigger relayout), or is laying out right now
                     consistencyChecker?.assertConsistent()
                     false
                 } else {
                     layoutNode.markLayoutPending()
-                    if (layoutNode.isPlaced) {
+                    if (layoutNode.isPlacedByParent) {
                         val parent = layoutNode.parent
                         if (parent?.layoutPending != true && parent?.measurePending != true) {
                             relayoutNodes.add(layoutNode, false)
@@ -386,13 +388,15 @@ internal class MeasureAndLayoutDelegate(private val root: LayoutNode) {
 
     private fun remeasureLookaheadRootsInSubtree(layoutNode: LayoutNode) {
         layoutNode.forEachChild {
-            if (it.isOutMostLookaheadRoot()) {
-                // This call will walk the subtree to look for lookaheadMeasurePending nodes and
-                // do a recursive lookahead remeasure starting at the root.
-                remeasureOnly(it, affectsLookahead = true)
-            } else {
-                // Only search downward when no lookahead root is found
-                remeasureLookaheadRootsInSubtree(it)
+            if (it.measureAffectsParent) {
+                if (it.isOutMostLookaheadRoot()) {
+                    // This call will walk the subtree to look for lookaheadMeasurePending nodes and
+                    // do a recursive lookahead remeasure starting at the root.
+                    remeasureOnly(it, affectsLookahead = true)
+                } else {
+                    // Only search downward when no lookahead root is found
+                    remeasureLookaheadRootsInSubtree(it)
+                }
             }
         }
     }
@@ -462,7 +466,8 @@ internal class MeasureAndLayoutDelegate(private val root: LayoutNode) {
         relayoutNeeded: Boolean = true
     ): Boolean {
         var sizeChanged = false
-        if (layoutNode.isPlaced ||
+        if (layoutNode.isPlaced || // the root node doesn't have isPlacedByParent = true
+            layoutNode.isPlacedByParent ||
             layoutNode.canAffectParent ||
             layoutNode.isPlacedInLookahead == true ||
             layoutNode.canAffectParentInLookahead ||
@@ -564,26 +569,26 @@ internal class MeasureAndLayoutDelegate(private val root: LayoutNode) {
 
     private fun forceMeasureTheSubtreeInternal(layoutNode: LayoutNode, affectsLookahead: Boolean) {
         layoutNode.forEachChild { child ->
-            // When LookaheadRoot's parent gets forceMeasureSubtree call, it means we need to check
-            // both lookahead invalidation and non-lookahead invalidation, just like a measure()
-            // call from LookaheadRoot's parent would start the two tracks - lookahead and post
-            // lookahead measurements.
-            if (child.isOutMostLookaheadRoot() && !affectsLookahead) {
-                // Force subtree measure hitting a lookahead root, pending lookahead measure. This
-                // could happen when the "applyChanges" cause nodes to be attached in lookahead
-                // subtree while the "applyChanges" is a part of the ancestor's subcomposition
-                // in the measure pass.
-                if (child.lookaheadMeasurePending && relayoutNodes.contains(child, true)) {
-                    remeasureAndRelayoutIfNeeded(child, true, relayoutNeeded = false)
-                } else {
-                    forceMeasureTheSubtree(child, true)
-                }
-            }
-
             // only proceed if child's size can affect the parent size
             if (!affectsLookahead && child.measureAffectsParent ||
                 affectsLookahead && child.measureAffectsParentLookahead
             ) {
+                // When LookaheadRoot's parent gets forceMeasureSubtree call, we need to check
+                // both lookahead invalidation and non-lookahead invalidation, just like a measure()
+                // call from LookaheadRoot's parent would start the two tracks - lookahead and post
+                // lookahead measurements.
+                if (child.isOutMostLookaheadRoot() && !affectsLookahead) {
+                    // Force subtree measure hitting a lookahead root, pending lookahead measure.
+                    // This could happen when the "applyChanges" cause nodes to be attached in
+                    // lookahead subtree while the "applyChanges" is a part of the ancestor's
+                    // subcomposition in the measure pass.
+                    if (child.lookaheadMeasurePending && relayoutNodes.contains(child, true)) {
+                        remeasureAndRelayoutIfNeeded(child, true, relayoutNeeded = false)
+                    } else {
+                        forceMeasureTheSubtree(child, true)
+                    }
+                }
+
                 onlyRemeasureIfScheduled(child, affectsLookahead)
 
                 // if the child is still in NeedsRemeasure state then this child remeasure wasn't

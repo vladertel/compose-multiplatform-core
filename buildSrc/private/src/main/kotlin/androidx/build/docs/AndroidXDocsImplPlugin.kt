@@ -461,8 +461,9 @@ abstract class AndroidXDocsImplPlugin : Plugin<Project> {
         val generatedDocsDir = project.layout.buildDirectory.dir("docs")
 
         val dackkaConfiguration =
-            project.configurations.create("dackka").apply {
-                dependencies.add(project.dependencies.create(project.getLibraryByName("dackka")))
+            project.configurations.create("dackka") {
+                it.dependencies.add(project.dependencies.create(project.getLibraryByName("dackka")))
+                it.isCanBeConsumed = false
             }
 
         val generateMetadataTask =
@@ -472,12 +473,12 @@ abstract class AndroidXDocsImplPlugin : Plugin<Project> {
                 task.getArtifactFiles().set(artifacts.map { result -> result.map { it.file } })
                 val multiplatformArtifacts =
                     multiplatformDocsConfiguration.incoming.artifacts.resolvedArtifacts
-                task.getMultiplatformArtifactIds().set(multiplatformArtifacts.map { result ->
-                    result.map { it.id }
-                })
-                task.getMultiplatformArtifactFiles().set(multiplatformArtifacts.map { result ->
-                    result.map { it.file }
-                })
+                task
+                    .getMultiplatformArtifactIds()
+                    .set(multiplatformArtifacts.map { result -> result.map { it.id } })
+                task
+                    .getMultiplatformArtifactFiles()
+                    .set(multiplatformArtifacts.map { result -> result.map { it.file } })
                 task.destinationFile.set(getMetadataRegularFile(project))
             }
 
@@ -487,6 +488,11 @@ abstract class AndroidXDocsImplPlugin : Plugin<Project> {
         val dackkaTask =
             project.tasks.register("docs", DackkaTask::class.java) { task ->
                 var taskStartTime: LocalDateTime? = null
+                task.argsJsonFile =
+                    File(
+                        project.rootProject.getDistributionDirectory(),
+                        "dackkaArgs-${project.name}.json"
+                    )
                 task.apply {
                     dependsOn(unzipJvmSourcesTask)
                     dependsOn(unzipSamplesTask)
@@ -520,6 +526,7 @@ abstract class AndroidXDocsImplPlugin : Plugin<Project> {
                     annotationsNotToDisplayJava = hiddenAnnotationsJava
                     annotationsNotToDisplayKotlin = hiddenAnnotationsKotlin
                     hidingAnnotations = annotationsToHideApis
+                    nullabilityAnnotations = validNullabilityAnnotations
                     versionMetadataFiles =
                         versionMetadataConfiguration.incoming.artifacts.resolvedArtifacts.map {
                             it.map { it.file }
@@ -694,6 +701,13 @@ private val hiddenAnnotations: List<String> =
         // This annotation is intended to target the compiler and is general not useful for devs.
         "java.lang.Override"
     )
+
+val validNullabilityAnnotations = listOf(
+    "androidx.annotation.Nullable", "android.annotation.Nullable",
+    "androidx.annotation.NonNull", "android.annotation.NonNull",
+    // Required by media3
+    "org.checkerframework.checker.nullness.qual.Nullable",
+)
 
 // Annotations which should not be displayed in the Kotlin docs, in addition to hiddenAnnotations
 private val hiddenAnnotationsKotlin: List<String> = listOf("kotlin.ExtensionFunctionType")

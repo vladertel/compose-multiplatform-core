@@ -101,8 +101,6 @@ public class StreamSharing extends UseCase {
         MutableConfig mutableConfig = new StreamSharingBuilder().getMutableConfig();
         mutableConfig.insertOption(OPTION_INPUT_FORMAT,
                 ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE);
-        mutableConfig.insertOption(OPTION_CAPTURE_TYPE,
-                UseCaseConfigFactory.CaptureType.STREAM_SHARING);
         List<UseCaseConfigFactory.CaptureType> captureTypes = new ArrayList<>();
         for (UseCase child : children) {
             if (child.getCurrentConfig().containsOption(OPTION_CAPTURE_TYPE)) {
@@ -274,6 +272,9 @@ public class StreamSharing extends UseCase {
         // Send the camera edge Surface to the camera2.
         SessionConfig.Builder builder = SessionConfig.Builder.createFrom(config,
                 streamSpec.getResolution());
+
+        propagateChildrenCamera2Interop(streamSpec.getResolution(), builder);
+
         builder.addSurface(mCameraEdge.getDeferrableSurface());
         builder.addRepeatingCameraCaptureCallback(mVirtualCamera.getParentMetadataCallback());
         if (streamSpec.getImplementationOptions() != null) {
@@ -282,6 +283,25 @@ public class StreamSharing extends UseCase {
         addCameraErrorListener(builder, cameraId, config, streamSpec);
         mSessionConfigBuilder = builder;
         return builder.build();
+    }
+
+    /**
+     * Propagates children Camera2interop settings.
+     */
+    private void propagateChildrenCamera2Interop(
+            @NonNull Size resolution,
+            @NonNull SessionConfig.Builder builder) {
+        for (UseCase useCase : getChildren()) {
+            SessionConfig childConfig =
+                    SessionConfig.Builder.createFrom(useCase.getCurrentConfig(), resolution)
+                            .build();
+            builder.addAllRepeatingCameraCaptureCallbacks(
+                    childConfig.getRepeatingCameraCaptureCallbacks());
+            builder.addAllCameraCaptureCallbacks(childConfig.getSingleCameraCaptureCallbacks());
+            builder.addAllSessionStateCallbacks(childConfig.getSessionStateCallbacks());
+            builder.addAllDeviceStateCallbacks(childConfig.getDeviceStateCallbacks());
+            builder.addImplementationOptions(childConfig.getImplementationOptions());
+        }
     }
 
     /**
@@ -391,5 +411,30 @@ public class StreamSharing extends UseCase {
     @NonNull
     VirtualCamera getVirtualCamera() {
         return mVirtualCamera;
+    }
+
+    /**
+     * Gets the capture types of all the children use cases when use case is StreamSharing, or just
+     * the capture type of the use case itself otherwise.
+     */
+    @NonNull
+    public static List<UseCaseConfigFactory.CaptureType> getCaptureTypes(@NonNull UseCase useCase) {
+        List<UseCaseConfigFactory.CaptureType> result = new ArrayList<>();
+        if (isStreamSharing(useCase)) {
+            for (UseCase child : ((StreamSharing) useCase).getChildren()) {
+                result.add(child.getCurrentConfig().getCaptureType());
+            }
+        } else {
+            result.add(useCase.getCurrentConfig().getCaptureType());
+        }
+        return result;
+    }
+
+    /**
+     * Checks if the provided use case is a StreamSharing use case.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public static boolean isStreamSharing(@Nullable UseCase useCase) {
+        return useCase instanceof StreamSharing;
     }
 }

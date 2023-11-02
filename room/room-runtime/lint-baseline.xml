@@ -1,13 +1,103 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 8.2.0-alpha15" type="baseline" client="gradle" dependencies="false" name="AGP (8.2.0-alpha15)" variant="all" version="8.2.0-alpha15">
+<issues format="6" by="lint 8.3.0-alpha04" type="baseline" client="gradle" dependencies="false" name="AGP (8.3.0-alpha04)" variant="all" version="8.3.0-alpha04">
 
     <issue
         id="NewApi"
-        message="Call requires API level 21 (current min is 14): `java.util.Locale#forLanguageTag`"
+        message="Call requires API level 21 (current min is 19): `java.util.Locale#forLanguageTag`"
         errorLine1="        Locale.setDefault(Locale.forLanguageTag(&quot;tr-TR&quot;))"
         errorLine2="                                 ~~~~~~~~~~~~~~">
         <location
             file="src/test/java/androidx/room/InvalidationTrackerTest.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="        bindingTypes = IntArray(limit)"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="            when (bindingTypes[index]) {"
+        errorLine2="                  ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="        bindingTypes[index] = NULL"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="        bindingTypes[index] = LONG"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="        bindingTypes[index] = DOUBLE"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="        bindingTypes[index] = STRING"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="        bindingTypes[index] = BLOB"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="        System.arraycopy(other.bindingTypes, 0, bindingTypes, 0, argCount)"
+        errorLine2="                               ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="        System.arraycopy(other.bindingTypes, 0, bindingTypes, 0, argCount)"
+        errorLine2="                                                ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
+    </issue>
+
+    <issue
+        id="WrongConstant"
+        message="Must be one of: RoomSQLiteQuery.NULL, RoomSQLiteQuery.LONG, RoomSQLiteQuery.DOUBLE, RoomSQLiteQuery.STRING, RoomSQLiteQuery.BLOB"
+        errorLine1="        Arrays.fill(bindingTypes, NULL)"
+        errorLine2="                    ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomSQLiteQuery.kt"/>
     </issue>
 
     <issue
@@ -164,7 +254,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api29Impl.setNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            SupportSQLiteCompat.Api29Impl.setNotificationUris(delegate, cr, uris)"
         errorLine2="                                          ~~~~~~~~~~~~~~~~~~~">
@@ -173,7 +263,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api29Impl.setNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            SupportSQLiteCompat.Api29Impl.setNotificationUris(delegate, cr, uris)"
         errorLine2="                                                              ~~~~~~~~">
@@ -182,7 +272,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api29Impl.setNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            SupportSQLiteCompat.Api29Impl.setNotificationUris(delegate, cr, uris)"
         errorLine2="                                                                        ~~">
@@ -191,7 +281,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api29Impl.setNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            SupportSQLiteCompat.Api29Impl.setNotificationUris(delegate, cr, uris)"
         errorLine2="                                                                            ~~~~">
@@ -200,7 +290,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api19Impl.getNotificationUri can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            return SupportSQLiteCompat.Api19Impl.getNotificationUri(delegate)"
         errorLine2="                                                 ~~~~~~~~~~~~~~~~~~">
@@ -209,7 +299,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api19Impl.getNotificationUri can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            return SupportSQLiteCompat.Api19Impl.getNotificationUri(delegate)"
         errorLine2="                                                                    ~~~~~~~~">
@@ -218,7 +308,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api29Impl.getNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            return SupportSQLiteCompat.Api29Impl.getNotificationUris(delegate)"
         errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~">
@@ -227,7 +317,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api29Impl.getNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            return SupportSQLiteCompat.Api29Impl.getNotificationUris(delegate)"
         errorLine2="                                                                     ~~~~~~~~">
@@ -236,7 +326,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api23Impl.setExtras can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            SupportSQLiteCompat.Api23Impl.setExtras(delegate, extras)"
         errorLine2="                                          ~~~~~~~~~">
@@ -245,7 +335,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api23Impl.setExtras can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            SupportSQLiteCompat.Api23Impl.setExtras(delegate, extras)"
         errorLine2="                                                    ~~~~~~~~">
@@ -254,7 +344,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api23Impl.setExtras can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            SupportSQLiteCompat.Api23Impl.setExtras(delegate, extras)"
         errorLine2="                                                              ~~~~~~">
@@ -263,7 +353,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api16Impl.createCancellationSignal can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="        SupportSQLiteCompat.Api16Impl.createCancellationSignal()"
         errorLine2="                                      ~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -272,16 +362,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
-        message="SafeIterableMap can only be called from within the same library group prefix (referenced groupId=`androidx.arch.core` with prefix androidx.arch from groupId=`androidx.room`)"
-        errorLine1="    internal val observerMap = SafeIterableMap&lt;Observer, ObserverWrapper>()"
-        errorLine2="                               ~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/room/InvalidationTracker.kt"/>
-    </issue>
-
-    <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api19Impl.isLowRamDevice can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="                SupportSQLiteCompat.Api19Impl.isLowRamDevice(activityManager)"
         errorLine2="                                              ~~~~~~~~~~~~~~">
@@ -290,7 +371,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="Api19Impl.isLowRamDevice can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="                SupportSQLiteCompat.Api19Impl.isLowRamDevice(activityManager)"
         errorLine2="                                                             ~~~~~~~~~~~~~~~">
@@ -299,16 +380,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
-        message="ArchTaskExecutor.getIOThreadExecutor can only be called from within the same library group prefix (referenced groupId=`androidx.arch.core` with prefix androidx.arch from groupId=`androidx.room`)"
-        errorLine1="                transactionExecutor = ArchTaskExecutor.getIOThreadExecutor()"
-        errorLine2="                                                       ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/room/RoomDatabase.kt"/>
-    </issue>
-
-    <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="ProcessLock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="        val copyLock = ProcessLock("
         errorLine2="                       ~~~~~~~~~~~">
@@ -317,7 +389,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="ProcessLock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            name,"
         errorLine2="            ~~~~">
@@ -326,7 +398,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="ProcessLock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            context.filesDir,"
         errorLine2="            ~~~~~~~~~~~~~~~~">
@@ -335,7 +407,7 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="ProcessLock.lock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            copyLock.lock()"
         errorLine2="                     ~~~~">
@@ -344,10 +416,145 @@
     </issue>
 
     <issue
-        id="RestrictedApi"
+        id="RestrictedApiAndroidX"
         message="ProcessLock.unlock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
         errorLine1="            copyLock.unlock()"
         errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/androidx/room/SQLiteCopyOpenHelper.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 16"
+        errorLine1="        @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/AutoClosingRoomOpenHelper.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/AutoClosingRoomOpenHelper.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 16"
+        errorLine1="        @get:RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/AutoClosingRoomOpenHelper.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/AutoClosingRoomOpenHelper.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="        @RequiresApi(api = Build.VERSION_CODES.KITKAT)"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/AutoClosingRoomOpenHelper.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/util/CursorUtil.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/util/DBUtil.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN &amp;&amp;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/InvalidationTracker.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="        val wal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {"
+        errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomDatabase.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="        return if (signal != null &amp;&amp; Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomDatabase.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="        return if (signal != null &amp;&amp; Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomDatabase.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN &amp;&amp;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomDatabase.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomDatabase.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="            if (Build.VERSION.SDK_INT >= 19) {"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/room/RoomDatabase.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 16"
+        errorLine1="    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/room/SQLiteCopyOpenHelper.kt"/>
     </issue>

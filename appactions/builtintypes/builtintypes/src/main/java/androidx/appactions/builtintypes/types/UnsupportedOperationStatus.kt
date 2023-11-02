@@ -1,19 +1,20 @@
-// Copyright 2023 The Android Open Source Project
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * Copyright 2023 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package androidx.appactions.builtintypes.types
 
-import androidx.appactions.builtintypes.properties.DisambiguatingDescription
 import androidx.appactions.builtintypes.properties.Name
 import androidx.appsearch.`annotation`.Document
 import java.util.Objects
@@ -111,11 +112,11 @@ public interface UnsupportedOperationStatus : ExecutionStatus {
  */
 @Suppress("UNCHECKED_CAST")
 public abstract class AbstractUnsupportedOperationStatus<
-  Self : AbstractUnsupportedOperationStatus<Self, Builder>,
-  Builder : AbstractUnsupportedOperationStatus.Builder<Builder, Self>>
+    Self : AbstractUnsupportedOperationStatus<Self, Builder>,
+    Builder : AbstractUnsupportedOperationStatus.Builder<Builder, Self>
+    >
 internal constructor(
   public final override val namespace: String,
-  public final override val disambiguatingDescription: DisambiguatingDescription?,
   public final override val identifier: String,
   public final override val name: Name?,
 ) : UnsupportedOperationStatus {
@@ -141,7 +142,6 @@ internal constructor(
     unsupportedOperationStatus: UnsupportedOperationStatus
   ) : this(
     unsupportedOperationStatus.namespace,
-    unsupportedOperationStatus.disambiguatingDescription,
     unsupportedOperationStatus.identifier,
     unsupportedOperationStatus.name
   )
@@ -155,7 +155,6 @@ internal constructor(
   public final override fun toBuilder(): Builder =
     toBuilderWithAdditionalPropertiesOnly()
       .setNamespace(namespace)
-      .setDisambiguatingDescription(disambiguatingDescription)
       .setIdentifier(identifier)
       .setName(name)
 
@@ -164,7 +163,6 @@ internal constructor(
     if (other == null || this::class.java != other::class.java) return false
     other as Self
     if (namespace != other.namespace) return false
-    if (disambiguatingDescription != other.disambiguatingDescription) return false
     if (identifier != other.identifier) return false
     if (name != other.name) return false
     if (additionalProperties != other.additionalProperties) return false
@@ -172,16 +170,12 @@ internal constructor(
   }
 
   public final override fun hashCode(): Int =
-    Objects.hash(namespace, disambiguatingDescription, identifier, name, additionalProperties)
+    Objects.hash(namespace, identifier, name, additionalProperties)
 
   public final override fun toString(): String {
     val attributes = mutableMapOf<String, String>()
     if (namespace.isNotEmpty()) {
       attributes["namespace"] = namespace
-    }
-    if (disambiguatingDescription != null) {
-      attributes["disambiguatingDescription"] =
-        disambiguatingDescription.toString(includeWrapperName = false)
     }
     if (identifier.isNotEmpty()) {
       attributes["identifier"] = identifier
@@ -250,8 +244,9 @@ internal constructor(
    */
   @Suppress("StaticFinalBuilder")
   public abstract class Builder<
-    Self : Builder<Self, Built>, Built : AbstractUnsupportedOperationStatus<Built, Self>> :
-    UnsupportedOperationStatus.Builder<Self> {
+      Self : Builder<Self, Built>,
+      Built : AbstractUnsupportedOperationStatus<Built, Self>
+      > : UnsupportedOperationStatus.Builder<Self> {
     /**
      * Human readable name for the concrete [Self] class.
      *
@@ -267,8 +262,6 @@ internal constructor(
     @get:Suppress("GetterOnBuilder") protected abstract val additionalProperties: Map<String, Any?>
 
     private var namespace: String = ""
-
-    private var disambiguatingDescription: DisambiguatingDescription? = null
 
     private var identifier: String = ""
 
@@ -290,18 +283,11 @@ internal constructor(
 
     public final override fun build(): Built =
       buildFromUnsupportedOperationStatus(
-        UnsupportedOperationStatusImpl(namespace, disambiguatingDescription, identifier, name)
+        UnsupportedOperationStatusImpl(namespace, identifier, name)
       )
 
     public final override fun setNamespace(namespace: String): Self {
       this.namespace = namespace
-      return this as Self
-    }
-
-    public final override fun setDisambiguatingDescription(
-      disambiguatingDescription: DisambiguatingDescription?
-    ): Self {
-      this.disambiguatingDescription = disambiguatingDescription
       return this as Self
     }
 
@@ -321,7 +307,6 @@ internal constructor(
       if (other == null || this::class.java != other::class.java) return false
       other as Self
       if (namespace != other.namespace) return false
-      if (disambiguatingDescription != other.disambiguatingDescription) return false
       if (identifier != other.identifier) return false
       if (name != other.name) return false
       if (additionalProperties != other.additionalProperties) return false
@@ -330,17 +315,13 @@ internal constructor(
 
     @Suppress("BuilderSetStyle")
     public final override fun hashCode(): Int =
-      Objects.hash(namespace, disambiguatingDescription, identifier, name, additionalProperties)
+      Objects.hash(namespace, identifier, name, additionalProperties)
 
     @Suppress("BuilderSetStyle")
     public final override fun toString(): String {
       val attributes = mutableMapOf<String, String>()
       if (namespace.isNotEmpty()) {
         attributes["namespace"] = namespace
-      }
-      if (disambiguatingDescription != null) {
-        attributes["disambiguatingDescription"] =
-          disambiguatingDescription!!.toString(includeWrapperName = false)
       }
       if (identifier.isNotEmpty()) {
         attributes["identifier"] = identifier
@@ -358,8 +339,8 @@ internal constructor(
 
 private class UnsupportedOperationStatusImpl :
   AbstractUnsupportedOperationStatus<
-    UnsupportedOperationStatusImpl, UnsupportedOperationStatusImpl.Builder
-  > {
+      UnsupportedOperationStatusImpl, UnsupportedOperationStatusImpl.Builder
+      > {
   protected override val selfTypeName: String
     get() = "UnsupportedOperationStatus"
 
@@ -368,10 +349,9 @@ private class UnsupportedOperationStatusImpl :
 
   public constructor(
     namespace: String,
-    disambiguatingDescription: DisambiguatingDescription?,
     identifier: String,
     name: Name?,
-  ) : super(namespace, disambiguatingDescription, identifier, name)
+  ) : super(namespace, identifier, name)
 
   public constructor(
     unsupportedOperationStatus: UnsupportedOperationStatus

@@ -128,7 +128,9 @@ sealed class Profiler {
             .mapKeys { it.key.lowercase() }[name.lowercase()]
 
         fun traceName(traceUniqueName: String, traceTypeLabel: String): String {
-            return "$traceUniqueName-$traceTypeLabel-${dateToFileName()}.trace"
+            return Outputs.sanitizeFilename(
+                "$traceUniqueName-$traceTypeLabel-${dateToFileName()}.trace"
+            )
         }
     }
 }
@@ -201,8 +203,7 @@ internal object MethodTracing : Profiler() {
 
     override fun embedInPerfettoTrace(profilerTrace: File, perfettoTrace: File) {
         ArtTrace(profilerTrace)
-            .toPerfettoTrace()
-            .encode(FileOutputStream(perfettoTrace, /* append = */ true))
+            .writeAsPerfettoTrace(FileOutputStream(perfettoTrace, /* append = */ true))
     }
 }
 @SuppressLint("BanThreadSleep") // needed for connected profiling
@@ -292,8 +293,7 @@ internal object StackSamplingSimpleperf : Profiler() {
     override fun stop() {
         session!!.stopRecording()
         Outputs.writeFile(
-            fileName = outputRelativePath!!,
-            reportKey = "simpleperf_trace"
+            fileName = outputRelativePath!!
         ) {
             session!!.convertSimpleperfOutputToProto("simpleperf.data", it.absolutePath)
         }

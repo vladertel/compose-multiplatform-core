@@ -686,6 +686,8 @@ public class ProtoLayoutDynamicDataPipelineTest {
                 .addResolvedAnimatedImage(drawableAvd, triggerTileVisibleOnce, TEST_POS_ID)
                 .commit(mRootContainer, /* isReattaching= */ false);
 
+        // OnVisible animations haven't started yet, so we should be able to trigger them manually.
+
         pipeline.playAvdAnimations(InnerCase.ON_LOAD_TRIGGER);
         expect.that(drawableAvd.started).isFalse();
 
@@ -715,10 +717,8 @@ public class ProtoLayoutDynamicDataPipelineTest {
                 .addResolvedAnimatedImage(drawableAvd, triggerTileLoad, TEST_POS_ID)
                 .commit(mRootContainer, /* isReattaching= */ false);
 
-        pipeline.playAvdAnimations(InnerCase.ON_VISIBLE_TRIGGER);
-        expect.that(drawableAvd.started).isFalse();
+        // In commit(), OnLoad animations are started.
 
-        pipeline.playAvdAnimations(InnerCase.ON_LOAD_TRIGGER);
         expect.that(drawableAvd.started).isTrue();
 
         pipeline.resetAvdAnimations(InnerCase.ON_LOAD_TRIGGER);
@@ -972,8 +972,8 @@ public class ProtoLayoutDynamicDataPipelineTest {
         makePipelineForDynamicBool(pipeline, expressionWith1Nodes, nodeInfo3);
 
         pipeline.initNewLayout();
-        // Now the pipeline will have a total expressionNodesCount of 6 = 5 + 1
-        // nodeInfo2 (failed to bound previously) and nodeInfo3(new) should be able to bound
+        // Now the pipeline will have a total expressionNodesCount of 6 = 5 + 1 nodeInfo2 (failed to
+        // bound previously) and nodeInfo3(new) should be able to bound
         expect.that(quotaManager.getRemainingQuota()).isEqualTo(2);
         expect.that(pipeline.mPositionIdTree.get(nodeInfo3).getFailedBindingRequest().size())
                 .isEqualTo(0);
@@ -1827,7 +1827,6 @@ public class ProtoLayoutDynamicDataPipelineTest {
         pipeline.newPipelineMaker()
                 .addPipelineFor(proto, TEST_POS_ID, receiver)
                 .commit(mRootContainer, /* isReattaching= */ false);
-        shadowOf(getMainLooper()).runOneTask();
         if (enableAnimations) {
             assertThat(pipeline.getRunningAnimationsCount()).isEqualTo(animationsNum);
         }

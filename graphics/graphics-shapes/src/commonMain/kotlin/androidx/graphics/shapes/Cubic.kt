@@ -16,6 +16,7 @@
 
 package androidx.graphics.shapes
 
+import androidx.collection.FloatFloatPair
 import kotlin.math.sqrt
 
 /**
@@ -25,7 +26,9 @@ import kotlin.math.sqrt
  * the slope of the curve between the anchor points.
  */
 open class Cubic internal constructor(internal val points: FloatArray = FloatArray(8)) {
-    init { require(points.size == 8) }
+    init {
+        require(points.size == 8) { "Points array size should be 8" }
+    }
 
     /**
      * The first anchor point x coordinate
@@ -67,38 +70,9 @@ open class Cubic internal constructor(internal val points: FloatArray = FloatArr
      */
     val anchor1Y get() = points[7]
 
-    /**
-     * This class holds the anchor and control point data for a single cubic Bézier curve,
-     * with anchor points ([anchor0X], [anchor0Y]) and ([anchor1X], [anchor1Y]) at either end
-     * and control points ([control0X], [control0Y]) and ([control1X], [control1Y]) determining
-     * the slope of the curve between the anchor points.
-     *
-     * This object is immutable.
-     *
-     * @param anchor0X the first anchor point x coordinate
-     * @param anchor0Y the first anchor point y coordinate
-     * @param control0X the first control point x coordinate
-     * @param control0Y the first control point y coordinate
-     * @param control1X the second control point x coordinate
-     * @param control1Y the second control point y coordinate
-     * @param anchor1X the second anchor point x coordinate
-     * @param anchor1Y the second anchor point y coordinate
-     */
-    constructor(
-        anchor0X: Float,
-        anchor0Y: Float,
-        control0X: Float,
-        control0Y: Float,
-        control1X: Float,
-        control1Y: Float,
-        anchor1X: Float,
-        anchor1Y: Float
-    ) : this(floatArrayOf(anchor0X, anchor0Y, control0X, control0Y,
-        control1X, control1Y, anchor1X, anchor1Y))
-
     internal constructor(anchor0: Point, control0: Point, control1: Point, anchor1: Point) :
-        this(anchor0.x, anchor0.y, control0.x, control0.y,
-            control1.x, control1.y, anchor1.x, anchor1.y)
+        this(floatArrayOf(anchor0.x, anchor0.y, control0.x, control0.y,
+            control1.x, control1.y, anchor1.x, anchor1.y))
 
     /**
      * Returns a point on the curve for parameter t, representing the proportional distance
@@ -178,9 +152,10 @@ open class Cubic internal constructor(internal val points: FloatArray = FloatArr
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
 
-        other as Cubic
+        if (other !is Cubic) {
+            return false
+        }
 
         return points.contentEquals(other.points)
     }
@@ -254,6 +229,35 @@ open class Cubic internal constructor(internal val points: FloatArray = FloatArr
 }
 
 /**
+ * Create a Cubic that holds the anchor and control point data for a single Bézier curve,
+ * with anchor points ([anchor0X], [anchor0Y]) and ([anchor1X], [anchor1Y]) at either end
+ * and control points ([control0X], [control0Y]) and ([control1X], [control1Y]) determining
+ * the slope of the curve between the anchor points.
+ *
+ * The returned instance is immutable.
+ *
+ * @param anchor0X the first anchor point x coordinate
+ * @param anchor0Y the first anchor point y coordinate
+ * @param control0X the first control point x coordinate
+ * @param control0Y the first control point y coordinate
+ * @param control1X the second control point x coordinate
+ * @param control1Y the second control point y coordinate
+ * @param anchor1X the second anchor point x coordinate
+ * @param anchor1Y the second anchor point y coordinate
+ */
+fun Cubic(
+    anchor0X: Float,
+    anchor0Y: Float,
+    control0X: Float,
+    control0Y: Float,
+    control1X: Float,
+    control1Y: Float,
+    anchor1X: Float,
+    anchor1Y: Float
+) = Cubic(floatArrayOf(anchor0X, anchor0Y, control0X, control0Y,
+    control1X, control1Y, anchor1X, anchor1Y))
+
+/**
  * This interface is used refer to Points that can be modified, as a scope to
  * [PointTransformer]
  */
@@ -269,57 +273,47 @@ interface MutablePoint {
     var y: Float
 }
 
+typealias TransformResult = FloatFloatPair
+
 /**
- * Interface for a function that can transform (rotate/scale/translate/etc.) points
+ * Interface for a function that can transform (rotate/scale/translate/etc.) points.
  */
 fun interface PointTransformer {
     /**
-     * Transform the given [MutablePoint] in place.
+     * Transform the point given the x and y parameters, returning the transformed point as a
+     * [TransformResult]
      */
-    fun MutablePoint.transform()
+    fun transform(x: Float, y: Float): TransformResult
 }
 
 /**
-
  * This is a Mutable version of [Cubic], used mostly for performance critical paths so we can
  * avoid creating new [Cubic]s
  *
- * This is used in Morph.asMutableCubics, reusing a [MutableCubic] instance to avoid creating
+ * This is used in Morph.forEachCubic, reusing a [MutableCubic] instance to avoid creating
  * new [Cubic]s.
  */
-class MutableCubic internal constructor() : Cubic() {
-    internal val anchor0 = ArrayMutablePoint(points, 0)
-    internal val control0 = ArrayMutablePoint(points, 2)
-    internal val control1 = ArrayMutablePoint(points, 4)
-    internal val anchor1 = ArrayMutablePoint(points, 6)
+class MutableCubic : Cubic() {
+    private fun transformOnePoint(f: PointTransformer, ix: Int) {
+        val result = f.transform(points[ix], points[ix + 1])
+        points[ix] = result.first
+        points[ix + 1] = result.second
+    }
 
     fun transform(f: PointTransformer) {
-        with(f) {
-            anchor0.transform()
-            control0.transform()
-            control1.transform()
-            anchor1.transform()
+        transformOnePoint(f, 0)
+        transformOnePoint(f, 2)
+        transformOnePoint(f, 4)
+        transformOnePoint(f, 6)
+    }
+
+    fun interpolate(c1: Cubic, c2: Cubic, progress: Float) {
+        repeat(8) {
+            points[it] = interpolate(
+                c1.points[it],
+                c2.points[it],
+                progress
+            )
         }
     }
-}
-
-/**
- * Implementation of [MutablePoint] backed by a [FloatArray], at a given position.
- * Note that the same [FloatArray] can be used to back many [ArrayMutablePoint],
- * see [MutableCubic]
- */
-internal class ArrayMutablePoint(internal val arr: FloatArray, internal val ix: Int) :
-    MutablePoint {
-    init { require(arr.size >= ix + 2) }
-
-    override var x: Float
-        get() = arr[ix]
-        set(v) {
-            arr[ix] = v
-        }
-    override var y: Float
-        get() = arr[ix + 1]
-        set(v) {
-            arr[ix + 1] = v
-        }
 }

@@ -69,7 +69,7 @@ val DefaultFillType = PathFillType.NonZero
 
 inline fun PathData(block: PathBuilder.() -> Unit) = with(PathBuilder()) {
     block()
-    getNodes()
+    nodes
 }
 
 fun addPathNodes(pathStr: String?) = if (pathStr == null) {

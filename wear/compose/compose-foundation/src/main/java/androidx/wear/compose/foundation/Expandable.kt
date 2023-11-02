@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.lerp
 import androidx.wear.compose.foundation.lazy.ScalingLazyListScope
 import kotlin.math.roundToInt
@@ -71,6 +72,7 @@ public fun rememberExpandableState(
  * @param collapseAnimationSpec The [AnimationSpec] to use when hiding the extra information.
  */
 @Composable
+@ExperimentalWearFoundationApi
 public fun <T> rememberExpandableStateMapping(
     initiallyExpanded: (key: T) -> Boolean = { false },
     expandAnimationSpec: AnimationSpec<Float> = ExpandableItemsDefaults.expandAnimationSpec,
@@ -179,8 +181,6 @@ private fun ScalingLazyListScope.expandableItemImpl(
     invertProgress: Boolean = false,
     content: @Composable (expanded: Boolean) -> Unit
 ) {
-    val progress = if (invertProgress) 1f - state.expandProgress else state.expandProgress
-
     item(key = key) {
         Layout(
             content = {
@@ -189,7 +189,9 @@ private fun ScalingLazyListScope.expandableItemImpl(
             },
             modifier = Modifier.clipToBounds()
         ) { measurables, constraints ->
-            val placeables = measurables.map { it.measure(constraints) }
+            val progress = if (invertProgress) 1f - state.expandProgress else state.expandProgress
+
+            val placeables = measurables.fastMap { it.measure(constraints) }
 
             val width = lerp(placeables[0].width, placeables[1].width, progress)
             val height = lerp(placeables[0].height, placeables[1].height, progress)
@@ -262,6 +264,7 @@ public class ExpandableState internal constructor(
  * A class that maps from keys of the given type to [ExpandableState].
  * An instance can be created and remembered with [rememberExpandableStateMapping]
  */
+@ExperimentalWearFoundationApi
 public class ExpandableStateMapping<T> internal constructor(
     private val initiallyExpanded: (key: T) -> Boolean,
     private val coroutineScope: CoroutineScope,

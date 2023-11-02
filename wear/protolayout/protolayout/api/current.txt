@@ -105,6 +105,9 @@ package androidx.wear.protolayout {
     method public static androidx.wear.protolayout.ColorBuilders.ColorProp argb(@ColorInt int);
   }
 
+  public static interface ColorBuilders.Brush {
+  }
+
   public static final class ColorBuilders.ColorProp {
     method @ColorInt public int getArgb();
     method public androidx.wear.protolayout.expression.DynamicBuilders.DynamicColor? getDynamicValue();
@@ -116,6 +119,26 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.ColorBuilders.ColorProp build();
     method public androidx.wear.protolayout.ColorBuilders.ColorProp.Builder setArgb(@ColorInt int);
     method public androidx.wear.protolayout.ColorBuilders.ColorProp.Builder setDynamicValue(androidx.wear.protolayout.expression.DynamicBuilders.DynamicColor);
+  }
+
+  public static final class ColorBuilders.ColorStop {
+    ctor public ColorBuilders.ColorStop(androidx.wear.protolayout.ColorBuilders.ColorProp);
+    ctor public ColorBuilders.ColorStop(androidx.wear.protolayout.ColorBuilders.ColorProp, androidx.wear.protolayout.TypeBuilders.FloatProp);
+    method public androidx.wear.protolayout.ColorBuilders.ColorProp? getColor();
+    method public androidx.wear.protolayout.TypeBuilders.FloatProp? getOffset();
+  }
+
+  public static final class ColorBuilders.SweepGradient implements androidx.wear.protolayout.ColorBuilders.Brush {
+    method public java.util.List<androidx.wear.protolayout.ColorBuilders.ColorStop!> getColorStops();
+    method public androidx.wear.protolayout.DimensionBuilders.DegreesProp getEndAngle();
+    method public androidx.wear.protolayout.DimensionBuilders.DegreesProp getStartAngle();
+  }
+
+  public static final class ColorBuilders.SweepGradient.Builder {
+    ctor @java.lang.SafeVarargs public ColorBuilders.SweepGradient.Builder(androidx.wear.protolayout.ColorBuilders.ColorStop!...);
+    method public androidx.wear.protolayout.ColorBuilders.SweepGradient build();
+    method public androidx.wear.protolayout.ColorBuilders.SweepGradient.Builder setEndAngle(androidx.wear.protolayout.DimensionBuilders.DegreesProp);
+    method public androidx.wear.protolayout.ColorBuilders.SweepGradient.Builder setStartAngle(androidx.wear.protolayout.DimensionBuilders.DegreesProp);
   }
 
   public final class DeviceParametersBuilders {
@@ -220,7 +243,7 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.DimensionBuilders.EmProp.Builder setValue(float);
   }
 
-  public static final class DimensionBuilders.ExpandedDimensionProp implements androidx.wear.protolayout.DimensionBuilders.ContainerDimension androidx.wear.protolayout.DimensionBuilders.ImageDimension {
+  public static final class DimensionBuilders.ExpandedDimensionProp implements androidx.wear.protolayout.DimensionBuilders.ContainerDimension androidx.wear.protolayout.DimensionBuilders.ImageDimension androidx.wear.protolayout.DimensionBuilders.SpacerDimension {
     method public androidx.wear.protolayout.TypeBuilders.FloatProp? getLayoutWeight();
   }
 
@@ -397,6 +420,7 @@ package androidx.wear.protolayout {
   }
 
   public static final class LayoutElementBuilders.ArcLine implements androidx.wear.protolayout.LayoutElementBuilders.ArcLayoutElement {
+    method public androidx.wear.protolayout.ColorBuilders.Brush? getBrush();
     method public androidx.wear.protolayout.ColorBuilders.ColorProp? getColor();
     method public androidx.wear.protolayout.DimensionBuilders.AngularLayoutConstraint? getLayoutConstraintsForDynamicLength();
     method public androidx.wear.protolayout.DimensionBuilders.DegreesProp? getLength();
@@ -408,6 +432,7 @@ package androidx.wear.protolayout {
   public static final class LayoutElementBuilders.ArcLine.Builder {
     ctor public LayoutElementBuilders.ArcLine.Builder();
     method public androidx.wear.protolayout.LayoutElementBuilders.ArcLine build();
+    method public androidx.wear.protolayout.LayoutElementBuilders.ArcLine.Builder setBrush(androidx.wear.protolayout.ColorBuilders.Brush);
     method public androidx.wear.protolayout.LayoutElementBuilders.ArcLine.Builder setColor(androidx.wear.protolayout.ColorBuilders.ColorProp);
     method public androidx.wear.protolayout.LayoutElementBuilders.ArcLine.Builder setLayoutConstraintsForDynamicLength(androidx.wear.protolayout.DimensionBuilders.AngularLayoutConstraint);
     method public androidx.wear.protolayout.LayoutElementBuilders.ArcLine.Builder setLength(androidx.wear.protolayout.DimensionBuilders.DegreesProp);
@@ -528,6 +553,7 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.TypeBuilders.BoolProp? getItalic();
     method public androidx.wear.protolayout.DimensionBuilders.EmProp? getLetterSpacing();
     method public androidx.wear.protolayout.DimensionBuilders.SpProp? getSize();
+    method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental public java.util.List<androidx.wear.protolayout.DimensionBuilders.SpProp!> getSizes();
     method public androidx.wear.protolayout.TypeBuilders.BoolProp? getUnderline();
     method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental public androidx.wear.protolayout.LayoutElementBuilders.FontVariantProp? getVariant();
     method public androidx.wear.protolayout.LayoutElementBuilders.FontWeightProp? getWeight();
@@ -541,6 +567,7 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setItalic(boolean);
     method public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setLetterSpacing(androidx.wear.protolayout.DimensionBuilders.EmProp);
     method public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setSize(androidx.wear.protolayout.DimensionBuilders.SpProp);
+    method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setSizes(androidx.wear.protolayout.DimensionBuilders.SpProp!...);
     method public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setUnderline(androidx.wear.protolayout.TypeBuilders.BoolProp);
     method public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setUnderline(boolean);
     method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setVariant(androidx.wear.protolayout.LayoutElementBuilders.FontVariantProp);
@@ -744,12 +771,14 @@ package androidx.wear.protolayout {
   }
 
   public static final class LayoutElementBuilders.StrokeCapProp {
+    method public androidx.wear.protolayout.ModifiersBuilders.Shadow? getShadow();
     method public int getValue();
   }
 
   public static final class LayoutElementBuilders.StrokeCapProp.Builder {
     ctor public LayoutElementBuilders.StrokeCapProp.Builder();
     method public androidx.wear.protolayout.LayoutElementBuilders.StrokeCapProp build();
+    method public androidx.wear.protolayout.LayoutElementBuilders.StrokeCapProp.Builder setShadow(androidx.wear.protolayout.ModifiersBuilders.Shadow);
     method public androidx.wear.protolayout.LayoutElementBuilders.StrokeCapProp.Builder setValue(int);
   }
 
@@ -882,6 +911,8 @@ package androidx.wear.protolayout {
 
   public static final class ModifiersBuilders.Clickable {
     method public String getId();
+    method public androidx.wear.protolayout.DimensionBuilders.DpProp getMinimumClickableHeight();
+    method public androidx.wear.protolayout.DimensionBuilders.DpProp getMinimumClickableWidth();
     method public androidx.wear.protolayout.ActionBuilders.Action? getOnClick();
   }
 
@@ -889,6 +920,8 @@ package androidx.wear.protolayout {
     ctor public ModifiersBuilders.Clickable.Builder();
     method public androidx.wear.protolayout.ModifiersBuilders.Clickable build();
     method public androidx.wear.protolayout.ModifiersBuilders.Clickable.Builder setId(String);
+    method public androidx.wear.protolayout.ModifiersBuilders.Clickable.Builder setMinimumClickableHeight(androidx.wear.protolayout.DimensionBuilders.DpProp);
+    method public androidx.wear.protolayout.ModifiersBuilders.Clickable.Builder setMinimumClickableWidth(androidx.wear.protolayout.DimensionBuilders.DpProp);
     method public androidx.wear.protolayout.ModifiersBuilders.Clickable.Builder setOnClick(androidx.wear.protolayout.ActionBuilders.Action);
   }
 
@@ -1024,6 +1057,18 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.ModifiersBuilders.Semantics.Builder setContentDescription(String);
     method public androidx.wear.protolayout.ModifiersBuilders.Semantics.Builder setRole(int);
     method public androidx.wear.protolayout.ModifiersBuilders.Semantics.Builder setStateDescription(androidx.wear.protolayout.TypeBuilders.StringProp);
+  }
+
+  public static final class ModifiersBuilders.Shadow {
+    method public androidx.wear.protolayout.DimensionBuilders.DpProp getBlurRadius();
+    method public androidx.wear.protolayout.ColorBuilders.ColorProp getColor();
+  }
+
+  public static final class ModifiersBuilders.Shadow.Builder {
+    ctor public ModifiersBuilders.Shadow.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.Shadow build();
+    method public androidx.wear.protolayout.ModifiersBuilders.Shadow.Builder setBlurRadius(androidx.wear.protolayout.DimensionBuilders.DpProp);
+    method public androidx.wear.protolayout.ModifiersBuilders.Shadow.Builder setColor(androidx.wear.protolayout.ColorBuilders.ColorProp);
   }
 
   @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static interface ModifiersBuilders.SlideBound {

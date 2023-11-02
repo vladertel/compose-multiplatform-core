@@ -109,10 +109,12 @@ public final class CameraXConfig implements TargetConfig<CameraX> {
                     "camerax.core.appConfig.availableCamerasLimiter",
                     CameraSelector.class);
 
-    static final Option<Long> OPTION_CAMERA_OPEN_RETRY_MAX_TIMEOUT_IN_MILLIS_WHILE_OCCUPIED =
+    static final Option<Long> OPTION_CAMERA_OPEN_RETRY_MAX_TIMEOUT_IN_MILLIS_WHILE_RESUMING =
             Option.create(
-                    "camerax.core.appConfig.cameraOpenRetryMaxTimeoutInMsWhileOccupied",
+                    "camerax.core.appConfig.cameraOpenRetryMaxTimeoutInMillisWhileResuming",
                     long.class);
+
+    static final long DEFAULT_OPTION_CAMERA_OPEN_RETRY_MAX_TIMEOUT_IN_MILLIS_WHILE_RESUMING = -1L;
 
     // *********************************************************************************************
 
@@ -197,14 +199,15 @@ public final class CameraXConfig implements TargetConfig<CameraX> {
     }
 
     /**
-     * Returns the camera open retry maximum timeout in milliseconds.
+     * Returns the camera open retry maximum timeout in milliseconds when in active resuming mode.
      *
-     * @see Builder#setCameraOpenRetryMaxTimeoutInMsWhileOccupied(long)
+     * <p>If this value is not set, -1L will be returned by default.
+     *
+     * @see Builder#setCameraOpenRetryMaxTimeoutInMillisWhileResuming(long)
      */
-    @RestrictTo(Scope.LIBRARY_GROUP)
-    public long getCameraOpenRetryMaxTimeoutInMsWhileOccupied(long valueIfMissing) {
-        return mConfig.retrieveOption(OPTION_CAMERA_OPEN_RETRY_MAX_TIMEOUT_IN_MILLIS_WHILE_OCCUPIED,
-                valueIfMissing);
+    public long getCameraOpenRetryMaxTimeoutInMillisWhileResuming() {
+        return mConfig.retrieveOption(OPTION_CAMERA_OPEN_RETRY_MAX_TIMEOUT_IN_MILLIS_WHILE_RESUMING,
+                DEFAULT_OPTION_CAMERA_OPEN_RETRY_MAX_TIMEOUT_IN_MILLIS_WHILE_RESUMING);
     }
 
     @RestrictTo(Scope.LIBRARY_GROUP)
@@ -381,16 +384,32 @@ public final class CameraXConfig implements TargetConfig<CameraX> {
         }
 
         /**
-         * Sets the camera open retry maximum timeout in milliseconds.
+         * Sets the camera open retry maximum timeout in milliseconds. This is only needed when
+         * users don't want to retry camera opening for a long time.
          *
-         * By default, the retry maximum timeout is 30 minutes when in active resume mode.
+         * <p>When {@link androidx.lifecycle.LifecycleOwner} is in ON_RESUME state, CameraX will
+         * actively retry opening the camera periodically to resume, until there is
+         * non-recoverable errors happening and then move to pending open state waiting for the
+         * next camera available after timeout.
          *
+         * <p>When in active resuming mode, it will periodically retry opening the
+         * camera regardless of the camera availability.
+         * Elapsed time <= 2 minutes -> retry once per 1 second.
+         * Elapsed time 2 to 5 minutes -> retry once per 2 seconds.
+         * Elapsed time > 5 minutes -> retry once per 4 seconds.
+         * Retry will stop after 30 minutes.
+         *
+         * <p>When not in active resuming mode, the camera will be attempted to be opened every
+         * 700ms for 10 seconds. This value cannot currently be changed.
+         *
+         * @param maxTimeoutInMillis The max timeout in milliseconds.
+         * @return this builder.
          */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
-        public Builder setCameraOpenRetryMaxTimeoutInMsWhileOccupied(long valueIfMissing) {
+        public Builder setCameraOpenRetryMaxTimeoutInMillisWhileResuming(long maxTimeoutInMillis) {
             getMutableConfig().insertOption(
-                    OPTION_CAMERA_OPEN_RETRY_MAX_TIMEOUT_IN_MILLIS_WHILE_OCCUPIED, valueIfMissing);
+                    OPTION_CAMERA_OPEN_RETRY_MAX_TIMEOUT_IN_MILLIS_WHILE_RESUMING,
+                    maxTimeoutInMillis);
             return this;
         }
 

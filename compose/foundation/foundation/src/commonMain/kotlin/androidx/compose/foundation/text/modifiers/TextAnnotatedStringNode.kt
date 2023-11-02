@@ -50,10 +50,10 @@ import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.clearTextSubstitution
 import androidx.compose.ui.semantics.getTextLayoutResult
 import androidx.compose.ui.semantics.isShowingTextSubstitution
-import androidx.compose.ui.semantics.originalText
 import androidx.compose.ui.semantics.setTextSubstitution
 import androidx.compose.ui.semantics.showTextSubstitution
 import androidx.compose.ui.semantics.text
+import androidx.compose.ui.semantics.textSubstitution
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextLayoutInput
@@ -223,10 +223,12 @@ internal class TextAnnotatedStringNode(
         layoutChanged: Boolean,
         callbacksChanged: Boolean
     ) {
+        if (!isAttached) {
+            // no-up for !isAttached. The node will invalidate when attaching again.
+            return
+        }
         if (textChanged || (drawChanged && semanticsTextLayoutResult != null)) {
-            if (isAttached) {
-                invalidateSemantics()
-            }
+            invalidateSemantics()
         }
 
         if (textChanged || layoutChanged || callbacksChanged) {
@@ -240,9 +242,7 @@ internal class TextAnnotatedStringNode(
                 minLines = minLines,
                 placeholders = placeholders
             )
-            if (isAttached) {
-                invalidateMeasurement()
-            }
+            invalidateMeasurement()
             invalidateDraw()
         }
         if (drawChanged) {
@@ -257,7 +257,7 @@ internal class TextAnnotatedStringNode(
         var substitution: AnnotatedString,
         var isShowingSubstitution: Boolean = false,
         var layoutCache: MultiParagraphLayoutCache? = null,
-        // TODO(klikli): add animation
+        // TODO(b/283944749): add animation
     )
 
     private var textSubstitution: TextSubstitutionValue? by mutableStateOf(null)
@@ -330,17 +330,11 @@ internal class TextAnnotatedStringNode(
             semanticsTextLayoutResult = localSemanticsTextLayoutResult
         }
 
-        val currentTextSubstitution = textSubstitution
-        if (currentTextSubstitution == null) {
-            text = this@TextAnnotatedStringNode.text
-        } else {
+        text = this@TextAnnotatedStringNode.text
+        val currentTextSubstitution = this@TextAnnotatedStringNode.textSubstitution
+        if (currentTextSubstitution != null) {
+            textSubstitution = currentTextSubstitution.substitution
             isShowingTextSubstitution = currentTextSubstitution.isShowingSubstitution
-            if (currentTextSubstitution.isShowingSubstitution) {
-                text = currentTextSubstitution.substitution
-                originalText = currentTextSubstitution.original
-            } else {
-                text = currentTextSubstitution.original
-            }
         }
 
         setTextSubstitution { updatedText ->
@@ -349,11 +343,11 @@ internal class TextAnnotatedStringNode(
             true
         }
         showTextSubstitution {
-            if (textSubstitution == null) {
+            if (this@TextAnnotatedStringNode.textSubstitution == null) {
                 return@showTextSubstitution false
             }
 
-            textSubstitution?.isShowingSubstitution = it
+            this@TextAnnotatedStringNode.textSubstitution?.isShowingSubstitution = it
 
             invalidateSemantics()
             invalidateMeasurement()
@@ -483,6 +477,10 @@ internal class TextAnnotatedStringNode(
         return contentDrawScope.draw()
     }
     override fun ContentDrawScope.draw() {
+        if (!isAttached) {
+            // no-up for !isAttached. The node will invalidate when attaching again.
+            return
+        }
         selectionController?.draw(this)
         drawIntoCanvas { canvas ->
             val layoutCache = getLayoutCache(this)

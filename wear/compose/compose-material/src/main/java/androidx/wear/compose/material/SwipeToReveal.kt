@@ -16,6 +16,11 @@
 
 package androidx.wear.compose.material
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -45,6 +50,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import androidx.wear.compose.foundation.ExperimentalWearFoundationApi
 import androidx.wear.compose.foundation.RevealActionType
 import androidx.wear.compose.foundation.RevealScope
@@ -53,7 +59,18 @@ import androidx.wear.compose.foundation.SwipeToReveal
 import kotlin.math.abs
 
 /**
- * [SwipeToReveal] Material composable for Chips. This provides the default style for consistency.
+ * [SwipeToReveal] Material composable for [Chip]s. This adds the option to configure up to two
+ * additional actions on the [Chip]: a mandatory [primaryAction] and an optional
+ * [secondaryAction]. These actions are initially hidden and revealed only when the [content] is
+ * swiped. These additional actions can be triggered by clicking on them after they are revealed.
+ * [primaryAction] can also be triggered by performing a full swipe of the [content].
+ *
+ * For actions like "Delete", consider adding [undoPrimaryAction] (displayed when the
+ * [primaryAction] is activated) and/or [undoSecondaryAction] (displayed when the [secondaryAction]
+ * is activated). Adding undo composables allow users to undo the action that they just performed.
+ *
+ * Example of [SwipeToRevealChip] with primary and secondary actions
+ * @sample androidx.wear.compose.material.samples.SwipeToRevealChipSample
  *
  * @param primaryAction A [SwipeToRevealAction] instance to describe the primary action when
  * swiping. See [SwipeToRevealDefaults.primaryAction]. The action will be triggered on click or a
@@ -103,7 +120,18 @@ public fun SwipeToRevealChip(
 }
 
 /**
- * [SwipeToReveal] Material composable for Cards. This provides the default style for consistency.
+ * [SwipeToReveal] Material composable for [Card]s. This adds the option to configure up to two
+ * additional actions on the [Card]: a mandatory [primaryAction] and an optional
+ * [secondaryAction]. These actions are initially hidden and revealed only when the [content] is
+ * swiped. These additional actions can be triggered by clicking on them after they are revealed.
+ * [primaryAction] can also be triggered by performing a full swipe of the [content].
+ *
+ * For actions like "Delete", consider adding [undoPrimaryAction] (displayed when the
+ * [primaryAction] is activated) and/or [undoSecondaryAction] (displayed when the [secondaryAction]
+ * is activated). Adding undo composables allow users to undo the action that they just performed.
+ *
+ * Example of [SwipeToRevealCard] with primary and secondary actions
+ * @sample androidx.wear.compose.material.samples.SwipeToRevealCardSample
  *
  * @param primaryAction A [SwipeToRevealAction] instance to describe the primary action when
  * swiping. See [SwipeToRevealDefaults.primaryAction]. The action will be triggered on click or a
@@ -164,17 +192,19 @@ public object SwipeToRevealDefaults {
     public val CardActionShape = RoundedCornerShape(40.dp)
 
     /**
-     * Colors to be used with different actions in [SwipeToReveal].
+     * The recommended colors used to display the contents of the
+     * primary, secondary and undo actions in [SwipeToReveal].
      *
-     * @param primaryActionBackgroundColor The background color (color of the shape) of the primary
-     * action
-     * @param primaryActionContentColor The content color (text and icon) of the primary action
+     * @param primaryActionBackgroundColor The background color (color of the shape) of the
+     * [primaryAction]
+     * @param primaryActionContentColor The content color (text and icon) of the [primaryAction]
      * @param secondaryActionBackgroundColor The background color (color of the shape) of the
-     * secondary action
-     * @param secondaryActionContentColor The content color (text and icon) of the secondary
-     * action
-     * @param undoActionBackgroundColor The background color (color of the shape) of the undo action
-     * @param undoActionContentColor The content color (text) of the undo action
+     * [secondaryAction]
+     * @param secondaryActionContentColor The content color (text and icon) of the
+     * [secondaryAction]
+     * @param undoActionBackgroundColor The background color (color of the shape) of the
+     * [undoAction]
+     * @param undoActionContentColor The content color (text) of the [undoAction]
      */
     @Composable
     public fun actionColors(
@@ -304,6 +334,7 @@ public object SwipeToRevealDefaults {
 
 /**
  * A class representing the colors applied in [SwipeToReveal] actions.
+ * See [SwipeToRevealDefaults.actionColors].
  *
  * @param primaryActionBackgroundColor Color of the shape (background) of primary action
  * @param primaryActionContentColor Color of icon or text used in the primary action
@@ -352,12 +383,13 @@ public class SwipeToRevealActionColors constructor(
 /**
  * A class containing the details required for describing the content of an action composable.
  * Both composables, [icon] and [label] are optional, however it is expected that at least one is
- * provided.
+ * provided. See the parameters below on how these are used based on action.
  *
- * @param icon A slot for providing the icon for this [SwipeToReveal] action
+ * @param icon A slot for providing the icon for this [SwipeToReveal] action. This is mandatory for
+ * primary and secondary action. It is recommended to not use this for undo action.
  * @param label A slot for providing a text label for this [SwipeToRevealAction] action. The
  * content provided here will be used in different perspective based on the action type
- * (primary action, secondary action or undo action).
+ * (primary action or undo action). It is recommended to not use this for secondary action.
  * @param modifier The [Modifier] to be applied on the action.
  * @param actionType The [RevealActionType] that gets applied to [RevealState.lastActionType] when
  * this action is clicked.
@@ -521,9 +553,11 @@ private fun RevealScope.SwipeToRevealAction(
                     content = action.icon
                 )
             }
-            if (abs(revealState.offset) > revealOffset && action.label != null) {
-                Spacer(Modifier.size(5.dp))
-                action.label.invoke()
+            if (action.label != null) {
+                ActionLabel(
+                    revealState = revealState,
+                    content = action.label
+                )
             }
         }
     }
@@ -531,7 +565,7 @@ private fun RevealScope.SwipeToRevealAction(
 
 @OptIn(ExperimentalWearFoundationApi::class, ExperimentalWearMaterialApi::class)
 @Composable
-private fun RevealScope.UndoAction(
+private fun UndoAction(
     revealState: RevealState,
     undoAction: SwipeToRevealAction,
     colors: SwipeToRevealActionColors
@@ -578,11 +612,14 @@ private fun RevealScope.ActionIcon(
             ((-revealState.offset - revealOffset * 0.5f) / (revealOffset * 0.25f))
                 .coerceIn(0.0f, 1.0f)
         else 1f
-    // Scale icons from 50% to 100% between 50% and 100% of the progress
+    // Scale icons from 70% to 100% between 50% and 100% of the progress
     val iconScale =
         if (revealOffset > 0)
-            ((-revealState.offset - revealOffset * 0.5f) / revealOffset)
-                .coerceIn(0.0f, 0.5f) + 0.5f
+            lerp(
+                start = 0.7f,
+                stop = 1.0f,
+                fraction = (-revealState.offset - revealOffset * 0.5f) / revealOffset + 0.5f
+            )
         else 1f
     Box(
         modifier = Modifier.graphicsLayer {
@@ -592,5 +629,31 @@ private fun RevealScope.ActionIcon(
         }
     ) {
         content()
+    }
+}
+
+@OptIn(ExperimentalWearFoundationApi::class)
+@Composable
+private fun RevealScope.ActionLabel(
+    revealState: RevealState,
+    content: @Composable () -> Unit
+) {
+    val labelAlpha = animateFloatAsState(
+        targetValue = if (abs(revealState.offset) > revealOffset) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = RAPID,
+            delayMillis = RAPID
+        ),
+        label = "ActionLabelAlpha"
+    )
+    AnimatedVisibility(
+        visible = abs(revealState.offset) > revealOffset,
+        enter = expandHorizontally(animationSpec = tween(durationMillis = RAPID)),
+        exit = ExitTransition.None
+    ) {
+        Box(modifier = Modifier.graphicsLayer { alpha = labelAlpha.value }) {
+            Spacer(Modifier.size(5.dp))
+            content.invoke()
+        }
     }
 }

@@ -402,13 +402,26 @@ package androidx.wear.compose.material {
     property public final int Right;
   }
 
+  public final class PositionIndicatorDefaults {
+    method public androidx.compose.animation.core.AnimationSpec<java.lang.Float> getPositionAnimationSpec();
+    method public androidx.compose.animation.core.AnimationSpec<java.lang.Float> getVisibilityAnimationSpec();
+    property public final androidx.compose.animation.core.AnimationSpec<java.lang.Float> positionAnimationSpec;
+    property public final androidx.compose.animation.core.AnimationSpec<java.lang.Float> visibilityAnimationSpec;
+    field public static final androidx.wear.compose.material.PositionIndicatorDefaults INSTANCE;
+  }
+
   public final class PositionIndicatorKt {
-    method @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.compose.foundation.lazy.LazyListState lazyListState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection);
-    method @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.compose.foundation.ScrollState scrollState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection);
-    method @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.wear.compose.foundation.lazy.ScalingLazyListState scalingLazyListState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection);
-    method @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.wear.compose.material.PositionIndicatorState state, float indicatorHeight, float indicatorWidth, float paddingHorizontal, optional androidx.compose.ui.Modifier modifier, optional long background, optional long color, optional boolean reverseDirection, optional int position);
+    method @Deprecated @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.compose.foundation.lazy.LazyListState lazyListState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection);
+    method @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.compose.foundation.lazy.LazyListState lazyListState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeInAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeOutAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> positionAnimationSpec);
+    method @Deprecated @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.compose.foundation.ScrollState scrollState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection);
+    method @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.compose.foundation.ScrollState scrollState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeInAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeOutAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> positionAnimationSpec);
+    method @Deprecated @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.wear.compose.foundation.lazy.ScalingLazyListState scalingLazyListState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection);
+    method @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.wear.compose.foundation.lazy.ScalingLazyListState scalingLazyListState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeInAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeOutAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> positionAnimationSpec);
+    method @Deprecated @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.wear.compose.material.PositionIndicatorState state, float indicatorHeight, float indicatorWidth, float paddingHorizontal, optional androidx.compose.ui.Modifier modifier, optional long background, optional long color, optional boolean reverseDirection, optional int position);
+    method @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.wear.compose.material.PositionIndicatorState state, float indicatorHeight, float indicatorWidth, float paddingHorizontal, optional androidx.compose.ui.Modifier modifier, optional long background, optional long color, optional boolean reverseDirection, optional int position, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeInAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeOutAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> positionAnimationSpec);
     method @Deprecated @androidx.compose.runtime.Composable public static void PositionIndicator(androidx.wear.compose.material.ScalingLazyListState scalingLazyListState, optional androidx.compose.ui.Modifier modifier, optional boolean reverseDirection);
-    method @androidx.compose.runtime.Composable public static void PositionIndicator(kotlin.jvm.functions.Function0<java.lang.Float> value, optional androidx.compose.ui.Modifier modifier, optional kotlin.ranges.ClosedFloatingPointRange<java.lang.Float> range, optional long color, optional boolean reverseDirection, optional int position);
+    method @Deprecated @androidx.compose.runtime.Composable public static void PositionIndicator(kotlin.jvm.functions.Function0<java.lang.Float> value, optional androidx.compose.ui.Modifier modifier, optional kotlin.ranges.ClosedFloatingPointRange<java.lang.Float> range, optional long color, optional boolean reverseDirection, optional int position);
+    method @androidx.compose.runtime.Composable public static void PositionIndicator(kotlin.jvm.functions.Function0<java.lang.Float> value, optional androidx.compose.ui.Modifier modifier, optional kotlin.ranges.ClosedFloatingPointRange<java.lang.Float> range, optional long color, optional boolean reverseDirection, optional int position, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeInAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> fadeOutAnimationSpec, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> positionAnimationSpec);
   }
 
   @androidx.compose.runtime.Stable public interface PositionIndicatorState {
@@ -551,14 +564,14 @@ package androidx.wear.compose.material {
 
   @Deprecated @androidx.compose.runtime.Stable public final class ScalingLazyListState implements androidx.compose.foundation.gestures.ScrollableState {
     ctor @Deprecated public ScalingLazyListState(optional int initialCenterItemIndex, optional int initialCenterItemScrollOffset);
-    method @Deprecated public suspend Object? animateScrollToItem(int index, optional int scrollOffset, optional kotlin.coroutines.Continuation<? super kotlin.Unit>);
+    method @Deprecated public suspend Object? animateScrollToItem(int index, optional int scrollOffset, kotlin.coroutines.Continuation<? super kotlin.Unit>);
     method @Deprecated public float dispatchRawDelta(float delta);
     method @Deprecated public int getCenterItemIndex();
     method @Deprecated public int getCenterItemScrollOffset();
     method @Deprecated public androidx.wear.compose.material.ScalingLazyListLayoutInfo getLayoutInfo();
     method @Deprecated public boolean isScrollInProgress();
     method @Deprecated public suspend Object? scroll(androidx.compose.foundation.MutatePriority scrollPriority, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.gestures.ScrollScope,? super kotlin.coroutines.Continuation<? super kotlin.Unit>,?> block, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-    method @Deprecated public suspend Object? scrollToItem(int index, optional int scrollOffset, optional kotlin.coroutines.Continuation<? super kotlin.Unit>);
+    method @Deprecated public suspend Object? scrollToItem(int index, optional int scrollOffset, kotlin.coroutines.Continuation<? super kotlin.Unit>);
     property @Deprecated public boolean canScrollBackward;
     property @Deprecated public boolean canScrollForward;
     property @Deprecated public final int centerItemIndex;
@@ -654,30 +667,32 @@ package androidx.wear.compose.material {
     property public final T to;
   }
 
-  public final class SwipeToDismissBoxDefaults {
-    method public androidx.compose.animation.core.SpringSpec<java.lang.Float> getAnimationSpec();
-    method public float getEdgeWidth();
-    property public final androidx.compose.animation.core.SpringSpec<java.lang.Float> AnimationSpec;
-    property public final float EdgeWidth;
-    field public static final androidx.wear.compose.material.SwipeToDismissBoxDefaults INSTANCE;
+  @Deprecated @androidx.compose.runtime.Stable public final class SwipeToDismissBoxDefaults {
+    method @Deprecated public androidx.compose.animation.core.SpringSpec<java.lang.Float> getAnimationSpec();
+    method @Deprecated public float getEdgeWidth();
+    property @Deprecated public final androidx.compose.animation.core.SpringSpec<java.lang.Float> AnimationSpec;
+    property @Deprecated public final float EdgeWidth;
+    field @Deprecated public static final androidx.wear.compose.material.SwipeToDismissBoxDefaults INSTANCE;
   }
 
   public final class SwipeToDismissBoxKt {
-    method @androidx.compose.runtime.Composable public static void SwipeToDismissBox(androidx.wear.compose.material.SwipeToDismissBoxState state, optional androidx.compose.ui.Modifier modifier, optional long backgroundScrimColor, optional long contentScrimColor, optional Object backgroundKey, optional Object contentKey, optional boolean hasBackground, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.layout.BoxScope,? super java.lang.Boolean,kotlin.Unit> content);
-    method @androidx.compose.runtime.Composable public static void SwipeToDismissBox(kotlin.jvm.functions.Function0<kotlin.Unit> onDismissed, optional androidx.compose.ui.Modifier modifier, optional androidx.wear.compose.material.SwipeToDismissBoxState state, optional long backgroundScrimColor, optional long contentScrimColor, optional Object backgroundKey, optional Object contentKey, optional boolean hasBackground, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.layout.BoxScope,? super java.lang.Boolean,kotlin.Unit> content);
-    method public static androidx.compose.ui.Modifier edgeSwipeToDismiss(androidx.compose.ui.Modifier, androidx.wear.compose.material.SwipeToDismissBoxState swipeToDismissBoxState, optional float edgeWidth);
-    method @androidx.compose.runtime.Composable public static androidx.wear.compose.material.SwipeToDismissBoxState rememberSwipeToDismissBoxState(optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> animationSpec, optional kotlin.jvm.functions.Function1<? super androidx.wear.compose.material.SwipeToDismissValue,java.lang.Boolean> confirmStateChange);
+    method @androidx.compose.runtime.Composable public static void SwipeToDismissBox(androidx.wear.compose.foundation.SwipeToDismissBoxState state, optional androidx.compose.ui.Modifier modifier, optional long backgroundScrimColor, optional long contentScrimColor, optional Object backgroundKey, optional Object contentKey, optional boolean hasBackground, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.layout.BoxScope,? super java.lang.Boolean,kotlin.Unit> content);
+    method @Deprecated @androidx.compose.runtime.Composable public static void SwipeToDismissBox(androidx.wear.compose.material.SwipeToDismissBoxState state, optional androidx.compose.ui.Modifier modifier, optional long backgroundScrimColor, optional long contentScrimColor, optional Object backgroundKey, optional Object contentKey, optional boolean hasBackground, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.layout.BoxScope,? super java.lang.Boolean,kotlin.Unit> content);
+    method @androidx.compose.runtime.Composable public static void SwipeToDismissBox(kotlin.jvm.functions.Function0<kotlin.Unit> onDismissed, optional androidx.compose.ui.Modifier modifier, optional androidx.wear.compose.foundation.SwipeToDismissBoxState state, optional long backgroundScrimColor, optional long contentScrimColor, optional Object backgroundKey, optional Object contentKey, optional boolean hasBackground, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.layout.BoxScope,? super java.lang.Boolean,kotlin.Unit> content);
+    method @Deprecated @androidx.compose.runtime.Composable public static void SwipeToDismissBox(kotlin.jvm.functions.Function0<kotlin.Unit> onDismissed, optional androidx.compose.ui.Modifier modifier, optional androidx.wear.compose.material.SwipeToDismissBoxState state, optional long backgroundScrimColor, optional long contentScrimColor, optional Object backgroundKey, optional Object contentKey, optional boolean hasBackground, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.layout.BoxScope,? super java.lang.Boolean,kotlin.Unit> content);
+    method @Deprecated public static androidx.compose.ui.Modifier edgeSwipeToDismiss(androidx.compose.ui.Modifier, androidx.wear.compose.material.SwipeToDismissBoxState swipeToDismissBoxState, optional float edgeWidth);
+    method @Deprecated @androidx.compose.runtime.Composable public static androidx.wear.compose.material.SwipeToDismissBoxState rememberSwipeToDismissBoxState(optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> animationSpec, optional kotlin.jvm.functions.Function1<? super androidx.wear.compose.material.SwipeToDismissValue,java.lang.Boolean> confirmStateChange);
   }
 
-  @androidx.compose.runtime.Stable public final class SwipeToDismissBoxState {
-    ctor public SwipeToDismissBoxState(optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> animationSpec, optional kotlin.jvm.functions.Function1<? super androidx.wear.compose.material.SwipeToDismissValue,java.lang.Boolean> confirmStateChange);
-    method public androidx.wear.compose.material.SwipeToDismissValue getCurrentValue();
-    method public androidx.wear.compose.material.SwipeToDismissValue getTargetValue();
-    method public boolean isAnimationRunning();
-    method public suspend Object? snapTo(androidx.wear.compose.material.SwipeToDismissValue targetValue, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-    property public final androidx.wear.compose.material.SwipeToDismissValue currentValue;
-    property public final boolean isAnimationRunning;
-    property public final androidx.wear.compose.material.SwipeToDismissValue targetValue;
+  @Deprecated @androidx.compose.runtime.Stable public final class SwipeToDismissBoxState {
+    ctor @Deprecated public SwipeToDismissBoxState(optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> animationSpec, optional kotlin.jvm.functions.Function1<? super androidx.wear.compose.material.SwipeToDismissValue,java.lang.Boolean> confirmStateChange);
+    method @Deprecated public androidx.wear.compose.material.SwipeToDismissValue getCurrentValue();
+    method @Deprecated public androidx.wear.compose.material.SwipeToDismissValue getTargetValue();
+    method @Deprecated public boolean isAnimationRunning();
+    method @Deprecated public suspend Object? snapTo(androidx.wear.compose.material.SwipeToDismissValue targetValue, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+    property @Deprecated public final androidx.wear.compose.material.SwipeToDismissValue currentValue;
+    property @Deprecated public final boolean isAnimationRunning;
+    property @Deprecated public final androidx.wear.compose.material.SwipeToDismissValue targetValue;
   }
 
   public enum SwipeToDismissKeys {
@@ -687,11 +702,11 @@ package androidx.wear.compose.material {
     enum_constant public static final androidx.wear.compose.material.SwipeToDismissKeys Content;
   }
 
-  public enum SwipeToDismissValue {
-    method public static androidx.wear.compose.material.SwipeToDismissValue valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.wear.compose.material.SwipeToDismissValue[] values();
-    enum_constant public static final androidx.wear.compose.material.SwipeToDismissValue Default;
-    enum_constant public static final androidx.wear.compose.material.SwipeToDismissValue Dismissed;
+  @Deprecated public enum SwipeToDismissValue {
+    method @Deprecated public static androidx.wear.compose.material.SwipeToDismissValue valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
+    method @Deprecated public static androidx.wear.compose.material.SwipeToDismissValue[] values();
+    enum_constant @Deprecated public static final androidx.wear.compose.material.SwipeToDismissValue Default;
+    enum_constant @Deprecated public static final androidx.wear.compose.material.SwipeToDismissValue Dismissed;
   }
 
   @SuppressCompatibility @androidx.wear.compose.material.ExperimentalWearMaterialApi public final class SwipeToRevealAction {
@@ -763,7 +778,7 @@ package androidx.wear.compose.material {
 
   @SuppressCompatibility @androidx.compose.runtime.Stable @androidx.wear.compose.material.ExperimentalWearMaterialApi public class SwipeableState<T> {
     ctor public SwipeableState(T initialValue, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> animationSpec, optional kotlin.jvm.functions.Function1<? super T,java.lang.Boolean> confirmStateChange);
-    method @SuppressCompatibility @androidx.wear.compose.material.ExperimentalWearMaterialApi public final suspend Object? animateTo(T targetValue, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> anim, optional kotlin.coroutines.Continuation<? super kotlin.Unit>);
+    method @SuppressCompatibility @androidx.wear.compose.material.ExperimentalWearMaterialApi public final suspend Object? animateTo(T targetValue, optional androidx.compose.animation.core.AnimationSpec<java.lang.Float> anim, kotlin.coroutines.Continuation<? super kotlin.Unit>);
     method public final T getCurrentValue();
     method public final float getDirection();
     method public final androidx.compose.runtime.State<java.lang.Float> getOffset();

@@ -280,13 +280,16 @@ public class UiDevice implements Searchable {
     }
 
     /**
-     * Retrieves a singleton instance of UiDevice
+     * Retrieves a singleton instance of UiDevice. A new instance will be created if
+     * instrumentation is also new.
      *
      * @return UiDevice instance
      */
     @NonNull
     public static UiDevice getInstance(@NonNull Instrumentation instrumentation) {
-        if (sInstance == null) {
+        if (sInstance == null || !instrumentation.equals(sInstance.mInstrumentation)) {
+            Log.i(TAG, String.format("Creating a new instance, old instance exists: %b",
+                    (sInstance != null)));
             sInstance = new UiDevice(instrumentation);
         }
         return sInstance;
@@ -1332,6 +1335,11 @@ public class UiDevice implements Searchable {
         }
     }
 
+    /**
+     * Gets the display with {@code displayId}. The display may be null because it may be a private
+     * virtual display, for example.
+     */
+    @Nullable
     Display getDisplayById(int displayId) {
         return mDisplayManager.getDisplay(displayId);
     }

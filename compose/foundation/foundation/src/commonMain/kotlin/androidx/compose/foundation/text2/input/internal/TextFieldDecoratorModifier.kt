@@ -22,9 +22,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text2.BasicTextField2
 import androidx.compose.foundation.text2.input.InputTransformation
-import androidx.compose.foundation.text2.input.TextFieldState
-import androidx.compose.foundation.text2.input.deselect
 import androidx.compose.foundation.text2.input.internal.selection.TextFieldSelectionState
+import androidx.compose.foundation.text2.input.internal.selection.TextToolbarState
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusManager
@@ -41,17 +40,21 @@ import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.GlobalPositionAwareModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.ObserverModifierNode
 import androidx.compose.ui.node.PointerInputModifierNode
 import androidx.compose.ui.node.SemanticsModifierNode
 import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.node.invalidateSemantics
+import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.PlatformTextInputModifierNode
 import androidx.compose.ui.platform.PlatformTextInputSession
 import androidx.compose.ui.platform.SoftwareKeyboardController
-import androidx.compose.ui.platform.textInputSession
+import androidx.compose.ui.platform.WindowInfo
+import androidx.compose.ui.platform.establishTextInputSession
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.copyText
 import androidx.compose.ui.semantics.cutText
@@ -61,11 +64,13 @@ import androidx.compose.ui.semantics.getTextLayoutResult
 import androidx.compose.ui.semantics.insertTextAtCursor
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onImeAction
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.pasteText
 import androidx.compose.ui.semantics.setSelection
 import androidx.compose.ui.semantics.setText
 import androidx.compose.ui.semantics.textSelectionRange
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -84,7 +89,7 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalFoundationApi::class)
 internal data class TextFieldDecoratorModifier(
-    private val textFieldState: TextFieldState,
+    private val textFieldState: TransformedTextFieldState,
     private val textLayoutState: TextLayoutState,
     private val textFieldSelectionState: TextFieldSelectionState,
     private val filter: InputTransformation?,
@@ -128,7 +133,7 @@ internal data class TextFieldDecoratorModifier(
 /** Modifier node for [TextFieldDecoratorModifier]. */
 @OptIn(ExperimentalFoundationApi::class)
 internal class TextFieldDecoratorModifierNode(
-    var textFieldState: TextFieldState,
+    var textFieldState: TransformedTextFieldState,
     var textLayoutState: TextLayoutState,
     var textFieldSelectionState: TextFieldSelectionState,
     var filter: InputTransformation?,
@@ -145,7 +150,8 @@ internal class TextFieldDecoratorModifierNode(
     GlobalPositionAwareModifierNode,
     PointerInputModifierNode,
     KeyInputModifierNode,
-    CompositionLocalConsumerModifierNode {
+    CompositionLocalConsumerModifierNode,
+    ObserverModifierNode {
 
     private val pointerInputNode = delegate(SuspendingPointerInputModifierNode {
         with(textFieldSelectionState) {
@@ -163,15 +169,24 @@ internal class TextFieldDecoratorModifierNode(
     var keyboardOptions: KeyboardOptions = keyboardOptions.withDefaultsFrom(filter?.keyboardOptions)
         private set
 
-    private var isFocused: Boolean = false
+    /**
+     * Needs to be kept separate from a window focus so we can restart an input session when the
+     * window receives the focus back. Element can stay focused even if the window loses its focus.
+     */
+    private var isElementFocused: Boolean = false
+
+    /**
+     * Keeps focus state of the window
+     */
+    private var windowInfo: WindowInfo? = null
+
+    private val isFocused: Boolean get() = isElementFocused && windowInfo?.isWindowFocused == true
 
     /**
      * Manages key events. These events often are sourced by a hardware keyboard but it's also
      * possible that IME or some other platform system simulates a KeyEvent.
      */
-    private val textFieldKeyEventHandler = createTextFieldKeyEventHandler().also {
-        it.setFilter(filter)
-    }
+    private val textFieldKeyEventHandler = createTextFieldKeyEventHandler()
 
     private val keyboardActionScope = object : KeyboardActionScope {
         private val focusManager: FocusManager
@@ -219,7 +234,7 @@ internal class TextFieldDecoratorModifierNode(
      * Updates all the related properties and invalidates internal state based on the changes.
      */
     fun updateNode(
-        textFieldState: TextFieldState,
+        textFieldState: TransformedTextFieldState,
         textLayoutState: TextLayoutState,
         textFieldSelectionState: TextFieldSelectionState,
         filter: InputTransformation?,
@@ -270,8 +285,6 @@ internal class TextFieldDecoratorModifierNode(
             invalidateSemantics()
         }
 
-        textFieldKeyEventHandler.setFilter(filter)
-
         if (textFieldSelectionState != previousTextFieldSelectionState) {
             pointerInputNode.resetPointerInputHandler()
         }
@@ -282,54 +295,68 @@ internal class TextFieldDecoratorModifierNode(
 
     // This function is called inside a snapshot observer.
     override fun SemanticsPropertyReceiver.applySemantics() {
-        val text = textFieldState.text
+        val text = textFieldState.untransformedText
         val selection = text.selectionInChars
+        editableText = AnnotatedString(text.toString())
+        textSelectionRange = selection
 
         getTextLayoutResult {
             textLayoutState.layoutResult?.let { result -> it.add(result) } ?: false
         }
-        editableText = AnnotatedString(text.toString())
-        textSelectionRange = selection
         if (!enabled) disabled()
 
         setText { newText ->
             if (readOnly || !enabled) return@setText false
 
-            textFieldState.editAsUser(filter) {
-                deleteAll()
-                commitText(newText.toString(), 1)
-            }
+            textFieldState.replaceAll(newText)
             true
         }
-        setSelection { start, end, _ ->
-            // BasicTextField2 doesn't have VisualTransformation for the time being and
-            // probably won't have something that uses offsetMapping design. We can safely
-            // skip relativeToOriginalText flag. Assume it's always true.
-
-            if (!enabled) {
-                false
-            } else if (start == selection.start && end == selection.end) {
-                false
-            } else if (start.coerceAtMost(end) >= 0 &&
-                start.coerceAtLeast(end) <= text.length
-            ) {
-                textFieldState.editAsUser(filter) {
-                    setSelection(start, end)
-                }
-                true
+        @Suppress("NAME_SHADOWING")
+        setSelection { start, end, relativeToOriginal ->
+            // in traversal mode (relativeToOriginal=true) we get selection from the
+            // `textSelectionRange` semantics which is selection in original text. In non-traversal
+            // mode selection comes from the Talkback and indices are relative to the transformed
+            // text
+            val text = if (relativeToOriginal) {
+                textFieldState.untransformedText
             } else {
-                false
+                textFieldState.text
             }
+            val selection = text.selectionInChars
+
+            if (!enabled ||
+                minOf(start, end) < 0 ||
+                maxOf(start, end) > text.length
+            ) {
+                return@setSelection false
+            }
+
+            // Selection is already selected, don't need to do any work.
+            if (start == selection.start && end == selection.end) {
+                return@setSelection true
+            }
+
+            val selectionRange = TextRange(start, end)
+            // Do not show toolbar if it's a traversal mode (with the volume keys), or if the
+            // selection is collapsed.
+            if (relativeToOriginal || start == end) {
+                textFieldSelectionState.updateTextToolbarState(TextToolbarState.None)
+            } else {
+                textFieldSelectionState.updateTextToolbarState(TextToolbarState.Selection)
+            }
+            if (relativeToOriginal) {
+                textFieldState.selectUntransformedCharsIn(selectionRange)
+            } else {
+                textFieldState.selectCharsIn(selectionRange)
+            }
+            return@setSelection true
         }
         insertTextAtCursor { newText ->
             if (readOnly || !enabled) return@insertTextAtCursor false
 
-            textFieldState.editAsUser(filter) {
-                // Finish composing text first because when the field is focused the IME
-                // might set composition.
-                commitComposition()
-                commitText(newText.toString(), 1)
-            }
+            // Finish composing text first because when the field is focused the IME
+            // might set composition.
+            textFieldState.replaceSelectedText(newText, clearComposition = true)
             true
         }
         onImeAction(keyboardOptions.imeAction) {
@@ -344,6 +371,13 @@ internal class TextFieldDecoratorModifierNode(
             } else if (!readOnly) {
                 requireKeyboardController().show()
             }
+            true
+        }
+        onLongClick {
+            if (!isFocused) {
+                requestFocus()
+            }
+            textFieldSelectionState.updateTextToolbarState(TextToolbarState.Selection)
             true
         }
         if (!selection.collapsed) {
@@ -367,11 +401,11 @@ internal class TextFieldDecoratorModifierNode(
     }
 
     override fun onFocusEvent(focusState: FocusState) {
-        if (isFocused == focusState.isFocused) {
+        if (isElementFocused == focusState.isFocused) {
             return
         }
-        isFocused = focusState.isFocused
-        textFieldSelectionState.isFocused = focusState.isFocused
+        isElementFocused = focusState.isFocused
+        textFieldSelectionState.isFocused = this.isFocused
 
         if (focusState.isFocused) {
             // Deselect when losing focus even if readonly.
@@ -381,8 +415,12 @@ internal class TextFieldDecoratorModifierNode(
             }
         } else {
             disposeInputSession()
-            textFieldState.deselect()
+            textFieldState.collapseSelectionToMax()
         }
+    }
+
+    override fun onAttach() {
+        onObservedReadsChanged()
     }
 
     override fun onDetach() {
@@ -390,7 +428,7 @@ internal class TextFieldDecoratorModifierNode(
     }
 
     override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
-        textLayoutState.decorationBoxCoordinates = coordinates
+        textLayoutState.decoratorNodeCoordinates = coordinates
     }
 
     override fun onPointerEvent(
@@ -419,7 +457,6 @@ internal class TextFieldDecoratorModifierNode(
         return textFieldKeyEventHandler.onKeyEvent(
             event = event,
             textFieldState = textFieldState,
-            inputTransformation = filter,
             textLayoutState = textLayoutState,
             textFieldSelectionState = textFieldSelectionState,
             editable = enabled && !readOnly,
@@ -428,11 +465,18 @@ internal class TextFieldDecoratorModifierNode(
         )
     }
 
+    override fun onObservedReadsChanged() {
+        observeReads {
+            windowInfo = currentValueOf(LocalWindowInfo)
+            startOrDisposeInputSessionOnWindowFocusChange()
+        }
+    }
+
     private fun startInputSession() {
         inputSessionJob = coroutineScope.launch {
             // This will automatically cancel the previous session, if any, so we don't need to
             // cancel the inputSessionJob ourselves.
-            textInputSession {
+            establishTextInputSession {
                 // Re-start observing changes in case our TextFieldState instance changed.
                 launch(start = CoroutineStart.UNDISPATCHED) {
                     textFieldSelectionState.observeChanges()
@@ -441,7 +485,6 @@ internal class TextFieldDecoratorModifierNode(
                 platformSpecificTextInputSession(
                     textFieldState,
                     keyboardOptions.toImeOptions(singleLine),
-                    filter = filter,
                     onImeAction = onImeActionPerformed
                 )
             }
@@ -453,6 +496,15 @@ internal class TextFieldDecoratorModifierNode(
         inputSessionJob = null
     }
 
+    private fun startOrDisposeInputSessionOnWindowFocusChange() {
+        if (windowInfo == null) return
+        if (windowInfo?.isWindowFocused == true && isElementFocused) {
+            startInputSession()
+        } else {
+            disposeInputSession()
+        }
+    }
+
     private fun requireKeyboardController(): SoftwareKeyboardController =
         currentValueOf(LocalSoftwareKeyboardController)
             ?: error("No software keyboard controller")
@@ -461,11 +513,9 @@ internal class TextFieldDecoratorModifierNode(
 /**
  * Runs platform-specific text input logic.
  */
-@OptIn(ExperimentalFoundationApi::class)
 internal expect suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
-    state: TextFieldState,
+    state: TransformedTextFieldState,
     imeOptions: ImeOptions,
-    filter: InputTransformation?,
     onImeAction: ((ImeAction) -> Unit)?
 ): Nothing
 
@@ -473,10 +523,10 @@ internal expect suspend fun PlatformTextInputSession.platformSpecificTextInputSe
  * Returns a [KeyboardOptions] that is merged with [defaults], with this object's values taking
  * precedence.
  */
-// TODO KeyboardOptions can't actually be merged correctly in all cases, because its properties
-//  don't all have proper "unspecified" values. I think we can fix that in a backwards-compatible
-//  way, but it will require adding new API outside of the text2 package so we should hold off on
-//  making them until after the study.
+// TODO(b/295951492) KeyboardOptions can't actually be merged correctly in all cases, because its
+//  properties don't all have proper "unspecified" values. I think we can fix that in a
+//  backwards-compatible way, but it will require adding new API outside of the text2 package so we
+//  should hold off on making them until after the study.
 internal fun KeyboardOptions.withDefaultsFrom(defaults: KeyboardOptions?): KeyboardOptions {
     if (defaults == null) return this
     return KeyboardOptions(

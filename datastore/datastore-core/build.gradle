@@ -19,6 +19,7 @@ import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import com.google.protobuf.gradle.ProtobufExtract
 
 plugins {
     id("AndroidXPlugin")
@@ -43,9 +44,6 @@ protobuf {
     protoc {
         artifact = libs.protobufCompiler.get()
     }
-    // Generates the java proto-lite code for the protos in this project. See
-    // https://github.com/google/protobuf-gradle-plugin#customizing-protobuf-compilation
-    // for more information.
     generateProtoTasks {
         all().each { task ->
             task.builtins {
@@ -55,6 +53,11 @@ protobuf {
             }
         }
     }
+}
+
+def protoDir = project.layout.projectDirectory.dir("src/androidInstrumentedTest/proto")
+tasks.named("extractAndroidTestProto").configure {
+    it.inputFiles.from(project.files(protoDir))
 }
 
 androidXMultiplatform {
@@ -75,15 +78,20 @@ androidXMultiplatform {
             dependencies {
                 api(libs.kotlinStdlib)
                 api(libs.kotlinCoroutinesCore)
+                api("androidx.annotation:annotation:1.7.0")
             }
         }
-        jvmMain {
-            dependencies {
-                api("androidx.annotation:annotation:1.3.0")
-            }
+
+        commonJvmMain {
+            dependsOn(commonMain)
         }
+
         androidMain {
-            dependsOn(jvmMain)
+            dependsOn(commonJvmMain)
+        }
+
+        jvmMain {
+            dependsOn(commonJvmMain)
         }
 
         commonTest {
@@ -98,7 +106,8 @@ androidXMultiplatform {
             }
         }
 
-        jvmTest {
+        commonJvmTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.junit)
                 implementation(libs.kotlinTest)
@@ -110,8 +119,19 @@ androidXMultiplatform {
             }
         }
 
-        androidTest {
-            dependsOn(jvmTest)
+        jvmTest {
+            dependsOn(commonJvmTest)
+        }
+
+        androidUnitTest {
+            dependsOn(commonJvmTest)
+            dependencies {
+                implementation(libs.protobufLite)
+            }
+        }
+
+        androidInstrumentedTest {
+            dependsOn(commonJvmTest)
             dependencies {
                 implementation(libs.protobufLite)
                 implementation(libs.truth)
@@ -123,10 +143,6 @@ androidXMultiplatform {
                 // Workaround bug in 1.8.0, was supposed be fixed in RC2/final, but apparently not.
                 implementation(libs.kotlinTestJunit)
             }
-        }
-
-        androidAndroidTest {
-            dependsOn(androidTest)
         }
 
         if (enableNative) {

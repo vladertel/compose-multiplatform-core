@@ -82,7 +82,7 @@ class ImageCaptureConfigProviderTest {
     @After
     fun cleanUp(): Unit = runBlocking {
         if (::cameraProvider.isInitialized) {
-            cameraProvider.shutdown()[10000, TimeUnit.MILLISECONDS]
+            cameraProvider.shutdownAsync()[10000, TimeUnit.MILLISECONDS]
         }
     }
 
@@ -135,8 +135,8 @@ class ImageCaptureConfigProviderTest {
             basicVendorExtender.init(camera.cameraInfo)
         }
         return ImageCapture.Builder().also {
-            ImageCaptureConfigProvider(extensionMode, basicVendorExtender).apply {
-                updateBuilderConfig(it, extensionMode, basicVendorExtender)
+            ImageCaptureConfigProvider(basicVendorExtender).apply {
+                updateBuilderConfig(it, basicVendorExtender)
             }
         }.build()
     }

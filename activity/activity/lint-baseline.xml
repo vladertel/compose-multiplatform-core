@@ -1,67 +1,139 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 8.2.0-alpha14" type="baseline" client="cli" dependencies="false" name="AGP (8.2.0-alpha14)" variant="all" version="8.2.0-alpha14">
+<issues format="6" by="lint 8.3.0-alpha04" type="baseline" client="gradle" dependencies="false" name="AGP (8.3.0-alpha04)" variant="all" version="8.3.0-alpha04">
 
     <issue
-        id="NewApi"
-        message="Field requires API level 19 (current min is 14): `ImageAndVideo`"
-        errorLine1="    mediaType: VisualMediaType = ImageAndVideo"
-        errorLine2="                                 ~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 18"
+        errorLine1="    @RequiresApi(18)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 18"
+        errorLine1="        @RequiresApi(18)"
+        errorLine2="        ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="        if (Build.VERSION.SDK_INT >= 19) {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="        if (19 &lt;= SDK_INT &amp;&amp; SDK_INT &lt;= 23) {"
+        errorLine2="            ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is never &lt; 19"
+        errorLine1="        if (SDK_INT &lt; Build.VERSION_CODES.JELLY_BEAN) {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 16"
+        errorLine1="    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="@RequiresApi(19)"
+        errorLine2="~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ImmLeaksCleaner.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="@RequiresApi(19)"
+        errorLine2="~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/result/PickVisualMediaRequest.kt"/>
     </issue>
 
     <issue
-        id="NewApi"
-        message="Field requires API level 19 (current min is 14): `ImageAndVideo`"
-        errorLine1="    var mediaType: VisualMediaType = ImageAndVideo"
-        errorLine2="                                     ~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="@RequiresApi(19)"
+        errorLine2="~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/result/PickVisualMediaRequest.kt"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Field requires API level 19 (current min is 14): `ImageAndVideo`"
-        errorLine1="        private var mediaType: VisualMediaType = ImageAndVideo"
-        errorLine2="                                                 ~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/activity/result/PickVisualMediaRequest.kt"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Field requires API level 19 (current min is 14): `VideoOnly`"
-        errorLine1="            ActivityResultContracts.PickVisualMedia.VideoOnly"
-        errorLine2="                                                    ~~~~~~~~~">
-        <location
-            file="src/androidTest/java/androidx/activity/result/PickVisualMediaRequestTest.kt"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Field requires API level 19 (current min is 14): `VideoOnly`"
-        errorLine1="        assertThat(request.mediaType).isEqualTo(ActivityResultContracts.PickVisualMedia.VideoOnly)"
-        errorLine2="                                                                                        ~~~~~~~~~">
-        <location
-            file="src/androidTest/java/androidx/activity/result/PickVisualMediaRequestTest.kt"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Field requires API level 19 (current min is 14): `VideoOnly`"
-        errorLine1="        val request = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)"
-        errorLine2="                                                                                     ~~~~~~~~~">
-        <location
-            file="src/androidTest/java/androidx/activity/result/PickVisualMediaRequestTest.kt"/>
-    </issue>
-
-    <issue
-        id="NewApi"
-        message="Field requires API level 19 (current min is 14): `VideoOnly`"
-        errorLine1="        assertThat(request.mediaType).isEqualTo(ActivityResultContracts.PickVisualMedia.VideoOnly)"
-        errorLine2="                                                                                        ~~~~~~~~~">
-        <location
-            file="src/androidTest/java/androidx/activity/result/PickVisualMediaRequestTest.kt"/>
     </issue>
 
 </issues>

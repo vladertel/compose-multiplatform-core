@@ -20,7 +20,7 @@ package androidx.compose.runtime
 import androidx.compose.runtime.changelist.ChangeList
 import androidx.compose.runtime.collection.IdentityArrayMap
 import androidx.compose.runtime.collection.IdentityArraySet
-import androidx.compose.runtime.collection.IdentityScopeMap
+import androidx.compose.runtime.collection.ScopeMap
 import androidx.compose.runtime.collection.fastForEach
 import androidx.compose.runtime.snapshots.fastAll
 import androidx.compose.runtime.snapshots.fastAny
@@ -90,16 +90,17 @@ sealed interface ReusableComposition : Composition {
      * After this has been called the changes to produce the initial composition has been calculated
      * and applied to the composition.
      *
+     * This method forces this composition into "reusing" state before setting content. In reusing
+     * state, all remembered content is discarded, and nodes emitted by [ReusableComposeNode] are
+     * re-used for the new content. The nodes are only reused if the group structure containing
+     * the node matches new content.
+     *
      * Will throw an [IllegalStateException] if the composition has been disposed.
      *
      * @param content A composable function that describes the content of the composition.
-     * @param reusing Whether to force this composition into "reusing" state. In reusing state,
-     *     all remembered content is discarded, and nodes emitted by [ReusableComposeNode] are
-     *     re-used for the new content. The nodes are only reused if the group structure containing
-     *     the node matches new content.
      * @exception IllegalStateException thrown in the composition has been [dispose]d.
      */
-    fun setContent(reusing: Boolean, content: @Composable () -> Unit)
+    fun setContentWithReuse(content: @Composable () -> Unit)
 
     /**
      * Deactivate all observation scopes in composition and remove all remembered slots while
@@ -471,12 +472,13 @@ internal class CompositionImpl(
      * A map of observable objects to the [RecomposeScope]s that observe the object. If the key
      * object is modified the associated scopes should be invalidated.
      */
-    private val observations = IdentityScopeMap<RecomposeScopeImpl>()
+    private val observations = ScopeMap<RecomposeScopeImpl>()
 
     /**
      * Used for testing. Returns the objects that are observed
      */
-    internal val observedObjects get() = observations.values.filterNotNull()
+    internal val observedObjects
+        @TestOnly @Suppress("AsCollectionCall") get() = observations.map.asMap().keys
 
     /**
      * A set of scopes that were invalidated conditionally (that is they were invalidated by a
@@ -489,18 +491,19 @@ internal class CompositionImpl(
     /**
      * A map of object read during derived states to the corresponding derived state.
      */
-    private val derivedStates = IdentityScopeMap<DerivedState<*>>()
+    private val derivedStates = ScopeMap<DerivedState<*>>()
 
     /**
      * Used for testing. Returns dependencies of derived states that are currently observed.
      */
-    internal val derivedStateDependencies get() = derivedStates.values.filterNotNull()
+    internal val derivedStateDependencies
+        @TestOnly @Suppress("AsCollectionCall") get() = derivedStates.map.asMap().keys
 
     /**
      * Used for testing. Returns the conditional scopes being tracked by the composer
      */
-    internal val conditionalScopes: List<RecomposeScopeImpl> get() =
-        conditionallyInvalidatedScopes.toList()
+    internal val conditionalScopes: List<RecomposeScopeImpl>
+        @TestOnly get() = conditionallyInvalidatedScopes.toList()
 
     /**
      * A list of changes calculated by [Composer] to be applied to the [Applier] and the
@@ -526,7 +529,7 @@ internal class CompositionImpl(
      * scopes that were already dismissed by composition and should be ignored in the next call
      * to [recordModificationsOf].
      */
-    private val observationsProcessed = IdentityScopeMap<RecomposeScopeImpl>()
+    private val observationsProcessed = ScopeMap<RecomposeScopeImpl>()
 
     /**
      * A map of the invalid [RecomposeScope]s. If this map is non-empty the current state of
@@ -612,16 +615,12 @@ internal class CompositionImpl(
         composeInitial(content)
     }
 
-    override fun setContent(reusing: Boolean, content: @Composable () -> Unit) {
-        if (reusing) {
-            composer.startReuseFromRoot()
-        }
+    override fun setContentWithReuse(content: @Composable () -> Unit) {
+        composer.startReuseFromRoot()
 
         composeInitial(content)
 
-        if (reusing) {
-            composer.endReuseFromRoot()
-        }
+        composer.endReuseFromRoot()
     }
 
     private fun composeInitial(content: @Composable () -> Unit) {
@@ -856,21 +855,21 @@ internal class CompositionImpl(
         }
 
         if (forgetConditionalScopes && conditionallyInvalidatedScopes.isNotEmpty()) {
-            observations.removeValueIf { scope ->
+            observations.removeScopeIf { scope ->
                 scope in conditionallyInvalidatedScopes || invalidated?.let { scope in it } == true
             }
             conditionallyInvalidatedScopes.clear()
             cleanUpDerivedStateObservations()
         } else {
             invalidated?.let {
-                observations.removeValueIf { scope -> scope in it }
+                observations.removeScopeIf { scope -> scope in it }
                 cleanUpDerivedStateObservations()
             }
         }
     }
 
     private fun cleanUpDerivedStateObservations() {
-        derivedStates.removeValueIf { derivedState -> derivedState !in observations }
+        derivedStates.removeScopeIf { derivedState -> derivedState !in observations }
         if (conditionallyInvalidatedScopes.isNotEmpty()) {
             conditionallyInvalidatedScopes.removeValueIf { scope -> !scope.isConditional }
         }
@@ -888,9 +887,7 @@ internal class CompositionImpl(
                     // Record derived state dependency mapping
                     if (value is DerivedState<*>) {
                         derivedStates.removeScope(value)
-                        for (dependency in value.currentRecord.dependencies) {
-                            // skip over empty objects from dependency array
-                            if (dependency == null) break
+                        value.currentRecord.dependencies.forEachKey { dependency ->
                             derivedStates.add(dependency, value)
                         }
                     }
@@ -979,7 +976,7 @@ internal class CompositionImpl(
             if (pendingInvalidScopes) {
                 trace("Compose:unobserve") {
                     pendingInvalidScopes = false
-                    observations.removeValueIf { scope -> !scope.valid }
+                    observations.removeScopeIf { scope -> !scope.valid }
                     cleanUpDerivedStateObservations()
                 }
             }
@@ -1338,79 +1335,11 @@ internal class CompositionImpl(
         }
         observations.clear()
         derivedStates.clear()
+        invalidations.clear()
+        changes.clear()
+        composer.deactivate()
     }
 }
-
-/**
- * Apply Code Changes will invoke the two functions before and after a code swap.
- *
- * This forces the whole view hierarchy to be redrawn to invoke any code change that was
- * introduce in the code swap.
- *
- * All these are private as within JVMTI / JNI accessibility is mostly a formality.
- */
-private class HotReloader {
-    companion object {
-        // Called before Dex Code Swap
-        @Suppress("UNUSED_PARAMETER")
-        private fun saveStateAndDispose(context: Any): Any {
-            return Recomposer.saveStateAndDisposeForHotReload()
-        }
-
-        // Called after Dex Code Swap
-        private fun loadStateAndCompose(token: Any) {
-            Recomposer.loadStateAndComposeForHotReload(token)
-        }
-
-        @TestOnly
-        internal fun simulateHotReload(context: Any) {
-            loadStateAndCompose(saveStateAndDispose(context))
-        }
-
-        @TestOnly
-        internal fun invalidateGroupsWithKey(key: Int) {
-            return Recomposer.invalidateGroupsWithKey(key)
-        }
-
-        @TestOnly
-        internal fun getCurrentErrors(): List<RecomposerErrorInfo> {
-            return Recomposer.getCurrentErrors()
-        }
-
-        @TestOnly
-        internal fun clearErrors() {
-            return Recomposer.clearErrors()
-        }
-    }
-}
-
-/**
- * @suppress
- */
-@TestOnly
-fun simulateHotReload(context: Any) = HotReloader.simulateHotReload(context)
-
-/**
- * @suppress
- */
-@TestOnly
-fun invalidateGroupsWithKey(key: Int) = HotReloader.invalidateGroupsWithKey(key)
-
-/**
- * @suppress
- */
-// suppressing for test-only api
-@Suppress("ListIterator")
-@TestOnly
-fun currentCompositionErrors(): List<Pair<Exception, Boolean>> =
-    HotReloader.getCurrentErrors()
-        .map { it.cause to it.recoverable }
-
-/**
- * @suppress
- */
-@TestOnly
-fun clearCompositionErrors() = HotReloader.clearErrors()
 
 private fun <K : Any, V : Any> IdentityArrayMap<K, IdentityArraySet<V>?>.addValue(
     key: K,

@@ -18,6 +18,7 @@ package androidx.compose.material3
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.os.Build
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -28,6 +29,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -46,6 +48,7 @@ import androidx.compose.material3.SheetValue.PartiallyExpanded
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -65,6 +68,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.AbstractComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
@@ -79,6 +83,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.findViewTreeViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
@@ -87,7 +92,6 @@ import androidx.savedstate.findViewTreeSavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import java.util.UUID
 import kotlin.math.max
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /**
@@ -109,6 +113,8 @@ import kotlinx.coroutines.launch
  * animates to [Hidden].
  * @param modifier Optional [Modifier] for the bottom sheet.
  * @param sheetState The state of the bottom sheet.
+ * @param sheetMaxWidth [Dp] that defines what the maximum width the sheet will take.
+ * Pass in [Dp.Unspecified] for a sheet that spans the entire screen width.
  * @param shape The shape of the bottom sheet.
  * @param containerColor The color used for the background of this bottom sheet
  * @param contentColor The preferred color for content inside this bottom sheet. Defaults to either
@@ -119,6 +125,8 @@ import kotlinx.coroutines.launch
  * @param dragHandle Optional visual marker to swipe the bottom sheet.
  * @param windowInsets window insets to be passed to the bottom sheet window via [PaddingValues]
  * params.
+ * @param properties [ModalBottomSheetProperties] for further customization of this
+ * modal bottom sheet's behavior.
  * @param content The content to be displayed inside the bottom sheet.
  */
 @Composable
@@ -127,6 +135,7 @@ fun ModalBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(),
+    sheetMaxWidth: Dp = BottomSheetDefaults.SheetMaxWidth,
     shape: Shape = BottomSheetDefaults.ExpandedShape,
     containerColor: Color = BottomSheetDefaults.ContainerColor,
     contentColor: Color = contentColorFor(containerColor),
@@ -134,6 +143,7 @@ fun ModalBottomSheet(
     scrimColor: Color = BottomSheetDefaults.ScrimColor,
     dragHandle: @Composable (() -> Unit)? = { BottomSheetDefaults.DragHandle() },
     windowInsets: WindowInsets = BottomSheetDefaults.windowInsets,
+    properties: ModalBottomSheetProperties = ModalBottomSheetDefaults.properties(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // b/291735717 Remove this once deprecated methods without density are removed
@@ -158,6 +168,7 @@ fun ModalBottomSheet(
     }
 
     ModalBottomSheetPopup(
+        properties = properties,
         onDismissRequest = {
             if (sheetState.currentValue == Expanded && sheetState.hasPartiallyExpandedState) {
                 scope.launch { sheetState.partialExpand() }
@@ -177,7 +188,7 @@ fun ModalBottomSheet(
             val bottomSheetPaneTitle = getString(string = Strings.BottomSheetPaneTitle)
             Surface(
                 modifier = modifier
-                    .widthIn(max = BottomSheetMaxWidth)
+                    .widthIn(max = sheetMaxWidth)
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
                     .semantics { paneTitle = bottomSheetPaneTitle }
@@ -198,10 +209,12 @@ fun ModalBottomSheet(
                             )
                         }
                     )
-                    .anchoredDraggable(
-                        state = sheetState.anchoredDraggableState,
+                    .draggable(
+                        state = sheetState.anchoredDraggableState.draggableState,
                         orientation = Orientation.Vertical,
-                        enabled = sheetState.isVisible
+                        enabled = sheetState.isVisible,
+                        startDragImmediately = sheetState.anchoredDraggableState.isAnimationRunning,
+                        onDragStopped = { settleToDismiss(it) }
                     )
                     .modalBottomSheetAnchors(
                         sheetState = sheetState,
@@ -266,6 +279,70 @@ fun ModalBottomSheet(
             sheetState.show()
         }
     }
+}
+
+/**
+ * Properties used to customize the behavior of a [ModalBottomSheet].
+ *
+ * @param securePolicy Policy for setting [WindowManager.LayoutParams.FLAG_SECURE] on the bottom
+ * sheet's window.
+ * @param isFocusable Whether the modal bottom sheet is focusable. When true,
+ * the modal bottom sheet will receive IME events and key presses, such as when
+ * the back button is pressed.
+ * @param shouldDismissOnBackPress Whether the modal bottom sheet can be dismissed by pressing
+ * the back button. If true, pressing the back button will call onDismissRequest.
+ * Note that [isFocusable] must be set to true in order to receive key events such as
+ * the back button - if the modal bottom sheet is not focusable then this property does nothing.
+ */
+@ExperimentalMaterial3Api
+class ModalBottomSheetProperties(
+    val securePolicy: SecureFlagPolicy,
+    val isFocusable: Boolean,
+    val shouldDismissOnBackPress: Boolean
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ModalBottomSheetProperties) return false
+
+        if (securePolicy != other.securePolicy) return false
+        if (isFocusable != other.isFocusable) return false
+        if (shouldDismissOnBackPress != other.shouldDismissOnBackPress) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = securePolicy.hashCode()
+        result = 31 * result + isFocusable.hashCode()
+        result = 31 * result + shouldDismissOnBackPress.hashCode()
+        return result
+    }
+}
+
+/**
+ * Default values for [ModalBottomSheet]
+ */
+@Immutable
+@ExperimentalMaterial3Api
+object ModalBottomSheetDefaults {
+    /**
+     * Properties used to customize the behavior of a [ModalBottomSheet].
+     *
+     * @param securePolicy Policy for setting [WindowManager.LayoutParams.FLAG_SECURE] on the bottom
+     * sheet's window.
+     * @param isFocusable Whether the modal bottom sheet is focusable. When true,
+     * the modal bottom sheet will receive IME events and key presses, such as when
+     * the back button is pressed.
+     * @param shouldDismissOnBackPress Whether the modal bottom sheet can be dismissed by pressing
+     * the back button. If true, pressing the back button will call onDismissRequest.
+     * Note that [isFocusable] must be set to true in order to receive key events such as
+     * the back button - if the modal bottom sheet is not focusable then this property does nothing.
+     */
+    fun properties(
+        securePolicy: SecureFlagPolicy = SecureFlagPolicy.Inherit,
+        isFocusable: Boolean = true,
+        shouldDismissOnBackPress: Boolean = true
+    ) = ModalBottomSheetProperties(securePolicy, isFocusable, shouldDismissOnBackPress)
 }
 
 /**
@@ -347,8 +424,10 @@ private fun Modifier.modalBottomSheetAnchors(
 /**
  * Popup specific for modal bottom sheet.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ModalBottomSheetPopup(
+    properties: ModalBottomSheetProperties,
     onDismissRequest: () -> Unit,
     windowInsets: WindowInsets,
     content: @Composable () -> Unit,
@@ -358,8 +437,10 @@ internal fun ModalBottomSheetPopup(
     val parentComposition = rememberCompositionContext()
     val currentContent by rememberUpdatedState(content)
     val layoutDirection = LocalLayoutDirection.current
-    val modalBottomSheetWindow = remember {
+    val configuration = LocalConfiguration.current
+    val modalBottomSheetWindow = remember(configuration) {
         ModalBottomSheetWindow(
+            properties = properties,
             onDismissRequest = onDismissRequest,
             composeView = view,
             saveId = id
@@ -371,7 +452,12 @@ internal fun ModalBottomSheetPopup(
                         Modifier
                             .semantics { this.popup() }
                             .windowInsetsPadding(windowInsets)
-                            .imePadding()
+                            .then(
+                                // TODO(b/290893168): Figure out a solution for APIs < 30.
+                                if (Build.VERSION.SDK_INT >= 33)
+                                    Modifier.imePadding()
+                                else Modifier
+                            )
                     ) {
                         currentContent()
                     }
@@ -391,10 +477,12 @@ internal fun ModalBottomSheetPopup(
 }
 
 /** Custom compose view for [ModalBottomSheet] */
+@OptIn(ExperimentalMaterial3Api::class)
 private class ModalBottomSheetWindow(
+    private val properties: ModalBottomSheetProperties,
     private var onDismissRequest: () -> Unit,
     private val composeView: View,
-    saveId: UUID,
+    saveId: UUID
 ) :
     AbstractComposeView(composeView.context),
     ViewTreeObserver.OnGlobalLayoutListener,
@@ -414,10 +502,7 @@ private class ModalBottomSheetWindow(
         composeView.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
     private val displayWidth: Int
-        get() {
-            val density = context.resources.displayMetrics.density
-            return (context.resources.configuration.screenWidthDp * density).roundToInt()
-        }
+        get() = context.resources.displayMetrics.widthPixels
 
     private val params: WindowManager.LayoutParams =
         WindowManager.LayoutParams().apply {
@@ -446,6 +531,22 @@ private class ModalBottomSheetWindow(
                 ).inv()
 
             flags = flags or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+
+            // Security flag
+            val secureFlagEnabled =
+                properties.securePolicy.shouldApplySecureFlag(composeView.isFlagSecureEnabled())
+            if (secureFlagEnabled) {
+                flags = flags or WindowManager.LayoutParams.FLAG_SECURE
+            } else {
+                flags = flags and (WindowManager.LayoutParams.FLAG_SECURE.inv())
+            }
+
+            // Focusable
+            if (!properties.isFocusable) {
+                flags = flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            } else {
+                flags = flags and (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv())
+            }
         }
 
     private var content: @Composable () -> Unit by mutableStateOf({})
@@ -482,7 +583,7 @@ private class ModalBottomSheetWindow(
      * Taken from PopupWindow. Calls [onDismissRequest] when back button is pressed.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK && properties.shouldDismissOnBackPress) {
             if (keyDispatcherState == null) {
                 return super.dispatchKeyEvent(event)
             }
@@ -517,5 +618,23 @@ private class ModalBottomSheetWindow(
             LayoutDirection.Rtl -> android.util.LayoutDirection.RTL
         }
         super.setLayoutDirection(direction)
+    }
+}
+
+// Taken from AndroidPopup.android.kt
+private fun View.isFlagSecureEnabled(): Boolean {
+    val windowParams = rootView.layoutParams as? WindowManager.LayoutParams
+    if (windowParams != null) {
+        return (windowParams.flags and WindowManager.LayoutParams.FLAG_SECURE) != 0
+    }
+    return false
+}
+
+// Taken from AndroidPopup.android.kt
+private fun SecureFlagPolicy.shouldApplySecureFlag(isSecureFlagSetOnParent: Boolean): Boolean {
+    return when (this) {
+        SecureFlagPolicy.SecureOff -> false
+        SecureFlagPolicy.SecureOn -> true
+        SecureFlagPolicy.Inherit -> isSecureFlagSetOnParent
     }
 }

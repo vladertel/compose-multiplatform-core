@@ -22,6 +22,7 @@ import androidx.room.compiler.codegen.XClassName
 import androidx.room.compiler.codegen.XTypeName
 import androidx.room.compiler.processing.testcode.OtherAnnotation
 import androidx.room.compiler.processing.util.Source
+import androidx.room.compiler.processing.util.compileFiles
 import androidx.room.compiler.processing.util.getDeclaredMethodByJvmName
 import androidx.room.compiler.processing.util.runKspTest
 import androidx.room.compiler.processing.util.runProcessorTest
@@ -118,6 +119,60 @@ class XRoundEnvTest {
               assertWithMessage("Enclosing element of method ${method.jvmName}")
                 .that(method.enclosingElement.name)
                 .isEqualTo("Baz")
+            }
+        }
+    }
+
+    @Test
+    fun getAnnotatedPackageElements() {
+        val source = Source.java(
+            // Packages can be annotated in `package-info.java` files.
+            "foo.bar.foobar.package-info",
+            """
+            @OtherAnnotation(value = "xx")
+            package foo.bar.foobar;
+            import androidx.room.compiler.processing.testcode.OtherAnnotation;
+            """.trimIndent()
+        )
+
+        runProcessorTest(listOf(source)) { testInvocation ->
+            (testInvocation.roundEnv.getElementsAnnotatedWith(
+                OtherAnnotation::class
+            ).single() as XPackageElement).apply {
+                assertThat(name).isEqualTo("foobar")
+                assertThat(qualifiedName).isEqualTo("foo.bar.foobar")
+                assertThat(kindName()).isEqualTo("package")
+                assertThat(validate()).isTrue()
+            }.getAllAnnotations().single().apply {
+                assertThat(qualifiedName)
+                    .isEqualTo("androidx.room.compiler.processing.testcode.OtherAnnotation")
+            }.annotationValues.single().apply {
+                assertThat(name).isEqualTo("value")
+                assertThat(value).isEqualTo("xx")
+            }
+        }
+    }
+
+    @Test
+    fun defaultPackage() {
+        val javaSource = Source.java(
+            "FooBar",
+            """
+            class FooBar {}
+            """.trimIndent()
+        )
+        val kotlinSource = Source.kotlin(
+            "FooBarKt.kt",
+            """
+            class FooBarKt
+            """.trimIndent()
+        )
+        runProcessorTest(listOf(javaSource, kotlinSource)) { testInvocation ->
+            testInvocation.processingEnv.requireTypeElement("FooBar").apply {
+                assertThat(packageName).isEqualTo("")
+            }
+            testInvocation.processingEnv.requireTypeElement("FooBarKt").apply {
+                assertThat(packageName).isEqualTo("")
             }
         }
     }
@@ -225,7 +280,7 @@ class XRoundEnvTest {
     }
 
     @Test
-    fun getElementsFromPackageIncludesSources() {
+    fun getTypeElementsFromPackageIncludesSources() {
         val source = Source.kotlin(
             "foo/Baz.kt",
             """
@@ -241,12 +296,12 @@ class XRoundEnvTest {
             )
             assertThat(
                 elements
-            ).contains(targetElement)
+            ).containsExactly(targetElement)
         }
     }
 
     @Test
-    fun getElementsFromPackageIncludesBinaries() {
+    fun getTypeElementsFromPackageIncludesBinaries() {
         runProcessorTest { testInvocation ->
             val kspElements = testInvocation.processingEnv.getTypeElementsFromPackage(
                 "com.google.devtools.ksp.processing"
@@ -263,13 +318,76 @@ class XRoundEnvTest {
     }
 
     @Test
-    fun getElementsFromPackageReturnsEmptyListForUnknownPackage() {
+    fun getTypeElementsFromPackageReturnsEmptyListForUnknownPackage() {
         runProcessorTest { testInvocation ->
             val kspElements = testInvocation.processingEnv.getTypeElementsFromPackage(
                 "com.example.unknown.package"
             )
 
             assertThat(kspElements).isEmpty()
+        }
+    }
+
+    @Test
+    fun getElementsFromPackageInSource() {
+        val source = Source.kotlin(
+            "Foo.kt",
+            """
+            package foo.bar
+            val p: Int = TODO()
+            fun f(): String = TODO()
+            """.trimIndent()
+        )
+        runProcessorTest(listOf(source)) { invocation ->
+            val elements = invocation.processingEnv.getElementsFromPackage(
+                "foo.bar"
+            )
+            if (invocation.isKsp) {
+                assertThat(
+                    elements.map { it.name }
+                ).containsExactly("p", "f")
+            } else {
+                assertThat(
+                    elements.map { it.name }
+                ).containsExactly("FooKt")
+            }
+        }
+    }
+
+    @Test
+    fun getElementsFromPackageInClass() {
+        val source = Source.kotlin(
+            "Foo.kt",
+            """
+            package foo.bar
+            val p: Int = TODO()
+            fun f(): String = TODO()
+            """.trimIndent()
+        )
+        runProcessorTest(classpath = compileFiles(listOf(source))) { invocation ->
+            val elements = invocation.processingEnv.getElementsFromPackage(
+                "foo.bar"
+            )
+            if (invocation.isKsp) {
+                assertThat(
+                    elements.map { it.name }
+                ).containsExactly("p", "f")
+            } else {
+                assertThat(
+                    elements.map { it.name }
+                ).containsExactly("FooKt")
+            }
+        }
+    }
+
+    @Test
+    fun getElementsFromPackageReturnsEmptyListForUnknownPackage() {
+        runProcessorTest { testInvocation ->
+            val elements = testInvocation.processingEnv.getElementsFromPackage(
+                "com.example.unknown.package"
+            )
+
+            assertThat(elements).isEmpty()
         }
     }
 

@@ -16,9 +16,10 @@
 
 package androidx.compose.material3.benchmark
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,6 +52,7 @@ class TabRowBenchmark {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 internal class TabRowTestCase : LayeredComposeTestCase(), ToggleableTestCase {
 
     private var state: Int by mutableStateOf(0)
@@ -58,7 +60,7 @@ internal class TabRowTestCase : LayeredComposeTestCase(), ToggleableTestCase {
     @Composable
     override fun MeasuredContent() {
         val titles = listOf("TAB 1", "TAB 2", "TAB 3")
-        TabRow(selectedTabIndex = state) {
+        PrimaryTabRow(selectedTabIndex = state) {
             titles.forEachIndexed { index, title ->
                 Tab(
                     text = { Text(title) },

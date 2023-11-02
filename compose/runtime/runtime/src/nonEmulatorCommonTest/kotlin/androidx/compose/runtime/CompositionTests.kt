@@ -1839,7 +1839,7 @@ class CompositionTests {
             Composition(obj = rememberObject)
         }
         validate { this.Composition() }
-        assertEquals(2, rememberObject1.count, "first object should enter")
+        assertEquals(1, rememberObject1.count, "first object should enter")
         assertEquals(0, rememberObject2.count, "second object should not have entered")
 
         rememberObject = rememberObject2
@@ -1847,7 +1847,7 @@ class CompositionTests {
         expectChanges()
         validate { Composition() }
         assertEquals(0, rememberObject1.count, "first object should have left")
-        assertEquals(2, rememberObject2.count, "second object should have entered")
+        assertEquals(1, rememberObject2.count, "second object should have entered")
 
         rememberObject = object {}
         scope?.invalidate()
@@ -3424,13 +3424,17 @@ class CompositionTests {
     @Test // regression test for 264467571
     fun test_returnConditionally_fromNodeLambda_local_initial_return() = compositionTest {
         var condition by mutableStateOf(true)
+
         compose {
+            currentComposer.disableSourceInformation()
             Text("Before outer")
             InlineLinear {
                 Text("Before inner")
                 InlineLinear inner@{
                     Text("Before return")
-                    if (condition) return@inner
+                    if (condition) {
+                        return@inner
+                    }
                     Text("After return")
                 }
                 Text("After inner")
@@ -3463,6 +3467,7 @@ class CompositionTests {
     fun test_returnConditionally_fromNodeLambda_local_initial_no_return() = compositionTest {
         var condition by mutableStateOf(true)
         compose {
+            currentComposer.disableSourceInformation()
             Text("Before outer")
             InlineLinear {
                 Text("Before inner")
@@ -3501,6 +3506,7 @@ class CompositionTests {
     fun test_returnConditionally_fromNodeLambda_nonLocal_initial_return() = compositionTest {
         var condition by mutableStateOf(true)
         compose {
+            currentComposer.disableSourceInformation()
             Text("Before outer")
             InlineLinear outer@{
                 Text("Before inner")
@@ -3539,6 +3545,7 @@ class CompositionTests {
     fun test_returnConditionally_fromNodeLambda_nonLocal_initial_no_return() = compositionTest {
         var condition by mutableStateOf(true)
         compose {
+            currentComposer.disableSourceInformation()
             Text("Before outer")
             InlineLinear outer@{
                 Text("Before inner")
@@ -3578,6 +3585,7 @@ class CompositionTests {
         compositionTest {
             var condition by mutableStateOf(true)
             compose {
+                currentComposer.disableSourceInformation()
                 Text("Before outer")
                 InlineLinear outer@{
                     Text("Before inner")
@@ -3922,6 +3930,21 @@ class CompositionTests {
 
         recomposeTrigger++
         advance()
+    }
+
+    // regression test for b/264467571, checks that composing with continue doesn't crash runtime
+    @Test
+    fun continueInALoop() = compositionTest {
+        var iterations by mutableIntStateOf(5)
+        compose {
+            for (i in 1..iterations) {
+                if (i == 4) continue
+                Text(i.toString())
+            }
+        }
+
+        iterations++
+        expectChanges()
     }
 
     private inline fun CoroutineScope.withGlobalSnapshotManager(block: CoroutineScope.() -> Unit) {

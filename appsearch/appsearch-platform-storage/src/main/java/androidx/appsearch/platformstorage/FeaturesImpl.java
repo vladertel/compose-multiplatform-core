@@ -15,16 +15,24 @@
  */
 package androidx.appsearch.platformstorage;
 
+import android.content.Context;
+import android.content.pm.ModuleInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Build;
 
+import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appsearch.app.Features;
+import androidx.core.util.Preconditions;
 
 /**
  * An implementation of {@link Features}. Feature availability is dependent on Android API
  * level.
  */
 final class FeaturesImpl implements Features {
+    private static final String APPSEARCH_MODULE_NAME = "com.android.appsearch";
 
     @Override
     public boolean isFeatureSupported(@NonNull String feature) {
@@ -74,9 +82,54 @@ final class FeaturesImpl implements Features {
                 // fall through
             case Features.SCHEMA_ADD_INDEXABLE_NESTED_PROPERTIES:
                 // TODO(b/289150947) : Update when feature is ready in service-appsearch.
+                // fall through
+            case Features.SEARCH_SPEC_ADD_FILTER_PROPERTIES:
+                // TODO(b/296088047) : Update when feature is ready in service-appsearch.
                 return false;
             default:
                 return false;
+        }
+    }
+
+    @Override
+    public int getMaxIndexedProperties(@NonNull Context context) {
+        Preconditions.checkNotNull(context);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return 64;
+        } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.TIRAMISU) {
+            PackageManager packageManager = context.getPackageManager();
+            long appsearchVersionCode = 0;
+            try {
+                String appSearchPackageName = ApiHelperForQ.getAppSearchPackageName(packageManager);
+                if (appSearchPackageName == null) {
+                    return 16;
+                }
+                PackageInfo pInfo = packageManager
+                        .getPackageInfo(appSearchPackageName, PackageManager.MATCH_APEX);
+                appsearchVersionCode = ApiHelperForQ.getPackageInfoLongVersionCode(pInfo);
+            } catch (PackageManager.NameNotFoundException e) {
+                // Module not installed
+            }
+            // Sixty-four properties were enabled in mainline module 'aml_ase_331311020'
+            return appsearchVersionCode >= 331311020 ? 64 : 16;
+        } else {
+            return 16;
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private static class ApiHelperForQ {
+        @DoNotInline
+        static long getPackageInfoLongVersionCode(PackageInfo pInfo) {
+            return pInfo.getLongVersionCode();
+        }
+
+        @DoNotInline
+        static String getAppSearchPackageName(PackageManager packageManager)
+                throws PackageManager.NameNotFoundException {
+            ModuleInfo appSearchModule =
+                    packageManager.getModuleInfo(APPSEARCH_MODULE_NAME, 1);
+            return appSearchModule.getPackageName();
         }
     }
 }

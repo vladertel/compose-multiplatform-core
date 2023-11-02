@@ -239,6 +239,9 @@ public abstract class Transition implements Cloneable {
     // that have completed
     boolean mEnded = false;
 
+    // The transition that this was cloned from
+    private Transition mCloneParent = null;
+
     // The set of listeners to be sent transition lifecycle events.
     private ArrayList<Transition.TransitionListener> mListeners = null;
 
@@ -527,7 +530,7 @@ public abstract class Transition implements Cloneable {
      * Transition's progress. The Transition will begin without starting any of the
      * animations.
      */
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     @NonNull
     TransitionSeekController createSeekController() {
         mSeekController = new SeekController();
@@ -970,7 +973,7 @@ public abstract class Transition implements Cloneable {
      * values. The duration is calculated. It also adds the animators to mCurrentAnimators so that
      * each animator can support seeking.
      */
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     void prepareAnimatorsForSeeking() {
         ArrayMap<Animator, AnimationInfo> runningAnimators = getRunningAnimators();
         // Now prepare every Animator that was previously created for this transition
@@ -2138,7 +2141,9 @@ public abstract class Transition implements Cloneable {
         if (mListeners == null) {
             return this;
         }
-        mListeners.remove(listener);
+        if (!mListeners.remove(listener) && mCloneParent != null) {
+            mCloneParent.removeListener(listener);
+        }
         if (mListeners.size() == 0) {
             mListeners = null;
         }
@@ -2306,9 +2311,8 @@ public abstract class Transition implements Cloneable {
             clone.mStartValuesList = null;
             clone.mEndValuesList = null;
             clone.mSeekController = null;
-            if (mListeners != null) {
-                clone.mListeners = new ArrayList<>(mListeners);
-            }
+            clone.mCloneParent = this;
+            clone.mListeners = null;
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new RuntimeException(e);
@@ -2336,6 +2340,17 @@ public abstract class Transition implements Cloneable {
      * Calls notification on each listener.
      */
     void notifyListeners(TransitionNotification notification, boolean isReversed) {
+        notifyFromTransition(this, notification, isReversed);
+    }
+
+    private void notifyFromTransition(
+            Transition transition,
+            TransitionNotification notification,
+            boolean isReversed
+    ) {
+        if (mCloneParent != null) {
+            mCloneParent.notifyFromTransition(transition, notification, isReversed);
+        }
         if (mListeners != null && !mListeners.isEmpty()) {
             // Use a cache so that we don't have to keep allocating on every notification
             int size = mListeners.size();
@@ -2344,7 +2359,7 @@ public abstract class Transition implements Cloneable {
             mListenersCache = null;
             listeners = mListeners.toArray(listeners);
             for (int i = 0; i < size; i++) {
-                notification.notifyListener(listeners[i], Transition.this, isReversed);
+                notification.notifyListener(listeners[i], transition, isReversed);
                 listeners[i] = null;
             }
             mListenersCache = listeners;
@@ -2370,7 +2385,7 @@ public abstract class Transition implements Cloneable {
      *                           than getTotalDurationMillis() to indicate that it is playing
      *                           backwards.
      */
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     void setCurrentPlayTimeMillis(long playTimeMillis, long lastPlayTimeMillis) {
         long duration = getTotalDurationMillis();
         boolean isReversed = playTimeMillis < lastPlayTimeMillis;
@@ -2691,7 +2706,7 @@ public abstract class Transition implements Cloneable {
     /**
      * Internal implementation of TransitionSeekController.
      */
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     class SeekController extends TransitionListenerAdapter implements TransitionSeekController,
             DynamicAnimation.OnAnimationUpdateListener {
         // Animation calculations appear to work better with numbers that range greater than 1
@@ -2704,6 +2719,7 @@ public abstract class Transition implements Cloneable {
         private SpringAnimation mSpringAnimation;
         private Consumer<TransitionSeekController>[] mListenerCache = null;
         private final VelocityTracker1D mVelocityTracker = new VelocityTracker1D();
+        private Runnable mResetToStartState;
 
         @Override
         public long getDurationMillis() {
@@ -2843,6 +2859,16 @@ public abstract class Transition implements Cloneable {
             mSpringAnimation.addEndListener((anim, canceled, value, velocity) -> {
                 if (!canceled) {
                     boolean isReversed = value < 1f;
+
+                    if (isReversed) {
+                        long duration = getDurationMillis();
+                        Transition.this.setCurrentPlayTimeMillis(duration, mCurrentPlayTime);
+                        mCurrentPlayTime = duration;
+                        if (mResetToStartState != null) {
+                            mResetToStartState.run();
+                        }
+                        mAnimators.clear();
+                    }
                     notifyListeners(TransitionNotification.ON_END, isReversed);
                 }
                 mSpringAnimation = null;
@@ -2856,7 +2882,8 @@ public abstract class Transition implements Cloneable {
         }
 
         @Override
-        public void animateToStart() {
+        public void animateToStart(@NonNull Runnable resetToStartState) {
+            mResetToStartState = resetToStartState;
             ensureAnimation();
             mSpringAnimation.animateToFinalPosition(-1);
         }

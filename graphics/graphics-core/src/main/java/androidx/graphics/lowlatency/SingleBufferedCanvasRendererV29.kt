@@ -16,16 +16,19 @@
 
 package androidx.graphics.lowlatency
 
+import android.graphics.Bitmap
 import android.graphics.BlendMode
+import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.RenderNode
+import android.graphics.ColorSpace
 import android.hardware.HardwareBuffer
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.annotation.WorkerThread
+import androidx.graphics.BufferedRendererImpl
 import androidx.graphics.MultiBufferedCanvasRenderer
 import androidx.graphics.RenderQueue
-import androidx.graphics.surface.SurfaceControlCompat
 import androidx.graphics.utils.HandlerThreadExecutor
 import androidx.hardware.SyncFenceCompat
 import java.util.concurrent.Executor
@@ -34,7 +37,7 @@ import java.util.concurrent.Executor
 internal class SingleBufferedCanvasRendererV29<T>(
     private val width: Int,
     private val height: Int,
-    private val bufferTransformer: BufferTransformer,
+    bufferTransformer: BufferTransformer,
     handlerThread: HandlerThreadExecutor,
     private val callbacks: SingleBufferedCanvasRenderer.RenderCallbacks<T>,
 ) : SingleBufferedCanvasRenderer<T> {
@@ -54,6 +57,8 @@ internal class SingleBufferedCanvasRendererV29<T>(
                     hardwareBuffer: HardwareBuffer,
                     fence: SyncFenceCompat?
                 ) {
+                    mBufferedRenderer.releaseBuffer(hardwareBuffer, fence)
+                    mPreservedRenderStrategy.onRenderComplete(hardwareBuffer, fence, colorSpace)
                     callbacks.onBufferReady(hardwareBuffer, fence)
                 }
 
@@ -61,43 +66,21 @@ internal class SingleBufferedCanvasRendererV29<T>(
                     hardwareBuffer: HardwareBuffer,
                     fence: SyncFenceCompat?
                 ) {
+                    mBufferedRenderer.releaseBuffer(hardwareBuffer, fence)
+                    mPreservedRenderStrategy.onRenderComplete(hardwareBuffer, fence, colorSpace)
                     callbacks.onBufferCancelled(hardwareBuffer, fence)
                 }
             }
         )
 
-    private val mTransform = android.graphics.Matrix().apply {
-        when (bufferTransformer.computedTransform) {
-            SurfaceControlCompat.BUFFER_TRANSFORM_ROTATE_90 -> {
-                setRotate(270f)
-                postTranslate(0f, width.toFloat())
-            }
-            SurfaceControlCompat.BUFFER_TRANSFORM_ROTATE_180 -> {
-                setRotate(180f)
-                postTranslate(width.toFloat(), height.toFloat())
-            }
-            SurfaceControlCompat.BUFFER_TRANSFORM_ROTATE_270 -> {
-                setRotate(90f)
-                postTranslate(height.toFloat(), 0f)
-            }
-            else -> {
-                reset()
-            }
-        }
-    }
+    private val mPreservedRenderStrategy = createPreservationStrategy(bufferTransformer)
 
     private val mBufferedRenderer = MultiBufferedCanvasRenderer(
-        RenderNode("renderNode").apply {
-            setPosition(
-                0,
-                0,
-                bufferTransformer.glWidth,
-                bufferTransformer.glHeight)
-        },
-        bufferTransformer.glWidth,
-        bufferTransformer.glHeight,
+        width,
+        height,
+        bufferTransformer,
         usage = FrontBufferUtils.obtainHardwareBufferUsageFlags(),
-        maxImages = 1
+        maxImages = mPreservedRenderStrategy.maxImages
     )
 
     private val mPendingParams = ArrayList<T>()
@@ -110,30 +93,40 @@ internal class SingleBufferedCanvasRendererV29<T>(
 
         override fun execute() {
             mBufferedRenderer.record { canvas ->
-                canvas.save()
-                canvas.setMatrix(mTransform)
+                mPreservedRenderStrategy.restoreContents(canvas, width, height)
                 for (pendingParam in mPendingParams) {
                     callbacks.render(canvas, width, height, pendingParam)
                 }
-                canvas.restore()
                 mPendingParams.clear()
             }
+        }
+
+        override fun onComplete() {
+            // NO-OP
         }
 
         override val id: Int = RENDER
     }
 
-    private val clearRequest = object : RenderQueue.Request {
+    private inner class ClearRequest(val clearComplete: (() -> Unit)?) : RenderQueue.Request {
         override fun execute() {
             mBufferedRenderer.record { canvas -> canvas.drawColor(Color.BLACK, BlendMode.CLEAR) }
         }
 
+        override fun onComplete() {
+            clearComplete?.invoke()
+        }
+
+        override fun isMergeable(): Boolean = clearComplete == null
+
         override val id: Int = CLEAR
     }
 
+    private val defaultClearRequest = ClearRequest(null)
+
     override var isVisible: Boolean = false
         set(value) {
-            mBufferedRenderer.preserveContents = isVisible
+            mBufferedRenderer.preserveContents = value
             field = value
         }
 
@@ -153,7 +146,12 @@ internal class SingleBufferedCanvasRendererV29<T>(
         }
     }
 
-    override fun clear() {
+    override fun clear(clearComplete: (() -> Unit)?) {
+        val clearRequest = if (clearComplete == null) {
+            defaultClearRequest
+        } else {
+            ClearRequest(clearComplete)
+        }
         mRenderQueue.enqueue(clearRequest)
     }
 
@@ -161,8 +159,98 @@ internal class SingleBufferedCanvasRendererV29<T>(
         mRenderQueue.cancelPending()
     }
 
+    override var colorSpace: ColorSpace
+        get() = mBufferedRenderer.colorSpace
+        set(value) { mBufferedRenderer.colorSpace = value }
+
     private companion object {
+
+        val TAG = "PersistedCanvas"
+
         const val RENDER = 0
         const val CLEAR = 1
+
+        fun createPreservationStrategy(
+            bufferTransformer: BufferTransformer
+        ): PreservedRenderStrategy {
+            val verifier = PreservedBufferContentsVerifier()
+            val supportsContentPreservation = verifier.supportsPreservedRenderedContent()
+            verifier.release()
+            return if (supportsContentPreservation) {
+                Log.v(TAG, "Device supports persisted canvas optimizations")
+                SingleBufferedStrategy()
+            } else {
+                Log.w(TAG,
+                    "Warning, device DOES NOT support persisted canvas optimizations.")
+                RedrawBufferStrategy(bufferTransformer)
+            }
+        }
+    }
+
+    internal interface PreservedRenderStrategy {
+        val maxImages: Int
+
+        fun restoreContents(canvas: Canvas, width: Int, height: Int)
+
+        fun onRenderComplete(
+            hardwareBuffer: HardwareBuffer,
+            fence: SyncFenceCompat?,
+            colorSpace: ColorSpace
+        )
+    }
+
+    internal class SingleBufferedStrategy : PreservedRenderStrategy {
+        override val maxImages = 1
+
+        override fun restoreContents(canvas: Canvas, width: Int, height: Int) {
+            // NO-OP HWUI preserves contents
+        }
+
+        override fun onRenderComplete(
+            hardwareBuffer: HardwareBuffer,
+            fence: SyncFenceCompat?,
+            colorSpace: ColorSpace
+        ) {
+            // NO-OP
+        }
+    }
+
+    internal class RedrawBufferStrategy(
+        bufferTransformer: BufferTransformer
+    ) : PreservedRenderStrategy {
+
+        private val inverseTransform = android.graphics.Matrix().apply {
+            bufferTransformer.configureMatrix(this)
+            invert(this)
+        }
+
+        override val maxImages: Int = 2
+
+        private var mHardwareBuffer: HardwareBuffer? = null
+        private var mFence: SyncFenceCompat? = null
+        private var mColorSpace: ColorSpace = BufferedRendererImpl.DefaultColorSpace
+
+        override fun restoreContents(canvas: Canvas, width: Int, height: Int) {
+            mHardwareBuffer?.let { buffer ->
+                mFence?.awaitForever()
+                val bitmap = Bitmap.wrapHardwareBuffer(buffer, mColorSpace)
+                if (bitmap != null) {
+                    canvas.save()
+                    canvas.concat(inverseTransform)
+                    canvas.drawBitmap(bitmap, 0f, 0f, null)
+                    canvas.restore()
+                }
+            }
+        }
+
+        override fun onRenderComplete(
+            hardwareBuffer: HardwareBuffer,
+            fence: SyncFenceCompat?,
+            colorSpace: ColorSpace
+        ) {
+            mHardwareBuffer = hardwareBuffer
+            mFence = fence
+            mColorSpace = colorSpace
+        }
     }
 }
