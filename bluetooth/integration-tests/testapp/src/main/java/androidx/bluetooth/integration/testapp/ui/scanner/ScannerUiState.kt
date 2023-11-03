@@ -14,19 +14,11 @@
  * limitations under the License.
  */
 
-package androidx.sqliteMultiplatform.driver
+package androidx.bluetooth.integration.testapp.ui.scanner
 
-import android.database.sqlite.SQLiteDatabase
-import androidx.sqliteMultiplatform.SQLiteConnection
-import androidx.sqliteMultiplatform.SQLiteDriver
-import java.io.File
+import androidx.bluetooth.ScanResult
 
-class AndroidSQLiteDriver(
-    val filename: String
-) : SQLiteDriver {
-    override fun open(): SQLiteConnection {
-        val file = File(filename)
-        val database = SQLiteDatabase.openOrCreateDatabase(file, null)
-        return AndroidSQLiteConnection(database)
-    }
-}
+data class ScannerUiState(
+    val isScanning: Boolean = false,
+    val scanResults: List<ScanResult> = emptyList()
+)

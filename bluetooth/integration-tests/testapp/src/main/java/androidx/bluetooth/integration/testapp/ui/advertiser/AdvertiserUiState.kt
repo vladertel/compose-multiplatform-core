@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 
-package androidx.sqliteMultiplatform
+package androidx.bluetooth.integration.testapp.ui.advertiser
 
-fun SQLiteConnection.execSQL(sql: String) {
-    prepare(sql).use { it.step() }
-}
-
-fun <R> SQLiteStatement.use(block: (SQLiteStatement) -> R): R {
-    try {
-        return block.invoke(this)
-    } finally {
-        close()
-    }
-}
+data class AdvertiserUiState(
+    val isAdvertising: Boolean = false,
+    val resultMessage: String? = null
+)
