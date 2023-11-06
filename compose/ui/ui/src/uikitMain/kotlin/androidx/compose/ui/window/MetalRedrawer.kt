@@ -290,7 +290,6 @@ internal class MetalRedrawer(
     }
 
     fun dispose() = disposeLock.doLocked {
-        println("dispose")
         check(caDisplayLink != null) { "MetalRedrawer.dispose() was called more than once" }
 
         applicationStateListener.dispose()
