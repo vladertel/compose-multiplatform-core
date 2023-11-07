@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.ui.interop.UIKitInteropState
 import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.interop.doLocked
@@ -318,6 +319,7 @@ internal class MetalRedrawer(
         draw(waitUntilCompletion = true, CACurrentMediaTime())
     }
 
+    @OptIn(ExperimentalComposeApi::class)
     private fun draw(waitUntilCompletion: Boolean, targetTimestamp: NSTimeInterval) {
         check(NSThread.isMainThread)
 
@@ -386,7 +388,7 @@ internal class MetalRedrawer(
                 isForcedToPresentWithTransactionEveryFrame || interopTransaction.isNotEmpty()
             metalLayer.presentsWithTransaction = presentsWithTransaction
 
-            val mustEncodeAndPresentOnMainThread = presentsWithTransaction || waitUntilCompletion
+            val mustEncodeAndPresentOnMainThread = presentsWithTransaction || waitUntilCompletion || forceMainThreadRendering
 
             val encodeAndPresentBlock = {
                 surface.canvas.drawPicture(picture)
@@ -458,6 +460,9 @@ internal class MetalRedrawer(
             dispatch_queue_create("RenderingDispatchQueue", null)
     }
 }
+
+@ExperimentalComposeApi
+var forceMainThreadRendering = false
 
 private class DisplayLinkProxy(
     private val callback: () -> Unit
