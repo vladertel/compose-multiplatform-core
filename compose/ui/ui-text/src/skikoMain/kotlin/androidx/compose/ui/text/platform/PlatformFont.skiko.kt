@@ -205,6 +205,9 @@ internal class FontCache {
     init {
         fonts.setDefaultFontManager(FontMgr.default)
         fonts.setAssetFontManager(fontProvider)
+
+        // FIXME: skia doesn't take into account isHalfLeading flag
+        fonts.paragraphCache.setEnabled(false)
     }
 
     internal fun load(font: PlatformFont): FontLoadResult {
