@@ -51,17 +51,7 @@ import org.jetbrains.kotlin.ir.types.impl.IrTypeAbbreviationImpl
 import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
 import org.jetbrains.kotlin.ir.types.isClassWithFqName
 import org.jetbrains.kotlin.ir.types.typeOrNull
-import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
-import org.jetbrains.kotlin.ir.util.SymbolRemapper
-import org.jetbrains.kotlin.ir.util.SymbolRenamer
-import org.jetbrains.kotlin.ir.util.TypeRemapper
-import org.jetbrains.kotlin.ir.util.defaultType
-import org.jetbrains.kotlin.ir.util.fqNameForIrSerialization
-import org.jetbrains.kotlin.ir.util.functions
-import org.jetbrains.kotlin.ir.util.hasAnnotation
-import org.jetbrains.kotlin.ir.util.isFunction
-import org.jetbrains.kotlin.ir.util.parentClassOrNull
-import org.jetbrains.kotlin.ir.util.patchDeclarationParents
+import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.types.Variance
@@ -69,7 +59,7 @@ import org.jetbrains.kotlin.types.Variance
 internal class DeepCopyIrTreeWithRemappedComposableTypes(
     private val context: IrPluginContext,
     private val symbolRemapper: DeepCopySymbolRemapper,
-    typeRemapper: TypeRemapper,
+    private val typeRemapper: TypeRemapper,
     symbolRenamer: SymbolRenamer = SymbolRenamer.DEFAULT
 ) : DeepCopyPreservingMetadata(symbolRemapper, typeRemapper, symbolRenamer) {
 
@@ -81,6 +71,15 @@ internal class DeepCopyIrTreeWithRemappedComposableTypes(
             symbolRemapper.visitSimpleFunction(declaration)
         }
         return super.visitSimpleFunction(declaration).also {
+            it.overriddenSymbols.forEach {
+                if (!it.isBound) {
+                    // symbol will be rebound by deep copy on later iteration
+                    return@forEach
+                }
+                if (it.owner.needsComposableRemapping() && !it.owner.isDecoy()) {
+                    it.owner.remapTypes(typeRemapper)
+                }
+            }
             it.correspondingPropertySymbol = declaration.correspondingPropertySymbol
         }
     }
