@@ -32,7 +32,6 @@ import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrTypeParametersContainer
 import org.jetbrains.kotlin.ir.declarations.copyAttributes
-import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrMemberAccessExpression
@@ -40,7 +39,6 @@ import org.jetbrains.kotlin.ir.expressions.IrWhen
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrIfThenElseImpl
-import org.jetbrains.kotlin.ir.symbols.IrConstructorSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
@@ -85,27 +83,6 @@ internal class DeepCopyIrTreeWithRemappedComposableTypes(
             it.correspondingPropertySymbol = declaration.correspondingPropertySymbol
         }
     }
-
-    override fun visitConstructor(declaration: IrConstructor): IrConstructor {
-        if (declaration.symbol.isRemappedAndBound()) {
-            return symbolRemapper.getReferencedConstructor(declaration.symbol).owner
-        }
-        if (declaration.symbol.isBoundButNotRemapped()) {
-            symbolRemapper.visitConstructor(declaration)
-        }
-        return super.visitConstructor(declaration).also {
-            it.remapTypes(typeRemapper)
-
-            val delegatingConstructorSymbol = (it.body?.statements?.firstOrNull {
-                it is IrDelegatingConstructorCall
-            } as? IrDelegatingConstructorCall)?.symbol
-
-            if (delegatingConstructorSymbol != null) {
-                delegatingConstructorSymbol.owner.remapTypes(typeRemapper)
-            }
-        }
-    }
-
     override fun visitProperty(declaration: IrProperty): IrProperty {
         return super.visitProperty(declaration).also {
             it.copyAttributes(declaration)
@@ -321,17 +298,8 @@ internal class DeepCopyIrTreeWithRemappedComposableTypes(
         return this.isBound && symbolRemapper.getReferencedFunction(this) == this
     }
 
-    private fun IrConstructorSymbol.isBoundButNotRemapped(): Boolean {
-        return this.isBound && symbolRemapper.getReferencedConstructor(this) == this
-    }
-
     private fun IrSimpleFunctionSymbol.isRemappedAndBound(): Boolean {
         val symbol = symbolRemapper.getReferencedFunction(this)
-        return symbol.isBound && symbol != this
-    }
-
-    private fun IrConstructorSymbol.isRemappedAndBound(): Boolean {
-        val symbol = symbolRemapper.getReferencedConstructor(this)
         return symbol.isBound && symbol != this
     }
 
