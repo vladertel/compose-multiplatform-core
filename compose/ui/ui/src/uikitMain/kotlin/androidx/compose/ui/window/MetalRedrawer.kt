@@ -359,27 +359,6 @@ internal class MetalRedrawer(
                 return@autoreleasepool
             }
 
-            val renderTarget =
-                BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
-
-            val surface = Surface.makeFromBackendRenderTarget(
-                context,
-                renderTarget,
-                SurfaceOrigin.TOP_LEFT,
-                SurfaceColorFormat.BGRA_8888,
-                ColorSpace.sRGB,
-                SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
-            )
-
-            if (surface == null) {
-                // TODO: anomaly, log
-                // Logger.warn { "'Surface.makeFromBackendRenderTarget' returned null. Skipping the frame." }
-                picture.close()
-                renderTarget.close()
-                dispatch_semaphore_signal(inflightSemaphore)
-                return@autoreleasepool
-            }
-
             val interopTransaction = callbacks.retrieveInteropTransaction()
             if (interopTransaction.state == UIKitInteropState.BEGAN) {
                 isInteropActive = true
@@ -390,7 +369,34 @@ internal class MetalRedrawer(
 
             val mustEncodeAndPresentOnMainThread = presentsWithTransaction || waitUntilCompletion || forceMainThreadRendering
 
-            val encodeAndPresentBlock = {
+            val encodeAndPresentBlock = encodeAndPresentBlock@{ exitImmediately: Boolean ->
+                if (exitImmediately) {
+                    picture.close()
+
+                    return@encodeAndPresentBlock
+                }
+
+                val renderTarget =
+                    BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
+
+                val surface = Surface.makeFromBackendRenderTarget(
+                    context,
+                    renderTarget,
+                    SurfaceOrigin.TOP_LEFT,
+                    SurfaceColorFormat.BGRA_8888,
+                    ColorSpace.sRGB,
+                    SurfaceProps(pixelGeometry = PixelGeometry.UNKNOWN)
+                )
+
+                if (surface == null) {
+                    // TODO: anomaly, log
+                    // Logger.warn { "'Surface.makeFromBackendRenderTarget' returned null. Skipping the frame." }
+                    picture.close()
+                    renderTarget.close()
+                    dispatch_semaphore_signal(inflightSemaphore)
+                    return@encodeAndPresentBlock
+                }
+
                 surface.canvas.drawPicture(picture)
                 picture.close()
                 surface.flushAndSubmit()
@@ -435,19 +441,12 @@ internal class MetalRedrawer(
             }
 
             if (mustEncodeAndPresentOnMainThread) {
-                encodeAndPresentBlock()
+                encodeAndPresentBlock(false)
             } else {
                 dispatch_async(renderingDispatchQueue) {
                     autoreleasepool {
                         disposeLock.doLocked {
-                            if (caDisplayLink == null) {
-                                // Was disposed before render encoding started
-                                picture.close()
-                                surface.close()
-                                renderTarget.close()
-                            } else {
-                                encodeAndPresentBlock()
-                            }
+                            encodeAndPresentBlock(caDisplayLink == null)
                         }
                     }
                 }
