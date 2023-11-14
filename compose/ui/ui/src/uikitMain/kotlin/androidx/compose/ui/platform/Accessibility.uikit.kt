@@ -33,16 +33,19 @@ import platform.darwin.NSObject
 import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.state.ToggleableState
 import kotlin.test.todo
 import platform.UIKit.UIAccessibilityTraitButton
 import platform.UIKit.UIAccessibilityTraitHeader
 import platform.UIKit.UIAccessibilityTraitNotEnabled
+import platform.UIKit.UIAccessibilityTraitSelected
 import platform.UIKit.UIAccessibilityTraits
 import platform.UIKit.UIView
 import platform.UIKit.accessibilityElementsHidden
 import platform.UIKit.accessibilityLabel
 import platform.UIKit.accessibilityTextualContext
 import platform.UIKit.accessibilityTraits
+import platform.UIKit.accessibilityValue
 import platform.darwin.NSInteger
 
 private fun <R> debugPrint(name: String, block: () -> R): R {
@@ -74,6 +77,7 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
     var isInvisibleToUser = false
 
     val accessibilityLabelStrings = mutableListOf<String>()
+    val accessibilityValueStrings = mutableListOf<String>()
 
     fun addTrait(trait: UIAccessibilityTraits) {
         accessibilityTraits = accessibilityTraits or trait
@@ -108,12 +112,34 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
             }
 
             SemanticsProperties.Heading -> {
+                hasAnyMeaningfulSemantics = true
+
                 addTrait(UIAccessibilityTraitHeader)
+            }
+
+            SemanticsProperties.ToggleableState -> {
+                val state = getValue(key)
+
+                when (state) {
+                    ToggleableState.On -> {
+                        addTrait(UIAccessibilityTraitSelected)
+                        accessibilityValueStrings.add("On")
+                    }
+
+                    ToggleableState.Off -> {
+                        accessibilityValueStrings.add("Off")
+                    }
+
+                    ToggleableState.Indeterminate -> {
+                        accessibilityValueStrings.add("Indeterminate")
+                    }
+                }
             }
 
             // == Actions ==
 
             SemanticsActions.OnClick -> {
+                hasAnyMeaningfulSemantics = true
                 // iOS accessibility service default interaction is a single tap and thus doesn't need to use [UIAccessibilityCustomAction], we only need to hint a user, that it's a button
                 addTrait(UIAccessibilityTraitButton)
             }
@@ -130,6 +156,11 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
     if (accessibilityLabelStrings.isNotEmpty()) {
         hasAnyMeaningfulSemantics = true
         accessibilityLabel = accessibilityLabelStrings.joinToString("\n") { it }
+    }
+
+    if (accessibilityValueStrings.isNotEmpty()) {
+        hasAnyMeaningfulSemantics = true
+        accessibilityValue = accessibilityLabelStrings.joinToString("\n") { it }
     }
 
     isAccessibilityElement = hasAnyMeaningfulSemantics
