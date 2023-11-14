@@ -31,12 +31,15 @@ import platform.UIKit.accessibilityElements
 import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
 import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.state.ToggleableState
 import kotlin.test.todo
+import platform.UIKit.UIAccessibilityTraitAdjustable
 import platform.UIKit.UIAccessibilityTraitButton
 import platform.UIKit.UIAccessibilityTraitHeader
+import platform.UIKit.UIAccessibilityTraitImage
 import platform.UIKit.UIAccessibilityTraitNotEnabled
 import platform.UIKit.UIAccessibilityTraitSelected
 import platform.UIKit.UIAccessibilityTraits
@@ -70,11 +73,10 @@ private fun <R> debugPrint(name: String, block: () -> R): R {
  */
 private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode) {
     // If the node doesn't have any semantics that can be projected to iOS UIAccessibility entities, it is invisible to accessibility services
+    isAccessibilityElement = false
     var hasAnyMeaningfulSemantics = false
 
     println(semanticsNode.config)
-
-    var isInvisibleToUser = false
 
     val accessibilityLabelStrings = mutableListOf<String>()
     val accessibilityValueStrings = mutableListOf<String>()
@@ -91,8 +93,8 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
             // == Properties ==
 
             SemanticsProperties.InvisibleToUser -> {
-                isInvisibleToUser = true
-                return@forEach
+                // Return immediately. Function won't reach a point where [isAccessibilityElement] is set to true
+                return
             }
 
             SemanticsProperties.ContentDescription -> {
@@ -117,6 +119,12 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
                 addTrait(UIAccessibilityTraitHeader)
             }
 
+            SemanticsProperties.StateDescription -> {
+                val state = getValue(key)
+
+                accessibilityValueStrings.add(state)
+            }
+
             SemanticsProperties.ToggleableState -> {
                 val state = getValue(key)
 
@@ -136,6 +144,22 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
                 }
             }
 
+            SemanticsProperties.Role -> {
+                val role = getValue(key)
+
+                when (role) {
+                    Role.DropdownList -> {
+                        hasAnyMeaningfulSemantics = true
+                        addTrait(UIAccessibilityTraitAdjustable)
+                    }
+
+                    Role.Image -> {
+                        hasAnyMeaningfulSemantics = true
+                        addTrait(UIAccessibilityTraitImage)
+                    }
+                }
+            }
+
             // == Actions ==
 
             SemanticsActions.OnClick -> {
@@ -146,11 +170,6 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
 
             else -> {}
         }
-    }
-
-    if (isInvisibleToUser) {
-        isAccessibilityElement = false
-        return
     }
 
     if (accessibilityLabelStrings.isNotEmpty()) {
