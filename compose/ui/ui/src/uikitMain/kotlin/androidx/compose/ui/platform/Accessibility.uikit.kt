@@ -31,8 +31,10 @@ import platform.UIKit.accessibilityElements
 import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
 import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import kotlin.test.todo
+import platform.UIKit.UIAccessibilityTraitButton
 import platform.UIKit.UIAccessibilityTraitHeader
 import platform.UIKit.UIAccessibilityTraitNotEnabled
 import platform.UIKit.UIAccessibilityTraits
@@ -82,6 +84,8 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
     // Iterate through all semantic properties and map them to values that are expected by iOS Accessibility services for the node with given semantics
     semanticsNode.config.forEach { pair ->
         when (val key = pair.key) {
+            // == Properties ==
+
             SemanticsProperties.InvisibleToUser -> {
                 isInvisibleToUser = true
                 return@forEach
@@ -105,6 +109,13 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
 
             SemanticsProperties.Heading -> {
                 addTrait(UIAccessibilityTraitHeader)
+            }
+
+            // == Actions ==
+
+            SemanticsActions.OnClick -> {
+                // iOS accessibility service default interaction is a single tap and thus doesn't need to use [UIAccessibilityCustomAction], we only need to hint a user, that it's a button
+                addTrait(UIAccessibilityTraitButton)
             }
 
             else -> {}
