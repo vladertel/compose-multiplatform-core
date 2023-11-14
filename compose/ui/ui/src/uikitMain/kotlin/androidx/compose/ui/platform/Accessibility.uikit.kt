@@ -33,9 +33,14 @@ import platform.darwin.NSObject
 import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import kotlin.test.todo
+import platform.UIKit.UIAccessibilityTraitHeader
+import platform.UIKit.UIAccessibilityTraitNotEnabled
+import platform.UIKit.UIAccessibilityTraits
 import platform.UIKit.UIView
+import platform.UIKit.accessibilityElementsHidden
 import platform.UIKit.accessibilityLabel
 import platform.UIKit.accessibilityTextualContext
+import platform.UIKit.accessibilityTraits
 import platform.darwin.NSInteger
 
 private fun <R> debugPrint(name: String, block: () -> R): R {
@@ -46,55 +51,74 @@ private fun <R> debugPrint(name: String, block: () -> R): R {
 
 /**
  * Set current object UIAccessibility properties using the [SemanticsNode] properties
+ *
+ * accessibilityLabel: A string that succinctly identifies the element. It's what a screen reader speaks to describe the element.
+ * accessibilityHint: Provides additional context about an element, typically describing what will happen if the user interacts with it. It helps users understand actions associated with the element.
+ * accessibilityValue: Conveys the value of an element, such as the current setting of a slider or the text inside a text field.
+ * accessibilityTraits: Describes the characteristics of the element, such as being a button, selected, a link, a header, etc. This helps users understand how to interact with the element.
+ * accessibilityElementsHidden: When set to true, it hides the element and all its children from the accessibility system. Useful when a widget is present in the hierarchy but covered with other widget.
+ * isAccessibilityElement: Determines whether the element should be exposed to the accessibility system.
+ * accessibilityFrame: The frame of the element in screen coordinates, helping the accessibility system to know where it is located.
+ * accessibilityPath: A path object that defines the shape of the element, used for more precise element description and interaction.
+ * accessibilityViewIsModal: Indicates whether interacting with this element requires the user to dismiss a modal view first.
+ *
  */
 private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode) {
+    // If the node doesn't have any semantics that can be projected to iOS UIAccessibility entities, it is invisible to accessibility services
     var hasAnyMeaningfulSemantics = false
 
     println(semanticsNode.config)
 
-    fun <T> withKey(key: SemanticsPropertyKey<T>, block: (T) -> Unit): Boolean {
-        val property = semanticsNode.config.getOrNull(key)
-
-        if (property == null) {
-            return false
-        } else {
-            block(property)
-            return true
-        }
-    }
-
-    // TODO: investigate how this semantic should affect a node with children
-    val isInvisibleToUser = withKey(SemanticsProperties.InvisibleToUser) {
-        isAccessibilityElement = false
-    }
-
-    if (isInvisibleToUser) {
-        return
-    }
+    var isInvisibleToUser = false
 
     val accessibilityLabelStrings = mutableListOf<String>()
 
-    withKey(SemanticsProperties.ContentDescription) { list ->
-        accessibilityLabelStrings.addAll(list)
+    fun addTrait(trait: UIAccessibilityTraits) {
+        accessibilityTraits = accessibilityTraits or trait
     }
 
-    withKey(SemanticsProperties.PaneTitle) {
-        accessibilityLabelStrings.add(it)
+    fun <T>getValue(key: SemanticsPropertyKey<T>): T = semanticsNode.config[key]
+
+    // Iterate through all semantic properties and map them to values that are expected by iOS Accessibility services for the node with given semantics
+    semanticsNode.config.forEach { pair ->
+        when (val key = pair.key) {
+            SemanticsProperties.InvisibleToUser -> {
+                isInvisibleToUser = true
+                return@forEach
+            }
+
+            SemanticsProperties.ContentDescription -> {
+                accessibilityLabelStrings.addAll(getValue(key))
+            }
+
+            SemanticsProperties.Text -> {
+                accessibilityLabelStrings.addAll(getValue(key).map { it.text })
+            }
+
+            SemanticsProperties.PaneTitle -> {
+                accessibilityLabelStrings.add(getValue(key))
+            }
+
+            SemanticsProperties.Disabled -> {
+                addTrait(UIAccessibilityTraitNotEnabled)
+            }
+
+            SemanticsProperties.Heading -> {
+                addTrait(UIAccessibilityTraitHeader)
+            }
+
+            else -> {}
+        }
+    }
+
+    if (isInvisibleToUser) {
+        isAccessibilityElement = false
+        return
     }
 
     if (accessibilityLabelStrings.isNotEmpty()) {
         hasAnyMeaningfulSemantics = true
         accessibilityLabel = accessibilityLabelStrings.joinToString("\n") { it }
-    }
-
-    withKey(SemanticsProperties.TestTag) { tag ->
-        // TODO: introduce UIAccessibilityIdentification workaround
-        //accessibilityIdentifier = tag
-    }
-
-    withKey(SemanticsProperties.Text) { list ->
-        hasAnyMeaningfulSemantics = true
-        accessibilityTextualContext = list.joinToString { it.text }
     }
 
     isAccessibilityElement = hasAnyMeaningfulSemantics
@@ -169,7 +193,7 @@ private class ComposeAccessibilityContainer(
     override fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
 
     override fun indexOfAccessibilityElement(element: Any?): NSInteger {
-        // TODO: store the elements in Int->Any map, if that lookup takes significant time
+        // TODO: store the elements in Any->Int map, if that lookup takes significant time
         if (element == null) {
             return NSNotFound
         }
@@ -193,7 +217,7 @@ private fun createComposeAccessibleObject(
     semanticsNode: SemanticsNode,
     parent: Any
 ): Any {
-    return if (semanticsNode.children.size == 0) {
+    return if (semanticsNode.children.isEmpty()) {
         ComposeAccessibilityElement(controller, semanticsNode, parent)
     } else {
         ComposeAccessibilityContainer(controller, semanticsNode, parent)
@@ -206,7 +230,7 @@ internal class AccessibilityControllerImpl(
     val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
 ) : AccessibilityController {
     /**
-     * Represents the current state of the [ComposeAccessibleTemp] tree cleanliness.
+     * Represents the current tree cleanliness.
      *
      * A value of true indicates that the Compose accessible tree is dirty, meaning that compose semantics tree was modified since last sync,
      * false otherwise.
@@ -253,7 +277,7 @@ internal class AccessibilityControllerImpl(
             println("${gap()} $any")
 
             if (any is UIAccessibilityContainerWorkaroundProtocol) {
-                for (i in 0..any.accessibilityElementCount() - 1) {
+                for (i in 0 until any.accessibilityElementCount()) {
                     any.accessibilityElementAtIndex(i.toLong())?.let {
                         traverse(it, depth + 1)
                     }
