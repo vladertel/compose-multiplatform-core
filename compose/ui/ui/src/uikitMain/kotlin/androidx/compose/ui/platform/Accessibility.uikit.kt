@@ -42,6 +42,7 @@ import platform.UIKit.UIAccessibilityTraitHeader
 import platform.UIKit.UIAccessibilityTraitImage
 import platform.UIKit.UIAccessibilityTraitNotEnabled
 import platform.UIKit.UIAccessibilityTraitSelected
+import platform.UIKit.UIAccessibilityTraitUpdatesFrequently
 import platform.UIKit.UIAccessibilityTraits
 import platform.UIKit.UIView
 import platform.UIKit.accessibilityElementsHidden
@@ -71,9 +72,14 @@ private fun <R> debugPrint(name: String, block: () -> R): R {
  * accessibilityViewIsModal: Indicates whether interacting with this element requires the user to dismiss a modal view first.
  */
 private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode) {
-    // If the node doesn't have any semantics that can be projected to iOS UIAccessibility entities, it is invisible to accessibility services
+    // If the node doesn't have any semantics that can be projected to iOS UIAccessibility entities, it will be invisible to accessibility services
     isAccessibilityElement = false
+
     var hasAnyMeaningfulSemantics = false
+
+    fun onMeaningfulSemanticAdded() {
+        hasAnyMeaningfulSemantics = true
+    }
 
     println(semanticsNode.config)
 
@@ -96,6 +102,11 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
                 return
             }
 
+            SemanticsProperties.LiveRegion -> {
+                onMeaningfulSemanticAdded()
+                addTrait(UIAccessibilityTraitUpdatesFrequently)
+            }
+
             SemanticsProperties.ContentDescription -> {
                 accessibilityLabelStrings.addAll(getValue(key))
             }
@@ -113,14 +124,12 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
             }
 
             SemanticsProperties.Heading -> {
-                hasAnyMeaningfulSemantics = true
-
+                onMeaningfulSemanticAdded()
                 addTrait(UIAccessibilityTraitHeader)
             }
 
             SemanticsProperties.StateDescription -> {
                 val state = getValue(key)
-
                 accessibilityValueStrings.add(state)
             }
 
@@ -148,17 +157,17 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
 
                 when (role) {
                     Role.Button, Role.RadioButton, Role.Checkbox, Role.Switch -> {
-                        hasAnyMeaningfulSemantics = true
+                        onMeaningfulSemanticAdded()
                         addTrait(UIAccessibilityTraitButton)
                     }
 
                     Role.DropdownList -> {
-                        hasAnyMeaningfulSemantics = true
+                        onMeaningfulSemanticAdded()
                         addTrait(UIAccessibilityTraitAdjustable)
                     }
 
                     Role.Image -> {
-                        hasAnyMeaningfulSemantics = true
+                        onMeaningfulSemanticAdded()
                         addTrait(UIAccessibilityTraitImage)
                     }
                 }
@@ -167,18 +176,18 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
             // == Actions ==
 
             SemanticsActions.OnClick -> {
-                hasAnyMeaningfulSemantics = true
+                onMeaningfulSemanticAdded()
             }
         }
     }
 
     if (accessibilityLabelStrings.isNotEmpty()) {
-        hasAnyMeaningfulSemantics = true
+        onMeaningfulSemanticAdded()
         accessibilityLabel = accessibilityLabelStrings.joinToString("\n") { it }
     }
 
     if (accessibilityValueStrings.isNotEmpty()) {
-        hasAnyMeaningfulSemantics = true
+        onMeaningfulSemanticAdded()
         accessibilityValue = accessibilityLabelStrings.joinToString("\n") { it }
     }
 
