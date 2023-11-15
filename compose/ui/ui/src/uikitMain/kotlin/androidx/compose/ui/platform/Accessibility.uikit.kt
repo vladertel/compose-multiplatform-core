@@ -69,7 +69,6 @@ private fun <R> debugPrint(name: String, block: () -> R): R {
  * accessibilityFrame: The frame of the element in screen coordinates, helping the accessibility system to know where it is located.
  * accessibilityPath: A path object that defines the shape of the element, used for more precise element description and interaction.
  * accessibilityViewIsModal: Indicates whether interacting with this element requires the user to dismiss a modal view first.
- *
  */
 private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode) {
     // If the node doesn't have any semantics that can be projected to iOS UIAccessibility entities, it is invisible to accessibility services
