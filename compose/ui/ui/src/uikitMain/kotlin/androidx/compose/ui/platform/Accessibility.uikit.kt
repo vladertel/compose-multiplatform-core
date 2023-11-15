@@ -147,6 +147,11 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
                 val role = getValue(key)
 
                 when (role) {
+                    Role.Button, Role.RadioButton, Role.Checkbox, Role.Switch -> {
+                        hasAnyMeaningfulSemantics = true
+                        addTrait(UIAccessibilityTraitButton)
+                    }
+
                     Role.DropdownList -> {
                         hasAnyMeaningfulSemantics = true
                         addTrait(UIAccessibilityTraitAdjustable)
@@ -163,11 +168,7 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
 
             SemanticsActions.OnClick -> {
                 hasAnyMeaningfulSemantics = true
-                // iOS accessibility service default interaction is a single tap and thus doesn't need to use [UIAccessibilityCustomAction], we only need to hint a user, that it's a button
-                addTrait(UIAccessibilityTraitButton)
             }
-
-            else -> {}
         }
     }
 
