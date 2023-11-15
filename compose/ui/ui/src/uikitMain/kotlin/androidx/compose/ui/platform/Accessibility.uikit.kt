@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.state.ToggleableState
 import kotlin.test.todo
+import platform.UIKit.UIAccessibilityCustomAction
 import platform.UIKit.UIAccessibilityTraitAdjustable
 import platform.UIKit.UIAccessibilityTraitButton
 import platform.UIKit.UIAccessibilityTraitHeader
@@ -45,6 +46,7 @@ import platform.UIKit.UIAccessibilityTraitSelected
 import platform.UIKit.UIAccessibilityTraitUpdatesFrequently
 import platform.UIKit.UIAccessibilityTraits
 import platform.UIKit.UIView
+import platform.UIKit.accessibilityCustomActions
 import platform.UIKit.accessibilityElementsHidden
 import platform.UIKit.accessibilityLabel
 import platform.UIKit.accessibilityTextualContext
@@ -177,6 +179,20 @@ private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode)
 
             SemanticsActions.OnClick -> {
                 onMeaningfulSemanticAdded()
+            }
+
+            SemanticsActions.CustomActions -> {
+                onMeaningfulSemanticAdded()
+
+                val actions = getValue(key)
+                accessibilityCustomActions = actions.map {
+                    UIAccessibilityCustomAction(
+                        name = it.label,
+                        actionHandler = { _ ->
+                            it.action.invoke()
+                        }
+                    )
+                }
             }
         }
     }
