@@ -324,6 +324,8 @@ internal class AccessibilityControllerImpl(
     private fun syncNodes() {
         val rooSemanticstNode = owner.rootSemanticsNode
 
+        // TODO: the entire NSObject tree is eagerly recreated now when semantics are invalidated. This is not optimal.
+
         if (!rooSemanticstNode.layoutNode.isPlaced) {
             return
         }
