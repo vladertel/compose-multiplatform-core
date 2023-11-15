@@ -315,6 +315,7 @@ internal class AccessibilityControllerImpl(
     }
 
     override suspend fun syncLoop() {
+        // Copied from desktop implementation
         while (true) {
             syncNodes()
             delay(100)
@@ -350,7 +351,7 @@ internal class AccessibilityControllerImpl(
 
             if (any is UIAccessibilityContainerWorkaroundProtocol) {
                 for (i in 0 until any.accessibilityElementCount()) {
-                    any.accessibilityElementAtIndex(i.toLong())?.let {
+                    any.accessibilityElementAtIndex(i)?.let {
                         traverse(it, depth + 1)
                     }
                 }
