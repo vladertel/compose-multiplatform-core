@@ -54,12 +54,6 @@ import platform.UIKit.accessibilityTraits
 import platform.UIKit.accessibilityValue
 import platform.darwin.NSInteger
 
-private fun <R> debugPrint(name: String, block: () -> R): R {
-    val value = block()
-    println("$name: $value")
-    return value
-}
-
 /**
  * Set current object UIAccessibility properties using the [SemanticsNode] properties
  *
