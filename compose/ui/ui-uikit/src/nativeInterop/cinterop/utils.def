@@ -1,3 +1,3 @@
 linkerOpts = -framework UIKit
-package = androidx.compose.ui.uikit.accessibility
+package = androidx.compose.ui.utils
 language = Objective-C

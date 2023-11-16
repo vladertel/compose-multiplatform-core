@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-#import <Foundation/Foundation.h>
+package androidx.compose.ui.utils
 
-//! Project version number for CMPAccessibility.
-FOUNDATION_EXPORT double CMPAccessibilityVersionNumber;
+import platform.UIKit.UIView
 
-//! Project version string for CMPAccessibility.
-FOUNDATION_EXPORT const unsigned char CMPAccessibilityVersionString[];
+class AccessibilityElement(
+    private val container: UIView
+): Accessibility() {
+    private val element = CMPAccessibilityElement(container)
 
-#import "CMPAccessibilityElement.h"
+    override fun getPlatform(): String {
+        return "iOS"
+    }
+}

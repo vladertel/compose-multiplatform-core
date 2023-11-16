@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.android.build.gradle.internal.tasks.factory.dependsOn
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
@@ -23,11 +24,13 @@ plugins {
 }
 
 version = "1.0-SNAPSHOT"
-group = "me.user.accessibility"
+group = "me.user.ui"
 
-// Kotlin library: accessibility:accessibility
-// Package: androidx.compose.ui.uikit.accessibility
-// Objc-Library: CMPAccessibility
+// TODO: Gradle dependency substitution
+
+// Kotlin library: ui:ui-uikit
+// Package: androidx.compose.ui.uikit
+// Objc-Library: CMPUIKitUtils
 
 kotlin {
     iosX64("uikitX64") {
@@ -56,7 +59,7 @@ kotlin {
 
 fun KotlinNativeTarget.configureCInterop() {
     val isDevice = konanTarget == KonanTarget.IOS_ARM64
-    val frameworkName = "CMPAccessibility"
+    val frameworkName = "CMPUIKitUtils"
     val schemeName = frameworkName
     val objcDir = File(project.projectDir, "src/uikitMain/objc")
     val frameworkSourcesDir = File(objcDir, frameworkName)
@@ -76,39 +79,38 @@ fun KotlinNativeTarget.configureCInterop() {
     }
 
     compilations.getByName("main") {
-        cinterops.create("accessibility") {
-            val taskName = "${interopProcessingTaskName}MakeFramework"
-            project.tasks.register(taskName, Exec::class.java) {
-                inputs.dir(frameworkSourcesDir)
-                    .withPropertyName("$frameworkName-$platform")
-                    .withPathSensitivity(PathSensitivity.RELATIVE)
+        val taskName = "${compileTaskProvider.name}ObjCLib"
+        project.tasks.register(taskName, Exec::class.java) {
+            inputs.dir(frameworkSourcesDir)
+                .withPropertyName("$frameworkName-$platform")
+                .withPathSensitivity(PathSensitivity.RELATIVE)
 
-                outputs.cacheIf { true }
-                outputs.dir(buildDir)
-                    .withPropertyName("$frameworkName-$platform-archive")
+            outputs.cacheIf { true }
+            outputs.dir(buildDir)
+                .withPropertyName("$frameworkName-$platform-archive")
 
-                workingDir(frameworkSourcesDir)
-                commandLine("xcodebuild")
-                args(
-                    "archive",
-                    "-scheme", schemeName,
-                    "-archivePath", buildDir,
-                    "-sdk", if (isDevice) "iphoneos" else "iphonesimulator",
-                    "-destination", if (isDevice) {
-                        "generic/platform=iOS"
-                    } else {
-                        "generic/platform=iOS Simulator"
-                    },
-                    "SKIP_INSTALL=NO",
-                    "BUILD_LIBRARY_FOR_DISTRIBUTION=YES",
-                    "VALID_ARCHS=" + if (isDevice) "arm64" else "arm64 x86_64",
-                    "MACH_O_TYPE=staticlib"
-                )
-            }
+            workingDir(frameworkSourcesDir)
+            commandLine("xcodebuild")
+            args(
+                "archive",
+                "-scheme", schemeName,
+                "-archivePath", buildDir,
+                "-sdk", if (isDevice) "iphoneos" else "iphonesimulator",
+                "-destination", if (isDevice) {
+                    "generic/platform=iOS"
+                } else {
+                    "generic/platform=iOS Simulator"
+                },
+                "SKIP_INSTALL=NO",
+                "BUILD_LIBRARY_FOR_DISTRIBUTION=YES",
+                "VALID_ARCHS=" + if (isDevice) "arm64" else "arm64 x86_64",
+                "MACH_O_TYPE=staticlib"
+            )
+        }
 
-            project.tasks.findByName(interopProcessingTaskName)!!
-                .dependsOn(taskName)
+        this.compileTaskProvider.dependsOn(taskName)
 
+        cinterops.create("utils") {
             headersPath.walk().filter { it.isFile && it.extension == "h" }.forEach {
                 headers(it)
             }

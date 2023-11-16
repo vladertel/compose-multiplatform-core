@@ -23,8 +23,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		996EFEEA2B02CE5D0000FE0F /* libCMPAccessibility.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCMPAccessibility.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		996EFEF52B02CE8A0000FE0F /* CMPAccessibility.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPAccessibility.h; sourceTree = "<group>"; };
+		996EFEEA2B02CE5D0000FE0F /* libCMPUIKitUtils.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCMPUIKitUtils.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		996EFEF52B02CE8A0000FE0F /* CMPUIKitUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPUIKitUtils.h; sourceTree = "<group>"; };
 		9975AAEA2AEADDA900AF155F /* CMPAccessibilityElement.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPAccessibilityElement.h; sourceTree = "<group>"; };
 		9975AAEB2AEADDA900AF155F /* CMPAccessibilityElement.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPAccessibilityElement.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -40,20 +40,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		996EFEEB2B02CE5D0000FE0F /* CMPAccessibility */ = {
+		996EFEEB2B02CE5D0000FE0F /* CMPUIKitUtils */ = {
 			isa = PBXGroup;
 			children = (
 				9975AAEA2AEADDA900AF155F /* CMPAccessibilityElement.h */,
 				9975AAEB2AEADDA900AF155F /* CMPAccessibilityElement.m */,
-				996EFEF52B02CE8A0000FE0F /* CMPAccessibility.h */,
+				996EFEF52B02CE8A0000FE0F /* CMPUIKitUtils.h */,
 			);
-			path = CMPAccessibility;
+			path = CMPUIKitUtils;
 			sourceTree = "<group>";
 		};
 		9975AAC02AEABB5600AF155F = {
 			isa = PBXGroup;
 			children = (
-				996EFEEB2B02CE5D0000FE0F /* CMPAccessibility */,
+				996EFEEB2B02CE5D0000FE0F /* CMPUIKitUtils */,
 				9975AACB2AEABB5600AF155F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,7 +61,7 @@
 		9975AACB2AEABB5600AF155F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				996EFEEA2B02CE5D0000FE0F /* libCMPAccessibility.a */,
+				996EFEEA2B02CE5D0000FE0F /* libCMPUIKitUtils.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -69,9 +69,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		996EFEE92B02CE5D0000FE0F /* CMPAccessibility */ = {
+		996EFEE92B02CE5D0000FE0F /* CMPUIKitUtils */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 996EFEF22B02CE5D0000FE0F /* Build configuration list for PBXNativeTarget "CMPAccessibility" */;
+			buildConfigurationList = 996EFEF22B02CE5D0000FE0F /* Build configuration list for PBXNativeTarget "CMPUIKitUtils" */;
 			buildPhases = (
 				996EFEE62B02CE5D0000FE0F /* Sources */,
 				996EFEE72B02CE5D0000FE0F /* Frameworks */,
@@ -81,9 +81,9 @@
 			);
 			dependencies = (
 			);
-			name = CMPAccessibility;
+			name = CMPUIKitUtils;
 			productName = CMPUIKitStatic;
-			productReference = 996EFEEA2B02CE5D0000FE0F /* libCMPAccessibility.a */;
+			productReference = 996EFEEA2B02CE5D0000FE0F /* libCMPUIKitUtils.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
@@ -100,7 +100,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 9975AAC42AEABB5600AF155F /* Build configuration list for PBXProject "CMPAccessibility" */;
+			buildConfigurationList = 9975AAC42AEABB5600AF155F /* Build configuration list for PBXProject "CMPUIKitUtils" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -113,7 +113,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				996EFEE92B02CE5D0000FE0F /* CMPAccessibility */,
+				996EFEE92B02CE5D0000FE0F /* CMPUIKitUtils */,
 			);
 		};
 /* End PBXProject section */
@@ -286,7 +286,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		996EFEF22B02CE5D0000FE0F /* Build configuration list for PBXNativeTarget "CMPAccessibility" */ = {
+		996EFEF22B02CE5D0000FE0F /* Build configuration list for PBXNativeTarget "CMPUIKitUtils" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				996EFEF02B02CE5D0000FE0F /* Debug */,
@@ -295,7 +295,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		9975AAC42AEABB5600AF155F /* Build configuration list for PBXProject "CMPAccessibility" */ = {
+		9975AAC42AEABB5600AF155F /* Build configuration list for PBXProject "CMPUIKitUtils" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				9975AADA2AEABB5600AF155F /* Debug */,

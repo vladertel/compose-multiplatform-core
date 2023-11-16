@@ -42,7 +42,7 @@ import androidx.compose.ui.platform.*
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.uikit.accessibility.*
+import androidx.compose.ui.utils.*
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
