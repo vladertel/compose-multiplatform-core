@@ -28,6 +28,11 @@ plugins {
 
 AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
+// TODO: Remove
+repositories {
+    mavenLocal()
+}
+
 dependencies {
 
     constraints {
@@ -199,6 +204,16 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     api(project(":compose:ui:ui-graphics"))
                     api(project(":compose:ui:ui-text"))
                     api(libs.skikoCommon)
+                }
+            }
+            uikitMain {
+                dependencies {
+                    if (project.useObjcUtilsAsSources.toBoolean()) {
+                        api project(":compose:ui:ui-uikit")
+                    } else {
+                        // TODO: Use path from JetBrains maven
+                        implementation("me.user.ui:ui-uikit:1.0-SNAPSHOT")
+                    }
                 }
             }
             notMobileMain.dependsOn(skikoMain)

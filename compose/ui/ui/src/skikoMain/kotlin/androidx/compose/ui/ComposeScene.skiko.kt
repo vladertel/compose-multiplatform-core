@@ -28,6 +28,8 @@ import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.*
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.util.fastAny
@@ -247,43 +249,21 @@ class ComposeScene internal constructor(
         }
     }
 
-    private val childScenes = mutableSetOf<ComposeScene>()
-
-    /**
-     * Adds a child [ComposeScene], so that nodes in it can be found in tests.
-     */
-    internal fun addChildScene(scene: ComposeScene) {
-        check(!isClosed) { "ComposeScene is closed" }
-        childScenes.add(scene)
-    }
-
-    /**
-     * Removes a child [ComposeScene].
-     */
-    internal fun removeChildScene(scene: ComposeScene) {
-        check(!isClosed) { "ComposeScene is closed" }
-        childScenes.remove(scene)
-    }
-
-    /**
-     * Adds this scene's [RootForTest]s, including any of its child scenes, into the given set.
-     */
-    private fun addRootsForTestTo(target: MutableSet<RootForTest>) {
-        target.addAll(owners)
-        for (child in childScenes) {
-            child.addRootsForTestTo(target)
-        }
-    }
-
-    /**
-     * All currently registered [RootForTest]s. After calling [setContent] the first root
-     * will be added. If there is an any [Popup] is present in the content, it will be added as
-     * another [RootForTest]
-     */
+    @Deprecated(
+        message = "The scene isn't tracking list of roots anymore",
+        level = DeprecationLevel.ERROR,
+        replaceWith = ReplaceWith("SkiaRootForTest.onRootCreatedCallback")
+    )
     val roots: Set<RootForTest>
-        get() = buildSet(owners.size) {
-            addRootsForTestTo(this)
-        }
+        get() = throw NotImplementedError()
+
+    /**
+     * Semantics owner that owns [SemanticsNode] objects and notifies listeners of changes to the
+     * semantics tree.
+     */
+    @ExperimentalComposeUiApi
+    val semanticsOwner: SemanticsOwner
+        get() = requireNotNull(mainOwner).semanticsOwner
 
     private val defaultPointerStateTracker = DefaultPointerStateTracker()
 

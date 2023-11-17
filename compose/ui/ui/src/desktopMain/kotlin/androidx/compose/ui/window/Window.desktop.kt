@@ -399,20 +399,17 @@ fun Window(
     val windowExceptionHandlerFactory by rememberUpdatedState(
         LocalWindowExceptionHandlerFactory.current
     )
-    val parentScene = LocalComposeScene.current
     val layoutDirection = LocalLayoutDirection.current
     AwtWindow(
         visible = visible,
         create = {
             create().apply {
-                parentScene?.addChildScene(scene)
                 this.compositionLocalContext = compositionLocalContext
                 this.exceptionHandler = windowExceptionHandlerFactory.exceptionHandler(this)
                 setContent(onPreviewKeyEvent, onKeyEvent, content)
             }
         },
         dispose = {
-            parentScene?.removeChildScene(it.scene)
             dispose(it)
         },
         update = {
@@ -460,7 +457,6 @@ fun FrameWindowScope.MenuBar(content: @Composable MenuBarScope.() -> Unit) {
         val menu = JMenuBar()
         val composition = menu.setContent(parentComposition, content)
         window.jMenuBar = menu
-        composition to menu
 
         onDispose {
             window.jMenuBar = null

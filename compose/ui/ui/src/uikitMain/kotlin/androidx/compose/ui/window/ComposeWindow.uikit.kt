@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.uikit.*
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.utils.*
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -525,6 +526,9 @@ internal actual class ComposeWindow : UIViewController {
 
     override fun viewDidAppear(animated: Boolean) {
         super.viewDidAppear(animated)
+
+        val workaround = CMPAccessibilityElement(view)
+        workaround.accessibilityFrame = view.bounds
 
         NSNotificationCenter.defaultCenter.addObserver(
             observer = keyboardVisibilityListener,
