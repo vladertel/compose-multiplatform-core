@@ -241,8 +241,7 @@ private class ComposeAccessibilityContainer(
     semanticsNode: SemanticsNode,
     semanticsNodeChildren: List<SemanticsNode>,
     parent: Any,
-) : UIAccessibilityElement(parent),
-    UIAccessibilityContainerWorkaroundProtocol {
+) : UIAccessibilityElement(parent) {
     private val children: List<Any>
     private val wrappedElement = ComposeAccessibilityElement(controller, semanticsNode, this)
 
@@ -257,7 +256,7 @@ private class ComposeAccessibilityContainer(
         }
     }
 
-    override fun accessibilityElementAtIndex(index: NSInteger): Any? {
+    fun accessibilityElementAtIndex(index: NSInteger): Any? {
         val idx = index.toInt()
 
         if (idx < 0 || idx >= accessibilityElementCount().toInt()) {
@@ -271,9 +270,9 @@ private class ComposeAccessibilityContainer(
         return children[idx - 1]
     }
 
-    override fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
+    fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
 
-    override fun indexOfAccessibilityElement(element: Any?): NSInteger {
+    fun indexOfAccessibilityElement(element: Any?): NSInteger {
         // TODO: store the elements in Any->Int map, if that lookup takes significant time
         if (element == null) {
             return NSNotFound
@@ -365,13 +364,13 @@ internal class AccessibilityControllerImpl(
 
             println("${gap()} $any")
 
-            if (any is UIAccessibilityContainerWorkaroundProtocol) {
-                for (i in 0 until any.accessibilityElementCount()) {
-                    any.accessibilityElementAtIndex(i)?.let {
-                        traverse(it, depth + 1)
-                    }
-                }
-            }
+//            if (any is UIAccessibilityContainerWorkaroundProtocol) {
+//                for (i in 0 until any.accessibilityElementCount()) {
+//                    any.accessibilityElementAtIndex(i)?.let {
+//                        traverse(it, depth + 1)
+//                    }
+//                }
+//            }
         }
 
         accessibilityElements.forEach { traverse(it) }
