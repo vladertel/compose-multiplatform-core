@@ -59,7 +59,5 @@ abstract class AndroidXComposeMultiplatformExtension {
      */
     abstract fun configureDarwinFlags(): Unit
 
-    abstract fun configureUIKitCInterop(): Unit
-
     abstract val isKotlinWasmTargetEnabled: Boolean
 }
