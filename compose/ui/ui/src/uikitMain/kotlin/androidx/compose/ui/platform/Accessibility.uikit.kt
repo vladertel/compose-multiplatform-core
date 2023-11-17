@@ -322,6 +322,8 @@ internal class AccessibilityControllerImpl(
 
     override fun onSemanticsChange() {
         isCurrentComposeAccessibleTreeDirty = true
+
+        println("Semantics invalidated")
     }
 
     override fun onLayoutChange(layoutNode: LayoutNode) {
