@@ -30,7 +30,6 @@ import platform.UIKit.UIAccessibilityElement
 import platform.UIKit.accessibilityElements
 import platform.UIKit.isAccessibilityElement
 import platform.darwin.NSObject
-import androidx.compose.objc.UIAccessibilityContainerWorkaroundProtocol
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
