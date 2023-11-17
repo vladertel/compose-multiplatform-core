@@ -239,6 +239,7 @@ private class ComposeAccessibilityElement(
 private class ComposeAccessibilityContainer(
     controller: AccessibilityControllerImpl,
     semanticsNode: SemanticsNode,
+    semanticsNodeChildren: List<SemanticsNode>,
     parent: Any,
 ) : UIAccessibilityElement(parent),
     UIAccessibilityContainerWorkaroundProtocol {
@@ -251,7 +252,7 @@ private class ComposeAccessibilityContainer(
         accessibilityFrame = wrappedElement.accessibilityFrame
         accessibilityContainer = parent
 
-        children = wrappedElement.semanticsNode.replacedChildren.map {
+        children = semanticsNodeChildren.map {
             createComposeAccessibleObject(wrappedElement.controller, it, this)
         }
     }
@@ -297,10 +298,12 @@ private fun createComposeAccessibleObject(
     semanticsNode: SemanticsNode,
     parent: Any
 ): Any {
-    return if (semanticsNode.children.isEmpty()) {
+    val children = semanticsNode.replacedChildren
+
+    return if (children.isEmpty()) {
         ComposeAccessibilityElement(controller, semanticsNode, parent)
     } else {
-        ComposeAccessibilityContainer(controller, semanticsNode, parent)
+        ComposeAccessibilityContainer(controller, semanticsNode, children, parent)
     }
 }
 
@@ -335,8 +338,7 @@ internal class AccessibilityControllerImpl(
     private fun syncNodes() {
         val rooSemanticstNode = owner.rootSemanticsNode
 
-        // TODO: the entire NSObject tree is eagerly recreated now when semantics are invalidated. This is not optimal.
-
+        // TODO: the entire NSObject tree is eagerly recreated now when semantics are invalidated. This is not optimal (and most likely not correct).
         if (!rooSemanticstNode.layoutNode.isPlaced) {
             return
         }
@@ -344,6 +346,8 @@ internal class AccessibilityControllerImpl(
         if (!isCurrentComposeAccessibleTreeDirty) {
             return
         }
+
+        println("Recalculating tree")
 
         isCurrentComposeAccessibleTreeDirty = false
 
