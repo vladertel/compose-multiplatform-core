@@ -42,6 +42,7 @@ import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
@@ -157,10 +158,24 @@ private class FakeOwner(
         get() = TODO("Not yet implemented")
     override val textInputService: TextInputService
         get() = TODO("Not yet implemented")
+    override val softwareKeyboardController: SoftwareKeyboardController
+        get() = TODO("Not yet implemented")
 
     override suspend fun textInputSession(
         session: suspend PlatformTextInputSessionScope.() -> Nothing
     ): Nothing {
+        TODO("Not yet implemented")
+    }
+
+    override fun screenToLocal(positionOnScreen: Offset): Offset {
+        TODO("Not yet implemented")
+    }
+
+    override fun localToScreen(localPosition: Offset): Offset {
+        TODO("Not yet implemented")
+    }
+
+    override fun localToScreen(localTransform: Matrix) {
         TODO("Not yet implemented")
     }
 

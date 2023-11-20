@@ -19,12 +19,17 @@ package androidx.camera.core.internal;
 import static androidx.camera.core.CameraEffect.IMAGE_CAPTURE;
 import static androidx.camera.core.CameraEffect.PREVIEW;
 import static androidx.camera.core.CameraEffect.VIDEO_CAPTURE;
+import static androidx.camera.core.DynamicRange.BIT_DEPTH_10_BIT;
+import static androidx.camera.core.DynamicRange.ENCODING_SDR;
+import static androidx.camera.core.DynamicRange.ENCODING_UNSPECIFIED;
+import static androidx.camera.core.impl.UseCaseConfig.OPTION_CAPTURE_TYPE;
 import static androidx.camera.core.impl.utils.TransformUtils.rectToSize;
 import static androidx.camera.core.processing.TargetUtils.getNumberOfTargets;
 import static androidx.camera.core.streamsharing.StreamSharing.getCaptureTypes;
 import static androidx.camera.core.streamsharing.StreamSharing.isStreamSharing;
 import static androidx.core.util.Preconditions.checkArgument;
 import static androidx.core.util.Preconditions.checkState;
+
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
@@ -32,6 +37,7 @@ import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.util.Log;
 import android.util.Pair;
 import android.util.Size;
 import android.view.Surface;
@@ -46,6 +52,7 @@ import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraEffect;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.DynamicRange;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.Logger;
 import androidx.camera.core.Preview;
@@ -61,6 +68,7 @@ import androidx.camera.core.impl.CameraInfoInternal;
 import androidx.camera.core.impl.CameraInternal;
 import androidx.camera.core.impl.CameraMode;
 import androidx.camera.core.impl.Config;
+import androidx.camera.core.impl.MutableOptionsBundle;
 import androidx.camera.core.impl.PreviewConfig;
 import androidx.camera.core.impl.RestrictedCameraControl;
 import androidx.camera.core.impl.RestrictedCameraControl.CameraOperation;
@@ -71,6 +79,7 @@ import androidx.camera.core.impl.StreamSpec;
 import androidx.camera.core.impl.SurfaceConfig;
 import androidx.camera.core.impl.UseCaseConfig;
 import androidx.camera.core.impl.UseCaseConfigFactory;
+import androidx.camera.core.impl.UseCaseConfigFactory.CaptureType;
 import androidx.camera.core.impl.stabilization.StabilizationMode;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.streamsharing.StreamSharing;
@@ -154,9 +163,9 @@ public final class CameraUseCaseAdapter implements Camera {
     private StreamSharing mStreamSharing;
 
     @NonNull
-    private final RestrictedCameraControl mRestrictedCameraControl;
+    private final RestrictedCameraControl mAdapterCameraControl;
     @NonNull
-    private final RestrictedCameraInfo mRestrictedCameraInfo;
+    private final RestrictedCameraInfo mAdapterCameraInfo;
 
 
     /**
@@ -184,11 +193,11 @@ public final class CameraUseCaseAdapter implements Camera {
         mCameraDeviceSurfaceManager = cameraDeviceSurfaceManager;
         mUseCaseConfigFactory = useCaseConfigFactory;
         // TODO(b/279996499): bind the same restricted CameraControl and CameraInfo to use cases.
-        mRestrictedCameraControl =
+        mAdapterCameraControl =
                 new RestrictedCameraControl(mCameraInternal.getCameraControlInternal());
-        mRestrictedCameraInfo =
+        mAdapterCameraInfo =
                 new RestrictedCameraInfo(mCameraInternal.getCameraInfoInternal(),
-                        mRestrictedCameraControl);
+                        mAdapterCameraControl);
     }
 
     /**
@@ -282,11 +291,22 @@ public final class CameraUseCaseAdapter implements Camera {
      */
     void updateUseCases(@NonNull Collection<UseCase> appUseCases, boolean applyStreamSharing) {
         synchronized (mLock) {
+            checkUnsupportedFeatureCombinationAndThrow(appUseCases);
+
+            // Force enable StreamSharing for Extensions to support VideoCapture. This means that
+            // applyStreamSharing is set to true when the use case combination contains
+            // VideoCapture and Extensions is enabled.
+            if (!applyStreamSharing && hasExtension() && hasVideoCapture(appUseCases)) {
+                updateUseCases(appUseCases, /*applyStreamSharing*/true);
+                return;
+            }
+
             // Calculate camera UseCases and keep the result in local variables in case they don't
             // meet the stream combination rules.
-            UseCase placeholderForExtensions = calculatePlaceholderForExtensions(appUseCases);
             StreamSharing streamSharing = createOrReuseStreamSharing(appUseCases,
                     applyStreamSharing);
+            UseCase placeholderForExtensions = calculatePlaceholderForExtensions(appUseCases,
+                    streamSharing);
             Collection<UseCase> cameraUseCases =
                     calculateCameraUseCases(appUseCases, placeholderForExtensions, streamSharing);
 
@@ -318,7 +338,7 @@ public final class CameraUseCaseAdapter implements Camera {
                 //  calculateSuggestedStreamSpecs() is currently slow. We will do it after it's
                 //  optimized
                 // Only allow StreamSharing for non-concurrent mode.
-                if (!applyStreamSharing && hasNoExtension()
+                if (!applyStreamSharing && !hasExtension()
                         && mCameraCoordinator.getCameraOperatingMode()
                         != CameraCoordinator.CAMERA_OPERATING_MODE_CONCURRENT) {
                     // Try again and see if StreamSharing resolves the issue.
@@ -420,9 +440,9 @@ public final class CameraUseCaseAdapter implements Camera {
         return CameraMode.DEFAULT;
     }
 
-    private boolean hasNoExtension() {
+    private boolean hasExtension() {
         synchronized (mLock) {
-            return mCameraConfig == CameraConfigs.emptyConfig();
+            return mCameraConfig.getSessionProcessor(null) != null;
         }
     }
 
@@ -480,8 +500,11 @@ public final class CameraUseCaseAdapter implements Camera {
             Set<UseCase> newChildren = getStreamSharingChildren(appUseCases,
                     forceSharingToPreviewAndVideo);
             if (newChildren.size() < 2) {
-                // No need to share the stream for 1 or less children.
-                return null;
+                // No need to share the stream for 1 or less children. Except the case that
+                // StreamSharing is enabled for Extensions to support VideoCapture.
+                if (!(hasExtension() && hasVideoCapture(newChildren))) {
+                    return null;
+                }
             }
             if (mStreamSharing != null && mStreamSharing.getChildren().equals(newChildren)) {
                 // Returns the current instance if the new children equals the old.
@@ -762,7 +785,7 @@ public final class CameraUseCaseAdapter implements Camera {
     private void updateViewPort(@NonNull Map<UseCase, StreamSpec> suggestedStreamSpecMap,
             @NonNull Collection<UseCase> useCases) {
         synchronized (mLock) {
-            if (mViewPort != null) {
+            if (mViewPort != null && !useCases.isEmpty()) {
                 Integer lensFacing = mCameraInternal.getCameraInfoInternal().getLensFacing();
                 boolean isFrontCamera;
                 if (lensFacing == null) {
@@ -826,15 +849,74 @@ public final class CameraUseCaseAdapter implements Camera {
         UseCaseConfig<?> mCameraConfig;
     }
 
-    // Get a map of the configs for the use cases from the respective factories
-    private Map<UseCase, ConfigPair> getConfigs(Collection<UseCase> useCases,
-            UseCaseConfigFactory extendedFactory, UseCaseConfigFactory cameraFactory) {
+    /**
+     * Gets a map of the configs for the use cases from the respective factories.
+     */
+    private static Map<UseCase, ConfigPair> getConfigs(@NonNull Collection<UseCase> useCases,
+            @NonNull UseCaseConfigFactory extendedFactory,
+            @NonNull UseCaseConfigFactory cameraFactory) {
         Map<UseCase, ConfigPair> configs = new HashMap<>();
         for (UseCase useCase : useCases) {
-            configs.put(useCase, new ConfigPair(useCase.getDefaultConfig(false, extendedFactory),
-                    useCase.getDefaultConfig(true, cameraFactory)));
+            UseCaseConfig<?> extendedConfig;
+            if (isStreamSharing(useCase)) {
+                extendedConfig = generateExtendedStreamSharingConfigFromPreview(extendedFactory,
+                        (StreamSharing) useCase);
+            } else {
+                extendedConfig = useCase.getDefaultConfig(false, extendedFactory);
+            }
+            UseCaseConfig<?> cameraConfig = useCase.getDefaultConfig(true, cameraFactory);
+            configs.put(useCase, new ConfigPair(extendedConfig, cameraConfig));
         }
         return configs;
+    }
+
+    private static UseCaseConfig<?> generateExtendedStreamSharingConfigFromPreview(
+            @NonNull UseCaseConfigFactory extendedFactory, @NonNull StreamSharing streamSharing) {
+        Preview preview = new Preview.Builder().build();
+        Config previewConfig = preview.getDefaultConfig(false, extendedFactory);
+        if (previewConfig == null) {
+            return null;
+        }
+
+        // Remove OPTION_TARGET_CLASS, since its value would be "Preview".
+        MutableOptionsBundle mutableConfig = MutableOptionsBundle.from(previewConfig);
+        mutableConfig.removeOption(TargetConfig.OPTION_TARGET_CLASS);
+
+        return streamSharing.getUseCaseConfigBuilder(mutableConfig).getUseCaseConfig();
+    }
+
+    /**
+     * Checks for any unsupported feature combinations and throws an exception if found.
+     *
+     * @throws IllegalArgumentException if any feature combination is not supported.
+     */
+    private void checkUnsupportedFeatureCombinationAndThrow(@NonNull Collection<UseCase> useCases)
+            throws IllegalArgumentException {
+        // TODO(b/309900490): since there are other places (e.g. SupportedSurfaceCombination in
+        //  camera2) that feature combination constraints are enforced, it would be nice if they
+        //  followed a similar pattern for checking constraints.
+        if (hasExtension() && hasNonSdrConfig(useCases)) {
+            throw new IllegalArgumentException("Extensions are only supported for use with "
+                    + "standard dynamic range.");
+        }
+    }
+
+    private static boolean hasNonSdrConfig(@NonNull Collection<UseCase> useCases) {
+        for (UseCase useCase : useCases) {
+            DynamicRange dynamicRange = useCase.getCurrentConfig().getDynamicRange();
+            if (isNotSdr(dynamicRange)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isNotSdr(@NonNull DynamicRange dynamicRange) {
+        boolean is10Bit = dynamicRange.getBitDepth() == BIT_DEPTH_10_BIT;
+        boolean isHdr = dynamicRange.getEncoding() != ENCODING_SDR
+                && dynamicRange.getEncoding() != ENCODING_UNSPECIFIED;
+
+        return is10Bit || isHdr;
     }
 
     /**
@@ -891,13 +973,13 @@ public final class CameraUseCaseAdapter implements Camera {
     @NonNull
     @Override
     public CameraControl getCameraControl() {
-        return mRestrictedCameraControl;
+        return mAdapterCameraControl;
     }
 
     @NonNull
     @Override
     public CameraInfo getCameraInfo() {
-        return mRestrictedCameraInfo;
+        return mAdapterCameraInfo;
     }
 
     @NonNull
@@ -932,11 +1014,14 @@ public final class CameraUseCaseAdapter implements Camera {
             if (sessionProcessor != null) {
                 @CameraOperation Set<Integer> supportedOps =
                         sessionProcessor.getSupportedCameraOperations();
-                mRestrictedCameraControl.enableRestrictedOperations(true, supportedOps);
+                mAdapterCameraControl.enableRestrictedOperations(true, supportedOps);
             } else {
-                mRestrictedCameraControl.enableRestrictedOperations(false, null);
+                mAdapterCameraControl.enableRestrictedOperations(false, null);
             }
-
+            mAdapterCameraInfo.setPostviewSupported(
+                    mCameraConfig.isPostviewSupported());
+            mAdapterCameraInfo.setCaptureProcessProgressSupported(
+                    mCameraConfig.isCaptureProcessProgressSupported());
             //Configure the CameraInternal as well so that it can get SessionProcessor.
             mCameraInternal.setExtendedConfig(mCameraConfig);
         }
@@ -973,17 +1058,26 @@ public final class CameraUseCaseAdapter implements Camera {
      * @param appUseCases UseCase provided by the app.
      */
     @Nullable
-    UseCase calculatePlaceholderForExtensions(@NonNull Collection<UseCase> appUseCases) {
+    private UseCase calculatePlaceholderForExtensions(@NonNull Collection<UseCase> appUseCases,
+            @Nullable StreamSharing streamSharing) {
         synchronized (mLock) {
+            // Replace children with StreamSharing before calculation.
+            List<UseCase> useCasesToCheck = new ArrayList<>(appUseCases);
+            if (streamSharing != null) {
+                useCasesToCheck.add(streamSharing);
+                useCasesToCheck.removeAll(streamSharing.getChildren());
+            }
+
+            // Perform calculation.
             UseCase placeholder = null;
             if (isCoexistingPreviewImageCaptureRequired()) {
-                if (isExtraPreviewRequired(appUseCases)) {
+                if (isExtraPreviewRequired(useCasesToCheck)) {
                     if (isPreview(mPlaceholderForExtensions)) {
                         placeholder = mPlaceholderForExtensions;
                     } else {
                         placeholder = createExtraPreview();
                     }
-                } else if (isExtraImageCaptureRequired(appUseCases)) {
+                } else if (isExtraImageCaptureRequired(useCasesToCheck)) {
                     if (isImageCapture(mPlaceholderForExtensions)) {
                         placeholder = mPlaceholderForExtensions;
                     } else {
@@ -1004,40 +1098,67 @@ public final class CameraUseCaseAdapter implements Camera {
 
     /**
      * Returns true if the input use case list contains a {@link ImageCapture} but does not
-     * contain an {@link Preview}.
+     * contain a {@link Preview}.
+     *
+     * <p> Note that {@link StreamSharing} provides preview output surface to
+     * {@link SessionProcessor} and is therefore considered a {@link Preview}.
      */
-    private boolean isExtraPreviewRequired(@NonNull Collection<UseCase> useCases) {
-        boolean hasPreview = false;
+    private static boolean isExtraPreviewRequired(@NonNull Collection<UseCase> useCases) {
+        boolean hasPreviewOrStreamSharing = false;
         boolean hasImageCapture = false;
 
         for (UseCase useCase : useCases) {
-            if (isPreview(useCase)) {
-                hasPreview = true;
+            if (isPreview(useCase) || isStreamSharing(useCase)) {
+                hasPreviewOrStreamSharing = true;
             } else if (isImageCapture(useCase)) {
                 hasImageCapture = true;
             }
         }
 
-        return hasImageCapture && !hasPreview;
+        return hasImageCapture && !hasPreviewOrStreamSharing;
     }
 
     /**
      * Returns true if the input use case list contains a {@link Preview} but does not contain an
      * {@link ImageCapture}.
+     *
+     * <p> Note that {@link StreamSharing} provides preview output surface to
+     * {@link SessionProcessor} and is therefore considered a {@link Preview}.
      */
-    private boolean isExtraImageCaptureRequired(@NonNull Collection<UseCase> useCases) {
-        boolean hasPreview = false;
+    private static boolean isExtraImageCaptureRequired(@NonNull Collection<UseCase> useCases) {
+        boolean hasPreviewOrStreamSharing = false;
         boolean hasImageCapture = false;
 
         for (UseCase useCase : useCases) {
-            if (isPreview(useCase)) {
-                hasPreview = true;
+            if (isPreview(useCase) || isStreamSharing(useCase)) {
+                hasPreviewOrStreamSharing = true;
             } else if (isImageCapture(useCase)) {
                 hasImageCapture = true;
             }
         }
 
-        return hasPreview && !hasImageCapture;
+        return hasPreviewOrStreamSharing && !hasImageCapture;
+    }
+
+    private static boolean hasVideoCapture(@NonNull Collection<UseCase> useCases) {
+        for (UseCase useCase : useCases) {
+            if (isVideoCapture(useCase)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isVideoCapture(@Nullable UseCase useCase) {
+        if (useCase != null) {
+            if (useCase.getCurrentConfig().containsOption(OPTION_CAPTURE_TYPE)) {
+                return useCase.getCurrentConfig().getCaptureType() == CaptureType.VIDEO_CAPTURE;
+            } else {
+                Log.e(TAG, useCase + " UseCase does not have capture type.");
+            }
+
+        }
+        return false;
     }
 
     private static boolean isPreview(@Nullable UseCase useCase) {

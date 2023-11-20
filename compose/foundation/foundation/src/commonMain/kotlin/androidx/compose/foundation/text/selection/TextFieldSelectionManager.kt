@@ -644,7 +644,7 @@ internal class TextFieldSelectionManager(
         )
         onValueChange(newValue)
         oldValue = oldValue.copy(selection = newValue.selection)
-        updateFloatingToolbar(show = true)
+        enterSelectionMode(showFloatingToolbar = true)
     }
 
     internal fun getHandlePosition(isStartHandle: Boolean): Offset {
@@ -932,17 +932,15 @@ internal fun TextFieldSelectionHandle(
     val observer = remember(isStartHandle, manager) {
         manager.handleDragObserver(isStartHandle)
     }
-    val position = manager.getHandlePosition(isStartHandle)
 
     SelectionHandle(
-        position = position,
+        offsetProvider = { manager.getHandlePosition(isStartHandle) },
         isStartHandle = isStartHandle,
         direction = direction,
         handlesCrossed = manager.value.selection.reversed,
         modifier = Modifier.pointerInput(observer) {
             detectDownAndDragGesturesWithObserver(observer)
         },
-        content = null
     )
 }
 

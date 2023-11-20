@@ -27,6 +27,7 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 
 import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.lang.Math.round;
 
 import android.annotation.SuppressLint;
@@ -216,6 +217,10 @@ public final class ProtoLayoutInflater {
     private static final Trigger DEFAULT_ANIMATION_TRIGGER =
             Trigger.newBuilder().setOnLoadTrigger(OnLoadTrigger.getDefaultInstance()).build();
 
+    /** The default minimal click target size, for meeting the accessibility requirement */
+    @VisibleForTesting
+    static final float DEFAULT_MIN_CLICKABLE_SIZE_DP = 48f;
+
     /**
      * Default maximum raw byte size for a bitmap drawable.
      *
@@ -262,6 +267,7 @@ public final class ProtoLayoutInflater {
     private static final int LINE_COLOR_DEFAULT = 0xFFFFFFFF;
 
     static final PendingLayoutParams NO_OP_PENDING_LAYOUT_PARAMS = layoutParams -> layoutParams;
+    private static final byte UNSET_MASK = 0;
 
     final Context mUiContext;
 
@@ -431,6 +437,11 @@ public final class ProtoLayoutInflater {
                         mChildLayoutParams.apply(checkNotNull(child.getLayoutParams())));
             }
             mNumMissingChildren = 0;
+
+            if (source.getTouchDelegate() != null) {
+                addTouchDelegate(
+                        destinationGroup, (TouchDelegateComposite) source.getTouchDelegate());
+            }
             return true;
         }
 
@@ -956,6 +967,22 @@ public final class ProtoLayoutInflater {
         return linearLayoutParams;
     }
 
+    /**
+     * Creates {@link ContainerDimension} from the given {@link SpacerDimension}. If none of the
+     * linear or expanded dimension are present, it defaults to linear dimension 0.
+     */
+    private static ContainerDimension spacerDimensionToContainerDimension(
+            SpacerDimension spacerDimension) {
+        ContainerDimension.Builder containerDimension =
+                ContainerDimension.newBuilder().setLinearDimension(DpProp.newBuilder().setValue(0));
+        if (spacerDimension.hasLinearDimension()) {
+            containerDimension.setLinearDimension(spacerDimension.getLinearDimension());
+        } else if (spacerDimension.hasExpandedDimension()) {
+            containerDimension.setExpandedDimension(spacerDimension.getExpandedDimension());
+        }
+        return containerDimension.build();
+    }
+
     private LayoutParams updateLayoutParams(
             ViewProperties viewProperties,
             LayoutParams layoutParams,
@@ -1261,7 +1288,11 @@ public final class ProtoLayoutInflater {
         }
     }
 
-    private void applyClickable(View view, Clickable clickable) {
+    private void applyClickable(
+            @NonNull View view,
+            @Nullable View wrapper,
+            @NonNull Clickable clickable,
+            boolean extendTouchTarget) {
         view.setTag(R.id.clickable_id_tag, clickable.getId());
 
         boolean hasAction = false;
@@ -1329,7 +1360,97 @@ public final class ProtoLayoutInflater {
                         "Could not resolve android.R.attr.selectableItemBackground from Ui"
                                 + " Context.");
             }
+
+            if (!extendTouchTarget) {
+                // For temporarily disable the touch size check for element on arc
+                return;
+            }
+
+            view.post(
+                    () -> {
+                        // Use the logical parent (the parent in the proto) for the touch delegation
+                        // 1. When the direct parent is the wrapper view for layout sizing, it could
+                        // no provide extra space around the view.
+                        // 2. the ancestor view further up in the hierarchy are also NOT used, even
+                        // when the logical parent might not have enough space around the view.
+                        // Below are the considerations:
+                        //  a. The clickables of the same logical parent should have same priority
+                        //   of touch delegations. Only with this, we could avoid breaking the
+                        //   rule of propagating touch event upwards in order. The higher the
+                        //   ancester which forwards the touch event, the later the event is been
+                        //   propagated to.
+                        //  b. The minimal clickable size is not layout affecting, so unreasonable
+                        //    big touch target size should not be guaranteed which leads to
+                        //    unpredictable behavior. With it limited within the logical parent
+                        //    bounds, the behaviour is predictable.
+                        ViewGroup logicalParent;
+                        if (wrapper != null) {
+                            logicalParent = (ViewGroup) wrapper.getParent();
+                        } else {
+                            logicalParent = (ViewGroup) view.getParent();
+                        }
+                        if (logicalParent != null) {
+                            float widthDp = DEFAULT_MIN_CLICKABLE_SIZE_DP;
+                            float heightDp = DEFAULT_MIN_CLICKABLE_SIZE_DP;
+                            if (clickable.hasMinimumClickableWidth()) {
+                                widthDp = clickable.getMinimumClickableWidth().getValue();
+                            }
+                            if (clickable.hasMinimumClickableHeight()) {
+                                heightDp = clickable.getMinimumClickableHeight().getValue();
+                            }
+                            extendClickableAreaIfNeeded(
+                                    view, logicalParent, safeDpToPx(widthDp), safeDpToPx(heightDp));
+                        }
+                    });
         }
+    }
+
+    /*
+     * Attempt to extend the clickable area if the view bound falls below the required minimum
+     * clickable width/height. The clickable area is extended by delegating the touch event of its
+     * surrounding space from its logical parent. Note that, the view's direct parent might not
+     * be the logical parent in the proto. For example, ImageView is wrapped in a RatioViewWrapper
+     */
+    private static void extendClickableAreaIfNeeded(
+            @NonNull View view,
+            @NonNull ViewGroup logicalParent,
+            int minClickableWidthPx,
+            int minClickableHeightPx) {
+        Rect hitRect = new Rect();
+        view.getHitRect(hitRect);
+        if (minClickableWidthPx > hitRect.width() || minClickableHeightPx > hitRect.height()) {
+
+            ViewGroup directParent = (ViewGroup) view.getParent();
+            while (logicalParent != directParent) {
+                if (directParent == null) {
+                    return;
+                }
+                Rect rect = new Rect();
+                directParent.getHitRect(rect);
+                hitRect.offset(rect.left, rect.top);
+                directParent = (ViewGroup) directParent.getParent();
+            }
+
+            Rect actualRect = new Rect(hitRect);
+            // Negative inset makes the rect wider.
+            hitRect.inset(
+                    min(0, hitRect.width() - minClickableWidthPx) / 2,
+                    min(0, hitRect.height() - minClickableHeightPx) / 2);
+
+            addTouchDelegate(logicalParent, new TouchDelegateComposite(view, actualRect, hitRect));
+        }
+    }
+
+    private static void addTouchDelegate(
+            @NonNull View parent, @NonNull TouchDelegateComposite touchDelegateComposite) {
+        TouchDelegateComposite touchDelegate;
+        if (parent.getTouchDelegate() != null) {
+            touchDelegate = (TouchDelegateComposite) parent.getTouchDelegate();
+            touchDelegate.mergeFrom(touchDelegateComposite);
+        } else {
+            touchDelegate = touchDelegateComposite;
+        }
+        parent.setTouchDelegate(touchDelegate);
     }
 
     private void applyPadding(View view, Padding padding) {
@@ -1395,12 +1516,13 @@ public final class ProtoLayoutInflater {
     }
 
     private View applyModifiers(
-            View view,
-            Modifiers modifiers,
-            String posId,
-            Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
+            @NonNull View view,
+            @Nullable View wrapper, // The wrapper view for layout sizing, if any
+            @NonNull Modifiers modifiers,
+            @NonNull String posId,
+            @NonNull Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
         if (modifiers.hasClickable()) {
-            applyClickable(view, modifiers.getClickable());
+            applyClickable(view, wrapper, modifiers.getClickable(), /* extendTouchTarget= */ true);
         }
 
         if (modifiers.hasSemantics()) {
@@ -1679,7 +1801,14 @@ public final class ProtoLayoutInflater {
         }
 
         if (modifiers.hasClickable()) {
-            applyClickable(view, modifiers.getClickable());
+
+            // set the extendTouchTarget as false to disable the clickable area extension for
+            // meeting the required minimum clickable area
+            applyClickable(
+                    view,
+                    /* wrapper= */ null,
+                    modifiers.getClickable(),
+                    /* extendTouchTarget= */ false);
         }
 
         if (modifiers.hasSemantics()) {
@@ -1717,6 +1846,8 @@ public final class ProtoLayoutInflater {
                 return TruncateAt.MARQUEE;
             case TEXT_OVERFLOW_UNDEFINED:
             case UNRECOGNIZED:
+            // TODO(b/302531877): Implement ellipsize.
+            case TEXT_OVERFLOW_ELLIPSIZE:
                 return TEXT_OVERFLOW_DEFAULT;
         }
 
@@ -1856,7 +1987,12 @@ public final class ProtoLayoutInflater {
         resolveMinimumDimensions(linearLayout, width, height);
 
         View wrappedView =
-                applyModifiers(linearLayout, column.getModifiers(), columnPosId, pipelineMaker);
+                applyModifiers(
+                        linearLayout,
+                        /* wrapper= */ null,
+                        column.getModifiers(),
+                        columnPosId,
+                        pipelineMaker);
 
         parentViewWrapper.maybeAddView(wrappedView, layoutParams);
 
@@ -1909,7 +2045,12 @@ public final class ProtoLayoutInflater {
         resolveMinimumDimensions(linearLayout, width, height);
 
         View wrappedView =
-                applyModifiers(linearLayout, row.getModifiers(), rowPosId, pipelineMaker);
+                applyModifiers(
+                        linearLayout,
+                        /* wrapper= */ null,
+                        row.getModifiers(),
+                        rowPosId,
+                        pipelineMaker);
 
         parentViewWrapper.maybeAddView(wrappedView, layoutParams);
 
@@ -1966,7 +2107,13 @@ public final class ProtoLayoutInflater {
                         box.getVerticalAlignment().getValue());
         PendingFrameLayoutParams childLayoutParams = new PendingFrameLayoutParams(gravity);
 
-        View wrappedView = applyModifiers(frame, box.getModifiers(), boxPosId, pipelineMaker);
+        View wrappedView =
+                applyModifiers(
+                        frame,
+                        /* wrapper= */ null,
+                        box.getModifiers(),
+                        boxPosId,
+                        pipelineMaker);
 
         parentViewWrapper.maybeAddView(wrappedView, layoutParams);
 
@@ -2033,8 +2180,16 @@ public final class ProtoLayoutInflater {
             Spacer spacer,
             String posId,
             Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
-        // TODO(b/307515493): Add support for expanded dimension.
         LayoutParams layoutParams = generateDefaultLayoutParams();
+        layoutParams =
+                updateLayoutParams(
+                        parentViewWrapper.getParentProperties(),
+                        layoutParams,
+                        // This doesn't copy layout constraint for dynamic fields. That is fine, because that
+                        // will be later applied to the wrapper, and this layoutParams would have dimension
+                        // reset and put into the pipeline.
+                        spacerDimensionToContainerDimension(spacer.getWidth()),
+                        spacerDimensionToContainerDimension(spacer.getHeight()));
 
         // Initialize the size wrapper here, if needed. This simplifies the logic below when
         // creating the actual Spacer and adding it to its parent...
@@ -2042,11 +2197,16 @@ public final class ProtoLayoutInflater {
         @Nullable Float widthForLayoutDp = resolveSizeForLayoutIfNeeded(spacer.getWidth());
         @Nullable Float heightForLayoutDp = resolveSizeForLayoutIfNeeded(spacer.getHeight());
 
+        // Handling dynamic width/height for the spacer.
         if (widthForLayoutDp != null || heightForLayoutDp != null) {
             sizeWrapper = new FrameLayout(mUiContext);
             LayoutParams spaceWrapperLayoutParams = generateDefaultLayoutParams();
-            spaceWrapperLayoutParams.width = LayoutParams.WRAP_CONTENT;
-            spaceWrapperLayoutParams.height = LayoutParams.WRAP_CONTENT;
+            spaceWrapperLayoutParams =
+                    updateLayoutParams(
+                            parentViewWrapper.getParentProperties(),
+                            spaceWrapperLayoutParams,
+                            spacerDimensionToContainerDimension(spacer.getWidth()),
+                            spacerDimensionToContainerDimension(spacer.getHeight()));
 
             if (widthForLayoutDp != null) {
                 if (widthForLayoutDp <= 0f) {
@@ -2069,17 +2229,29 @@ public final class ProtoLayoutInflater {
             }
 
             int gravity =
-                    horizontalAlignmentToGravity(
-                                    spacer.getWidth()
-                                            .getLinearDimension()
-                                            .getHorizontalAlignmentForLayout())
-                            | verticalAlignmentToGravity(
-                                    spacer.getHeight()
-                                            .getLinearDimension()
-                                            .getVerticalAlignmentForLayout());
+                    (spacer.getWidth().hasLinearDimension()
+                            ? horizontalAlignmentToGravity(
+                            spacer.getWidth().getLinearDimension().getHorizontalAlignmentForLayout())
+                            : UNSET_MASK)
+                            | (spacer.getHeight().hasLinearDimension()
+                            ? verticalAlignmentToGravity(
+                            spacer.getHeight().getLinearDimension().getVerticalAlignmentForLayout())
+                            : UNSET_MASK);
+
+            // This layoutParams will override what we initially had and will be used for Spacer
+            // itself. This means that the wrapper's layout params should follow the rules for
+            // expand, and this one should just match the parents size when dimension is set to
+            // expand. When dimension is dynamic, the value will be assigned during the
+            // evaluation, so currently we will just copy over the value from constraints.
             FrameLayout.LayoutParams frameLayoutLayoutParams =
                     new FrameLayout.LayoutParams(layoutParams);
             frameLayoutLayoutParams.gravity = gravity;
+            if (spacer.getWidth().hasExpandedDimension()) {
+                frameLayoutLayoutParams.width = LayoutParams.MATCH_PARENT;
+            }
+            if (spacer.getHeight().hasExpandedDimension()) {
+                frameLayoutLayoutParams.height = LayoutParams.MATCH_PARENT;
+            }
             layoutParams = frameLayoutLayoutParams;
 
             parentViewWrapper.maybeAddView(sizeWrapper, spaceWrapperLayoutParams);
@@ -2093,64 +2265,99 @@ public final class ProtoLayoutInflater {
         if (spacer.hasModifiers()) {
             view =
                     applyModifiers(
-                            new View(mUiContext), spacer.getModifiers(), posId, pipelineMaker);
+                            new View(mUiContext),
+                            sizeWrapper,
+                            spacer.getModifiers(),
+                            posId,
+                            pipelineMaker);
 
-            // Currently, a spacer can only have a known size, not wrap or expand. Because of that,
-            // we don't need to use updateLayoutParams (it only exists to special-case expand() in a
-            // linear layout). Just go and set the LayoutParams directly here. First though, init
-            // the layout params to 0 (so we don't get strange behaviour before the first data
-            // pipeline update).
-            layoutParams.width = 0;
-            layoutParams.height = 0;
-
+            // LayoutParams have been updated above to accommodate from expand option.
             // The View needs to be added before any of the *Prop messages are wired up.
             // View#getLayoutParams will return null if the View has not been added to a container
             // yet
             // (since the LayoutParams are technically managed by the parent).
             parentViewWrapper.maybeAddView(view, layoutParams);
 
-            handleProp(
-                    spacer.getWidth().getLinearDimension(),
-                    width -> {
-                        LayoutParams lp = view.getLayoutParams();
-                        if (lp == null) {
-                            Log.e(TAG, "LayoutParams was null when updating spacer width");
-                            return;
-                        }
+            if (spacer.getWidth().hasLinearDimension()) {
+                // Init the layout params' width to 0 (so we don't get strange behaviour before the
+                // first data pipeline update).
+                layoutParams.width = 0;
+                handleProp(
+                        spacer.getWidth().getLinearDimension(),
+                        width -> {
+                            LayoutParams lp = view.getLayoutParams();
+                            if (lp == null) {
+                                Log.e(TAG, "LayoutParams was null when updating spacer width");
+                                return;
+                            }
 
-                        lp.width = safeDpToPx(width);
-                        view.requestLayout();
-                    },
-                    posId,
-                    pipelineMaker);
+                            lp.width = safeDpToPx(width);
+                            view.requestLayout();
+                        },
+                        posId,
+                        pipelineMaker);
+            }
 
-            handleProp(
-                    spacer.getHeight().getLinearDimension(),
-                    height -> {
-                        LayoutParams lp = view.getLayoutParams();
-                        if (lp == null) {
-                            Log.e(TAG, "LayoutParams was null when updating spacer height");
-                            return;
-                        }
+            if (spacer.getHeight().hasLinearDimension()) {
+                // Init the layout params' width to 0 (so we don't get strange behaviour before the
+                // first data pipeline update).
+                layoutParams.height = 0;
+                handleProp(
+                        spacer.getHeight().getLinearDimension(),
+                        height -> {
+                            LayoutParams lp = view.getLayoutParams();
+                            if (lp == null) {
+                                Log.e(TAG, "LayoutParams was null when updating spacer height");
+                                return;
+                            }
 
-                        lp.height = safeDpToPx(height);
-                        view.requestLayout();
-                    },
-                    posId,
-                    pipelineMaker);
+                            lp.height = safeDpToPx(height);
+                            view.requestLayout();
+                        },
+                        posId,
+                        pipelineMaker);
+            }
         } else {
             view = new Space(mUiContext);
-            handleProp(
-                    spacer.getWidth().getLinearDimension(),
-                    width -> view.setMinimumWidth(safeDpToPx(width)),
-                    posId,
-                    pipelineMaker);
-            handleProp(
-                    spacer.getHeight().getLinearDimension(),
-                    height -> view.setMinimumHeight(safeDpToPx(height)),
-                    posId,
-                    pipelineMaker);
             parentViewWrapper.maybeAddView(view, layoutParams);
+            if (spacer.getWidth().hasLinearDimension()) {
+                handleProp(
+                        spacer.getWidth().getLinearDimension(),
+                        width -> {
+                            // We still need to update layout params in case other dimension is expand, so 0 could
+                            // be miss interpreted.
+                            LayoutParams lp = view.getLayoutParams();
+                            if (lp == null) {
+                                Log.e(TAG, "LayoutParams was null when updating spacer width");
+                                return;
+                            }
+
+                            lp.width = safeDpToPx(width);
+                            // This calls requestLayout.
+                            view.setMinimumWidth(safeDpToPx(width));
+                        },
+                        posId,
+                        pipelineMaker);
+            }
+            if (spacer.getHeight().hasLinearDimension()) {
+                handleProp(
+                        spacer.getHeight().getLinearDimension(),
+                        height -> {
+                            // We still need to update layout params in case other dimension is expand, so 0 could
+                            // be miss interpreted.
+                            LayoutParams lp = view.getLayoutParams();
+                            if (lp == null) {
+                                Log.e(TAG, "LayoutParams was null when updating spacer height");
+                                return;
+                            }
+
+                            lp.height = safeDpToPx(height);
+                            // This calls requestLayout.
+                            view.setMinimumHeight(safeDpToPx(height));
+                        },
+                        posId,
+                        pipelineMaker);
+            }
         }
 
         if (sizeWrapper != null) {
@@ -2344,8 +2551,6 @@ public final class ProtoLayoutInflater {
         // importantForAccessibility, so we don't want to override it after applying modifiers.
         textView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
 
-        View wrappedView = applyModifiers(textView, text.getModifiers(), posId, pipelineMaker);
-
         if (valueForLayout != null) {
             if (valueForLayout.isEmpty()) {
                 Log.w(TAG, "Text's value_for_layout is empty. Element won't be visible.");
@@ -2358,6 +2563,13 @@ public final class ProtoLayoutInflater {
             sizeChangingTextWrapperLayoutParams.width =
                     (int) textView.getPaint().measureText(valueForLayout);
             sizeChangingTextWrapperLayoutParams.height = LayoutParams.WRAP_CONTENT;
+            View wrappedView =
+                    applyModifiers(
+                            textView,
+                            sizeChangingTextWrapper,
+                            text.getModifiers(),
+                            posId,
+                            pipelineMaker);
 
             // Set horizontal gravity on the wrapper to reflect alignment.
             int gravity = textAlignToAndroidGravity(text.getText().getTextAlignmentForLayout());
@@ -2375,6 +2587,13 @@ public final class ProtoLayoutInflater {
                             .getParentProperties()
                             .applyPendingChildLayoutParams(sizeChangingTextWrapperLayoutParams));
         } else {
+            View wrappedView =
+                    applyModifiers(
+                            textView,
+                            /* wrapper= */ null,
+                            text.getModifiers(),
+                            posId,
+                            pipelineMaker);
             parentViewWrapper.maybeAddView(wrappedView, layoutParams);
             return new InflatedView(
                     wrappedView,
@@ -2566,11 +2785,15 @@ public final class ProtoLayoutInflater {
         // of an image would read "image, <description>" (where the location of "image" can move
         // depending on user settings). If we apply the modifiers to RatioViewWrapper though, screen
         // readers will not realise that this is an image, and will read the incorrect description.
-        View wrappedImageView =
-                applyModifiers(imageView, image.getModifiers(), posId, pipelineMaker);
-
         RatioViewWrapper ratioViewWrapper = new RatioViewWrapper(mUiContext);
         ratioViewWrapper.setAspectRatio(ratio);
+        View wrappedImageView =
+                applyModifiers(
+                        imageView,
+                        ratioViewWrapper,
+                        image.getModifiers(),
+                        posId,
+                        pipelineMaker);
         ratioViewWrapper.addView(wrappedImageView);
 
         parentViewWrapper.maybeAddView(ratioViewWrapper, ratioWrapperLayoutParams);
@@ -2743,7 +2966,9 @@ public final class ProtoLayoutInflater {
         layoutParams.width = LayoutParams.MATCH_PARENT;
         layoutParams.height = LayoutParams.MATCH_PARENT;
 
-        if (line.hasColor()) {
+        if (line.hasBrush()) {
+            lineView.setBrush(line.getBrush());
+        } else if (line.hasColor()) {
             handleProp(line.getColor(), lineView::setColor, posId, pipelineMaker);
         } else {
             lineView.setColor(LINE_COLOR_DEFAULT);
@@ -2904,7 +3129,13 @@ public final class ProtoLayoutInflater {
             layoutInfoBuilder.removeSubtree(arcPosId);
         }
 
-        View wrappedView = applyModifiers(arcLayout, arc.getModifiers(), arcPosId, pipelineMaker);
+        View wrappedView =
+                applyModifiers(
+                        arcLayout,
+                        /* wrapper= */ null,
+                        arc.getModifiers(),
+                        arcPosId,
+                        pipelineMaker);
         parentViewWrapper.maybeAddView(wrappedView, layoutParams);
 
         int numMissingChildren = includeChildren ? 0 : arc.getContentsCount();
@@ -3202,7 +3433,13 @@ public final class ProtoLayoutInflater {
             tv.setScroller(new InhibitingScroller(mUiContext));
         }
 
-        View wrappedView = applyModifiers(tv, spannable.getModifiers(), posId, pipelineMaker);
+        View wrappedView =
+                applyModifiers(
+                        tv,
+                        /* wrapper= */ null,
+                        spannable.getModifiers(),
+                        posId,
+                        pipelineMaker);
         parentViewWrapper.maybeAddView(wrappedView, layoutParams);
 
         return new InflatedView(
@@ -3706,7 +3943,6 @@ public final class ProtoLayoutInflater {
             case LINEAR_DIMENSION:
                 return true;
             case EXPANDED_DIMENSION:
-                // TODO(b/307515493): Add support for expanded dimension.
                 return false;
             case INNER_NOT_SET:
                 return false;
@@ -3974,6 +4210,19 @@ public final class ProtoLayoutInflater {
             }
             if (!inflatedView.addMissingChildrenFrom(viewToUpdate)) {
                 throw new ViewMutationException("Failed to add missing children " + posId);
+            }
+            // Remove the touch delegate to the view to be updated
+            if (immediateParent.getTouchDelegate() != null) {
+                ((TouchDelegateComposite) immediateParent.getTouchDelegate())
+                        .removeDelegate(viewToUpdate);
+
+                // Make sure to remove the touch delegate when the actual clickable view is wrapped,
+                // for example ImageView inside the RatioViewWrapper
+                if (viewToUpdate instanceof ViewGroup
+                        && ((ViewGroup) viewToUpdate).getChildCount() > 0) {
+                    ((TouchDelegateComposite) immediateParent.getTouchDelegate())
+                            .removeDelegate(((ViewGroup) viewToUpdate).getChildAt(0));
+                }
             }
             immediateParent.removeViewAt(childIndex);
             immediateParent.addView(inflatedView.mView, childIndex, inflatedView.mLayoutParams);

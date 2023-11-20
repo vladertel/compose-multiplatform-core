@@ -31,6 +31,7 @@ import static androidx.wear.protolayout.renderer.helper.TestDsl.image;
 import static androidx.wear.protolayout.renderer.helper.TestDsl.layout;
 import static androidx.wear.protolayout.renderer.helper.TestDsl.row;
 import static androidx.wear.protolayout.renderer.helper.TestDsl.text;
+import static androidx.wear.protolayout.renderer.inflater.ProtoLayoutInflater.DEFAULT_MIN_CLICKABLE_SIZE_DP;
 import static androidx.wear.protolayout.renderer.inflater.ProtoLayoutInflater.TEXT_AUTOSIZES_LIMIT;
 import static androidx.wear.protolayout.renderer.inflater.ProtoLayoutInflater.getFrameLayoutGravity;
 import static androidx.wear.protolayout.renderer.inflater.ProtoLayoutInflater.getRenderedMetadata;
@@ -50,6 +51,7 @@ import android.app.Application;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.graphics.Paint.Cap;
 import android.graphics.Rect;
 import android.graphics.drawable.AnimatedVectorDrawable;
@@ -114,7 +116,10 @@ import androidx.wear.protolayout.proto.AlignmentProto.HorizontalAlignment;
 import androidx.wear.protolayout.proto.AlignmentProto.HorizontalAlignmentProp;
 import androidx.wear.protolayout.proto.AlignmentProto.VerticalAlignment;
 import androidx.wear.protolayout.proto.AlignmentProto.VerticalAlignmentProp;
+import androidx.wear.protolayout.proto.ColorProto.Brush;
 import androidx.wear.protolayout.proto.ColorProto.ColorProp;
+import androidx.wear.protolayout.proto.ColorProto.ColorStop;
+import androidx.wear.protolayout.proto.ColorProto.SweepGradient;
 import androidx.wear.protolayout.proto.DimensionProto;
 import androidx.wear.protolayout.proto.DimensionProto.ArcLineLength;
 import androidx.wear.protolayout.proto.DimensionProto.ArcSpacerLength;
@@ -153,6 +158,7 @@ import androidx.wear.protolayout.proto.LayoutElementProto.StrokeCapProp;
 import androidx.wear.protolayout.proto.LayoutElementProto.Text;
 import androidx.wear.protolayout.proto.LayoutElementProto.TextOverflow;
 import androidx.wear.protolayout.proto.LayoutElementProto.TextOverflowProp;
+import androidx.wear.protolayout.proto.ModifiersProto;
 import androidx.wear.protolayout.proto.ModifiersProto.AnimatedVisibility;
 import androidx.wear.protolayout.proto.ModifiersProto.Border;
 import androidx.wear.protolayout.proto.ModifiersProto.Clickable;
@@ -227,6 +233,7 @@ public class ProtoLayoutInflaterTest {
 
     private static final int SCREEN_WIDTH = 400;
     private static final int SCREEN_HEIGHT = 400;
+    private static final int DEFAULT_WEIGHT = 1;
 
     @Rule public final Expect expect = Expect.create();
 
@@ -617,6 +624,11 @@ public class ProtoLayoutInflaterTest {
         // Dimensions are in DP, but the density is currently 1 in the tests, so this is fine.
         expect.that(tv.getMeasuredWidth()).isEqualTo(width);
         expect.that(tv.getMeasuredHeight()).isEqualTo(height);
+
+        // This tests that layoutParams weren't null in the case when there's no modifiers so that
+        // minimum dimension is correctly set.
+        expect.that(tv.getMinimumWidth()).isEqualTo(width);
+        expect.that(tv.getMeasuredHeight()).isEqualTo(height);
     }
 
     @Test
@@ -650,6 +662,337 @@ public class ProtoLayoutInflaterTest {
         // Dimensions are in DP, but the density is currently 1 in the tests, so this is fine.
         expect.that(tv.getMeasuredWidth()).isEqualTo(width);
         expect.that(tv.getMeasuredHeight()).isEqualTo(height);
+    }
+
+    @Test
+    public void inflate_spacerWithDynamicDimension_andModifiers() {
+        int width = 100;
+        int widthForLayout = 112;
+        int height = 200;
+        int heightForLayout = 212;
+        DynamicFloat dynamicWidth =
+                DynamicFloat.newBuilder()
+                        .setFixed(FixedFloat.newBuilder().setValue(width).build())
+                        .build();
+        DynamicFloat dynamicHeight =
+                DynamicFloat.newBuilder()
+                        .setFixed(FixedFloat.newBuilder().setValue(height).build())
+                        .build();
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setSpacer(
+                                Spacer.newBuilder()
+                                        .setHeight(
+                                                SpacerDimension.newBuilder()
+                                                        .setLinearDimension(
+                                                                dynamicDp(
+                                                                        dynamicHeight,
+                                                                        heightForLayout)))
+                                        .setWidth(
+                                                SpacerDimension.newBuilder()
+                                                        .setLinearDimension(
+                                                                dynamicDp(
+                                                                        dynamicWidth,
+                                                                        widthForLayout)))
+                                        .setModifiers(
+                                                Modifiers.newBuilder()
+                                                        .setBackground(
+                                                                ModifiersProto.Background
+                                                                        .getDefaultInstance())))
+                        .build();
+
+        FrameLayout rootLayout = renderer(fingerprintedLayout(root)).inflate();
+
+        // Wait for evaluation to finish.
+        shadowOf(Looper.getMainLooper()).idle();
+
+        // Check that there's a single element in the layout...
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        ViewGroup wrapper = (ViewGroup) rootLayout.getChildAt(0);
+
+        // Check the spacer wrapper.
+        expect.that(wrapper.getMeasuredWidth()).isEqualTo(widthForLayout);
+        expect.that(wrapper.getMeasuredHeight()).isEqualTo(heightForLayout);
+
+        // Wait for evaluation to finish.
+        shadowOf(Looper.getMainLooper()).idle();
+
+        View spacer = wrapper.getChildAt(0);
+        // Check the actual spacer.
+        // Dimensions are in DP, but the density is currently 1 in the tests, so this is fine.
+        expect.that(spacer.getMeasuredWidth()).isEqualTo(width);
+        expect.that(spacer.getMeasuredHeight()).isEqualTo(height);
+    }
+
+    @Test
+    public void inflate_spacerWithDynamicDimension() {
+        int width = 100;
+        int widthForLayout = 112;
+        int height = 200;
+        int heightForLayout = 212;
+        DynamicFloat dynamicWidth =
+                DynamicFloat.newBuilder()
+                        .setFixed(FixedFloat.newBuilder().setValue(width).build())
+                        .build();
+        DynamicFloat dynamicHeight =
+                DynamicFloat.newBuilder()
+                        .setFixed(FixedFloat.newBuilder().setValue(height).build())
+                        .build();
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setSpacer(
+                                Spacer.newBuilder()
+                                        .setHeight(
+                                                SpacerDimension.newBuilder()
+                                                        .setLinearDimension(
+                                                                dynamicDp(
+                                                                        dynamicHeight,
+                                                                        heightForLayout)))
+                                        .setWidth(
+                                                SpacerDimension.newBuilder()
+                                                        .setLinearDimension(
+                                                                dynamicDp(
+                                                                        dynamicWidth,
+                                                                        widthForLayout))))
+                        .build();
+
+        FrameLayout rootLayout = renderer(fingerprintedLayout(root)).inflate();
+
+        // Wait for evaluation to finish.
+        shadowOf(Looper.getMainLooper()).idle();
+
+        // Check that there's a single element in the layout...
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        ViewGroup wrapper = (ViewGroup) rootLayout.getChildAt(0);
+
+        // Check the spacer wrapper.
+        expect.that(wrapper.getMeasuredWidth()).isEqualTo(widthForLayout);
+        expect.that(wrapper.getMeasuredHeight()).isEqualTo(heightForLayout);
+
+        // Wait for evaluation to finish.
+        shadowOf(Looper.getMainLooper()).idle();
+
+        View spacer = wrapper.getChildAt(0);
+        // Check the actual spacer.
+        // Dimensions are in DP, but the density is currently 1 in the tests, so this is fine.
+        expect.that(spacer.getMeasuredWidth()).isEqualTo(width);
+        expect.that(spacer.getMeasuredHeight()).isEqualTo(height);
+    }
+
+    @Test
+    public void inflate_spacerWithExpand() {
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setSpacer(
+                                Spacer.newBuilder()
+                                        .setHeight(
+                                                SpacerDimension.newBuilder()
+                                                        .setExpandedDimension(
+                                                                ExpandedDimensionProp
+                                                                        .getDefaultInstance()))
+                                        .setWidth(
+                                                SpacerDimension.newBuilder()
+                                                        .setExpandedDimension(
+                                                                ExpandedDimensionProp
+                                                                        .getDefaultInstance())))
+                        .build();
+
+        FrameLayout rootLayout = renderer(fingerprintedLayout(root)).inflate();
+
+        // Check that there's a single element in the layout...
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        View tv = rootLayout.getChildAt(0);
+
+        expect.that(tv.getMeasuredWidth()).isEqualTo(SCREEN_WIDTH);
+        expect.that(tv.getMeasuredHeight()).isEqualTo(SCREEN_HEIGHT);
+    }
+
+    @Test
+    public void inflate_spacersWithWeightExpanded() {
+        int widthWeight1 = 1;
+        int widthWeight2 = 3;
+        int heightWeight1 = 2;
+        int heightWeight2 = 4;
+
+        // SCREEN_WIDTH * widthWeight1 / (widthWeight1 + widthWeight2)
+        int expectedWidth1 = 100;
+        // SCREEN_WIDTH - expectedWidth1
+        int expectedWidth2 = 300;
+        // SCREEN_HEIGHT * heightWeight1 / (heightWeight1 + heightWeight2)
+        int expectedHeight1 = 133;
+        // SCREEN_HEIGHT - heightWeight1
+        int expectedHeight2 = 267;
+
+        // A column with a row (Spacer + Spacer) and Spacer, everything has weighted expand
+        // dimension.
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setColumn(
+                                Column.newBuilder()
+                                        .setWidth(expand())
+                                        .setHeight(expand())
+                                        .addContents(
+                                                LayoutElement.newBuilder()
+                                                        .setRow(
+                                                                Row.newBuilder()
+                                                                        .setWidth(expand())
+                                                                        .setHeight(
+                                                                                ContainerDimension.newBuilder()
+                                                                                        .setExpandedDimension(expandWithWeight(heightWeight1))
+                                                                                        .build())
+                                                                        .addContents(
+                                                                                LayoutElement.newBuilder()
+                                                                                        .setSpacer(
+                                                                                                buildExpandedSpacer(widthWeight1, DEFAULT_WEIGHT)))
+                                                                        .addContents(
+                                                                                LayoutElement.newBuilder()
+                                                                                        .setSpacer(
+                                                                                                buildExpandedSpacer(
+                                                                                                        widthWeight2, DEFAULT_WEIGHT)))))
+                                        .addContents(
+                                                LayoutElement.newBuilder()
+                                                        .setSpacer(buildExpandedSpacer(DEFAULT_WEIGHT, heightWeight2)))
+                                        .build())
+                        .build();
+
+        FrameLayout rootLayout = renderer(fingerprintedLayout(root)).inflate();
+
+        // Check that there's a single element in the layout...
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        ViewGroup column = (ViewGroup) rootLayout.getChildAt(0);
+        ViewGroup row = (ViewGroup) column.getChildAt(0);
+        View spacer1 = row.getChildAt(0);
+        View spacer2 = row.getChildAt(1);
+        View spacer = column.getChildAt(1);
+
+        expect.that(spacer1.getMeasuredWidth()).isEqualTo(expectedWidth1);
+        expect.that(spacer2.getMeasuredWidth()).isEqualTo(expectedWidth2);
+        expect.that(row.getMeasuredHeight()).isEqualTo(expectedHeight1);
+        expect.that(spacer.getMeasuredHeight()).isEqualTo(expectedHeight2);
+    }
+
+    @Test
+    public void inflate_spacerWithMixExpandAndFixed() {
+        int width = 100;
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setSpacer(
+                                Spacer.newBuilder()
+                                        .setHeight(
+                                                SpacerDimension.newBuilder()
+                                                        .setExpandedDimension(
+                                                                ExpandedDimensionProp
+                                                                        .getDefaultInstance()))
+                                        .setWidth(SpacerDimension
+                                                .newBuilder()
+                                                .setLinearDimension(dp(width))))
+                        .build();
+
+        FrameLayout rootLayout = renderer(fingerprintedLayout(root)).inflate();
+
+        // Check that there's a single element in the layout...
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        View tv = rootLayout.getChildAt(0);
+
+        // Dimensions are in DP, but the density is currently 1 in the tests, so this is fine.
+        expect.that(tv.getMeasuredWidth()).isEqualTo(width);
+        expect.that(tv.getMeasuredHeight()).isEqualTo(SCREEN_HEIGHT);
+    }
+
+    @Test
+    public void inflate_spacerWithExpandHeightAndDynamicWidth() {
+        int width = 100;
+        int widthForLayout = 112;
+        DynamicFloat dynamicWidth =
+                DynamicFloat.newBuilder()
+                        .setFixed(FixedFloat.newBuilder().setValue(width).build())
+                        .build();
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setSpacer(
+                                Spacer.newBuilder()
+                                        .setHeight(
+                                                SpacerDimension.newBuilder()
+                                                        .setExpandedDimension(
+                                                                ExpandedDimensionProp
+                                                                        .getDefaultInstance()))
+                                        .setWidth(
+                                                SpacerDimension.newBuilder()
+                                                        .setLinearDimension(
+                                                                dynamicDp(
+                                                                        dynamicWidth,
+                                                                        widthForLayout))))
+                        .build();
+
+        FrameLayout rootLayout = renderer(fingerprintedLayout(root)).inflate();
+
+        // Wait for evaluation to finish.
+        shadowOf(Looper.getMainLooper()).idle();
+
+        // Check that there's a single element in the layout...
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        ViewGroup wrapper = (ViewGroup) rootLayout.getChildAt(0);
+
+        // Check the spacer wrapper.
+        expect.that(wrapper.getMeasuredWidth()).isEqualTo(widthForLayout);
+        expect.that(wrapper.getMeasuredHeight()).isEqualTo(SCREEN_HEIGHT);
+
+        // Wait for evaluation to finish.
+        shadowOf(Looper.getMainLooper()).idle();
+
+        View spacer = wrapper.getChildAt(0);
+        // Check the actual spacer.
+        // Dimensions are in DP, but the density is currently 1 in the tests, so this is fine.
+        expect.that(spacer.getMeasuredWidth()).isEqualTo(width);
+        expect.that(spacer.getMeasuredHeight()).isEqualTo(SCREEN_HEIGHT);
+    }
+
+    @Test
+    public void inflate_spacerWithExpandWidthAndDynamicHeight() {
+        int height = 100;
+        int heightForLayout = 112;
+        DynamicFloat dynamicHeight =
+                DynamicFloat.newBuilder()
+                        .setFixed(FixedFloat.newBuilder().setValue(height).build())
+                        .build();
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setSpacer(
+                                Spacer.newBuilder()
+                                        .setWidth(
+                                                SpacerDimension.newBuilder()
+                                                        .setExpandedDimension(
+                                                                ExpandedDimensionProp
+                                                                        .getDefaultInstance()))
+                                        .setHeight(
+                                                SpacerDimension.newBuilder()
+                                                        .setLinearDimension(
+                                                                dynamicDp(
+                                                                        dynamicHeight,
+                                                                        heightForLayout))))
+                        .build();
+
+        FrameLayout rootLayout = renderer(fingerprintedLayout(root)).inflate();
+
+        // Wait for evaluation to finish.
+        shadowOf(Looper.getMainLooper()).idle();
+
+        // Check that there's a single element in the layout...
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        ViewGroup wrapper = (ViewGroup) rootLayout.getChildAt(0);
+
+        // Check the spacer wrapper.
+        expect.that(wrapper.getMeasuredWidth()).isEqualTo(SCREEN_WIDTH);
+        expect.that(wrapper.getMeasuredHeight()).isEqualTo(heightForLayout);
+
+        // Wait for evaluation to finish.
+        shadowOf(Looper.getMainLooper()).idle();
+
+        View spacer = wrapper.getChildAt(0);
+        // Check the actual spacer.
+        // Dimensions are in DP, but the density is currently 1 in the tests, so this is fine.
+        expect.that(spacer.getMeasuredWidth()).isEqualTo(SCREEN_WIDTH);
+        expect.that(spacer.getMeasuredHeight()).isEqualTo(height);
     }
 
     @Test
@@ -1036,6 +1379,434 @@ public class ProtoLayoutInflaterTest {
     }
 
     @Test
+    public void inflate_clickableModifier_extendsClickTargetArea() {
+        Action action = Action.newBuilder().setLoadAction(LoadAction.getDefaultInstance()).build();
+
+        int parentSize = 60;
+        int clickTargetSize = (int) DEFAULT_MIN_CLICKABLE_SIZE_DP;
+        int childSize = 30;
+
+        ContainerDimension parentBoxSize =
+                ContainerDimension.newBuilder().setLinearDimension(dp(parentSize)).build();
+        ContainerDimension childBoxSize =
+                ContainerDimension.newBuilder().setLinearDimension(dp(childSize)).build();
+
+        LayoutElement childBox =
+                LayoutElement.newBuilder().setBox(
+                        Box.newBuilder()
+                                .setWidth(childBoxSize)
+                                .setHeight(childBoxSize)
+                                .setModifiers(
+                                        Modifiers.newBuilder()
+                                                .setClickable(
+                                                        Clickable.newBuilder()
+                                                                .setId("foo")
+                                                                .setOnClick(
+                                                                        action))))
+                        .build();
+
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setBox(
+                                Box.newBuilder()
+                                        .setWidth(parentBoxSize)
+                                        .setHeight(parentBoxSize)
+                                        .addContents(childBox))
+                                        .build();
+
+        State.Builder receivedState = State.newBuilder();
+        FrameLayout rootLayout =
+                renderer(
+                        newRendererConfigBuilder(fingerprintedLayout(root), resourceResolvers())
+                                .setLoadActionListener(receivedState::mergeFrom))
+                        .inflate();
+        shadowOf(Looper.getMainLooper()).idle();
+
+        // Should be just a parent box with a child box.
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        View parent = rootLayout.getChildAt(0);
+        assertThat(parent).isInstanceOf(FrameLayout.class);
+        View child = ((FrameLayout) parent).getChildAt(0);
+        assertThat(child).isInstanceOf(FrameLayout.class);
+
+        // The clickable view must have the same tag as the corresponding layout clickable.
+        expect.that(child.getTag(clickable_id_tag)).isEqualTo("foo");
+
+        // Dispatch a click event to the child View; it should trigger the LoadAction...
+        dispatchTouchEvent(child, childSize / 2f, childSize / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo");
+
+        // -----------parent size 60------------------//
+        //     ------clickable target size 48 ----    //
+        //         ---clickable size 30 --            //
+        // Dispatch a click event to the parent View within the expanded clickable area;
+        // it should trigger the LoadAction...
+        receivedState.clearLastClickableId();
+        int loc = (int) ((parentSize - clickTargetSize) / 2f + (clickTargetSize - childSize) / 4f);
+        dispatchTouchEvent(parent, loc, loc);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo");
+
+        // Dispatch a click event to the parent View outside the expanded clickable area;
+        // it should NOT trigger the LoadAction...
+        receivedState.clearLastClickableId();
+        loc = (parentSize - clickTargetSize) / 4;
+        dispatchTouchEvent(parent, loc, loc);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("");
+    }
+
+    @Test
+    public void inflate_clickableModifier_extendMultipleClickTargetAreas() {
+        Action action = Action.newBuilder().setLoadAction(LoadAction.getDefaultInstance()).build();
+
+        int rowWidth = 80;
+        int rowHeight = 30;
+        int spacerSize = 5;
+        int childSize = 20;
+        int clickTargetSize = 30;
+        ContainerDimension parentRowWidth =
+                ContainerDimension.newBuilder().setLinearDimension(dp(rowWidth)).build();
+        ContainerDimension parentRowHeight =
+                ContainerDimension.newBuilder().setLinearDimension(dp(rowHeight)).build();
+        ContainerDimension childBoxSize =
+                ContainerDimension.newBuilder().setLinearDimension(dp(childSize)).build();
+        LayoutElement.Builder spacer =
+                LayoutElement.newBuilder()
+                        .setSpacer(
+                                Spacer.newBuilder()
+                                        .setWidth(
+                                                SpacerDimension.newBuilder()
+                                                        .setLinearDimension(dp(spacerSize))
+                                                        .build()
+                                        ));
+
+        //           |--clickable area child box 1 (5 - 35)--|
+        //                                          |---clickable area child box 2 (30-60)--|
+        // | spacer | spacer |      child box 1     | spacer|        child box 2       |
+        LayoutElement box1 =
+                LayoutElement.newBuilder()
+                        .setBox(
+                                Box.newBuilder()
+                                        .setWidth(childBoxSize)
+                                        .setHeight(childBoxSize)
+                                        .setModifiers(
+                                                Modifiers.newBuilder()
+                                                        .setClickable(
+                                                                Clickable.newBuilder()
+                                                                        .setMinimumClickableWidth(
+                                                                                dp(clickTargetSize))
+                                                                        .setMinimumClickableHeight(
+                                                                                dp(clickTargetSize))
+                                                                        .setOnClick(
+                                                                                action)
+                                                                        .setId("foo1"))))
+                        .build();
+
+        LayoutElement box2 =
+                LayoutElement.newBuilder()
+                        .setBox(
+                                Box.newBuilder()
+                                        .setWidth(childBoxSize)
+                                        .setHeight(childBoxSize)
+                                        .setModifiers(
+                                                Modifiers.newBuilder()
+                                                        .setClickable(
+                                                                Clickable.newBuilder()
+                                                                        .setMinimumClickableWidth(
+                                                                                dp(clickTargetSize))
+                                                                        .setMinimumClickableHeight(
+                                                                                dp(clickTargetSize))
+                                                                        .setOnClick(
+                                                                                action)
+                                                                        .setId("foo2"))))
+                        .build();
+
+        VerticalAlignmentProp verticalAlignment =
+                VerticalAlignmentProp.newBuilder()
+                        .setValue(VerticalAlignment.VERTICAL_ALIGN_CENTER)
+                        .build();
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setRow(
+                                Row.newBuilder()
+                                        .setWidth(parentRowWidth)
+                                        .setHeight(parentRowHeight)
+                                        .setVerticalAlignment(verticalAlignment)
+                                        .addContents(spacer)
+                                        .addContents(spacer)
+                                        .addContents(box1)
+                                        .addContents(spacer)
+                                        .addContents(box2))
+                        .build();
+
+        State.Builder receivedState = State.newBuilder();
+        FrameLayout rootLayout =
+                renderer(
+                        newRendererConfigBuilder(fingerprintedLayout(root), resourceResolvers())
+                                .setLoadActionListener(receivedState::mergeFrom))
+                        .inflate();
+
+        ShadowLooper.runUiThreadTasks();
+
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        View parent = rootLayout.getChildAt(0);
+        assertThat(parent).isInstanceOf(LinearLayout.class);
+        View childBox1 = ((LinearLayout) parent).getChildAt(2);
+        assertThat(childBox1).isInstanceOf(FrameLayout.class);
+        View childBox2 = ((LinearLayout) parent).getChildAt(4);
+        assertThat(childBox2).isInstanceOf(FrameLayout.class);
+
+        // The clickable view must have the same tag as the corresponding layout clickable.
+        expect.that(childBox1.getTag(clickable_id_tag)).isEqualTo("foo1");
+        expect.that(childBox2.getTag(clickable_id_tag)).isEqualTo("foo2");
+
+        // Dispatch a click event to the parent View within the expanded clickable area;
+        // it should trigger the LoadAction...
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, spacerSize + 1, rowHeight / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo1");
+
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, spacerSize * 2.5f + childSize - 1, rowHeight / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo1");
+
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, spacerSize * 2.5f + childSize + 1, rowHeight / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo2");
+
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, spacerSize * 3 + childSize * 2 + 1, rowHeight / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo2");
+
+        // Dispatch a click event to the child View; it should trigger the LoadAction...
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(childBox1, childSize / 2f, childSize / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo1");
+
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(childBox2, childSize / 2f, childSize / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo2");
+
+        // Dispatch a click event to the parent View outside the expanded clickable area;
+        // it should NOT trigger the LoadAction...
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, 1, rowHeight / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("");
+
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, rowWidth - 1, rowHeight / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("");
+    }
+
+    @Test
+    public void inflateThenMutate_withChangeToText_clickableModifier_extendClickTargetSize() {
+        Action action = Action.newBuilder().setLoadAction(LoadAction.getDefaultInstance()).build();
+        Modifiers testModifiers1 =
+                Modifiers.newBuilder()
+                        .setClickable(Clickable.newBuilder().setOnClick(action).setId("foo1"))
+                        .build();
+
+        Modifiers testModifiers2 =
+                Modifiers.newBuilder()
+                        .setClickable(Clickable.newBuilder().setOnClick(action).setId("foo2"))
+                        .build();
+
+        int parentSize = 45;
+        ContainerDimension parentBoxSize =
+                ContainerDimension.newBuilder().setLinearDimension(dp(parentSize)).build();
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setBox(
+                                Box.newBuilder()
+                                        .setWidth(parentBoxSize)
+                                        .setHeight(parentBoxSize)
+                                        .addContents(
+                                                LayoutElement.newBuilder()
+                                                        .setText(
+                                                                Text.newBuilder()
+                                                                        .setText(string("world"))
+                                                                        .setModifiers(
+                                                                                testModifiers1))))
+                        .build();
+
+        State.Builder receivedState = State.newBuilder();
+        Renderer renderer =
+                renderer(
+                        newRendererConfigBuilder(fingerprintedLayout(root), resourceResolvers())
+                                .setLoadActionListener(receivedState::mergeFrom));
+        FrameLayout rootLayout = renderer.inflate();
+        ViewGroup parent = (ViewGroup) rootLayout.getChildAt(0);
+        assertThat(((TextView) parent.getChildAt(0)).getText().toString()).isEqualTo("world");
+
+        // Dispatch a click event to the parent View within the expanded clickable area;
+        // it should trigger the LoadAction...
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, parentSize - 1, parentSize - 1);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo1");
+
+        // Produce a new layout with only one Text element changed.
+        LayoutElement root2 =
+                LayoutElement.newBuilder()
+                        .setBox(
+                                Box.newBuilder()
+                                        .setWidth(parentBoxSize)
+                                        .setHeight(parentBoxSize)
+                                        .addContents(
+                                                LayoutElement.newBuilder()
+                                                        .setText(
+                                                                Text.newBuilder()
+                                                                        .setText(string("mars"))
+                                                                        .setModifiers(
+                                                                                testModifiers2))))
+                        .build();
+
+        // Compute the mutation
+        ViewGroupMutation mutation =
+                renderer.computeMutation(getRenderedMetadata(rootLayout),
+                        fingerprintedLayout(root2));
+        assertThat(mutation).isNotNull();
+        assertThat(mutation.isNoOp()).isFalse();
+
+        // Apply the mutation
+        boolean mutationResult = renderer.applyMutation(rootLayout, mutation);
+        assertThat(mutationResult).isTrue();
+        assertThat(((TextView) parent.getChildAt(0)).getText().toString()).isEqualTo("mars");
+
+        // Dispatch a click event to the parent View within the expanded clickable area;
+        // it should trigger the LoadAction...
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, parentSize - 1, parentSize - 1);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("foo2");
+    }
+
+    @Test
+    public void inflateThenMutate_withAddedText_clickableModifier_extendsMultiClickTargetAreas() {
+        Action action = Action.newBuilder().setLoadAction(LoadAction.getDefaultInstance()).build();
+        Modifiers testModifiers1 =
+                Modifiers.newBuilder()
+                        .setClickable(Clickable.newBuilder().setOnClick(action).setId("www"))
+                        .build();
+
+        Modifiers testModifiers2 =
+                Modifiers.newBuilder()
+                        .setClickable(Clickable.newBuilder().setOnClick(action).setId("mmm"))
+                        .build();
+
+        int spacerSize = 50;
+        LayoutElement.Builder spacer =
+                LayoutElement.newBuilder()
+                        .setSpacer(
+                                Spacer.newBuilder()
+                                        .setWidth(
+                                                SpacerDimension.newBuilder().setLinearDimension(
+                                                        dp(spacerSize)).build()));
+
+        int parentHeight = 45;
+        int parentWidth = 125;
+        ContainerDimension parentHeightDimension =
+                ContainerDimension.newBuilder().setLinearDimension(dp(parentHeight)).build();
+        ContainerDimension parentWidthDimension =
+                ContainerDimension.newBuilder().setLinearDimension(dp(parentWidth)).build();
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setRow(
+                                Row.newBuilder()
+                                        .setWidth(parentWidthDimension)
+                                        .setHeight(parentHeightDimension)
+                                        .addContents(spacer)
+                                        .addContents(
+                                                LayoutElement.newBuilder()
+                                                        .setText(
+                                                                Text.newBuilder()
+                                                                        .setText(string("www"))
+                                                                        .setModifiers(
+                                                                                testModifiers1))))
+                        .build();
+
+        State.Builder receivedState = State.newBuilder();
+        Renderer renderer =
+                renderer(
+                        newRendererConfigBuilder(fingerprintedLayout(root), resourceResolvers())
+                                .setLoadActionListener(receivedState::mergeFrom));
+        FrameLayout rootLayout = renderer.inflate();
+        ViewGroup parent = (ViewGroup) rootLayout.getChildAt(0);
+        assertThat(((TextView) parent.getChildAt(1)).getText().toString()).isEqualTo("www");
+
+        // | spacer |www|
+        // Dispatch a click event to the parent View within the expanded clickable area;
+        // it should trigger the LoadAction...
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, spacerSize - 1, parentHeight / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("www");
+
+        // Produce a new layout with only one Text element changed.
+        LayoutElement root2 =
+                LayoutElement.newBuilder()
+                        .setRow(
+                                Row.newBuilder()
+                                        .setWidth(parentWidthDimension)
+                                        .setHeight(parentHeightDimension)
+                                        .addContents(spacer)
+                                        .addContents(
+                                                LayoutElement.newBuilder()
+                                                        .setText(
+                                                                Text.newBuilder()
+                                                                        .setText(string("www"))
+                                                                        .setModifiers(
+                                                                                testModifiers1)))
+                                        .addContents(spacer)
+                                        .addContents(
+                                                LayoutElement.newBuilder()
+                                                        .setText(
+                                                                Text.newBuilder()
+                                                                        .setText(string("mmm"))
+                                                                        .setModifiers(
+                                                                                testModifiers2))))
+                        .build();
+
+        // Compute the mutation
+        ViewGroupMutation mutation =
+                renderer.computeMutation(getRenderedMetadata(rootLayout),
+                        fingerprintedLayout(root2));
+        assertThat(mutation).isNotNull();
+        assertThat(mutation.isNoOp()).isFalse();
+
+        // Apply the mutation
+        ListenableFuture<Void> applyMutationFuture =
+                renderer.mRenderer.applyMutation(rootLayout, mutation);
+        shadowOf(getMainLooper()).idle();
+        try {
+            applyMutationFuture.get();
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        // | spacer |www| spacer |mmm
+        parent = (ViewGroup) rootLayout.getChildAt(0);
+        TextView text1 = (TextView) parent.getChildAt(1);
+        assertThat(text1.getText().toString()).isEqualTo("www");
+        assertThat(((TextView) parent.getChildAt(3)).getText().toString()).isEqualTo("mmm");
+
+        // Dispatch a click event to the parent View within the expanded clickable area;
+        // it should trigger the LoadAction...
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, spacerSize - 1, parentHeight / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("www");
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(
+                parent, spacerSize * 2 + 5 /* approximate www text size*/, parentHeight / 2f);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("mmm");
+
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, spacerSize + 1, 1);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("www");
+        receivedState.clearLastClickableId();
+        dispatchTouchEvent(parent, parentWidth - 1, parentHeight - 1);
+        expect.that(receivedState.getLastClickableId()).isEqualTo("mmm");
+    }
+
+    @Test
     public void inflate_arc_withLineDrawnWithArcTo() {
         LayoutElement root =
                 LayoutElement.newBuilder()
@@ -1065,6 +1836,39 @@ public class ProtoLayoutInflaterTest {
         assertThat(line.getStrokeCap()).isEqualTo(Cap.BUTT);
         // Dimensions are in DP, but the density is currently 1 in the tests, so this is fine:
         assertThat(line.getThickness()).isEqualTo(12);
+    }
+
+    @Test
+    public void inflate_arc_withGradient() {
+        Brush.Builder brush =
+                Brush.newBuilder()
+                        .setSweepGradient(
+                                SweepGradient.newBuilder()
+                                        .addColorStops(colorStop(Color.BLUE, 0.5f))
+                                        .addColorStops(colorStop(Color.RED, 1f)));
+        LayoutElement root =
+                LayoutElement.newBuilder()
+                        .setArc(
+                                Arc.newBuilder()
+                                        .setAnchorAngle(degrees(0).build())
+                                        .addContents(
+                                                ArcLayoutElement.newBuilder()
+                                                        .setLine(
+                                                                ArcLine.newBuilder()
+                                                                        .setLength(degrees(30))
+                                                                        .setStrokeCap(
+                                                                                strokeCapButt())
+                                                                        .setThickness(dp(12))
+                                                                        .setBrush(brush))))
+                        .build();
+
+        FrameLayout rootLayout = renderer(fingerprintedLayout(root)).inflate();
+
+        assertThat(rootLayout.getChildCount()).isEqualTo(1);
+        ArcLayout arcLayout = (ArcLayout) rootLayout.getChildAt(0);
+        assertThat(arcLayout.getChildCount()).isEqualTo(1);
+        WearCurvedLineView line = (WearCurvedLineView) arcLayout.getChildAt(0);
+        assertThat(line.mSweepGradientHelper).isNotNull();
     }
 
     @Test
@@ -1814,30 +2618,7 @@ public class ProtoLayoutInflaterTest {
         TextView tv = (TextView) rootLayout.getChildAt(0);
 
         // Dispatch a click event to the first View; it should trigger the LoadAction...
-        long startTime = SystemClock.uptimeMillis();
-        MotionEvent evt =
-                MotionEvent.obtain(
-                        /* downTime= */ startTime,
-                        /* eventTime= */ startTime,
-                        MotionEvent.ACTION_DOWN,
-                        /* x= */ 5f,
-                        /* y= */ 5f,
-                        /* metaState= */ 0);
-        tv.dispatchTouchEvent(evt);
-        evt.recycle();
-
-        evt =
-                MotionEvent.obtain(
-                        /* downTime= */ startTime,
-                        /* eventTime= */ startTime + 100,
-                        MotionEvent.ACTION_UP,
-                        /* x= */ 5f,
-                        /* y= */ 5f,
-                        /* metaState= */ 0);
-        tv.dispatchTouchEvent(evt);
-        evt.recycle();
-
-        shadowOf(Looper.getMainLooper()).idle();
+        dispatchTouchEvent(tv, 5f, 5f);
 
         assertThat(hasFiredList).hasSize(1);
     }
@@ -4716,6 +5497,11 @@ public class ProtoLayoutInflaterTest {
     }
 
     @NonNull
+    private static DpProp.Builder dynamicDp(DynamicFloat value, float valueForLayout) {
+        return DpProp.newBuilder().setDynamicValue(value).setValueForLayout(valueForLayout);
+    }
+
+    @NonNull
     private static DimensionProto.SpProp sp(float value) {
         return DimensionProto.SpProp.newBuilder().setValue(value).build();
     }
@@ -4734,6 +5520,21 @@ public class ProtoLayoutInflaterTest {
     @NonNull
     private static DegreesProp.Builder degrees(int value) {
         return DegreesProp.newBuilder().setValue(value);
+    }
+
+    @NonNull
+    private static ColorStop.Builder colorStop(int color, float offset) {
+        return colorStop(color).setOffset(FloatProp.newBuilder().setValue(offset));
+    }
+
+    @NonNull
+    private static ColorStop.Builder colorStop(int color) {
+        return ColorStop.newBuilder().setColor(argb(color));
+    }
+
+    @NonNull
+    private static ColorProp.Builder argb(int value) {
+        return ColorProp.newBuilder().setArgb(value);
     }
 
     @NonNull
@@ -4766,9 +5567,49 @@ public class ProtoLayoutInflaterTest {
     @NonNull
     private static List<DimensionProto.SpProp> buildSizesList(int[] presetSizes) {
         List<DimensionProto.SpProp> sizes = new ArrayList<>(3);
-        for (int s: presetSizes) {
+        for (int s : presetSizes) {
             sizes.add(sp(s));
         }
         return sizes;
+    }
+
+    private static void dispatchTouchEvent(View view, float x, float y) {
+        long startTime = SystemClock.uptimeMillis();
+        MotionEvent evt =
+                MotionEvent.obtain(
+                        /* downTime= */ startTime,
+                        /* eventTime= */ startTime,
+                        MotionEvent.ACTION_DOWN,
+                        /* x= */ x,
+                        /* y= */ y,
+                        /* metaState= */ 0);
+        view.dispatchTouchEvent(evt);
+        evt.recycle();
+
+        evt =
+                MotionEvent.obtain(
+                        /* downTime= */ startTime,
+                        /* eventTime= */ startTime + 10,
+                        MotionEvent.ACTION_UP,
+                        /* x= */ x,
+                        /* y= */ y,
+                        /* metaState= */ 0);
+        view.dispatchTouchEvent(evt);
+        evt.recycle();
+
+        shadowOf(Looper.getMainLooper()).idle();
+    }
+
+    private static Spacer.Builder buildExpandedSpacer(int widthWeight, int heightWeight) {
+        return Spacer.newBuilder()
+                .setWidth(SpacerDimension.newBuilder().setExpandedDimension(expandWithWeight(widthWeight)))
+                .setHeight(
+                        SpacerDimension.newBuilder().setExpandedDimension(expandWithWeight(heightWeight)));
+    }
+
+    private static ExpandedDimensionProp expandWithWeight(int weight) {
+        return ExpandedDimensionProp.newBuilder()
+                .setLayoutWeight(FloatProp.newBuilder().setValue(weight).build())
+                .build();
     }
 }

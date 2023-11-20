@@ -106,6 +106,9 @@ import androidx.compose.material3.samples.PlainTooltipSample
 import androidx.compose.material3.samples.PlainTooltipWithManualInvocationSample
 import androidx.compose.material3.samples.PrimaryIconTabs
 import androidx.compose.material3.samples.PrimaryTextTabs
+import androidx.compose.material3.samples.PullToRefreshSample
+import androidx.compose.material3.samples.PullToRefreshSampleCustomState
+import androidx.compose.material3.samples.PullToRefreshScalingSample
 import androidx.compose.material3.samples.RadioButtonSample
 import androidx.compose.material3.samples.RadioGroupSample
 import androidx.compose.material3.samples.RangeSliderSample
@@ -774,6 +777,32 @@ val ProgressIndicatorsExamples = listOf(
         sourceUrl = ProgressIndicatorsExampleSourceUrl
     ) {
         IndeterminateCircularProgressIndicatorSample()
+    }
+)
+
+private const val PullToRefreshExampleDescription = "Pull-to-refresh examples"
+private const val PullToRefreshExampleSourceUrl = "$SampleSourceUrl/PullToRefreshSamples.kt"
+val PullToRefreshExamples = listOf(
+    Example(
+        name = ::PullToRefreshSample.name,
+        description = PullToRefreshExampleDescription,
+        sourceUrl = PullToRefreshExampleSourceUrl
+    ) {
+        PullToRefreshSample()
+    },
+    Example(
+        name = ::PullToRefreshScalingSample.name,
+        description = PullToRefreshExampleDescription,
+        sourceUrl = PullToRefreshExampleSourceUrl
+    ) {
+        PullToRefreshScalingSample()
+    },
+    Example(
+        name = ::PullToRefreshSampleCustomState.name,
+        description = PullToRefreshExampleDescription,
+        sourceUrl = PullToRefreshExampleSourceUrl
+    ) {
+        PullToRefreshSampleCustomState()
     }
 )
 
