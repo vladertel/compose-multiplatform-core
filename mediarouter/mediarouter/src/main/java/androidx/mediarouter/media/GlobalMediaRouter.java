@@ -88,6 +88,7 @@ import java.util.Set;
     MediaRouter.PrepareTransferNotifier mTransferNotifier;
 
     private final Context mApplicationContext;
+    private final MediaFeatureFlagsRetriever mMediaFeatureFlagsRetriever;
     private final ArrayList<WeakReference<MediaRouter>> mRouters = new ArrayList<>();
     private final ArrayList<MediaRouter.RouteInfo> mRoutes = new ArrayList<>();
     private final Map<Pair<String, String>, String> mUniqueIdMap = new HashMap<>();
@@ -135,16 +136,27 @@ import java.util.Set;
 
     /* package */ GlobalMediaRouter(Context applicationContext) {
         mApplicationContext = applicationContext;
+        mMediaFeatureFlagsRetriever = MediaFeatureFlagsRetriever.fromContext(applicationContext);
         mLowRam =
                 ActivityManagerCompat.isLowRamDevice(
                         (ActivityManager)
                                 applicationContext.getSystemService(Context.ACTIVITY_SERVICE));
 
-        mTransferReceiverDeclared =
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
-                        && MediaTransferReceiver.isDeclared(mApplicationContext);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (mMediaFeatureFlagsRetriever.isFlagDeclared(
+                    MediaFeatureFlagsRetriever.FEATURE_FLAG_MEDIA_TRANSFER_ENABLED)) {
+                mTransferReceiverDeclared =
+                        mMediaFeatureFlagsRetriever.getBoolean(
+                                MediaFeatureFlagsRetriever.FEATURE_FLAG_MEDIA_TRANSFER_ENABLED);
+            } else {
+                mTransferReceiverDeclared = MediaTransferReceiver.isDeclared(mApplicationContext);
+            }
+        }
+
         mUseMediaRouter2ForSystemRouting =
-                SystemRoutingUsingMediaRouter2Receiver.isDeclared(mApplicationContext);
+                mMediaFeatureFlagsRetriever.getBoolean(
+                        MediaFeatureFlagsRetriever
+                                .FEATURE_FLAG_SYSTEM_ROUTING_USING_MEDIA_ROUTER2);
 
         if (DEBUG && mUseMediaRouter2ForSystemRouting) {
             // This is only added to skip the presubmit check for UnusedVariable
@@ -722,12 +734,14 @@ import java.util.Set;
                 if (sourceIndex < 0) {
                     // 1. Add the route to the list.
                     String uniqueId = assignRouteUniqueId(provider, id);
-                    MediaRouter.RouteInfo route = new MediaRouter.RouteInfo(provider, id, uniqueId);
+                    MediaRouter.RouteInfo route =
+                            new MediaRouter.RouteInfo(
+                                    provider, id, uniqueId, routeDescriptor.isSystemRoute());
 
                     provider.mRoutes.add(targetIndex++, route);
                     mRoutes.add(route);
                     // 2. Create the route's contents.
-                    if (routeDescriptor.getGroupMemberIds().size() > 0) {
+                    if (!routeDescriptor.getGroupMemberIds().isEmpty()) {
                         addedGroups.add(new Pair<>(route, routeDescriptor));
                     } else {
                         route.maybeUpdateDescriptor(routeDescriptor);
@@ -744,7 +758,7 @@ import java.util.Set;
                     // 1. Reorder the route within the list.
                     Collections.swap(provider.mRoutes, sourceIndex, targetIndex++);
                     // 2. Update the route's contents.
-                    if (routeDescriptor.getGroupMemberIds().size() > 0) {
+                    if (!routeDescriptor.getGroupMemberIds().isEmpty()) {
                         updatedGroups.add(new Pair<>(route, routeDescriptor));
                     } else {
                         // 3. Notify clients about changes.

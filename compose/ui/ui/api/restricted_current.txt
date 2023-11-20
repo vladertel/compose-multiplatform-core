@@ -258,7 +258,7 @@ package androidx.compose.ui.draganddrop {
   }
 
   public final class DragAndDropKt {
-    method public static androidx.compose.ui.draganddrop.DragAndDropTarget DragAndDropTarget(kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,java.lang.Boolean> onDropped, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit> onStarted, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit> onEntered, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit> onMoved, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit> onChanged, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit> onExited, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit> onEnded);
+    method public static androidx.compose.ui.draganddrop.DragAndDropTarget DragAndDropTarget(kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,java.lang.Boolean> onDrop, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit>? onStarted, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit>? onEntered, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit>? onMoved, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit>? onChanged, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit>? onExited, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,kotlin.Unit>? onEnded);
   }
 
   public interface DragAndDropModifierNode extends androidx.compose.ui.node.DelegatableNode androidx.compose.ui.draganddrop.DragAndDropTarget {
@@ -267,17 +267,18 @@ package androidx.compose.ui.draganddrop {
   }
 
   public final class DragAndDropNodeKt {
-    method public static androidx.compose.ui.draganddrop.DragAndDropModifierNode DragAndDropModifierNode(optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,? extends androidx.compose.ui.draganddrop.DragAndDropTarget> acceptDragAndDropTransfer);
+    method public static androidx.compose.ui.draganddrop.DragAndDropModifierNode DragAndDropModifierNode();
+    method public static androidx.compose.ui.draganddrop.DragAndDropModifierNode DragAndDropModifierNode(kotlin.jvm.functions.Function1<? super androidx.compose.ui.draganddrop.DragAndDropEvent,java.lang.Boolean> shouldStartDragAndDrop, androidx.compose.ui.draganddrop.DragAndDropTarget target);
   }
 
   public interface DragAndDropTarget {
-    method public void onChanged(androidx.compose.ui.draganddrop.DragAndDropEvent event);
-    method public boolean onDropped(androidx.compose.ui.draganddrop.DragAndDropEvent event);
-    method public void onEnded(androidx.compose.ui.draganddrop.DragAndDropEvent event);
-    method public void onEntered(androidx.compose.ui.draganddrop.DragAndDropEvent event);
-    method public void onExited(androidx.compose.ui.draganddrop.DragAndDropEvent event);
-    method public void onMoved(androidx.compose.ui.draganddrop.DragAndDropEvent event);
-    method public void onStarted(androidx.compose.ui.draganddrop.DragAndDropEvent event);
+    method public default void onChanged(androidx.compose.ui.draganddrop.DragAndDropEvent event);
+    method public boolean onDrop(androidx.compose.ui.draganddrop.DragAndDropEvent event);
+    method public default void onEnded(androidx.compose.ui.draganddrop.DragAndDropEvent event);
+    method public default void onEntered(androidx.compose.ui.draganddrop.DragAndDropEvent event);
+    method public default void onExited(androidx.compose.ui.draganddrop.DragAndDropEvent event);
+    method public default void onMoved(androidx.compose.ui.draganddrop.DragAndDropEvent event);
+    method public default void onStarted(androidx.compose.ui.draganddrop.DragAndDropEvent event);
   }
 
   public final class DragAndDropTransferData {
@@ -2139,8 +2140,11 @@ package androidx.compose.ui.layout {
     method public androidx.compose.ui.geometry.Rect localBoundingBoxOf(androidx.compose.ui.layout.LayoutCoordinates sourceCoordinates, optional boolean clipBounds);
     method public long localPositionOf(androidx.compose.ui.layout.LayoutCoordinates sourceCoordinates, long relativeToSource);
     method public long localToRoot(long relativeToLocal);
+    method public default long localToScreen(long relativeToLocal);
     method public long localToWindow(long relativeToLocal);
+    method public default long screenToLocal(long relativeToScreen);
     method public default void transformFrom(androidx.compose.ui.layout.LayoutCoordinates sourceCoordinates, float[] matrix);
+    method public default void transformToScreen(float[] matrix);
     method public long windowToLocal(long relativeToWindow);
     property public abstract boolean isAttached;
     property public abstract androidx.compose.ui.layout.LayoutCoordinates? parentCoordinates;
@@ -2157,6 +2161,7 @@ package androidx.compose.ui.layout {
     method public static long positionInParent(androidx.compose.ui.layout.LayoutCoordinates);
     method public static long positionInRoot(androidx.compose.ui.layout.LayoutCoordinates);
     method public static long positionInWindow(androidx.compose.ui.layout.LayoutCoordinates);
+    method public static long positionOnScreen(androidx.compose.ui.layout.LayoutCoordinates);
   }
 
   public final class LayoutIdKt {
@@ -2664,11 +2669,13 @@ package androidx.compose.ui.node {
   }
 
   public interface RootForTest {
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public void forceAccessibilityForTesting();
     method public androidx.compose.ui.unit.Density getDensity();
     method public androidx.compose.ui.semantics.SemanticsOwner getSemanticsOwner();
     method public androidx.compose.ui.text.input.TextInputService getTextInputService();
     method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public default void measureAndLayoutForTest();
     method public boolean sendKeyEvent(android.view.KeyEvent keyEvent);
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public void setAccessibilityEventBatchIntervalMillis(long accessibilityInterval);
     property public abstract androidx.compose.ui.unit.Density density;
     property public abstract androidx.compose.ui.semantics.SemanticsOwner semanticsOwner;
     property public abstract androidx.compose.ui.text.input.TextInputService textInputService;
@@ -2798,7 +2805,7 @@ package androidx.compose.ui.platform {
     property public long doubleTapMinTimeMillis;
     property public long doubleTapTimeoutMillis;
     property public long longPressTimeoutMillis;
-    property public int maximumFlingVelocity;
+    property public float maximumFlingVelocity;
     property public float touchSlop;
   }
 
@@ -3023,13 +3030,13 @@ package androidx.compose.ui.platform {
     method public long getDoubleTapMinTimeMillis();
     method public long getDoubleTapTimeoutMillis();
     method public long getLongPressTimeoutMillis();
-    method public default int getMaximumFlingVelocity();
+    method public default float getMaximumFlingVelocity();
     method public default long getMinimumTouchTargetSize();
     method public float getTouchSlop();
     property public abstract long doubleTapMinTimeMillis;
     property public abstract long doubleTapTimeoutMillis;
     property public abstract long longPressTimeoutMillis;
-    property public default int maximumFlingVelocity;
+    property public default float maximumFlingVelocity;
     property public default long minimumTouchTargetSize;
     property public abstract float touchSlop;
   }
@@ -3332,6 +3339,7 @@ package androidx.compose.ui.semantics {
     method public androidx.compose.ui.semantics.SemanticsNode? getParent();
     method public long getPositionInRoot();
     method public long getPositionInWindow();
+    method public long getPositionOnScreen();
     method public androidx.compose.ui.node.RootForTest? getRoot();
     method public long getSize();
     method public androidx.compose.ui.geometry.Rect getTouchBoundsInRoot();
@@ -3347,6 +3355,7 @@ package androidx.compose.ui.semantics {
     property public final androidx.compose.ui.semantics.SemanticsNode? parent;
     property public final long positionInRoot;
     property public final long positionInWindow;
+    property public final long positionOnScreen;
     property public final androidx.compose.ui.node.RootForTest? root;
     property public final long size;
     property public final androidx.compose.ui.geometry.Rect touchBoundsInRoot;
@@ -3369,6 +3378,7 @@ package androidx.compose.ui.semantics {
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.semantics.CollectionItemInfo> getCollectionItemInfo();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.util.List<java.lang.String>> getContentDescription();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getDisabled();
+    method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getEditable();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.text.AnnotatedString> getEditableText();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.String> getError();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> getFocused();
@@ -3401,6 +3411,7 @@ package androidx.compose.ui.semantics {
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.semantics.CollectionItemInfo> CollectionItemInfo;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.util.List<java.lang.String>> ContentDescription;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> Disabled;
+    property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> Editable;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<androidx.compose.ui.text.AnnotatedString> EditableText;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.String> Error;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> Focused;
@@ -3446,6 +3457,7 @@ package androidx.compose.ui.semantics {
     method public static void dialog(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method public static void disabled(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method public static void dismiss(androidx.compose.ui.semantics.SemanticsPropertyReceiver, optional String? label, kotlin.jvm.functions.Function0<java.lang.Boolean>? action);
+    method public static void editable(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method public static void error(androidx.compose.ui.semantics.SemanticsPropertyReceiver, String description);
     method public static void expand(androidx.compose.ui.semantics.SemanticsPropertyReceiver, optional String? label, kotlin.jvm.functions.Function0<java.lang.Boolean>? action);
     method public static androidx.compose.ui.semantics.CollectionInfo getCollectionInfo(androidx.compose.ui.semantics.SemanticsPropertyReceiver);

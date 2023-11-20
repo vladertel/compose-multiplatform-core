@@ -29,11 +29,8 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.OptIn;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
-import androidx.camera.camera2.interop.Camera2CameraInfo;
-import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.Logger;
 import androidx.camera.core.impl.ImageFormatConstants;
@@ -60,6 +57,7 @@ import androidx.core.util.Preconditions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -92,6 +90,7 @@ public class BasicVendorExtender implements VendorExtender {
             CaptureRequest.FLASH_MODE,
             CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION
     ));
+
     static {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             sBaseSupportedKeys.add(CaptureRequest.CONTROL_ZOOM_RATIO);
@@ -156,7 +155,6 @@ public class BasicVendorExtender implements VendorExtender {
                 && mImageCaptureExtenderImpl.isExtensionAvailable(cameraId, cameraCharacteristics);
     }
 
-    @OptIn(markerClass = ExperimentalCamera2Interop.class)
     @Override
     public void init(@NonNull CameraInfo cameraInfo) {
         mCameraInfo = cameraInfo;
@@ -165,9 +163,9 @@ public class BasicVendorExtender implements VendorExtender {
             return;
         }
 
-        mCameraId = Camera2CameraInfo.from(cameraInfo).getCameraId();
+        mCameraId = Camera2CameraInfoWrapper.from(cameraInfo).getCameraId();
         mCameraCharacteristics =
-                Camera2CameraInfo.extractCameraCharacteristics(cameraInfo);
+                Camera2CameraInfoWrapper.extractCameraCharacteristics(cameraInfo);
         mPreviewExtenderImpl.init(mCameraId, mCameraCharacteristics);
         mImageCaptureExtenderImpl.init(mCameraId, mCameraCharacteristics);
 
@@ -190,9 +188,8 @@ public class BasicVendorExtender implements VendorExtender {
         return null;
     }
 
-    @OptIn(markerClass = ExperimentalCamera2Interop.class)
     private Size[] getOutputSizes(int imageFormat) {
-        StreamConfigurationMap map = Camera2CameraInfo.from(mCameraInfo)
+        StreamConfigurationMap map = Camera2CameraInfoWrapper.from(mCameraInfo)
                 .getCameraCharacteristic(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
         return map.getOutputSizes(imageFormat);
@@ -375,6 +372,43 @@ public class BasicVendorExtender implements VendorExtender {
             }
         }
         return Collections.emptyList();
+    }
+
+    @NonNull
+    @Override
+    public Map<Integer, List<Size>> getSupportedPostviewResolutions(@NonNull Size captureSize) {
+        if (ClientVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)
+                && ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)) {
+            List<Pair<Integer, Size[]>> list =
+                    mImageCaptureExtenderImpl.getSupportedPostviewResolutions(captureSize);
+            Map<Integer, List<Size>> result = new HashMap<>();
+            for (Pair<Integer, Size[]> pair : list) {
+                result.put(pair.first, Arrays.asList(pair.second));
+            }
+            return Collections.unmodifiableMap(result);
+        }
+
+        return Collections.emptyMap();
+    }
+
+    @Override
+    public boolean isPostviewAvailable() {
+        if (ClientVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)
+                && ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)) {
+            return mImageCaptureExtenderImpl.isPostviewAvailable();
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean isCaptureProcessProgressAvailable() {
+        if (ClientVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)
+                && ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)) {
+            return mImageCaptureExtenderImpl.isCaptureProcessProgressAvailable();
+        } else {
+            return false;
+        }
     }
 
     @Nullable

@@ -24,9 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.material3.Checkbox
 import androidx.wear.compose.material3.Icon
@@ -42,7 +39,7 @@ fun ToggleButtonWithCheckbox() {
     var checked by remember { mutableStateOf(true) }
     ToggleButton(
         label = {
-            Text("SwitchIcon", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Checkbox", maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         secondaryLabel = {
             Text("With secondary label", maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -52,10 +49,6 @@ fun ToggleButtonWithCheckbox() {
             Checkbox(
                 checked = checked,
                 enabled = true,
-                modifier = Modifier.semantics {
-                    this.contentDescription =
-                        if (checked) "On" else "Off"
-                }
             )
         },
         onCheckedChange = { checked = it },
@@ -75,7 +68,7 @@ fun ToggleButtonWithSwitch() {
     var checked by remember { mutableStateOf(true) }
     ToggleButton(
         label = {
-            Text("SwitchIcon", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Switch", maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         secondaryLabel = {
             Text("With secondary label", maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -85,10 +78,6 @@ fun ToggleButtonWithSwitch() {
             Switch(
                 checked = checked,
                 enabled = true,
-                modifier = Modifier.semantics {
-                    this.contentDescription =
-                        if (checked) "On" else "Off"
-                }
             )
         },
         onCheckedChange = { checked = it },
@@ -108,7 +97,7 @@ fun ToggleButtonWithRadioButton() {
     var selected by remember { mutableStateOf(true) }
     ToggleButton(
         label = {
-            Text("RadioIcon", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Radio button", maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         secondaryLabel = {
             Text("With secondary label", maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -118,10 +107,6 @@ fun ToggleButtonWithRadioButton() {
             RadioButton(
                 selected = selected,
                 enabled = true,
-                modifier = Modifier.semantics {
-                    this.contentDescription =
-                        if (selected) "On" else "Off"
-                }
             )
         },
         onCheckedChange = { selected = it },
@@ -148,10 +133,6 @@ fun SplitToggleButtonWithCheckbox() {
             Checkbox(
                 checked = checked,
                 enabled = true,
-                modifier = Modifier.semantics {
-                    this.contentDescription =
-                        if (checked) "Checked" else "Unchecked"
-                }
             )
         },
         onCheckedChange = { checked = it },
@@ -175,10 +156,6 @@ fun SplitToggleButtonWithSwitch() {
             Switch(
                 checked = checked,
                 enabled = true,
-                modifier = Modifier.semantics {
-                    this.contentDescription =
-                        if (checked) "Checked" else "Unchecked"
-                }
             )
         },
         onCheckedChange = { checked = it },
@@ -202,10 +179,6 @@ fun SplitToggleButtonWithRadioButton() {
             Checkbox(
                 checked = selected,
                 enabled = true,
-                modifier = Modifier.semantics {
-                    this.contentDescription =
-                        if (selected) "On" else "Off"
-                }
             )
         },
         onCheckedChange = { selected = it },

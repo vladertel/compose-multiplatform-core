@@ -19,10 +19,8 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.SQLException
 import android.database.sqlite.SQLiteTransactionListener
-import android.os.Build
 import android.os.CancellationSignal
 import android.util.Pair
-import androidx.annotation.RequiresApi
 import java.io.Closeable
 import java.util.Locale
 
@@ -85,6 +83,36 @@ interface SupportSQLiteDatabase : Closeable {
     fun beginTransactionNonExclusive()
 
     /**
+     * Begins a transaction in DEFERRED mode, with the android-specific constraint that the
+     * transaction is read-only. The database may not be modified inside a read-only transaction
+     * otherwise a [android.database.sqlite.SQLiteDatabaseLockedException] might be thrown.
+     *
+     * Read-only transactions may run concurrently with other read-only transactions, and if they
+     * database is in WAL mode, they may also run concurrently with IMMEDIATE or EXCLUSIVE
+     * transactions.
+     *
+     * Transactions can be nested. However, the behavior of the transaction is not altered by
+     * nested transactions. A nested transaction may be any of the three transaction types but if
+     * the outermost type is read-only then nested transactions remain read-only, regardless of how
+     * they are started.
+     *
+     * Here is the standard idiom for read-only transactions:
+     * ```
+     *   db.beginTransactionReadOnly();
+     *   try {
+     *     ...
+     *   } finally {
+     *     db.endTransaction();
+     *   }
+     * ```
+     * If the implementation does not support read-only transactions then the default implementation
+     * delegates to [beginTransaction].
+     */
+    fun beginTransactionReadOnly() {
+        beginTransaction()
+    }
+
+    /**
      * Begins a transaction in EXCLUSIVE mode.
      *
      * Transactions can be nested.
@@ -138,6 +166,35 @@ interface SupportSQLiteDatabase : Closeable {
     fun beginTransactionWithListenerNonExclusive(
         transactionListener: SQLiteTransactionListener
     )
+
+    /**
+     * Begins a transaction in read-only mode with a {@link SQLiteTransactionListener} listener.
+     * The database may not be modified inside a read-only transaction otherwise a
+     * [android.database.sqlite.SQLiteDatabaseLockedException] might be thrown.
+     *
+     * Transactions can be nested. However, the behavior of the transaction is not altered by
+     * nested transactions. A nested transaction may be any of the three transaction types but if
+     * the outermost type is read-only then nested transactions remain read-only, regardless of how
+     * they are started.
+     *
+     * Here is the standard idiom for read-only transactions:
+     * ```
+     *   db.beginTransactionWightListenerReadOnly(listener);
+     *   try {
+     *     ...
+     *   } finally {
+     *     db.endTransaction();
+     *   }
+     * ```
+     * If the implementation does not support read-only transactions then the default implementation
+     * delegates to [beginTransactionWithListener].
+     */
+    @Suppress("ExecutorRegistration")
+    fun beginTransactionWithListenerReadOnly(
+        transactionListener: SQLiteTransactionListener
+    ) {
+        beginTransactionWithListener(transactionListener)
+    }
 
     /**
      * End a transaction. See beginTransaction for notes about how to use this and when transactions
@@ -314,7 +371,6 @@ interface SupportSQLiteDatabase : Closeable {
      * @return A [Cursor] object, which is positioned before the first entry. Note that
      * [Cursor]s are not synchronized, see the documentation for more details.
      */
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     fun query(
         query: SupportSQLiteQuery,
         cancellationSignal: CancellationSignal?
@@ -494,7 +550,6 @@ interface SupportSQLiteDatabase : Closeable {
      * @throws IllegalStateException if the are transactions is in progress
      * when this method is called.
      */
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     fun setForeignKeyConstraintsEnabled(enabled: Boolean)
 
     /**
@@ -574,13 +629,11 @@ interface SupportSQLiteDatabase : Closeable {
      * time this method is called. WAL mode can only be changed when there are no transactions in
      * progress.
      */
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     fun disableWriteAheadLogging()
 
     /**
      * Is true if write-ahead logging has been enabled for this database.
      */
-    @get:RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     val isWriteAheadLoggingEnabled: Boolean
 
     /**

@@ -984,6 +984,19 @@ class ComposableFunctionBodyTransformer(
             }
         }
 
+        scope.applyIntrinsicRememberFixups { args, metas ->
+            // replace dirty with changed param in meta used for inference, as we are not
+            // populating dirty
+            if (!canSkipExecution) {
+                metas.forEach {
+                    if (it.maskParam == dirty) {
+                        it.maskParam = changedParam
+                    }
+                }
+            }
+            irIntrinsicRememberInvalid(args, metas, ::irInferredChanged)
+        }
+
         if (canSkipExecution) {
             // We CANNOT skip if any of the following conditions are met
             // 1. if any of the stable parameters have *differences* from last execution.
@@ -1136,6 +1149,20 @@ class ComposableFunctionBodyTransformer(
             skipPreamble.statements.addAll(0, dirty.asStatements())
             dirty
         } else changedParam
+
+        scope.applyIntrinsicRememberFixups { args, metas ->
+            // replace dirty with changed param in meta used for inference, as we are not
+            // populating dirty
+            if (!canSkipExecution) {
+                metas.forEach {
+                    if (it.maskParam == dirty) {
+                        it.maskParam = changedParam
+                    }
+                }
+            }
+            irIntrinsicRememberInvalid(args, metas, ::irInferredChanged)
+        }
+
         val transformedBody = if (canSkipExecution) {
             // We CANNOT skip if any of the following conditions are met
             // 1. if any of the stable parameters have *differences* from last execution.
@@ -2629,7 +2656,7 @@ class ComposableFunctionBodyTransformer(
         var isStatic: Boolean = false,
         var isCertain: Boolean = false,
         var maskSlot: Int = -1,
-        var maskParam: IrChangedBitMaskValue? = null
+        var maskParam: IrChangedBitMaskValue? = null,
     )
 
     private fun paramMetaOf(arg: IrExpression, isProvided: Boolean): ParamMeta {
@@ -2967,20 +2994,19 @@ class ComposableFunctionBodyTransformer(
         }
 
         encounteredComposableCall(withGroups = true)
+        recordCallInSource(call = expression)
 
         if (calculationArg == null) {
-            recordCallInSource(call = expression)
             return expression
         }
         if (hasSpreadArgs) {
-            recordCallInSource(call = expression)
             calculationArg.transform(this, null)
             return expression
         }
 
         // Build the change parameters as if this was a call to remember to ensure the
         // use of the $dirty flags are calculated correctly.
-        inputArgs.map { paramMetaOf(it, isProvided = true) }.also {
+        val inputArgMetas = inputArgs.map { paramMetaOf(it, isProvided = true) }.also {
             buildChangedParamsForCall(
                 contextParams = emptyList(),
                 valueParams = it,
@@ -2989,39 +3015,99 @@ class ComposableFunctionBodyTransformer(
             )
         }
 
+        // If intrinsic remember uses $dirty, we are not sure if it is going to be populated,
+        // so we have to apply fixups after function body is transformed
+        var dirty: IrChangedBitMaskValue? = null
+        inputArgMetas.forEach {
+            if (it.maskParam is IrChangedBitMaskVariable) {
+                if (dirty == null) {
+                    dirty = it.maskParam
+                } else {
+                    // Validate that we only capture dirty param from a single scope. Capturing
+                    // $dirty is only allowed in inline functions, so we are guaranteed to only
+                    // encounter one.
+                    require(dirty == it.maskParam) {
+                        "Only single dirty param is allowed in a capture scope"
+                    }
+                }
+            }
+        }
+        val usesDirty = inputArgMetas.any { it.maskParam is IrChangedBitMaskVariable }
+
         // We can only rely on the $changed or $dirty if the flags are correctly updated in
         // the restart function or the result of replacing remember with cached will be
         // different.
-        val changedTestFunction: (IrExpression) -> IrExpression? =
-            if (updateChangedFlagsFunction == null) {
-                ::irChanged
+        val metaMaskConsistent = updateChangedFlagsFunction != null
+        val changedFunction: (IrExpression, ParamMeta) -> IrExpression? =
+            if (usesDirty || !metaMaskConsistent) {
+                { arg, _ -> irChanged(arg) }
             } else {
-                ::irChangedOrInferredChanged
+                ::irInferredChanged
             }
 
-        val invalidExpr = inputArgs
-            .mapNotNull(changedTestFunction)
-            .reduceOrNull { acc, changed -> irBooleanOr(acc, changed) }
-            ?: irConst(false)
-
-        val blockScope = currentFunctionScope
-        return irCache(
+        val invalidExpr = irIntrinsicRememberInvalid(inputArgs, inputArgMetas, changedFunction)
+        val functionScope = currentFunctionScope
+        val cacheCall = irCache(
             irCurrentComposer(),
             expression.startOffset,
             expression.endOffset,
             expression.type,
             invalidExpr,
             calculationArg.transform(this, null)
-        ).wrap(
-            before = listOf(irStartReplaceableGroup(expression, blockScope)),
-            after = listOf(irEndReplaceableGroup(scope = blockScope))
         )
+        if (usesDirty && metaMaskConsistent) {
+            functionScope.recordIntrinsicRememberFixUp(
+                inputArgs,
+                inputArgMetas,
+                cacheCall
+            )
+        }
+        val blockScope = object : Scope.BlockScope("<intrinsic-remember>") {
+            val rememberFunction = expression.symbol.owner
+            val currentFunction = currentFunctionScope.function
+            override fun calculateHasSourceInformation(sourceInformationEnabled: Boolean) =
+                sourceInformationEnabled
+
+            override fun calculateSourceInfo(sourceInformationEnabled: Boolean): String? =
+                // forge a source information call to fake remember function with current file
+                // location to make sure tooling can identify the following group as remember.
+                if (sourceInformationEnabled) {
+                    buildString {
+                        append(rememberFunction.callInformation())
+                        super.calculateSourceInfo(true)?.also {
+                            append(it)
+                        }
+                        append(":")
+                        append(currentFunction.file.name)
+                        append("#")
+                        // Use runtime package hash to make sure tooling can identify it as such
+                        append(rememberFunction.packageHash().toString(36))
+                    }
+                } else {
+                    null
+                }
+        }
+
+        return inScope(blockScope) {
+            cacheCall.wrap(
+                before = listOf(irStartReplaceableGroup(expression, blockScope)),
+                after = listOf(irEndReplaceableGroup(scope = blockScope))
+            )
+        }
     }
 
-    private fun irChangedOrInferredChanged(arg: IrExpression): IrExpression? {
-        val meta = paramMetaOf(arg, isProvided = true)
-        val param = meta.maskParam
+    private fun irIntrinsicRememberInvalid(
+        args: List<IrExpression>,
+        metas: List<ParamMeta>,
+        changedExpr: (IrExpression, ParamMeta) -> IrExpression?
+    ): IrExpression =
+        args
+            .mapIndexedNotNull { i, arg -> changedExpr(arg, metas[i]) }
+            .reduceOrNull { acc, changed -> irBooleanOr(acc, changed) }
+            ?: irConst(false)
 
+    private fun irInferredChanged(arg: IrExpression, meta: ParamMeta): IrExpression? {
+        val param = meta.maskParam
         return when {
             meta.isStatic -> null
             meta.isCertain &&
@@ -3712,93 +3798,8 @@ class ComposableFunctionBodyTransformer(
                 }
             }
 
-            // Parameter information is an index from the sorted order of the parameters to the
-            // actual order. This is used to reorder the fields of the lambda class generated for
-            // restart lambdas into parameter order. If all the parameters are in sorted order
-            // with no inline classes then no additional information is necessary. This means
-            // that parameter-less or single parameter functions with no inline classes never
-            // need additional information and two parameter functions are only 50% likely to
-            // need ordering information which is, if needed, very short ("1"). The encoding is as
-            // follows,
-            //
-            //   parameters: (parameter|run) ("," parameter | run)*
-            //   parameter: sorted-index [":" inline-class]
-            //   sorted-index: <number>
-            //   inline-class: <chars not "," or "!">
-            //   run: "!" <number>
-            //
-            //   where
-            //     sorted-index:  the index of the parameter's name in the sorted list of
-            //                    parameter names,
-            //     inline-class:  the fully qualified name of the inline class using "c#" as a
-            //                    short-hand for "androidx.compose.".
-            //     run:           The number of parameter that are in sequence assuming the
-            //                    previously selected parameters are removed from the sorted order.
-            //                    For example, "!5" at the beginning of the list is equivalent to
-            //                    "0,1,2,3,4" and "3!4" is equivalent to "3,0,1,2,4". If there
-            //                    are 9 parameters "3,4!2,6,8" is equivalent to "3,4,0,1,6,8,2,
-            //                    5,6,7".
-            //
-            // There is an implied "!n" (where n is the number of remaining parameters) at the end
-            // of the parameter information that implies the rest of the parameters are in order.
-            // If the parameter information is missing it implies "P()" which implies all the
-            // parameters are in sorted order.
-            private fun parameterInformation(): String {
-                val builder = StringBuilder("P(")
-                val parameters = function.valueParameters.filter {
-                    !it.name.asString().startsWith("$")
-                }
-                val sortIndex = mapOf(
-                    *parameters.mapIndexed { index, parameter ->
-                        Pair(index, parameter)
-                    }.sortedBy { it.second.name.asString() }
-                        .mapIndexed { sortIndex, originalIndex ->
-                            Pair(originalIndex.first, sortIndex)
-                        }.toTypedArray()
-                )
-
-                val expectedIndexes = Array(parameters.size) { it }.toMutableList()
-                var run = 0
-                var parameterEmitted = false
-
-                fun emitRun(originalIndex: Int) {
-                    if (run > 0) {
-                        builder.append('!')
-                        if (originalIndex < parameters.size - 1) {
-                            builder.append(run)
-                        }
-                        run = 0
-                    }
-                }
-
-                parameters.forEachIndexed { originalIndex, parameter ->
-                    if (expectedIndexes.first() == sortIndex[originalIndex] &&
-                        !parameter.type.isInlineClassType()
-                    ) {
-                        run++
-                        expectedIndexes.removeAt(0)
-                    } else {
-                        emitRun(originalIndex)
-                        if (originalIndex > 0) builder.append(',')
-                        val index = sortIndex[originalIndex]
-                            ?: error("missing index $originalIndex")
-                        builder.append(index)
-                        expectedIndexes.remove(index)
-                        if (parameter.type.isInlineClassType()) {
-                            parameter.type.getClass()?.fqNameWhenAvailable?.let {
-                                builder.append(':')
-                                builder.append(
-                                    it.asString()
-                                        .replacePrefix("androidx.compose.", "c#")
-                                )
-                            }
-                        }
-                        parameterEmitted = true
-                    }
-                }
-                builder.append(')')
-                return if (parameterEmitted) builder.toString() else ""
-            }
+            private fun parameterInformation(): String =
+                function.parameterInformation()
 
             override fun sourceLocationOf(call: IrElement): SourceLocation {
                 val parent = parent
@@ -3807,12 +3808,8 @@ class ComposableFunctionBodyTransformer(
                 else super.sourceLocationOf(call)
             }
 
-            private fun callInformation(): String {
-                val inlineMarker = if (function.isInline) "C" else ""
-                return if (!function.name.isSpecial)
-                    "${inlineMarker}C(${function.name.asString()})"
-                else "${inlineMarker}C"
-            }
+            private fun callInformation(): String =
+                function.callInformation()
 
             override fun calculateHasSourceInformation(sourceInformationEnabled: Boolean): Boolean {
                 return if (sourceInformationEnabled) {
@@ -3827,7 +3824,7 @@ class ComposableFunctionBodyTransformer(
                 if (sourceInformationEnabled) {
                     "${callInformation()}${parameterInformation()}${
                     super.calculateSourceInfo(sourceInformationEnabled) ?: ""
-                    }:${sourceFileInformation()}"
+                    }:${function.sourceFileInformation()}"
                 } else {
                     if (function.visibility.isPublicAPI) {
                         "${callInformation()}${parameterInformation()}"
@@ -3932,16 +3929,40 @@ class ComposableFunctionBodyTransformer(
                 return null
             }
 
-            private fun packageHash(): Int =
-                packageName()?.fold(0) { hash, current ->
-                    hash * 31 + current.code
-                }?.absoluteValue ?: 0
+            private class IntrinsicRememberFixup(
+                val args: List<IrExpression>,
+                val metas: List<ParamMeta>,
+                val call: IrCall
+            )
+            private val intrinsicRememberFixups = mutableListOf<IntrinsicRememberFixup>()
 
-            internal fun sourceFileInformation(): String {
-                val hash = packageHash()
-                if (hash != 0)
-                    return "${function.file.name}#${hash.toString(36)}"
-                return function.file.name
+            fun recordIntrinsicRememberFixUp(
+                args: List<IrExpression>,
+                metas: List<ParamMeta>,
+                call: IrCall
+            ) {
+                val dirty = metas.find { it.maskParam is IrChangedBitMaskVariable }
+                if (dirty?.maskParam == this.dirty) {
+                    intrinsicRememberFixups.add(IntrinsicRememberFixup(args, metas, call))
+                } else {
+                    // capturing dirty is only allowed from inline function context, which doesn't
+                    // have dirty params.
+                    // if we encounter dirty that doesn't match mask from the current function, it
+                    // means that we should apply the fixup higher in the tree.
+                    var scope = parent
+                    while (scope !is FunctionScope) scope = scope!!.parent
+                    scope.recordIntrinsicRememberFixUp(args, metas, call)
+                }
+            }
+
+            fun applyIntrinsicRememberFixups(
+                invalidExpr: (List<IrExpression>, List<ParamMeta>) -> IrExpression
+            ) {
+                intrinsicRememberFixups.forEach {
+                    val invalid = invalidExpr(it.args, it.metas)
+                    // $composer.cache(invalid, calc)
+                    it.call.putValueArgument(0, invalid)
+                }
             }
         }
 
@@ -4187,7 +4208,7 @@ class ComposableFunctionBodyTransformer(
                 if (sourceInformationEnabled) {
                     "C${
                     super.calculateSourceInfo(sourceInformationEnabled) ?: ""
-                    }:${functionScope?.sourceFileInformation() ?: ""}"
+                    }:${functionScope?.function?.sourceFileInformation() ?: ""}"
                 } else {
                     null
                 }
@@ -4535,4 +4556,123 @@ private fun mutableStatementContainer(context: IrPluginContext): IrContainerExpr
         UNDEFINED_OFFSET,
         context.irBuiltIns.unitType
     )
+}
+
+private fun IrFunction.callInformation(): String {
+    val inlineMarker = if (isInline) "C" else ""
+    return if (!name.isSpecial)
+        "${inlineMarker}C(${name.asString()})"
+    else "${inlineMarker}C"
+}
+
+// Parameter information is an index from the sorted order of the parameters to the
+// actual order. This is used to reorder the fields of the lambda class generated for
+// restart lambdas into parameter order. If all the parameters are in sorted order
+// with no inline classes then no additional information is necessary. This means
+// that parameter-less or single parameter functions with no inline classes never
+// need additional information and two parameter functions are only 50% likely to
+// need ordering information which is, if needed, very short ("1"). The encoding is as
+// follows,
+//
+//   parameters: (parameter|run) ("," parameter | run)*
+//   parameter: sorted-index [":" inline-class]
+//   sorted-index: <number>
+//   inline-class: <chars not "," or "!">
+//   run: "!" <number>
+//
+//   where
+//     sorted-index:  the index of the parameter's name in the sorted list of
+//                    parameter names,
+//     inline-class:  the fully qualified name of the inline class using "c#" as a
+//                    short-hand for "androidx.compose.".
+//     run:           The number of parameter that are in sequence assuming the
+//                    previously selected parameters are removed from the sorted order.
+//                    For example, "!5" at the beginning of the list is equivalent to
+//                    "0,1,2,3,4" and "3!4" is equivalent to "3,0,1,2,4". If there
+//                    are 9 parameters "3,4!2,6,8" is equivalent to "3,4,0,1,6,8,2,
+//                    5,6,7".
+//
+// There is an implied "!n" (where n is the number of remaining parameters) at the end
+// of the parameter information that implies the rest of the parameters are in order.
+// If the parameter information is missing it implies "P()" which implies all the
+// parameters are in sorted order.
+private fun IrFunction.parameterInformation(): String {
+    val builder = StringBuilder("P(")
+    val parameters = valueParameters.filter {
+        !it.name.asString().startsWith("$")
+    }
+    val sortIndex = mapOf(
+        *parameters.mapIndexed { index, parameter ->
+            Pair(index, parameter)
+        }.sortedBy { it.second.name.asString() }
+            .mapIndexed { sortIndex, originalIndex ->
+                Pair(originalIndex.first, sortIndex)
+            }.toTypedArray()
+    )
+
+    val expectedIndexes = Array(parameters.size) { it }.toMutableList()
+    var run = 0
+    var parameterEmitted = false
+
+    fun emitRun(originalIndex: Int) {
+        if (run > 0) {
+            builder.append('!')
+            if (originalIndex < parameters.size - 1) {
+                builder.append(run)
+            }
+            run = 0
+        }
+    }
+
+    parameters.forEachIndexed { originalIndex, parameter ->
+        if (expectedIndexes.first() == sortIndex[originalIndex] &&
+            !parameter.type.isInlineClassType()
+        ) {
+            run++
+            expectedIndexes.removeAt(0)
+        } else {
+            emitRun(originalIndex)
+            if (originalIndex > 0) builder.append(',')
+            val index = sortIndex[originalIndex]
+                ?: error("missing index $originalIndex")
+            builder.append(index)
+            expectedIndexes.remove(index)
+            if (parameter.type.isInlineClassType()) {
+                parameter.type.getClass()?.fqNameWhenAvailable?.let {
+                    builder.append(':')
+                    builder.append(
+                        it.asString()
+                            .replacePrefix("androidx.compose.", "c#")
+                    )
+                }
+            }
+            parameterEmitted = true
+        }
+    }
+    builder.append(')')
+    return if (parameterEmitted) builder.toString() else ""
+}
+
+private fun IrFunction.packageName(): String? {
+    var parent = parent
+    while (true) {
+        when (parent) {
+            is IrPackageFragment -> return parent.packageFqName.asString()
+            is IrDeclaration -> parent = parent.parent
+            else -> break
+        }
+    }
+    return null
+}
+
+private fun IrFunction.packageHash(): Int =
+    packageName()?.fold(0) { hash, current ->
+        hash * 31 + current.code
+    }?.absoluteValue ?: 0
+
+private fun IrFunction.sourceFileInformation(): String {
+    val hash = packageHash()
+    if (hash != 0)
+        return "${file.name}#${hash.toString(36)}"
+    return file.name
 }

@@ -70,6 +70,7 @@ import org.gradle.api.component.SoftwareComponentFactory
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Zip
@@ -96,11 +97,8 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
 import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinAndroidTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTargetWithSimulatorTests
-import org.jetbrains.kotlin.gradle.tasks.CInteropProcess
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 
 /**
  * A plugin which enables all of the Gradle customizations for AndroidX. This plugin reacts to other
@@ -316,36 +314,55 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
     /** Configures the project to use the Kotlin version specified by `androidx.kotlinTarget`. */
     private fun Project.configureKotlinVersion() {
         val kotlinVersionStringProvider = androidXConfiguration.kotlinBomVersion
+        val kotlinTestVersionStringProvider = androidXConfiguration.kotlinTestBomVersion
 
         // Resolve unspecified Kotlin versions to the target version.
         configurations.all { configuration ->
+            val useVersionStringProvider = if (configuration.isTest()) {
+                kotlinTestVersionStringProvider
+            } else {
+                kotlinVersionStringProvider
+            }
             configuration.resolutionStrategy { strategy ->
                 strategy.eachDependency { details ->
-                    if (details.requested.group == "org.jetbrains.kotlin") {
-                        if (
-                            details.requested.group == "org.jetbrains.kotlin" &&
-                                details.requested.version == null
-                        ) {
-                            details.useVersion(kotlinVersionStringProvider.get())
-                        }
+                    if (details.requested.group == "org.jetbrains.kotlin" &&
+                        details.requested.version == null) {
+                        details.useVersion(useVersionStringProvider.get())
                     }
                 }
             }
         }
 
+        fun Provider<String>.toKotlinVersionProvider() = map { version ->
+            KotlinVersion.fromVersion(version.substringBeforeLast('.'))
+        }
+
+        fun KotlinCompilationTask<*>.isTestCompilation() =
+            multiplatformExtension?.targets?.any { target ->
+                target.compilations.findByName("test")?.compileKotlinTaskName == name
+            } ?: false
+
         // Set the Kotlin compiler's API and language version to ensure bytecode is compatible.
-        val kotlinVersionProvider =
-            kotlinVersionStringProvider.map { version ->
-                KotlinVersion.fromVersion(version.substringBeforeLast('.'))
-            }
+        val kotlinVersionProvider = kotlinVersionStringProvider.toKotlinVersionProvider()
+        val kotlinTestVersionProvider = kotlinTestVersionStringProvider.toKotlinVersionProvider()
         tasks.configureEach { task ->
-            (task as? KotlinCompilationTask<*>)?.apply {
-                compilerOptions.apiVersion.set(kotlinVersionProvider)
-                compilerOptions.languageVersion.set(kotlinVersionProvider)
+            if (task is KotlinCompilationTask<*>) {
+                // We can't directly determine if a Task is compiling test code, but we can scrape
+                // the names of all the compilation units and compare them to Task names.
+                val useVersionProvider = if (task.isTestCompilation()) {
+                    kotlinTestVersionProvider
+                } else {
+                    kotlinVersionProvider
+                }
+                task.compilerOptions.apiVersion.set(useVersionProvider)
+                task.compilerOptions.languageVersion.set(useVersionProvider)
             }
         }
 
-        // Specify coreLibrariesVersion for consumption by Kotlin Gradle Plugin.
+        // Specify coreLibrariesVersion for consumption by Kotlin Gradle Plugin. Note that KGP does
+        // not explicitly support varying the version between tasks/configurations for a given
+        // project, so this is not strictly correct. Picking the non-test (e.g. lower) value seems
+        // to work, though.
         afterEvaluate { evaluatedProject ->
             evaluatedProject.kotlinExtensionOrNull?.let { kotlinExtension ->
                 kotlinExtension.coreLibrariesVersion = kotlinVersionStringProvider.get()
@@ -443,7 +460,8 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
         }
         if (plugin is KotlinMultiplatformPluginWrapper) {
-            project.configureKonanDirectory()
+            KonanPrebuiltsSetup.configureKonanDirectory(project)
+            KmpLinkTaskWorkaround.serializeLinkTasks(project)
 
             val libraryExtension = project.extensions.findByType<LibraryExtension>()
             if (libraryExtension != null) {
@@ -746,8 +764,9 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 extension.type == LibraryType.PUBLISHED_LIBRARY ||
                     extension.type == LibraryType.UNSET
             if (mavenGroup != null && isProbablyPublished && extension.shouldPublish()) {
-                validateProjectStructure(mavenGroup.group)
+                validateProjectMavenGroup(mavenGroup.group)
                 validateProjectMavenName(extension.name.get(), mavenGroup.group)
+                validateProjectStructure(mavenGroup.group)
             }
         }
     }
@@ -951,37 +970,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             .srcFile("src/androidInstrumentedTest/AndroidManifest.xml")
     }
 
-    /** Sets the konan distribution url to the prebuilts directory. */
-    private fun Project.configureKonanDirectory() {
-        if (ProjectLayoutType.isPlayground(this)) {
-            return // playground does not use prebuilts
-        }
-        overrideKotlinNativeDistributionUrlToLocalDirectory()
-        overrideKotlinNativeDependenciesUrlToLocalDirectory()
-    }
-
-    private fun Project.overrideKotlinNativeDependenciesUrlToLocalDirectory() {
-        val konanPrebuiltsFolder = getKonanPrebuiltsFolder()
-        // use relative path so it doesn't affect gradle remote cache.
-        val relativeRootPath = konanPrebuiltsFolder.relativeTo(rootProject.projectDir).path
-        val relativeProjectPath = konanPrebuiltsFolder.relativeTo(projectDir).path
-        tasks.withType(KotlinNativeCompile::class.java).configureEach {
-            it.kotlinOptions.freeCompilerArgs +=
-                listOf("-Xoverride-konan-properties=dependenciesUrl=file:$relativeRootPath")
-        }
-        tasks.withType(CInteropProcess::class.java).configureEach {
-            it.settings.extraOpts +=
-                listOf("-Xoverride-konan-properties", "dependenciesUrl=file:$relativeProjectPath")
-        }
-    }
-
-    private fun Project.overrideKotlinNativeDistributionUrlToLocalDirectory() {
-        val relativePath =
-            getKonanPrebuiltsFolder().resolve("nativeCompilerPrebuilts").relativeTo(projectDir).path
-        val url = "file:$relativePath"
-        extensions.extraProperties["kotlin.native.distribution.baseDownloadUrl"] = url
-    }
-
     private fun Project.configureKmp() {
         val kmpExtension =
             checkNotNull(project.extensions.findByType<KotlinMultiplatformExtension>()) {
@@ -997,16 +985,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         kmpExtension.targets.all { kotlinTarget ->
             kotlinTarget.compilations.all {
                 it.compilerOptions.options.freeCompilerArgs.add("-Xexpect-actual-classes")
-            }
-        }
-
-        kmpExtension.testableTargets.all { kotlinTarget ->
-            if (kotlinTarget is KotlinNativeTargetWithSimulatorTests) {
-                kotlinTarget.binaries.all {
-                    // Use std allocator to avoid the following warning:
-                    // w: Mimalloc allocator isn't supported on target <target>. Used standard mode.
-                    it.freeCompilerArgs += "-Xallocator=std"
-                }
             }
         }
     }
@@ -1164,6 +1142,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
     companion object {
         const val CREATE_LIBRARY_BUILD_INFO_FILES_TASK = "createLibraryBuildInfoFiles"
         const val GENERATE_TEST_CONFIGURATION_TASK = "GenerateTestConfiguration"
+        const val FINALIZE_TEST_CONFIGS_WITH_APKS_TASK = "finalizeTestConfigsWithApks"
         const val ZIP_TEST_CONFIGS_WITH_APKS_TASK = "zipTestConfigsWithApks"
 
         const val TASK_GROUP_API = "API"

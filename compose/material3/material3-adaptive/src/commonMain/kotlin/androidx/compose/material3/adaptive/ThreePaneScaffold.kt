@@ -376,19 +376,15 @@ private class ThreePaneContentMeasurePolicy(
                 it == PaneAdaptedValue.Hidden
             }
 
-            val verticalSpacerSize = scaffoldDirective.gutterSizes.verticalSpacerSize.roundToPx()
+            val verticalSpacerSize = scaffoldDirective.horizontalPartitionSpacerSize.roundToPx()
             val leftContentPadding =
-                scaffoldDirective.gutterSizes.contentPadding.calculateLeftPadding(
-                    layoutDirection
-                ).roundToPx()
+                scaffoldDirective.contentPadding.calculateLeftPadding(layoutDirection).roundToPx()
             val rightContentPadding =
-                scaffoldDirective.gutterSizes.contentPadding.calculateRightPadding(
-                    layoutDirection
-                ).roundToPx()
+                scaffoldDirective.contentPadding.calculateRightPadding(layoutDirection).roundToPx()
             val topContentPadding =
-                scaffoldDirective.gutterSizes.contentPadding.calculateTopPadding().roundToPx()
+                scaffoldDirective.contentPadding.calculateTopPadding().roundToPx()
             val bottomContentPadding =
-                scaffoldDirective.gutterSizes.contentPadding.calculateBottomPadding().roundToPx()
+                scaffoldDirective.contentPadding.calculateBottomPadding().roundToPx()
             val outerBounds = IntRect(
                 leftContentPadding,
                 topContentPadding,
@@ -814,8 +810,9 @@ internal object ThreePaneScaffoldDefaults {
      */
     val TertiaryPanePreferredWidth = 412.dp
 
-    // TODO(conradchen): maybe remove this after addressing unspecified preferred width issue
-    val PrimaryPanePreferredWidth = 600.dp
+    // Make it the same as the secondary and tertiary panes, so we can have a semi-50-50-split on
+    // narrower windows by default.
+    val PrimaryPanePreferredWidth = 412.dp
 
     // TODO(conradchen): consider declaring a value class for priority
     const val PrimaryPanePriority = 10
@@ -846,7 +843,7 @@ internal object ThreePaneScaffoldDefaults {
     // TODO(conradchen): open this to public when we support motion customization
     val PaneSpringSpec: SpringSpec<IntOffset> =
         spring(
-            dampingRatio = 0.7f,
+            dampingRatio = 0.8f,
             stiffness = 600f,
             visibilityThreshold = IntOffset.VisibilityThreshold
         )

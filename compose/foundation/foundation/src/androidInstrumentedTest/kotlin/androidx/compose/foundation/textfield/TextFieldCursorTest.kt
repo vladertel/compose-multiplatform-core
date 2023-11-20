@@ -111,6 +111,7 @@ class TextFieldCursorTest : FocusedWindowTest {
     // default onTextLayout to capture cursor boundaries.
     private val onTextLayout: (TextLayoutResult) -> Unit = { cursorRect = it.getCursorRect(0) }
 
+    @Ignore("b/305799612")
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun textFieldFocused_cursorRendered() = with(rule.density) {
@@ -575,6 +576,7 @@ class TextFieldCursorTest : FocusedWindowTest {
             )
     }
 
+    @Ignore("b/308895081")
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun cursorNotBlinking_whenWindowLostFocus() {
@@ -617,6 +619,7 @@ class TextFieldCursorTest : FocusedWindowTest {
             .assertDoesNotContainColor(cursorColor)
     }
 
+    @Ignore("b/308895081")
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun focusedTextField_resumeBlinking_whenWindowRegainsFocus() {

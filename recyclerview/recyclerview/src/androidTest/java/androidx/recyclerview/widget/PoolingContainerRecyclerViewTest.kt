@@ -23,9 +23,9 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.annotation.RequiresApi
 import androidx.customview.poolingcontainer.addPoolingContainerListener
+import androidx.recyclerview.test.awaitScrollIdle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
-import androidx.test.filters.SdkSuppress
 import androidx.test.internal.runner.junit4.statement.UiThreadStatement.runOnUiThread
 import androidx.testutils.AnimationDurationScaleRule
 import com.google.common.truth.Truth.assertThat
@@ -42,7 +42,6 @@ import org.junit.runner.RunWith
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.KITKAT)
 /**
  * Note: this test's structure largely parallels AndroidComposeViewsRecyclerViewTest
  * (though there are notable implementation differences)
@@ -456,29 +455,6 @@ class PoolingContainerTestAdapter(
     }
 
     override fun getItemCount(): Int = items
-}
-
-private suspend fun RecyclerView.awaitScrollIdle() {
-    val rv = this
-    withContext(Dispatchers.Main) {
-        suspendCancellableCoroutine<Unit> { continuation ->
-            val listener = object : RecyclerView.OnScrollListener() {
-                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                    if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                        continuation.resume(Unit)
-                    }
-                }
-            }
-
-            rv.addOnScrollListener(listener)
-
-            continuation.invokeOnCancellation { rv.removeOnScrollListener(listener) }
-
-            if (rv.scrollState == RecyclerView.SCROLL_STATE_IDLE) {
-                continuation.resume(Unit)
-            }
-        }
-    }
 }
 
 private suspend fun RecyclerView.awaitItemAnimationsComplete() {

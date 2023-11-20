@@ -16,6 +16,9 @@
 
 package androidx.appsearch.compiler;
 
+import static androidx.appsearch.compiler.AppSearchCompiler.OUTPUT_DIR_OPTION;
+import static androidx.appsearch.compiler.AppSearchCompiler.RESTRICT_GENERATED_CODE_TO_LIB_OPTION;
+
 import static com.google.testing.compile.CompilationSubject.assertThat;
 
 import com.google.auto.value.processor.AutoValueProcessor;
@@ -59,11 +62,12 @@ public class AppSearchCompilerTest {
     @Test
     public void testPrivate() {
         Compilation compilation = compile(
-                "Wrapper",
+                /* classSimpleName= */"Wrapper",
                 "public class Wrapper {\n"
                         + "@Document\n"
                         + "private class Gift {}\n"
-                        + "}  // Wrapper\n"
+                        + "}  // Wrapper\n",
+                /* restrictGeneratedCodeToLibrary= */false
         );
 
         assertThat(compilation).hadErrorContaining("annotated class is private");
@@ -1960,6 +1964,41 @@ public class AppSearchCompilerTest {
     }
 
     @Test
+    public void testInterfaceAsNestedDocument() throws Exception {
+        Compilation compilation = compile(
+                "@Document\n"
+                        + "interface Thing {\n"
+                        + "  public static Thing create(String id, String namespace) {\n"
+                        + "    return new ThingImpl(id, namespace);\n"
+                        + "  }\n"
+                        + "  @Document.Namespace public String getNamespace();\n"
+                        + "  @Document.Id public String getId();\n"
+                        + "}\n"
+                        + "class ThingImpl implements Thing {\n"
+                        + "  public ThingImpl(String id, String namespace) {\n"
+                        + "    this.id = id;\n"
+                        + "    this.namespace = namespace;\n"
+                        + "  }\n"
+                        + "  private String namespace;\n"
+                        + "  private String id;\n"
+                        + "  public String getNamespace() { return namespace; }\n"
+                        + "  public String getId() { return id; }\n"
+                        + "}\n"
+                        + "@Document\n"
+                        + "public class Gift {\n"
+                        + "  @Document.Namespace String namespace;\n"
+                        + "  @Document.Id String id;\n"
+                        + "  @Document.DocumentProperty Thing thing;\n"
+                        + "}\n");
+        assertThat(compilation).succeededWithoutWarnings();
+        checkResultContains("Thing.java",
+                "Thing document = Thing.create(getIdConv, getNamespaceConv)");
+        checkResultContains("Gift.java",
+                "thingConv = thingCopy.toDocumentClass(Thing.class, documentClassMap)");
+        checkEqualsGolden("Gift.java");
+    }
+
+    @Test
     public void testInterfaceImplementingParents() throws Exception {
         Compilation compilation = compile(
                 "@Document\n"
@@ -2811,11 +2850,265 @@ public class AppSearchCompilerTest {
         checkDocumentMapEqualsGolden(/* roundIndex= */0);
     }
 
-    private Compilation compile(String classBody) {
-        return compile("Gift", classBody);
+    @Test
+    public void testStringSerializer() throws Exception {
+        Compilation compilation = compile(
+                "import androidx.appsearch.app.StringSerializer;\n"
+                        + "import java.net.URL;\n"
+                        + "import java.net.MalformedURLException;\n"
+                        + "import java.util.List;\n"
+                        + "@Document\n"
+                        + "class Gift {\n"
+                        + "    @Document.Id String mId;\n"
+                        + "    @Document.Namespace String mNamespace;\n"
+                        + "    @Document.StringProperty(\n"
+                        + "        serializer = UrlAsStringSerializer.class\n"
+                        + "    )\n"
+                        + "    URL mUrl;\n"
+                        + "    @Document.StringProperty(\n"
+                        + "        serializer = UrlAsStringSerializer.class\n"
+                        + "    )\n"
+                        + "    List<URL> mUrlList;\n"
+                        + "    @Document.StringProperty(\n"
+                        + "        serializer = UrlAsStringSerializer.class\n"
+                        + "    )\n"
+                        + "    URL[] mUrlArr;\n"
+                        + "    static class UrlAsStringSerializer \n"
+                        + "            implements StringSerializer<URL> {\n"
+                        + "        @Override\n"
+                        + "        public String serialize(URL url) {\n"
+                        + "            return url.toString();\n"
+                        + "        }\n"
+                        + "        @Override\n"
+                        + "        public URL deserialize(String string) {\n"
+                        + "            try {\n"
+                        + "                return new URL(string);\n"
+                        + "            } catch (MalformedURLException e) {\n"
+                        + "                return null;\n"
+                        + "            }\n"
+                        + "        }\n"
+                        + "    }\n"
+                        + "}"
+        );
+        assertThat(compilation).succeededWithoutWarnings();
+        checkEqualsGolden("Gift.java");
+        checkResultContains(
+                "Gift.java",
+                "Gift.UrlAsStringSerializer serializer = new Gift.UrlAsStringSerializer()");
+        checkResultContains("Gift.java", "String mUrlConv = serializer.serialize(mUrlCopy)");
+        checkResultContains(
+                "Gift.java", "mUrlConv = new Gift.UrlAsStringSerializer().deserialize(mUrlCopy)");
+        checkResultContains("Gift.java", "mUrlListConv[i++] = serializer.serialize(item)");
+        checkResultContains("Gift.java", "URL elem = serializer.deserialize(mUrlListCopy[i])");
+        checkResultContains("Gift.java", "mUrlArrConv[i] = serializer.serialize(mUrlArrCopy[i])");
+        checkResultContains("Gift.java", "URL elem = serializer.deserialize(mUrlArrCopy[i])");
     }
 
-    private Compilation compile(String classSimpleName, String classBody) {
+    @Test
+    public void testLongSerializer() throws Exception {
+        Compilation compilation = compile(
+                "import androidx.appsearch.app.LongSerializer;\n"
+                        + "import java.util.Arrays;\n"
+                        + "import java.util.List;\n"
+                        + "@Document\n"
+                        + "class Gift {\n"
+                        + "    @Document.Id String mId;\n"
+                        + "    @Document.Namespace String mNamespace;\n"
+                        + "    @Document.LongProperty(\n"
+                        + "        serializer = PricePointAsOrdinalSerializer.class\n"
+                        + "    )\n"
+                        + "    PricePoint mPricePoint;\n"
+                        + "    @Document.LongProperty(\n"
+                        + "        serializer = PricePointAsOrdinalSerializer.class\n"
+                        + "    )\n"
+                        + "    List<PricePoint> mPricePointList;\n"
+                        + "    @Document.LongProperty(\n"
+                        + "        serializer = PricePointAsOrdinalSerializer.class\n"
+                        + "    )\n"
+                        + "    PricePoint[] mPricePointArr;\n"
+                        + "    enum PricePoint { LOW, MID, HIGH }\n"
+                        + "    static class PricePointAsOrdinalSerializer \n"
+                        + "            implements LongSerializer<PricePoint> {\n"
+                        + "        @Override\n"
+                        + "        public long serialize(PricePoint pricePoint) {\n"
+                        + "            return pricePoint.ordinal();\n"
+                        + "        }\n"
+                        + "        @Override\n"
+                        + "        public PricePoint deserialize(long l) {\n"
+                        + "            return Arrays.stream(PricePoint.values())\n"
+                        + "                    .filter(pp -> pp.ordinal() == l)\n"
+                        + "                    .findFirst()\n"
+                        + "                    .orElse(null);\n"
+                        + "        }\n"
+                        + "    }\n"
+                        + "}"
+        );
+        assertThat(compilation).succeededWithoutWarnings();
+        checkEqualsGolden("Gift.java");
+        checkResultContains(
+                "Gift.java",
+                "Gift.PricePointAsOrdinalSerializer serializer = "
+                        + "new Gift.PricePointAsOrdinalSerializer()");
+        checkResultContains(
+                "Gift.java",
+                "mPricePointConv = "
+                        + "new Gift.PricePointAsOrdinalSerializer().deserialize(mPricePointCopy)");
+        checkResultContains(
+                "Gift.java", "long mPricePointConv = serializer.serialize(mPricePointCopy)");
+        checkResultContains(
+                "Gift.java",
+                "Gift.PricePoint elem = serializer.deserialize(mPricePointListCopy[i])");
+        checkResultContains("Gift.java", "mPricePointListConv[i++] = serializer.serialize(item)");
+        checkResultContains(
+                "Gift.java", "mPricePointArrConv[i] = serializer.serialize(mPricePointArrCopy[i])");
+        checkResultContains(
+                "Gift.java",
+                "Gift.PricePoint elem = serializer.deserialize(mPricePointArrCopy[i])");
+    }
+
+    @Test
+    public void testSerializerWithoutDefaultConstructor() {
+        Compilation compilation = compile(
+                "import androidx.appsearch.app.LongSerializer;\n"
+                        + "import java.time.Instant;\n"
+                        + "@Document\n"
+                        + "class Gift {\n"
+                        + "    @Document.Id\n"
+                        + "    String mId = null;\n"
+                        + "    @Document.Namespace\n"
+                        + "    String mNamespace = null;\n"
+                        + "    @Document.LongProperty(\n"
+                        + "        serializer = InstantAsEpochMillisSerializer.class\n"
+                        + "    )\n"
+                        + "    Instant mPurchaseTimeStamp = null;\n"
+                        + "    final static class InstantAsEpochMillisSerializer \n"
+                        + "            implements LongSerializer<Instant> {\n"
+                        + "        InstantAsEpochMillisSerializer(boolean someParam) {}\n"
+                        + "        @Override\n"
+                        + "        public long serialize(Instant instant) {\n"
+                        + "            return instant.toEpochMilli();\n"
+                        + "        }\n"
+                        + "        @Override\n"
+                        + "        public Instant deserialize(long l) {\n"
+                        + "            return Instant.ofEpochMilli(l);\n"
+                        + "        }\n"
+                        + "    }\n"
+                        + "}"
+        );
+        assertThat(compilation).hadErrorContaining(
+                "Serializer com.example.appsearch.Gift.InstantAsEpochMillisSerializer must have a "
+                        + "zero-param constructor");
+    }
+
+    @Test
+    public void testSerializerWithPrivateDefaultConstructor() {
+        Compilation compilation = compile(
+                "import androidx.appsearch.app.LongSerializer;\n"
+                        + "import java.time.Instant;\n"
+                        + "@Document\n"
+                        + "class Gift {\n"
+                        + "    @Document.Id\n"
+                        + "    String mId = null;\n"
+                        + "    @Document.Namespace\n"
+                        + "    String mNamespace = null;\n"
+                        + "    @Document.LongProperty(\n"
+                        + "        serializer = InstantAsEpochMillisSerializer.class\n"
+                        + "    )\n"
+                        + "    Instant mPurchaseTimeStamp = null;\n"
+                        + "    final static class InstantAsEpochMillisSerializer \n"
+                        + "            implements LongSerializer<Instant> {\n"
+                        + "        private InstantAsEpochMillisSerializer() {}\n"
+                        + "        @Override\n"
+                        + "        public long serialize(Instant instant) {\n"
+                        + "            return instant.toEpochMilli();\n"
+                        + "        }\n"
+                        + "        @Override\n"
+                        + "        public Instant deserialize(long l) {\n"
+                        + "            return Instant.ofEpochMilli(l);\n"
+                        + "        }\n"
+                        + "    }\n"
+                        + "}"
+        );
+        assertThat(compilation).hadErrorContaining(
+                "The zero-param constructor of serializer "
+                        + "com.example.appsearch.Gift.InstantAsEpochMillisSerializer must not "
+                        + "be private");
+    }
+
+    @Test
+    public void testPropertyTypeDoesNotMatchSerializer() {
+        Compilation compilation = compile(
+                "import androidx.appsearch.app.StringSerializer;\n"
+                        + "import java.net.MalformedURLException;\n"
+                        + "import java.net.URL;\n"
+                        + "@Document\n"
+                        + "class Gift {\n"
+                        + "    @Document.Id\n"
+                        + "    String mId = null;\n"
+                        + "    @Document.Namespace\n"
+                        + "    String mNamespace = null;\n"
+                        + "    @Document.StringProperty(serializer = UrlAsStringSerializer.class)\n"
+                        + "    int mProductUrl = null;\n"
+                        + "    final static class UrlAsStringSerializer\n"
+                        + "            implements StringSerializer<URL> {\n"
+                        + "        @Override\n"
+                        + "        public String serialize(URL url) {\n"
+                        + "            return url.toString();\n"
+                        + "        }\n"
+                        + "        @Override\n"
+                        + "        public URL deserialize(String string) {\n"
+                        + "            try {\n"
+                        + "                return new URL(string);\n"
+                        + "            } catch (MalformedURLException e) {\n"
+                        + "                return null;\n"
+                        + "            }\n"
+                        + "        }\n"
+                        + "    }\n"
+                        + "}"
+        );
+        assertThat(compilation).hadErrorContaining(
+                "@StringProperty with serializer = UrlAsStringSerializer must only be placed on a "
+                        + "getter/field of type or array or collection of java.net.URL");
+    }
+
+    @Test
+    public void testPropertyNamedAsDocumentClassMap() throws Exception {
+        Compilation compilation = compile(
+                "@Document\n"
+                        + "public class Gift {\n"
+                        + "  @Document.Namespace String namespace;\n"
+                        + "  @Document.Id String id;\n"
+                        + "  @Document.LongProperty int documentClassMap;\n"
+                        + "}\n");
+        assertThat(compilation).succeededWithoutWarnings();
+        checkResultContains("Gift.java",
+                "int documentClassMapConv = (int) genericDoc.getPropertyLong"
+                        + "(\"documentClassMap\")");
+        checkResultContains("Gift.java", "document.documentClassMap = documentClassMapConv");
+        checkEqualsGolden("Gift.java");
+    }
+
+    @Test
+    public void testGeneratedCodeRestrictedToLibrary() throws Exception {
+        Compilation compilation = compile(
+                /* classSimpleName=*/"Gift",
+                "@Document\n"
+                        + "public class Gift {\n"
+                        + "  @Document.Namespace String namespace;\n"
+                        + "  @Document.Id String id;\n"
+                        + "}\n",
+                /* restrictGeneratedCodeToLibrary= */true);
+        assertThat(compilation).succeededWithoutWarnings();
+        checkResultContains("Gift.java", "@RestrictTo(RestrictTo.Scope.LIBRARY)");
+        checkEqualsGolden("Gift.java");
+    }
+
+    private Compilation compile(String classBody) {
+        return compile("Gift", classBody, /* restrictGeneratedCodeToLibrary= */false);
+    }
+
+    private Compilation compile(
+            String classSimpleName, String classBody, boolean restrictGeneratedCodeToLibrary) {
         String src = "package com.example.appsearch;\n"
                 + "import androidx.appsearch.annotation.Document;\n"
                 + "import androidx.appsearch.annotation.Document.*;\n"
@@ -2826,13 +3119,13 @@ public class AppSearchCompilerTest {
         // Fully compiling this source code requires AppSearch to be on the classpath, but it only
         // builds on Android. Instead, this test configures the annotation processor to write to a
         // test-controlled path which is then diffed.
-        String outputDirFlag = String.format(
-                "-A%s=%s",
-                AppSearchCompiler.OUTPUT_DIR_OPTION,
-                mGenFilesDir.getAbsolutePath());
+        String outputDirFlag = "-A%s=%s".formatted(
+                OUTPUT_DIR_OPTION, mGenFilesDir.getAbsolutePath());
+        String restrictGeneratedCodeToLibraryFlag = "-A%s=%s".formatted(
+                RESTRICT_GENERATED_CODE_TO_LIB_OPTION, restrictGeneratedCodeToLibrary);
         return Compiler.javac()
                 .withProcessors(new AppSearchCompiler(), new AutoValueProcessor())
-                .withOptions(outputDirFlag)
+                .withOptions(outputDirFlag, restrictGeneratedCodeToLibraryFlag)
                 .compile(jfo);
     }
 

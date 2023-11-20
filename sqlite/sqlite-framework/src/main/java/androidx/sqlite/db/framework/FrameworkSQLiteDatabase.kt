@@ -15,6 +15,7 @@
  */
 package androidx.sqlite.db.framework
 
+import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.database.Cursor
 import android.database.SQLException
@@ -30,7 +31,6 @@ import android.util.Pair
 import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
 import androidx.sqlite.db.SimpleSQLiteQuery
-import androidx.sqlite.db.SupportSQLiteCompat
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteStatement
@@ -59,6 +59,10 @@ internal class FrameworkSQLiteDatabase(
         delegate.beginTransactionNonExclusive()
     }
 
+    override fun beginTransactionReadOnly() {
+        internalBeginTransactionWithListenerReadOnly(null)
+    }
+
     override fun beginTransactionWithListener(
         transactionListener: SQLiteTransactionListener
     ) {
@@ -69,6 +73,32 @@ internal class FrameworkSQLiteDatabase(
         transactionListener: SQLiteTransactionListener
     ) {
         delegate.beginTransactionWithListenerNonExclusive(transactionListener)
+    }
+
+    override fun beginTransactionWithListenerReadOnly(
+        transactionListener: SQLiteTransactionListener
+    ) {
+        internalBeginTransactionWithListenerReadOnly(transactionListener)
+    }
+
+    // TODO(b/288918056): Use Android V API once it is available and SDK check the reflection call.
+    @SuppressLint("BanUncheckedReflection")
+    private fun internalBeginTransactionWithListenerReadOnly(
+        transactionListener: SQLiteTransactionListener?
+    ) {
+        if (beginTransactionMethod != null && getThreadSessionMethod != null) {
+            beginTransactionMethod!!.invoke(
+                checkNotNull(getThreadSessionMethod!!.invoke(delegate)),
+                0 /* SQLiteSession.TRANSACTION_MODE_DEFERRED */,
+                transactionListener,
+                0 /* connectionFlags */,
+                null /* cancellationSignal */
+            )
+        } else if (transactionListener != null) {
+            beginTransactionWithListener(transactionListener)
+        } else {
+            beginTransaction()
+        }
     }
 
     override fun endTransaction() {
@@ -157,14 +187,11 @@ internal class FrameworkSQLiteDatabase(
             cursorFactory, query.sql, EMPTY_STRING_ARRAY, null)
     }
 
-    @RequiresApi(16)
     override fun query(
         query: SupportSQLiteQuery,
         cancellationSignal: CancellationSignal?
     ): Cursor {
-        return SupportSQLiteCompat.Api16Impl.rawQueryWithFactory(delegate, query.sql,
-            EMPTY_STRING_ARRAY, null, cancellationSignal!!
-        ) { _: SQLiteDatabase?,
+        return delegate.rawQueryWithFactory({ _: SQLiteDatabase?,
             masterQuery: SQLiteCursorDriver?,
             editTable: String?,
             sqLiteQuery: SQLiteQuery? ->
@@ -174,7 +201,7 @@ internal class FrameworkSQLiteDatabase(
                 )
             )
             SQLiteCursor(masterQuery, editTable, sqLiteQuery)
-        }
+        }, query.sql, EMPTY_STRING_ARRAY, null, cancellationSignal!!)
     }
 
     @Throws(SQLException::class)
@@ -272,23 +299,20 @@ internal class FrameworkSQLiteDatabase(
         delegate.setMaxSqlCacheSize(cacheSize)
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     override fun setForeignKeyConstraintsEnabled(enabled: Boolean) {
-        SupportSQLiteCompat.Api16Impl.setForeignKeyConstraintsEnabled(delegate, enabled)
+        delegate.setForeignKeyConstraintsEnabled(enabled)
     }
 
     override fun enableWriteAheadLogging(): Boolean {
         return delegate.enableWriteAheadLogging()
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     override fun disableWriteAheadLogging() {
-        SupportSQLiteCompat.Api16Impl.disableWriteAheadLogging(delegate)
+        delegate.disableWriteAheadLogging()
     }
 
-    @get:RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     override val isWriteAheadLoggingEnabled: Boolean
-        get() = SupportSQLiteCompat.Api16Impl.isWriteAheadLoggingEnabled(delegate)
+        get() = delegate.isWriteAheadLoggingEnabled
 
     override val attachedDbs: List<Pair<String, String>>?
         get() = delegate.attachedDbs
@@ -331,5 +355,28 @@ internal class FrameworkSQLiteDatabase(
                 " OR REPLACE "
             )
         private val EMPTY_STRING_ARRAY = arrayOfNulls<String>(0)
+
+        private val getThreadSessionMethod by lazy(LazyThreadSafetyMode.NONE) {
+            try {
+                SQLiteDatabase::class.java.getDeclaredMethod("getThreadSession")
+                    .apply { isAccessible = true }
+            } catch (t: Throwable) {
+                null
+            }
+        }
+
+        private val beginTransactionMethod by lazy(LazyThreadSafetyMode.NONE) {
+            try {
+                getThreadSessionMethod?.returnType?.getDeclaredMethod(
+                    "beginTransaction",
+                    Int::class.java,
+                    SQLiteTransactionListener::class.java,
+                    Int::class.java,
+                    CancellationSignal::class.java
+                )
+            } catch (t: Throwable) {
+                null
+            }
+        }
     }
 }

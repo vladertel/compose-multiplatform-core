@@ -449,23 +449,6 @@ class ExtensionsManagerTest(
     }
 
     @Test
-    fun throwIllegalArgumentException_whenBindingVideoCapture(): Unit = runBlocking {
-        val extensionCameraSelector = checkExtensionAvailabilityAndInit()
-
-        withContext(Dispatchers.Main) {
-            val fakeLifecycleOwner = FakeLifecycleOwner()
-
-            assertThrows<IllegalArgumentException> {
-                cameraProvider.bindToLifecycle(
-                    fakeLifecycleOwner,
-                    extensionCameraSelector,
-                    createVideoCapture()
-                )
-            }
-        }
-    }
-
-    @Test
     fun isImageAnalysisSupportedReturnsFalse_whenHasNoAnalysisSizes() {
         extensionsManager = ExtensionsManager.getInstanceAsync(
             context,
@@ -564,6 +547,64 @@ class ExtensionsManagerTest(
                 extensionMode
             )
         ).isFalse()
+    }
+
+    @Test
+    fun postviewSupportedIsSetCorrectlyOnCameraConfig() = runBlocking {
+        // 1. Arrange
+        val extensionCameraSelector = checkExtensionAvailabilityAndInit()
+        val fakeVendorExtender = object : VendorExtender {
+            override fun isExtensionAvailable(
+                cameraId: String,
+                characteristicsMap: MutableMap<String, CameraCharacteristics>
+            ): Boolean {
+                return true
+            }
+
+            override fun isPostviewAvailable(): Boolean {
+                return true;
+            }
+        }
+        extensionsManager.setVendorExtenderFactory {
+            fakeVendorExtender
+        }
+
+        // 2. Act
+        val camera = withContext(Dispatchers.Main) {
+            cameraProvider.bindToLifecycle(FakeLifecycleOwner(), extensionCameraSelector)
+        }
+
+        // 3. Assert
+        assertThat(camera.extendedConfig.isPostviewSupported).isTrue()
+    }
+
+    @Test
+    fun captureProcessProgressSupportedIsSetCorrectlyOnCameraConfig() = runBlocking {
+        // 1. Arrange
+        val extensionCameraSelector = checkExtensionAvailabilityAndInit()
+        val fakeVendorExtender = object : VendorExtender {
+            override fun isExtensionAvailable(
+                cameraId: String,
+                characteristicsMap: MutableMap<String, CameraCharacteristics>
+            ): Boolean {
+                return true
+            }
+
+            override fun isCaptureProcessProgressAvailable(): Boolean {
+                return true;
+            }
+        }
+        extensionsManager.setVendorExtenderFactory {
+            fakeVendorExtender
+        }
+
+        // 2. Act
+        val camera = withContext(Dispatchers.Main) {
+            cameraProvider.bindToLifecycle(FakeLifecycleOwner(), extensionCameraSelector)
+        }
+
+        // 3. Assert
+        assertThat(camera.extendedConfig.isCaptureProcessProgressSupported).isTrue()
     }
 
     private fun checkExtensionAvailabilityAndInit(): CameraSelector {

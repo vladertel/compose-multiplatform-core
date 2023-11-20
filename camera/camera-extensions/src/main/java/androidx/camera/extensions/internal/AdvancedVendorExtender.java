@@ -26,11 +26,8 @@ import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.OptIn;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
-import androidx.camera.camera2.interop.Camera2CameraInfo;
-import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.Logger;
 import androidx.camera.core.impl.SessionProcessor;
@@ -93,13 +90,12 @@ public class AdvancedVendorExtender implements VendorExtender {
         mAdvancedExtenderImpl = advancedExtenderImpl;
     }
 
-    @OptIn(markerClass = ExperimentalCamera2Interop.class)
     @Override
     public void init(@NonNull CameraInfo cameraInfo) {
-        mCameraId = Camera2CameraInfo.from(cameraInfo).getCameraId();
+        mCameraId = Camera2CameraInfoWrapper.from(cameraInfo).getCameraId();
 
         Map<String, CameraCharacteristics> cameraCharacteristicsMap =
-                Camera2CameraInfo.from(cameraInfo).getCameraCharacteristicsMap();
+                Camera2CameraInfoWrapper.from(cameraInfo).getCameraCharacteristicsMap();
 
         mAdvancedExtenderImpl.init(mCameraId, cameraCharacteristicsMap);
     }
@@ -173,6 +169,38 @@ public class AdvancedVendorExtender implements VendorExtender {
             }
         }
         return keys;
+    }
+
+    @NonNull
+    @Override
+    public Map<Integer, List<Size>> getSupportedPostviewResolutions(@NonNull Size captureSize) {
+        if (ClientVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)
+                && ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)) {
+            return Collections.unmodifiableMap(
+                    mAdvancedExtenderImpl.getSupportedPostviewResolutions(captureSize));
+        } else {
+            return Collections.emptyMap();
+        }
+    }
+
+    @Override
+    public boolean isPostviewAvailable() {
+        if (ClientVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)
+                && ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)) {
+            return mAdvancedExtenderImpl.isPostviewAvailable();
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean isCaptureProcessProgressAvailable() {
+        if (ClientVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)
+                && ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4)) {
+            return mAdvancedExtenderImpl.isCaptureProcessProgressAvailable();
+        } else {
+            return false;
+        }
     }
 
     @Nullable

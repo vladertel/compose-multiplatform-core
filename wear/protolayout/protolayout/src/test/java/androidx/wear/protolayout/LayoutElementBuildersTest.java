@@ -20,6 +20,7 @@ import static androidx.wear.protolayout.ColorBuilders.argb;
 import static androidx.wear.protolayout.DimensionBuilders.dp;
 import static androidx.wear.protolayout.DimensionBuilders.expand;
 import static androidx.wear.protolayout.DimensionBuilders.sp;
+import static androidx.wear.protolayout.DimensionBuilders.weight;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -53,10 +54,7 @@ public class LayoutElementBuildersTest {
                     .setDynamicValue(DynamicBuilders.DynamicFloat.from(new AppDataKey<>(STATE_KEY)))
                     .build();
     private static final DimensionBuilders.ExpandedDimensionProp EXPAND_PROP = expand();
-    private static final DimensionBuilders.ExpandedDimensionProp EXPAND_WEIGHT_PROP =
-            new DimensionBuilders.ExpandedDimensionProp.Builder()
-                    .setLayoutWeight(new TypeBuilders.FloatProp.Builder(12).build())
-                    .build();
+    private static final DimensionBuilders.ExpandedDimensionProp EXPAND_WEIGHT_PROP = weight(12);
 
     private static final DimensionBuilders.HorizontalLayoutConstraint HORIZONTAL_LAYOUT_CONSTRAINT =
             new DimensionBuilders.HorizontalLayoutConstraint.Builder(20)
@@ -66,6 +64,8 @@ public class LayoutElementBuildersTest {
             new DimensionBuilders.VerticalLayoutConstraint.Builder(20)
                     .setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_BOTTOM)
                     .build();
+    private static final TypeBuilders.StringProp STATIC_STRING_PROP =
+            new TypeBuilders.StringProp.Builder("string").build();
     private static final TypeBuilders.StringProp STRING_PROP =
             new TypeBuilders.StringProp.Builder("string")
                     .setDynamicValue(
@@ -253,6 +253,66 @@ public class LayoutElementBuildersTest {
                 .isEqualTo(STRING_LAYOUT_CONSTRAINT.getPatternForLayout());
         assertThat(textProto.getTextAlignmentForLayoutValue())
                 .isEqualTo(STRING_LAYOUT_CONSTRAINT.getAlignment());
+    }
+
+    @Test
+    public void testTextSetOverflow_ellipsize() {
+        LayoutElementBuilders.Text text =
+                new LayoutElementBuilders.Text.Builder()
+                        .setText(STATIC_STRING_PROP)
+                        .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE)
+                        .build();
+
+        LayoutElementProto.Text textProto = text.toProto();
+
+        assertThat(textProto.getText().getValue()).isEqualTo(STATIC_STRING_PROP.getValue());
+        assertThat(textProto.getOverflow().getValue().getNumber())
+                .isEqualTo(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE);
+    }
+
+    @Test
+    public void testTextSetOverflow_ellipsizeEnd() {
+        LayoutElementBuilders.Text text =
+                new LayoutElementBuilders.Text.Builder()
+                        .setText(STATIC_STRING_PROP)
+                        .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE_END)
+                        .build();
+
+        LayoutElementProto.Text textProto = text.toProto();
+
+        assertThat(textProto.getText().getValue()).isEqualTo(STATIC_STRING_PROP.getValue());
+        assertThat(textProto.getOverflow().getValue().getNumber())
+                .isEqualTo(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE_END);
+    }
+
+    @Test
+    public void testTextSetOverflow_truncate() {
+        LayoutElementBuilders.Text text =
+                new LayoutElementBuilders.Text.Builder()
+                        .setText(STATIC_STRING_PROP)
+                        .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_TRUNCATE)
+                        .build();
+
+        LayoutElementProto.Text textProto = text.toProto();
+
+        assertThat(textProto.getText().getValue()).isEqualTo(STATIC_STRING_PROP.getValue());
+        assertThat(textProto.getOverflow().getValue().getNumber())
+                .isEqualTo(LayoutElementBuilders.TEXT_OVERFLOW_TRUNCATE);
+    }
+
+    @Test
+    public void testTextSetOverflow_marquee() {
+        LayoutElementBuilders.Text text =
+                new LayoutElementBuilders.Text.Builder()
+                        .setText(STATIC_STRING_PROP)
+                        .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_MARQUEE)
+                        .build();
+
+        LayoutElementProto.Text textProto = text.toProto();
+
+        assertThat(textProto.getText().getValue()).isEqualTo(STATIC_STRING_PROP.getValue());
+        assertThat(textProto.getOverflow().getValue().getNumber())
+                .isEqualTo(LayoutElementBuilders.TEXT_OVERFLOW_MARQUEE);
     }
 
     @Test

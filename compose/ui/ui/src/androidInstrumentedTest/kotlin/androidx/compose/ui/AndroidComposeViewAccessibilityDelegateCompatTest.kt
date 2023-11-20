@@ -75,6 +75,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.cutText
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.dismiss
+import androidx.compose.ui.semantics.editable
 import androidx.compose.ui.semantics.editableText
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.expand
@@ -132,6 +133,7 @@ import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Correspondence
 import com.google.common.truth.Truth.assertThat
 import java.util.function.Consumer
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -804,6 +806,7 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
                         editableText = AnnotatedString(text)
                         textSelectionRange = TextRange(1)
                         focused = true
+                        editable()
                         getTextLayoutResult { true }
                         setText(setTextActionLabel) { true }
                         setSelection(setSelectionActionLabel) { _, _, _ -> true }
@@ -1072,7 +1075,10 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
                     }
             ) {
                 Text("foo", Modifier.size(10.toDp()))
-                Text("bar", Modifier.size(10.toDp()).testTag(tag))
+                Text("bar",
+                    Modifier
+                        .size(10.toDp())
+                        .testTag(tag))
             }
         }
         rule.mainClock.advanceTimeBy(accessibilityEventLoopIntervalMs)
@@ -1241,6 +1247,7 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
     }
 
     @Test
+    @Ignore("b/307823561")
     fun sendWindowContentChangeUndefinedEventByDefault_onlyOnce_whenMultiplePropertiesChange() {
         // Arrange.
         var propertiesChanged by mutableStateOf(false)
@@ -1407,9 +1414,18 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
         // Arrange.
         rule.setContentWithAccessibilityEnabled {
             Row(Modifier.size(10.toDp())) {
-                Box(Modifier.size(10.toDp()).semantics {})
-                Box(Modifier.size(10.toDp()).semantics {})
-                Box(Modifier.size(10.toDp()).semantics {})
+                Box(
+                    Modifier
+                        .size(10.toDp())
+                        .semantics {})
+                Box(
+                    Modifier
+                        .size(10.toDp())
+                        .semantics {})
+                Box(
+                    Modifier
+                        .size(10.toDp())
+                        .semantics {})
             }
         }
 
@@ -2059,10 +2075,19 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
         var appeared by mutableStateOf(false)
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
-            Row(Modifier.size(100.dp).semantics {}) {
+            Row(
+                Modifier
+                    .size(100.dp)
+                    .semantics {}) {
                 if (appeared) {
-                    Box(Modifier.size(10.dp).semantics { text = AnnotatedString("foo") })
-                    Box(Modifier.size(10.dp).semantics { text = AnnotatedString("bar") })
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .semantics { text = AnnotatedString("foo") })
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .semantics { text = AnnotatedString("bar") })
                 }
             }
         }
@@ -2100,9 +2125,18 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
             if (!disappeared) {
-                Row(Modifier.size(100.dp).semantics { }) {
-                    Box(Modifier.size(10.dp).semantics { })
-                    Box(Modifier.size(10.dp).semantics { })
+                Row(
+                    Modifier
+                        .size(100.dp)
+                        .semantics { }) {
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .semantics { })
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .semantics { })
                 }
             }
         }
@@ -2136,9 +2170,18 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
             if (appeared) {
-                Row(Modifier.size(100.dp).semantics { }) {
-                    Box(Modifier.size(10.dp).semantics { })
-                    Box(Modifier.size(10.dp).semantics { })
+                Row(
+                    Modifier
+                        .size(100.dp)
+                        .semantics { }) {
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .semantics { })
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .semantics { })
                 }
             }
         }
@@ -2183,9 +2226,15 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
 
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
-            Box(Modifier.size(10.dp).semantics { }) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .semantics { }) {
                 if (appeared) {
-                    Box(Modifier.size(10.dp).semantics { })
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .semantics { })
                 }
             }
         }
@@ -2235,7 +2284,10 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
 
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
-            Box(Modifier.size(10.dp).semantics { }) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .semantics { }) {
                 if (appeared) {
                     Box(
                         Modifier
@@ -2271,7 +2323,10 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
 
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
-            Box(Modifier.size(10.dp).semantics { }) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .semantics { }) {
                 if (appeared) {
                     Box(
                         Modifier
@@ -2304,7 +2359,10 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
         // Arrange.
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
-            Box(Modifier.size(10.dp).semantics { text = AnnotatedString("bar") }) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .semantics { text = AnnotatedString("bar") }) {
                 Box(
                     Modifier
                         .size(10.dp)
@@ -2350,7 +2408,10 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
         var result: AnnotatedString? = null
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
-            Box(Modifier.size(10.dp).semantics { text = AnnotatedString("bar") }) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .semantics { text = AnnotatedString("bar") }) {
                 Box(
                     Modifier
                         .size(10.dp)
@@ -2396,7 +2457,10 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
         var result = false
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
-            Box(Modifier.size(10.dp).semantics { text = AnnotatedString("bar") }) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .semantics { text = AnnotatedString("bar") }) {
                 Box(
                     Modifier
                         .size(10.dp)
@@ -2426,7 +2490,10 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
         var result = true
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
-            Box(Modifier.size(10.dp).semantics { text = AnnotatedString("bar") }) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .semantics { text = AnnotatedString("bar") }) {
                 Box(
                     Modifier
                         .size(10.dp)
@@ -2457,7 +2524,10 @@ class AndroidComposeViewAccessibilityDelegateCompatTest {
         var result = false
         rule.mainClock.autoAdvance = false
         rule.setContentWithContentCaptureEnabled {
-            Box(Modifier.size(10.dp).semantics { text = AnnotatedString("bar") }) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .semantics { text = AnnotatedString("bar") }) {
                 Box(
                     Modifier
                         .size(10.dp)

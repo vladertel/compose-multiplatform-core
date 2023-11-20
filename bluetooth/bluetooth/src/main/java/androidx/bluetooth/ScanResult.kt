@@ -17,7 +17,11 @@
 package androidx.bluetooth
 
 import android.bluetooth.le.ScanResult as FwkScanResult
+import android.os.Build
 import android.os.ParcelUuid
+import androidx.annotation.DoNotInline
+import androidx.annotation.RequiresApi
+import androidx.annotation.RestrictTo
 import java.util.UUID
 
 /**
@@ -35,13 +39,36 @@ import java.util.UUID
  * bluetooth GATT services.
  *
  */
-class ScanResult internal constructor(private val fwkScanResult: FwkScanResult) {
+class ScanResult @RestrictTo(RestrictTo.Scope.LIBRARY) constructor(
+    private val fwkScanResult: FwkScanResult
+) {
 
     companion object {
         /**
          * Periodic advertising interval is not present in the packet.
          */
         const val PERIODIC_INTERVAL_NOT_PRESENT: Int = FwkScanResult.PERIODIC_INTERVAL_NOT_PRESENT
+    }
+
+    @RequiresApi(29)
+    private object ScanResultApi29Impl {
+        @JvmStatic
+        @DoNotInline
+        fun serviceSolicitationUuids(fwkScanResult: FwkScanResult): List<ParcelUuid> =
+            fwkScanResult.scanRecord?.serviceSolicitationUuids.orEmpty()
+    }
+
+    @RequiresApi(26)
+    private object ScanResultApi26Impl {
+        @JvmStatic
+        @DoNotInline
+        fun isConnectable(fwkScanResult: FwkScanResult): Boolean =
+            fwkScanResult.isConnectable
+
+        @JvmStatic
+        @DoNotInline
+        fun periodicAdvertisingInterval(fwkScanResult: FwkScanResult): Long =
+            (fwkScanResult.periodicAdvertisingInterval * 1.25).toLong()
     }
 
     /** Remote Bluetooth device found. */
@@ -80,9 +107,16 @@ class ScanResult internal constructor(private val fwkScanResult: FwkScanResult) 
     /**
      * Returns a list of service solicitation UUIDs within the advertisement that are used to
      * identify the Bluetooth GATT services.
+     *
+     * Please note that this will return an `emptyList()` on versions
+     * before [android.os.Build.VERSION_CODES.Q].
      */
     val serviceSolicitationUuids: List<ParcelUuid>
-        get() = fwkScanResult.scanRecord?.serviceSolicitationUuids.orEmpty()
+        get() = if (Build.VERSION.SDK_INT >= 29) {
+            ScanResultApi29Impl.serviceSolicitationUuids(fwkScanResult)
+        } else {
+            emptyList()
+        }
 
     /**
      * Returns a map of service UUID and its corresponding service data.
@@ -105,9 +139,16 @@ class ScanResult internal constructor(private val fwkScanResult: FwkScanResult) 
      * Checks if this object represents a connectable scan result.
      *
      * @return {@code true} if the scanned device is connectable.
+     *
+     * Please note that this will return {@code true} on versions
+     * before [android.os.Build.VERSION_CODES.Q].
      */
     fun isConnectable(): Boolean {
-        return fwkScanResult.isConnectable
+        return if (Build.VERSION.SDK_INT >= 26) {
+            ScanResultApi26Impl.isConnectable(fwkScanResult)
+        } else {
+            true
+        }
     }
 
     /** Returns the received signal strength in dBm. The valid range is [-127, 126]. */
@@ -117,9 +158,15 @@ class ScanResult internal constructor(private val fwkScanResult: FwkScanResult) 
     /**
      * Returns the periodic advertising interval in milliseconds ranging from 7.5ms to 81918.75ms
      * A value of [PERIODIC_INTERVAL_NOT_PRESENT] means periodic advertising interval is not present.
+     *
+     * Please note that this will return [PERIODIC_INTERVAL_NOT_PRESENT] on versions
+     * before [android.os.Build.VERSION_CODES.Q].
      */
     val periodicAdvertisingInterval: Long
-        // TODO(b/304870068) Cover periodicAdvertisingInterval for below API 26
-        // Framework returns interval in units of 1.25ms.
-        get() = (fwkScanResult.periodicAdvertisingInterval * 1.25).toLong()
+        get() = if (Build.VERSION.SDK_INT >= 26) {
+            // Framework returns interval in units of 1.25ms.
+            ScanResultApi26Impl.periodicAdvertisingInterval(fwkScanResult)
+        } else {
+            PERIODIC_INTERVAL_NOT_PRESENT.toLong()
+        }
 }

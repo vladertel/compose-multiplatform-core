@@ -165,14 +165,6 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         const val AccessibilitySliderStepsCount = 20
 
         /**
-         * Delay before dispatching a recurring accessibility event in milliseconds.
-         * This delay guarantees that a recurring event will be send at most once
-         * during the [SendRecurringAccessibilityEventsIntervalMillis] time
-         * frame.
-         */
-        const val SendRecurringAccessibilityEventsIntervalMillis: Long = 100
-
-        /**
          * Timeout to determine whether a text selection changed event and the pending text
          * traversed event could be resulted from the same traverse action.
          */
@@ -235,6 +227,14 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             field = value
             currentSemanticsNodesInvalidated = true
         }
+
+    /**
+     * Delay before dispatching a recurring accessibility event in milliseconds.
+     * This delay guarantees that a recurring event will be send at most once
+     * during the [SendRecurringAccessibilityEventsIntervalMillis] time
+     * frame.
+     */
+    internal var SendRecurringAccessibilityEventsIntervalMillis = 100L
 
     private val enabledStateListener = AccessibilityStateChangeListener { enabled ->
         enabledServices = if (enabled) {
@@ -909,8 +909,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
             info.isHeading = true
         }
         info.isPassword = semanticsNode.isPassword
-        // Note editable is not added to semantics properties api.
-        info.isEditable = semanticsNode.isTextField
+        info.isEditable = semanticsNode.isEditable
         info.isEnabled = semanticsNode.enabled()
         info.isFocusable = semanticsNode.unmergedConfig.contains(SemanticsProperties.Focused)
         if (info.isFocusable) {
@@ -2210,6 +2209,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
      * recent layout changes and sends events to the accessibility and content capture framework in
      * batches separated by a 100ms delay.
      */
+    @OptIn(ExperimentalComposeUiApi::class)
     internal suspend fun boundsUpdatesEventLoop() {
         try {
             val subtreeChangedSemanticsNodesIds = ArraySet<Int>()
@@ -3572,7 +3572,8 @@ private inline val SemanticsNode.isPassword: Boolean get() =
     config.contains(SemanticsProperties.Password)
 private inline val SemanticsNode.isTextField get() =
     unmergedConfig.contains(SemanticsActions.SetText)
-private inline val SemanticsNode.isRtl get() = layoutInfo.layoutDirection == LayoutDirection.Rtl
+private inline val SemanticsNode.isEditable get() = config.contains(SemanticsProperties.Editable)
+private val SemanticsNode.isRtl get() = layoutInfo.layoutDirection == LayoutDirection.Rtl
 private inline val SemanticsNode.isTraversalGroup get() =
     config.getOrElse(SemanticsProperties.IsTraversalGroup) { false }
 private inline val SemanticsNode.traversalIndex get() =

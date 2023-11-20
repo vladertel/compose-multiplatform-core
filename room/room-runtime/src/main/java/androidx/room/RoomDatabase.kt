@@ -20,7 +20,6 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
-import android.os.Build
 import android.os.CancellationSignal
 import android.os.Looper
 import android.util.Log
@@ -33,7 +32,6 @@ import androidx.room.Room.LOG_TAG
 import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SimpleSQLiteQuery
-import androidx.sqlite.db.SupportSQLiteCompat
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.SupportSQLiteQuery
@@ -233,13 +231,9 @@ abstract class RoomDatabase {
             invalidationTracker.setAutoCloser(it.autoCloser)
         }
 
-        val wal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            val enabled = configuration.journalMode == JournalMode.WRITE_AHEAD_LOGGING
-            openHelper.setWriteAheadLoggingEnabled(enabled)
-            enabled
-        } else {
-            false
-        }
+        val wal = configuration.journalMode == JournalMode.WRITE_AHEAD_LOGGING
+        openHelper.setWriteAheadLoggingEnabled(wal)
+
         mCallbacks = configuration.callbacks
         internalQueryExecutor = configuration.queryExecutor
         internalTransactionExecutor = TransactionExecutor(configuration.transactionExecutor)
@@ -478,7 +472,7 @@ abstract class RoomDatabase {
     open fun query(query: SupportSQLiteQuery, signal: CancellationSignal? = null): Cursor {
         assertNotMainThread()
         assertNotSuspendingTransaction()
-        return if (signal != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+        return if (signal != null) {
             openHelper.writableDatabase.query(query, signal)
         } else {
             openHelper.writableDatabase.query(query)
@@ -521,9 +515,7 @@ abstract class RoomDatabase {
         assertNotMainThread()
         val database = openHelper.writableDatabase
         invalidationTracker.syncTriggers(database)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN &&
-            database.isWriteAheadLoggingEnabled
-        ) {
+        if (database.isWriteAheadLoggingEnabled) {
             database.beginTransactionNonExclusive()
         } else {
             database.beginTransaction()
@@ -664,22 +656,13 @@ abstract class RoomDatabase {
             if (this != AUTOMATIC) {
                 return this
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                val manager =
-                    context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                if (manager != null && !isLowRamDevice(manager)) {
-                    return WRITE_AHEAD_LOGGING
-                }
+            val manager =
+                context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            if (manager != null && !manager.isLowRamDevice) {
+                return WRITE_AHEAD_LOGGING
             }
             return TRUNCATE
         }
-
-        private fun isLowRamDevice(activityManager: ActivityManager) =
-            if (Build.VERSION.SDK_INT >= 19) {
-                SupportSQLiteCompat.Api19Impl.isLowRamDevice(activityManager)
-            } else {
-                false
-            }
     }
 
     /**
@@ -709,6 +692,7 @@ abstract class RoomDatabase {
         private var multiInstanceInvalidationIntent: Intent? = null
         private var requireMigration: Boolean = true
         private var allowDestructiveMigrationOnDowngrade = false
+        private var allowDestructiveMigrationForAllTables = false
         private var autoCloseTimeout = -1L
         private var autoCloseTimeUnit: TimeUnit? = null
 
@@ -1095,8 +1079,8 @@ abstract class RoomDatabase {
          * If it cannot find the set of [Migration]s that will bring the database to the
          * current version, it will throw an [IllegalStateException].
          *
-         * You can call this method to change this behavior to re-create the database instead of
-         * crashing.
+         * You can call this method to change this behavior to re-create the database tables instead
+         * of crashing.
          *
          * If the database was create from an asset or a file then Room will try to use the same
          * file to re-create the database, otherwise this will delete all of the data in the
@@ -1107,9 +1091,46 @@ abstract class RoomDatabase {
          *
          * @return This builder instance.
          */
+        @Deprecated(
+            message = "Replace by overloaded version with parameter to indicate if all tables" +
+                "should be dropped or not.",
+            replaceWith = ReplaceWith("fallbackToDestructiveMigration(false)")
+        )
+        @Suppress("BuilderSetStyle") // Overload of exsisting API
         open fun fallbackToDestructiveMigration() = apply {
             this.requireMigration = false
             this.allowDestructiveMigrationOnDowngrade = true
+        }
+
+        /**
+         * Allows Room to destructively recreate database tables if [Migration]s that would
+         * migrate old database schemas to the latest schema version are not found.
+         *
+         * When the database version on the device does not match the latest schema version, Room
+         * runs necessary [Migration]s on the database.
+         *
+         * If it cannot find the set of [Migration]s that will bring the database to the
+         * current version, it will throw an [IllegalStateException].
+         *
+         * You can call this method to change this behavior to re-create the database tables instead
+         * of crashing.
+         *
+         * If the database was create from an asset or a file then Room will try to use the same
+         * file to re-create the database, otherwise this will delete all of the data in the
+         * database tables managed by Room.
+         *
+         * To let Room fallback to destructive migration only during a schema downgrade then use
+         * [fallbackToDestructiveMigrationOnDowngrade].
+         *
+         * @param dropAllTables Set to `true` if all tables should be dropped during destructive
+         * migration including those not managed by Room.
+         * @return This builder instance.
+         */
+        @Suppress("BuilderSetStyle") // Overload of existing API
+        fun fallbackToDestructiveMigration(dropAllTables: Boolean) = apply {
+            this.requireMigration = false
+            this.allowDestructiveMigrationOnDowngrade = true
+            this.allowDestructiveMigrationForAllTables = dropAllTables
         }
 
         /**
@@ -1120,9 +1141,32 @@ abstract class RoomDatabase {
          *
          * @return This builder instance.
          */
+        @Deprecated(
+            message = "Replace by overloaded version with parameter to indicate if all tables" +
+                "should be dropped or not.",
+            replaceWith = ReplaceWith("fallbackToDestructiveMigrationOnDowngrade(false)")
+        )
         open fun fallbackToDestructiveMigrationOnDowngrade() = apply {
             this.requireMigration = true
             this.allowDestructiveMigrationOnDowngrade = true
+        }
+
+        /**
+         * Allows Room to destructively recreate database tables if [Migration]s are not
+         * available when downgrading to old schema versions.
+         *
+         * For details, see [Builder.fallbackToDestructiveMigration].
+         *
+         * @param dropAllTables Set to `true` if all tables should be dropped during destructive
+         * migration including those not managed by Room. Recommended value is `true` as otherwise
+         * Room could leave obsolete data when table names or existence changes between versions.
+         * @return This builder instance.
+         */
+        @Suppress("BuilderSetStyle") // Overload of existing API
+        fun fallbackToDestructiveMigrationOnDowngrade(dropAllTables: Boolean) = apply {
+            this.requireMigration = true
+            this.allowDestructiveMigrationOnDowngrade = true
+            this.allowDestructiveMigrationForAllTables = dropAllTables
         }
 
         /**
@@ -1146,10 +1190,49 @@ abstract class RoomDatabase {
          * migration.
          * @return This builder instance.
          */
+        @Deprecated(
+            message = "Replace by overloaded version with parameter to indicate if all tables" +
+                "should be dropped or not.",
+            replaceWith = ReplaceWith("fallbackToDestructiveMigrationFrom(false, startVersions)")
+        )
         open fun fallbackToDestructiveMigrationFrom(vararg startVersions: Int) = apply {
             for (startVersion in startVersions) {
                 this.migrationsNotRequiredFrom.add(startVersion)
             }
+        }
+
+        /**
+         * Informs Room that it is allowed to destructively recreate database tables from specific
+         * starting schema versions.
+         *
+         * This functionality is the same as that provided by
+         * [fallbackToDestructiveMigration], except that this method allows the
+         * specification of a set of schema versions for which destructive recreation is allowed.
+         *
+         * Using this method is preferable to [fallbackToDestructiveMigration] if you want
+         * to allow destructive migrations from some schema versions while still taking advantage
+         * of exceptions being thrown due to unintentionally missing migrations.
+         *
+         * Note: No versions passed to this method may also exist as either starting or ending
+         * versions in the [Migration]s provided to [addMigrations]. If a
+         * version passed to this method is found as a starting or ending version in a Migration, an
+         * exception will be thrown.
+         *
+         * @param dropAllTables Set to `true` if all tables should be dropped during destructive
+         * migration including those not managed by Room.
+         * @param startVersions The set of schema versions from which Room should use a destructive
+         * migration.
+         * @return This builder instance.
+         */
+        @Suppress("BuilderSetStyle") // Overload of existing API
+        open fun fallbackToDestructiveMigrationFrom(
+            dropAllTables: Boolean,
+            vararg startVersions: Int
+        ) = apply {
+            for (startVersion in startVersions) {
+                this.migrationsNotRequiredFrom.add(startVersion)
+            }
+            this.allowDestructiveMigrationForAllTables = dropAllTables
         }
 
         /**
@@ -1346,7 +1429,8 @@ abstract class RoomDatabase {
                 copyFromInputStream,
                 prepackagedDatabaseCallback,
                 typeConverters,
-                autoMigrationSpecs
+                autoMigrationSpecs,
+                allowDestructiveMigrationForAllTables
             )
             val db = Room.getGeneratedImplementation<T, T>(klass, "_Impl")
             db.init(configuration)
