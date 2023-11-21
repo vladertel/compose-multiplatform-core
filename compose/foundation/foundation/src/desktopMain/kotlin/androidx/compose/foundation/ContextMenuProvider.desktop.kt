@@ -32,6 +32,8 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.util.fastAll
@@ -100,6 +102,19 @@ private val LocalContextMenuData = staticCompositionLocalOf<ContextMenuData?> {
 
 
 /**
+ * Returns whether the given event is a context menu opening gesture.
+ */
+private fun PointerEvent.isOpenContextMenuGesture(): Boolean {
+    if (buttons.isSecondaryPressed)
+        return true
+    if (DesktopPlatform.Current == DesktopPlatform.MacOS) {
+        if (buttons.isPrimaryPressed && keyboardModifiers.isCtrlPressed)
+            return true
+    }
+    return false
+}
+
+/**
  * Detects events that open a context menu (mouse right-clicks).
  *
  * @param key The pointer input handling coroutine will be cancelled and **re-started** when
@@ -118,7 +133,7 @@ fun Modifier.contextMenuOpenDetector(
         this.pointerInput(key) {
             awaitEachGesture {
                 val event = awaitEventFirstDown()
-                if (event.buttons.isSecondaryPressed) {
+                if (event.isOpenContextMenuGesture()) {
                     event.changes.forEach { it.consume() }
                     onOpen(event.changes[0].position)
                 }
