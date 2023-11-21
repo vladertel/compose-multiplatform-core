@@ -1,4 +1,4 @@
-# Tractatum on life and death of `UIViewController`s and `ComposeScene`s in CMP world
+# Tractatum on life and death of `UIViewController` and `ComposeScene` in CMP world
 
 ## Intro
 
@@ -102,7 +102,7 @@ Well. Not in our world.
 
 #### Problem 1.
 
-It can not happen _immediately_. Once `UIViewController` instance is passed to Kotlin runtime,
+It can not happen _immediately_. Once `UIViewController` instance is passed to/created by Kotlin runtime,
 it will be owned by a Kotlin wrapper object (let's call it `KViewController`, that is controlled by
 Kotlin rules and will not be
 released earlier, than next GC pass, which will happen whenever, so we can't release associated
@@ -140,23 +140,41 @@ Let's have a look at this piece of code:
 ```kotlin
  @Composable
  private fun Foo() {
-     // can't use LocalUIViewController.current inside onClick because onClick is not @Composable
      // LocalUIViewController.current is WeakReference<UIViewController>
      val viewController = LocalUIViewController.current.get() ?: return
 
-     Column {
-         Button(onClick = {
-             val newViewController = UIViewController()
-             viewController.presentViewController(newViewController, true)
-         }) {
-             Text("Push")
-         }
+     // can't use LocalUIViewController.current inside onClick because onClick is not @Composable
+     Button(onClick = {
+         val newViewController = UIViewController()
+         viewController.presentViewController(newViewController, true)
+     }) {
+         Text("Present")
      }
 }
 ```
 
-We've just created a memory leak. `viewController` which is our `KViewController` is now a lambda capture inside Compose machinery. In order to release it, we need to call `ComposeScene.dispose()` which will be called
-when when `KViewController` is released, which is never, because it's a part of compose execution machinery, which is referenced by the root set.
+We've just created a memory leak. `viewController` which is our `KViewController` is now captured by `onClick` lambda and is hold inside Compose machinery. In order to release it, we need to call `ComposeScene.dispose()` which will be called
+when when `KViewController` is released, which is never, because it's a part of Compose execution machinery, which is referenced by the root set.
+
+#### Second approach
+What [if we use](https://github.com/JetBrains/compose-multiplatform-core/pull/747) `viewWillAppear` to create `ComposeScene` and `viewDidDisappear` to destroy it.
+It's determined. Seems like a good idea. There are disadvantages though:
+1. We offload the responsibility to store the state of `ComposeScene` that should persist across scene resconstructions to the user. 
+2. Semantically incorrect code like custom `UIViewController` container, that didn't call `viewDidDisappear` will never `dispose` the scene.
+3. Edge case below:
+
+![](images/oops_dispose.png)
+Interop video player view implicitly presents a over-fullscreen modal to expand the player, causing `viewDidDisappear` call, subsequent `ComposeScene.dispose()`, destroying "interop VideoView" which was created by composition that was a source of presented controller in a first place. Undefined behavior in its finest.
+
+## Stayin` alive and dying ASAP while being correct
+
+Since `lifetime` becomes a blurred and smudged term in the mix of two different runtimes, we need to either:
+
+### Enforce the lifetime semantics of automated reference counting
+
+In order not to be tied to the garbage collector shenanigans, we can hide from it altogether.
+![](images/cmp_view_controller.png)
+The idea behind this approach is to design the CMP API in a way, where the `UIViewController` never shows up in the Kotlin runtime in the first place.
 
 
 
