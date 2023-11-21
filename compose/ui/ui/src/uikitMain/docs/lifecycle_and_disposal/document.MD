@@ -175,6 +175,73 @@ Since `lifetime` becomes a blurred and smudged term in the mix of two different 
 In order not to be tied to the garbage collector shenanigans, we can hide from it altogether.
 ![](images/cmp_view_controller.png)
 The idea behind this approach is to design the CMP API in a way, where the `UIViewController` never shows up in the Kotlin runtime in the first place.
+The `UIViewController` will live as long as it's inside `UIViewController` hierarchy or some Obj-C/Swift function scope.
+
+#### Let's sketch the API
+
+```kotlin
+// CMPView.kt
+
+class CMPView(   
+   content: @Composable () -> Unit   
+): UIView() {
+    val composeScene = ComposeScene()
+  
+    init {
+        composeScene.setContent(content)
+    }
+
+    fun dispose() = composeScene.dispose()
+}
+
+fun dispose(view: UIView) {
+    if (view is CMPView) {
+        view.dispose()
+    }
+}
+```
+
+```swift
+// CMPViewController.swift
+
+class CMPViewController: UIViewController {
+   let cmpView: UIView
+   
+   init(cmpView: UIView) {
+       self.cmpView = cmpView
+   }
+   
+   deinit {
+       dispose(view)
+   }
+   
+   override func loadView() {
+       view = cmpView
+   }
+    
+}
+```
+
+```kotlin
+// App.kt
+
+fun makeView(): UIView =
+  CMPView {
+      // @Composable stuff
+  }
+```
+
+```swift
+// App.swift
+
+// ...
+    window.rootViewController = CMPViewController(cmpView: makeView())
+    // ...
+    // the first one will be destroyed now and call `dispose` during `deinit`
+    window.rootViewController = CMPViewController(cmpView: makeView())
+// ...
+
+```
 
 
 
