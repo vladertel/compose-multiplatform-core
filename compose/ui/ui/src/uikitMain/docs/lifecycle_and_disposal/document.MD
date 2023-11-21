@@ -46,6 +46,7 @@ viewControllerA.willMoveToParent(navigationController)
 
 In this example it happened earlier during the app execution, when it was initially
 pushed to the navigation stack, so the sequence of events looked like that:
+
 ```
 navigationController.pushViewController(viewControllerA, animated: true)
 // Implementation will call: 
@@ -55,5 +56,7 @@ navigationController.pushViewController(viewControllerA, animated: true)
 // viewControllerA.didMoveToParent(navigationController)
 ```
 
-This state of affairs could possibly lead us to the idea, that `UIViewControler` being a `rootViewController` of `UIWindow` or being a child controller of other `UIViewController` could be something we could treat as "__state of being alive__".
+This state of affairs could possibly lead us to the idea, that `UIViewControler` being
+a `rootViewController` of `UIWindow` or being a child controller of other `UIViewController` could
+be something we could treat as "__state of being alive__".
 
