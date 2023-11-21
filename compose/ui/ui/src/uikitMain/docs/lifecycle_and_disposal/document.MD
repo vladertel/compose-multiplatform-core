@@ -23,20 +23,20 @@ There are three primary types in `UIKit` to be aware of to understand what's goi
 * `UIWindow` representing fullscreen(for simplification) pane to which a `rootViewController` can be
   attached.
 
-#### Examples
+### Examples
 
 A simple app could look like that:
-![Simple UIKit hierarchy](images/simple_uiapplication.png)
+![](images/simple_uiapplication.png)
 
 But usually it's something more sophisticated, looking like that:
-![UIKit hierarchy with tab bar](images/tabbar_uiapplication.png)
+![](images/tabbar_uiapplication.png)
 
 This whole thing is actually quite stateful and we can even stop the world in the middle of
 navigation pop transition and it will look like that:
-![UIKit hierarchy with navigation controller in the middle of pop transition](images/uiapplication_during_pop.png)
+![](images/uiapplication_during_pop.png)
 
 If we watch this transition in dynamic we will observe this sequence of events:
-![Navigation transition events sequence breakdown](images/navigation_transition_details.png)
+![](images/navigation_transition_details.png)
 
 If you look closer, you will notice that there is no
 
@@ -59,4 +59,104 @@ navigationController.pushViewController(viewControllerA, animated: true)
 This state of affairs could possibly lead us to the idea, that `UIViewControler` being
 a `rootViewController` of `UIWindow` or being a child controller of other `UIViewController` could
 be something we could treat as "__state of being alive__".
+
+## Stayin' alive
+
+iOS SDK is designed around the languages with reference counting. Both Swift and Obj-C rely on
+concepts of strong ownership and weak references. The objects that don't have anybody who owns them
+strongly get deallocated, all weak references still keep the control block allocated along with the
+object alive, so the weak references could be unwrapped and see that the object is indeed dead,
+instead of being a dangling pointer into somewhere the deallocated object resided.
+
+```swift
+class Foo {
+   private let dataBaseConnection = DataBaseConnection()
+   private let composeScene = ComposeScene() 
+   
+   init {
+       print("hello")
+   }
+   
+   deinit {
+      print("bye")
+      // composeScene closes and gets deallocated
+      // dataBaseConnection is disposed and gets deallocated
+   }
+}
+
+func bar() {
+  let foo = Foo() // prints: hello
+  // all references are released in the end of function scope
+  // `foo` isn't owned by someone else anymore
+  // prints: bye, cleans up stuff
+}
+```
+
+Let's see what happens with a `UIViewController`, that was popped in the previous chapter:
+![](images/popped_view_controller.png)
+The `UIViewController` "B" gets immediately deallocated, because nobody owns it anymore. It released
+the resources, that were uniquely referenced by it (let's say it had a `ComposeScene` inside).
+Right?
+
+Well. Not in our world.
+
+#### Problem 1.
+
+It can not happen _immediately_. Once `UIViewController` instance is passed to Kotlin runtime,
+it will be owned by a Kotlin wrapper object (let's call it `KViewController`, that is controlled by
+Kotlin rules and will not be
+released earlier, than next GC pass, which will happen whenever, so we can't release associated
+resources in
+_determined_ way.
+
+#### Problem 2.
+
+From Kotlin runtime perspective, `ComposeScene` which is transitively referenced by
+this `KViewController` also references `KViewController` indirectly. We pass `LocalUIViewController`
+into our composition, so that users can use its API for interop purposes
+(like `presentViewController` to modally show other view controllers). But that should not be a big
+deal, mark-and-sweep GC will collect circular references unless one of them is referenced by
+something in the root set.
+
+The bad news is, something in _the root set_ is after us:
+![](images/dispose.png)
+And we need to break this connection by calling `ComposeScene.dispose()`.
+The problem is - who calls the `dispose()`?
+How can `UIViewController` know that it needs to dispose the owned `ComposeScene`, its lifetime in
+terms of automatic reference counting semantics is ruined in this case.
+
+#### First approach
+The initial take on implementing scene disposal
+was [this PR](https://github.com/JetBrains/compose-multiplatform-core/pull/728).
+It broke the strong connection between `ComposeScene` and `KViewController` via using `WeakReference` and Kotlin Native `createCleaner` that allowed us to schedule some work at GC time once the object is collected.
+The view controller was collected and `createCleaner` lambda called `ComposeScene.dispose()`
+
+This approach still had two disadvantages:
+1. It happens at unknown time in the future when GC collects the `KViewController`
+2. It's very fragile.
+
+Let's have a look at this piece of code:
+
+```kotlin
+ @Composable
+ private fun Foo() {
+     // can't use LocalUIViewController.current inside onClick because onClick is not @Composable
+     // LocalUIViewController.current is WeakReference<UIViewController>
+     val viewController = LocalUIViewController.current.get() ?: return
+
+     Column {
+         Button(onClick = {
+             val newViewController = UIViewController()
+             viewController.presentViewController(newViewController, true)
+         }) {
+             Text("Push")
+         }
+     }
+}
+```
+
+We've just created a memory leak. `viewController` which is our `KViewController` is now a lambda capture inside Compose machinery. In order to release it, we need to call `ComposeScene.dispose()` which will be called
+when when `KViewController` is released, which is never, because it's a part of compose execution machinery, which is referenced by the root set.
+
+
 
