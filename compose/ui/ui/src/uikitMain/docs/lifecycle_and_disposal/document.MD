@@ -4,7 +4,6 @@
 
 ### The main problem
 We need to free resources associated with `ComposeScene` in a determined and predictable way.
-(and not forget about it)
 ### Summary
 
 This document summarizes a set of interconnected problem related to lifetime of instances
