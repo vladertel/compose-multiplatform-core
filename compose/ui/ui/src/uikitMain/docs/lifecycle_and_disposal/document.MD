@@ -270,7 +270,7 @@ class CMPViewController: UIViewController {
    }
    
    deinit {
-       view.cmpDispose()
+       cmpView.cmpDispose()
    }
    
    override func loadView() {
