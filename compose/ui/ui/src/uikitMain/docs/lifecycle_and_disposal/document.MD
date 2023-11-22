@@ -87,30 +87,6 @@ class ControlBlock(
 }
 ```
 
-```swift
-class Foo {
-   private let dataBaseConnection = DataBaseConnection()
-   private let composeScene = ComposeScene() 
-   
-   init {
-       print("hello")
-   }
-   
-   deinit {
-      print("bye")
-      // composeScene closes and gets deallocated
-      // dataBaseConnection is disposed and gets deallocated
-   }
-}
-
-func bar() {
-  let foo = Foo() // prints: hello
-  // all references are released in the end of function scope
-  // `foo` isn't owned by someone else anymore
-  // prints: bye, cleans up stuff
-}
-```
-
 Let's see what happens with a `UIViewController`, that was popped in the previous chapter:
 ![](images/popped_view_controller.png)
 The `UIViewController` "B" gets immediately deallocated, because nobody owns it anymore. It released
