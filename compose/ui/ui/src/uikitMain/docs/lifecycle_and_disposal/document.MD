@@ -62,7 +62,7 @@ be something we could treat as "__state of being alive__".
 
 ## Stayin' alive
 
-iOS SDK is designed around the languages with reference counting. Both Swift and Obj-C rely on
+iOS SDK is designed around the languages with automatic reference counting (ARC). Both Swift and Obj-C rely on
 concepts of strong ownership and weak references. The objects that don't have anybody who owns them
 strongly get deallocated, all weak references still keep the control block allocated along with the
 object alive, so the weak references could be unwrapped and see that the object is indeed dead,
@@ -220,10 +220,10 @@ Obj-C/Swift function scope.
 ```kotlin
 // CMPView.kt
 
-// We will hide [weak self] of CMPViewController in those callbacks on ObjC side.
+// We will hide [weak self] of CMPViewController in those callbacks on ARC-world side.
 class CMPViewControllerCallbacks(
     val presentViewController: (UIViewController, Bool) -> Unit
-    // and other callbacks, that user needs for the UIViewController
+    // and other proxy methods, that user needs for the UIViewController
 ) : NSObject()
 
 class CMPView(
@@ -458,7 +458,7 @@ We have the same question again:
 _Who owns what, what is a __lifetime__ and who is responsible for disposing things._
 Let's explore another options?
 
-### Reusing some determined SDK capabilites to reinvent lifetime
+### Reusing some determined SDK capabilites to reinvent lifetime meaning
 
 There was a remark in the `Examples` chapter:
 
@@ -522,6 +522,15 @@ thing that happened to the object. It will lead to problems once work on commoni
 [Android activity lifecycle](https://developer.android.com/guide/components/activities/activity-lifecycle) starts. 
 There is no way to maintain both invariants:
 1. `onDestroy` is called once.
-2. `onDestory` is called in determined way. 
+2. `onDestroy` is called in determined way.
 
-So, which way do we go?
+### What to do
+
+As you can see, those games with interop and embedding doesn't do us any favors because 
+iOS SDK is designed with ARC in mind. In Android the system manages the activities, in a similar 
+way, our planned navigation library could take the same responsibility. 
+
+Fow now, we have only one scenario, which has a clear solution:
+
+We don't need `ComposeScene` disposal for a single `ComposeWindow` app, just create it and leave it be.
+
