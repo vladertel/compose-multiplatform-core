@@ -175,7 +175,6 @@ It's determined. Seems like a good idea. There are disadvantages though:
 Interop video player view implicitly presents a over-fullscreen modal to expand the player,
 causing `viewDidDisappear` call, subsequent `ComposeScene.dispose()`, destroying "interop VideoView"
 which was created by composition that was a source of presented controller in a first place.
-Undefined behavior in its finest.
 
 ## Stayin` alive and dying ASAP while being correct
 
