@@ -509,6 +509,9 @@ As you can see, those games with interop and embedding doesn't do us any favors 
 iOS SDK is designed with ARC in mind. In Android the system manages the activities, in a similar 
 way, our planned navigation library could take the same responsibility. 
 
+A general case solution doesn't seem to be possible with all our constraints in mind.
+We should explore specific scenariors of using CMP and focus on them, prohibiting other ones.
+
 Fow now, we have only one scenario, which has a clear obvious solution:
 
 We don't need `ComposeScene` disposal for a single `ComposeWindow` app, just create it and leave it be.
