@@ -2,11 +2,14 @@
 
 ## Intro
 
+### The main problem
+We need to free resources associated with `ComposeScene` in a determined and predictable way.
+(and not forget about it)
 ### Summary
 
 This document summarizes a set of interconnected problem related to lifetime of instances
 of `UIViewController` and `ComposeScene` types in the scope of Compose Multiplatform and gives an
-insight into how considered solutions to those problems are intefering with each other.
+insight into how considered solutions to those problems are interfering with each other.
 
 ### iOS SDK overview
 
