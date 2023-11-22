@@ -423,7 +423,7 @@ fun Foo() {
 Looks fine. This should work. Still it could be broken in a million of ways. We explicitly design
 the API to protect the user from passing `CMPViewController` to Kotlin, but nobody protects the user
 from accidently capturing `presentingViewController` in a lambda. Moreover, we will need to thoroughly 
-explore every usecase like... We don't want a modal presentation, we want to push something onto
+explore every use case. For example, we don't want a modal presentation, we want to push something onto
 navigation stack:
 ```kotlin
 // UINavigationController doesn't know about stuff like `pushViewControllerFromCmpView`
