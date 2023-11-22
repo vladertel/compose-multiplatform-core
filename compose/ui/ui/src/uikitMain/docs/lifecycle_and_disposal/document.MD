@@ -408,12 +408,12 @@ class CMPViewControllerCallbacks(
 fun Foo() {
     val callbacks = LocalCMPViewControllerCallbacks.current
 
-    val composeViewControllerRawPtr = generateCmpViewControllerOpaquePtrFromCmpView(CMPView {
+    val view = CMPView {
         // @Composable stuff
-    })
+    }
 
     Button(onClick = {
-        callbacks.presentViewControllerFromCmpView(composeViewControllerRawPtr, true)
+        callbacks.presentViewControllerFromCmpView(view, true)
     }) {
         Text("Present")
     }
