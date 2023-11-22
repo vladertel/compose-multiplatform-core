@@ -21,11 +21,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -40,6 +43,7 @@ import androidx.compose.ui.renderComposeScene
 import androidx.compose.ui.test.InternalTestApi
 import androidx.compose.ui.test.junit4.DesktopScreenshotTestRule
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
@@ -289,6 +293,27 @@ class GraphicsLayerTest {
                         .background(Color.Blue)
                 )
             }
+        }
+        screenshotRule.write(snapshot)
+    }
+
+    @Test
+    fun `box outside bounds should not be clipped`() {
+        val snapshot = renderComposeScene(width = 40, height = 40) {
+            Box(modifier = Modifier
+                .size(40.dp)
+                .offset {
+                    -IntOffset(41, 41)
+                }
+                .drawBehind {
+                    drawRect(
+                        Color.Red,
+                        Offset.Zero,
+                        size * 10f,
+                    )
+                }
+                .background(Color.Green)
+            )
         }
         screenshotRule.write(snapshot)
     }

@@ -45,7 +45,7 @@ internal class RenderNodeLayer(
         }
 
     private val pictureRecorder = PictureRecorder()
-    private var picture: Picture? = null
+    private var picture: DrawableImpl? = null
     private var isDestroyed = false
 
     private var transformOrigin: TransformOrigin = TransformOrigin.Center
@@ -216,13 +216,13 @@ internal class RenderNodeLayer(
             val bounds = size.toSize().toRect()
             val pictureCanvas = pictureRecorder.beginRecording(bounds.toSkiaRect())
             performDrawLayer(pictureCanvas.asComposeCanvas(), bounds)
-            picture = pictureRecorder.finishRecordingAsPicture()
+            picture = pictureRecorder.finishRecordingAsDrawable()
         }
 
         canvas.save()
         canvas.concat(matrix)
         canvas.translate(position.x.toFloat(), position.y.toFloat())
-        canvas.nativeCanvas.drawPicture(picture!!, null, null)
+        canvas.nativeCanvas.drawDrawable(picture!!)
         canvas.restore()
     }
 
