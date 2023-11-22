@@ -93,7 +93,7 @@ The `UIViewController` "B" gets immediately deallocated, because nobody owns it 
 the resources, that were uniquely referenced by it (let's say it had a `ComposeScene` inside).
 Right?
 
-Well. Not in our world.
+Well. Not in our world. Let's imagine, our `UIViewController` "B" is a `ComposeWindow`.
 
 #### Problem 1.
 
