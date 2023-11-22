@@ -485,7 +485,7 @@ will just cease to exist, leaving us hanging if we tie our `ComposeScene` lifeti
 Technically, `FooViewController` never moved to `nil` parent, it's a `UINavigationController`
 whose `view` was detached from the `window`.
 
-We could go the other way and treat attaching and detaching from `window` as event to take decisions
+We could go the other way and treat attaching and detaching from `window` as an event to take decisions
 about what our lifetime stage is. It is closely related to `viewWillAppear`, `viewDidDisappear`,
 but in this case things get even worse, because `window` value is not really semantical, but a
 structural attribute. It means every time
@@ -509,7 +509,7 @@ As you can see, those games with interop and embedding doesn't do us any favors 
 iOS SDK is designed with ARC in mind. In Android the system manages the activities, in a similar 
 way, our planned navigation library could take the same responsibility. 
 
-Fow now, we have only one scenario, which has a clear solution:
+Fow now, we have only one scenario, which has a clear obvious solution:
 
 We don't need `ComposeScene` disposal for a single `ComposeWindow` app, just create it and leave it be.
 
