@@ -178,8 +178,8 @@ which was created by composition that was a source of presented controller in a 
 
 ## Stayin` alive and dying ASAP while being correct
 
-Since `lifetime` becomes a blurred and smudged term in the mix of two different runtimes, we need to
-either:
+Since `lifetime` becomes a blurred and smudged term in the mix of two different runtimes we can try
+to give authority to the runtime with predictable behavior.
 
 ### Enforce the lifetime semantics of automated reference counting
 
@@ -234,6 +234,16 @@ fun UIView.cmpSetCallbacks(callbacks: CMPViewControllerCallbacks) {
 
 ```
 
+
+```kotlin
+// App.kt
+
+fun makeView(): UIView =
+    CMPView {
+        // @Composable stuff
+    }
+```
+
 ```swift
 // CMPViewController.swift
 
@@ -269,15 +279,6 @@ class CMPViewController: UIViewController {
    }
     
 }
-```
-
-```kotlin
-// App.kt
-
-fun makeView(): UIView =
-    CMPView {
-        // @Composable stuff
-    }
 ```
 
 ```swift
@@ -492,10 +493,13 @@ structural attribute. It means every time
 detach of `UIView` from `UIWindow` to put it in some other place will still lead to `ComposeScene`
 disposal because in the moment, the `window` would be `nil`.
 
+We jumped through hoops to predict the sequence of events, after which the object will possibly get deallocated 
+in a native app, but still failed.
+
 Moreover, nobody can guaruantee whether the `viewDidDisappear` or `window` set to `nil` is the last
 thing that happened to the object. It will lead to problems once work on commonizing
 [Android activity lifecycle](https://developer.android.com/guide/components/activities/activity-lifecycle) starts. 
-There is no way to maintain both invariants:
+There is no way to maintain those invariants when using an approach above:
 1. `onDestroy` is called once.
 2. `onDestroy` is called in determined way.
 
