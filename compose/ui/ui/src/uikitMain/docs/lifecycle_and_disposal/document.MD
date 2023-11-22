@@ -244,7 +244,7 @@ class CMPView(
 private fun UIView.doIfCmpView(block: (CMPView) -> Unit) {
     val view = this
     if (view is CMPView) {
-        view.dispose()
+        block(view)
     }
 }
 
