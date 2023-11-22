@@ -127,7 +127,7 @@ The initial take on implementing scene disposal
 was [this PR](https://github.com/JetBrains/compose-multiplatform-core/pull/728).
 It broke the strong connection between `ComposeScene` and `KViewController` via
 using `WeakReference` and Kotlin Native `createCleaner` that allowed us to schedule some work at GC
-time once the object is collected.
+time once the object is collected, making it a poor man destructor.
 The view controller was collected and `createCleaner` lambda called `ComposeScene.dispose()`
 
 This approach still had two disadvantages:
