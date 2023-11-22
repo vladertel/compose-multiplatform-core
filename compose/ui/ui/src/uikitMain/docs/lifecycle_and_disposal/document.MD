@@ -268,8 +268,8 @@ class CMPViewController: UIViewController {
        // `Unmanaged.passUnretained` API. Using `Unmanaged.fromOpaque` will be a Undefined Behavior 
        // (and hopefully a crash) if it's used after `CMPViewController` is deallocated.
        // So basically this allows us to keep the `CMPViewController` alive while something in 
-       // ObjC/Swift owns it, while keeping the control block alive, while this lambda wasn't 
-       // collected by Kotlin GC
+       // ObjC/Swift owns it, while keeping the control block alive until this lambda 
+       // is collected by Kotlin GC
               
        cmpView.cmpSetCallbacks(CMPLocalViewControllerCallbacks(
            presentViewController: { [weak self] viewController, animated in
