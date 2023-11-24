@@ -32,7 +32,6 @@ import java.awt.event.FocusListener
 import java.util.Locale
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities.isEventDispatchThread
-import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayerAnalytics
 
@@ -86,7 +85,6 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     private var _isFocusable = true
     private var _isRequestFocusEnabled = false
     private var bridge: ComposeBridge? = null
-    private val clipMap = mutableMapOf<Component, ClipComponent>()
     private var content: (@Composable () -> Unit)? = null
 
     /**
@@ -171,19 +169,8 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     override fun add(component: Component): Component {
-        if (bridge == null) {
-            return component
-        }
-        val clipComponent = ClipComponent(component)
-        clipMap[component] = clipComponent
-        bridge!!.clipComponents.add(clipComponent)
+        // TODO: Investigate it we can avoid such reordering
         return super.add(component, Integer.valueOf(0))
-    }
-
-    override fun remove(component: Component) {
-        bridge!!.clipComponents.remove(clipMap[component]!!)
-        clipMap.remove(component)
-        super.remove(component)
     }
 
     override fun addNotify() {

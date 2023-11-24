@@ -21,19 +21,23 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.SnapshotStateObserver
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.unit.round
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntRect
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
@@ -43,6 +47,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.JPanel
 import javax.swing.LayoutFocusTraversalPolicy
 import javax.swing.SwingUtilities
+import kotlin.math.ceil
+import kotlin.math.floor
 
 val NoOpUpdate: Component.() -> Unit = {}
 
@@ -75,23 +81,19 @@ public fun <T : Component> SwingPanel(
     val componentInfo = remember { ComponentInfo<T>() }
 
     val root = LocalLayerContainer.current
-    val density = LocalDensity.current.density
+    val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
     val focusSwitcher = remember { FocusSwitcher(componentInfo, focusManager) }
 
     Box(
         modifier = modifier.onGloballyPositioned { childCoordinates ->
             val coordinates = childCoordinates.parentCoordinates!!
-            val location = coordinates.localToWindow(Offset.Zero).round()
-            val size = coordinates.size
-            componentInfo.container.setBounds(
-                (location.x / density).toInt(),
-                (location.y / density).toInt(),
-                (size.width / density).toInt(),
-                (size.height / density).toInt()
-            )
+            val bounds = coordinates.boundsInWindow().round(density)
+            componentInfo.container.setBounds(bounds.left, bounds.top, bounds.width, bounds.height)
             componentInfo.container.validate()
             componentInfo.container.repaint()
+        }.drawBehind {
+            drawRect(Color.Transparent, blendMode = BlendMode.DstAtop) // draw transparent hole
         }
     ) {
         focusSwitcher.Content()
@@ -298,4 +300,12 @@ private class Updater<T : Component>(
         snapshotObserver.clear()
         isDisposed = true
     }
+}
+
+private fun Rect.round(density: Density): IntRect {
+    val left = floor(left / density.density).toInt()
+    val top = floor(top / density.density).toInt()
+    val right = ceil(right / density.density).toInt()
+    val bottom = ceil(bottom / density.density).toInt()
+    return IntRect(left, top, right, bottom)
 }

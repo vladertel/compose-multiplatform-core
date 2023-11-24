@@ -72,18 +72,9 @@ internal class ComposeWindowDelegate(
         }
 
         override fun add(component: Component): Component {
-            val clipComponent = ClipComponent(component)
-            clipMap[component] = clipComponent
-            bridge.clipComponents.add(clipComponent)
+            // TODO: Investigate it we can avoid such reordering
             return add(component, Integer.valueOf(0))
         }
-
-        override fun remove(component: Component) {
-            bridge.clipComponents.remove(clipMap[component]!!)
-            clipMap.remove(component)
-            super.remove(component)
-        }
-
         override fun addNotify() {
             super.addNotify()
             bridge.component.requestFocus()
@@ -105,8 +96,6 @@ internal class ComposeWindowDelegate(
     }
 
     val pane get() = _pane
-
-    private val clipMap = mutableMapOf<Component, ClipComponent>()
 
     init {
         pane.focusTraversalPolicy = object : FocusTraversalPolicy() {

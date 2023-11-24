@@ -76,9 +76,6 @@ internal class WindowComposeBridge(
     override val renderApi: GraphicsApi
         get() = component.renderApi
 
-    override val clipComponents: MutableList<ClipRectangle>
-        get() = component.clipComponents
-
     override val focusComponentDelegate: Component
         get() = component.canvas
 
