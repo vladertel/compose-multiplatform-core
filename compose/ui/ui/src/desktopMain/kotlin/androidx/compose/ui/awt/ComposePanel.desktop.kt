@@ -169,7 +169,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     override fun add(component: Component): Component {
-        // TODO: Investigate it we can avoid such reordering
+        // TODO: Investigate if we can avoid such reordering
         return super.add(component, Integer.valueOf(0))
     }
 

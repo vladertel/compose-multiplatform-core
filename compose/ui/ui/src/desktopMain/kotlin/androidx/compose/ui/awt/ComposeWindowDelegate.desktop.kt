@@ -72,7 +72,7 @@ internal class ComposeWindowDelegate(
         }
 
         override fun add(component: Component): Component {
-            // TODO: Investigate it we can avoid such reordering
+            // TODO: Investigate if we can avoid such reordering
             return add(component, Integer.valueOf(0))
         }
         override fun addNotify() {
