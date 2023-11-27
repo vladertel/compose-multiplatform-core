@@ -93,7 +93,7 @@ public fun <T : Component> SwingPanel(
             componentInfo.container.validate()
             componentInfo.container.repaint()
         }.drawBehind {
-            drawRect(Color.Transparent, blendMode = BlendMode.DstAtop) // draw transparent hole
+            drawRect(Color.Transparent, blendMode = BlendMode.Clear) // draw transparent hole
         }
     ) {
         focusSwitcher.Content()
