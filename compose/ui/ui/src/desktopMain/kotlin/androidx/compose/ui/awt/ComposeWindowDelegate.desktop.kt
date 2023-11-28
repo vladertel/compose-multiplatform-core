@@ -72,7 +72,7 @@ internal class ComposeWindowDelegate(
         }
 
         override fun add(component: Component): Component {
-            super.setLayer(component, /* layer = */ 0)
+            super.setLayer(component, componentLayer)
             return super.add(component)
         }
 
@@ -82,6 +82,14 @@ internal class ComposeWindowDelegate(
             super.setLayer(bridge.component, /* layer = */ 10)
             super.add(bridge.component)
         }
+
+        // Place it to top if alpha blending doesn't work
+        private val componentLayer: Int
+            get() = if (isAlphaBlendingWorking) 0 else 20
+
+        // TODO: Support for all platforms
+        private val isAlphaBlendingWorking
+            get() = renderApi == GraphicsApi.METAL
 
         override fun addNotify() {
             super.addNotify()
