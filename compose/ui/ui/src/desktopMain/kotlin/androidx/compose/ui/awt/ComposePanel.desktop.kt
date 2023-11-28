@@ -169,8 +169,15 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     override fun add(component: Component): Component {
-        // TODO: Investigate if we can avoid such reordering
-        return super.add(component, Integer.valueOf(0))
+        super.setLayer(component, /* layer = */ 0)
+        return super.add(component)
+    }
+
+    private fun addBridge(bridge: ComposeBridge) {
+        super.setLayer(bridge.invisibleComponent, /* layer = */ 10)
+        super.add(bridge.invisibleComponent)
+        super.setLayer(bridge.component, /* layer = */ 10)
+        super.add(bridge.component)
     }
 
     override fun addNotify() {
@@ -178,11 +185,11 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
         // After [super.addNotify] is called we can safely initialize the bridge and composable
         // content.
-        if (bridge == null) {
-            bridge = createComposeBridge()
+        if (this.bridge == null) {
+            val bridge = createComposeBridge()
+            this.bridge = bridge
             initContent()
-            super.add(bridge!!.invisibleComponent, Integer.valueOf(1))
-            super.add(bridge!!.component, Integer.valueOf(1))
+            addBridge(bridge)
         }
     }
 

@@ -72,9 +72,17 @@ internal class ComposeWindowDelegate(
         }
 
         override fun add(component: Component): Component {
-            // TODO: Investigate if we can avoid such reordering
-            return add(component, Integer.valueOf(0))
+            super.setLayer(component, /* layer = */ 0)
+            return super.add(component)
         }
+
+        private fun addBridge(bridge: ComposeBridge) {
+            super.setLayer(bridge.invisibleComponent, /* layer = */ 10)
+            super.add(bridge.invisibleComponent)
+            super.setLayer(bridge.component, /* layer = */ 10)
+            super.add(bridge.component)
+        }
+
         override fun addNotify() {
             super.addNotify()
             bridge.component.requestFocus()
@@ -85,8 +93,7 @@ internal class ComposeWindowDelegate(
 
         init {
             layout = null
-            super.add(bridge.invisibleComponent, 1)
-            super.add(bridge.component, 1)
+            addBridge(bridge)
         }
 
         fun dispose() {
