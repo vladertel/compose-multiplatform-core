@@ -33,7 +33,9 @@ import java.util.Locale
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities.isEventDispatchThread
 import org.jetbrains.skiko.GraphicsApi
+import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.SkiaLayerAnalytics
+import org.jetbrains.skiko.hostOs
 
 /**
  * ComposePanel is a panel for building UI using Compose for Desktop.
@@ -169,16 +171,30 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     override fun add(component: Component): Component {
-        super.setLayer(component, componentLayer)
-        return super.add(component)
+        addToLayer(component, componentLayer)
+        return component
     }
 
     private fun addBridge(bridge: ComposeBridge) {
-        super.setLayer(bridge.invisibleComponent, /* layer = */ 10)
-        super.add(bridge.invisibleComponent)
-        super.setLayer(bridge.component, /* layer = */ 10)
-        super.add(bridge.component)
+        addToLayer(bridge.invisibleComponent, bridgeLayer)
+        addToLayer(bridge.component, bridgeLayer)
     }
+
+    private fun addToLayer(component: Component, layer: Int) {
+        if (hostOs == OS.MacOS) {
+            // TODO: Figure out why it makes difference in transparency
+            // Using [setLayer] on macOS makes our bridge non-transparent
+            super.add(component, Integer.valueOf(layer))
+        } else {
+            // On Windows [add] overload doesn't work - it just places component to layer 0,
+            // So call [setLayer] explicitly
+            super.setLayer(component, layer)
+            super.add(component)
+        }
+        // TODO: Check linux
+    }
+
+    private val bridgeLayer: Int = 10
 
     // Place it to top if alpha blending doesn't work
     private val componentLayer: Int
@@ -186,7 +202,8 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
     // TODO: Support for all platforms
     private val isAlphaBlendingWorking
-        get() = renderApi == GraphicsApi.METAL || bridge is SwingComposeBridge
+        get() = bridge is SwingComposeBridge
+            || renderApi == GraphicsApi.METAL // || renderApi == GraphicsApi.DIRECT3D
 
     override fun addNotify() {
         super.addNotify()
