@@ -181,17 +181,15 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     private fun addToLayer(component: Component, layer: Int) {
-        if (hostOs == OS.MacOS) {
+        if (renderApi == GraphicsApi.METAL && bridge !is SwingComposeBridge) {
+            // Applying layer on macOS makes our bridge non-transparent
+            // But it draws always on top, so we can just add it as-is
             // TODO: Figure out why it makes difference in transparency
-            // Using [setLayer] on macOS makes our bridge non-transparent
-            super.add(component, Integer.valueOf(layer))
+            super.add(component, 0)
         } else {
-            // On Windows [add] overload doesn't work - it just places component to layer 0,
-            // So call [setLayer] explicitly
             super.setLayer(component, layer)
             super.add(component)
         }
-        // TODO: Check linux
     }
 
     private val bridgeLayer: Int = 10
