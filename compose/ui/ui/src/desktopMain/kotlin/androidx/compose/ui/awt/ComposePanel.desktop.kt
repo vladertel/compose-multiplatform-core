@@ -32,6 +32,7 @@ import java.awt.event.FocusListener
 import java.util.Locale
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities.isEventDispatchThread
+import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.SkiaLayerAnalytics
@@ -172,7 +173,15 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
     override fun add(component: Component): Component {
         addToLayer(component, componentLayer)
+        if (!interopBlending) {
+            bridge?.addClipComponent(component)
+        }
         return component
+    }
+
+    override fun remove(component: Component) {
+        bridge?.removeClipComponent(component)
+        super.remove(component)
     }
 
     private fun addBridge(bridge: ComposeBridge) {
@@ -193,15 +202,16 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     private val bridgeLayer: Int = 10
-
-    // Place it to top if alpha blending doesn't work
     private val componentLayer: Int
-        get() = if (isAlphaBlendingWorking) 0 else 20
+        get() = if (interopBlending) 0 else 20
 
-    // TODO: Support for all platforms
-    private val isAlphaBlendingWorking
-        get() = bridge is SwingComposeBridge
-            || renderApi == GraphicsApi.METAL // || renderApi == GraphicsApi.DIRECT3D
+    private val renderOnGraphics: Boolean
+        get() = System.getProperty("compose.swing.render.on.graphics").toBoolean()
+    private val _interopBlending: Boolean
+        get() = System.getProperty("compose.interop.blending").toBoolean()
+    private val interopBlending: Boolean
+        get() = _interopBlending &&
+            (renderOnGraphics || requireNotNull(bridge).interopBlendingSupported)
 
     override fun addNotify() {
         super.addNotify()
@@ -217,7 +227,6 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     private fun createComposeBridge(): ComposeBridge {
-        val renderOnGraphics = System.getProperty("compose.swing.render.on.graphics").toBoolean()
         val bridge: ComposeBridge = if (renderOnGraphics) {
             // TODO: Add window transparent info
             SwingComposeBridge(skiaLayerAnalytics, layoutDirectionFor(this))
@@ -345,5 +354,5 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
      * environment variable.
      */
     val renderApi: GraphicsApi
-        get() = if (bridge != null) bridge!!.renderApi else GraphicsApi.UNKNOWN
+        get() = bridge?.renderApi ?: GraphicsApi.UNKNOWN
 }

@@ -60,20 +60,89 @@ internal class ComposeWindowDelegate(
         }
     internal val scene: ComposeScene
         get() = bridge.scene
+
     internal val windowAccessible: Accessible
         get() = bridge.sceneAccessible
+
     internal var rootForTestListener by bridge::rootForTestListener
+
     val undecoratedWindowResizer = UndecoratedWindowResizer(window)
+
+    var fullscreen: Boolean
+        get() = bridge.component.fullscreen
+        set(value) {
+            bridge.component.fullscreen = value
+        }
+
+    var compositionLocalContext: CompositionLocalContext?
+        get() = bridge.compositionLocalContext
+        set(value) {
+            bridge.compositionLocalContext = value
+        }
+
+    @ExperimentalComposeUiApi
+    var exceptionHandler: WindowExceptionHandler?
+        get() = bridge.exceptionHandler
+        set(value) {
+            bridge.exceptionHandler = value
+        }
+
+    val windowHandle: Long
+        get() = bridge.component.windowHandle
+
+    val renderApi: GraphicsApi
+        get() = bridge.renderApi
+
+    var isWindowTransparent: Boolean = false
+        set(value) {
+            if (field != value) {
+                check(isUndecorated()) { "Transparent window should be undecorated!" }
+                check(!window.isDisplayable) {
+                    "Cannot change transparency if window is already displayable."
+                }
+                field = value
+
+                // required
+                bridge.transparency = value
+
+                /*
+                 * Windows makes clicks on transparent pixels fall through, but it doesn't work
+                 * with GPU accelerated rendering since this check requires having access to pixels from CPU.
+                 *
+                 * JVM doesn't allow override this behaviour with low-level windows methods, so hack this in this way.
+                 * Based on tests, it doesn't affect resulting pixel color.
+                 *
+                 * Note: Do not set isOpaque = false for this container
+                 */
+                if (value && hostOs == OS.Windows) {
+                    pane.background = Color(0, 0, 0, 1)
+                    pane.isOpaque = true
+                } else {
+                    pane.background = null
+                    pane.isOpaque = false
+                }
+
+                window.background = if (value) Color(0, 0, 0, 0) else null
+            }
+        }
 
     private val _pane = object : JLayeredPane() {
         override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
-            bridge.component.setSize(width, height)
+            bridge.component.setBounds(0, 0, width, height)
             super.setBounds(x, y, width, height)
         }
 
         override fun add(component: Component): Component {
             addToLayer(component, componentLayer)
+            if (!interopBlending) {
+                bridge.addClipComponent(component)
+            }
             return component
+        }
+
+        override fun remove(component: Component) {
+            bridge.removeClipComponent(component)
+            super.remove(component)
         }
 
         private fun addBridge(bridge: ComposeBridge) {
@@ -93,15 +162,14 @@ internal class ComposeWindowDelegate(
             }
         }
 
-        private val bridgeLayer: Int = 10
-
-        // Place it to top if alpha blending doesn't work
+        private val bridgeLayer: Int get() = 10
         private val componentLayer: Int
-            get() = if (isAlphaBlendingWorking) 0 else 20
+            get() = if (interopBlending) 0 else 20
 
-        // TODO: Support for all platforms
-        private val isAlphaBlendingWorking
-            get() = renderApi == GraphicsApi.METAL // || renderApi == GraphicsApi.DIRECT3D
+        private val _interopBlending: Boolean
+            get() = System.getProperty("compose.interop.blending").toBoolean()
+        private val interopBlending: Boolean
+            get() = _interopBlending && bridge.interopBlendingSupported
 
         override fun addNotify() {
             super.addNotify()
@@ -143,18 +211,6 @@ internal class ComposeWindowDelegate(
     fun remove(component: Component) {
         _pane.remove(component)
     }
-
-    var fullscreen: Boolean
-        get() = bridge.component.fullscreen
-        set(value) {
-            bridge.component.fullscreen = value
-        }
-
-    var compositionLocalContext: CompositionLocalContext?
-        get() = bridge.compositionLocalContext
-        set(value) {
-            bridge.compositionLocalContext = value
-        }
 
     fun setContent(
         onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
@@ -240,38 +296,6 @@ internal class ComposeWindowDelegate(
             action()
         }
     }
-
-    @ExperimentalComposeUiApi
-    var exceptionHandler: WindowExceptionHandler?
-        get() = bridge.exceptionHandler
-        set(value) {
-            bridge.exceptionHandler = value
-        }
-
-    val windowHandle: Long
-        get() = bridge.component.windowHandle
-
-    val renderApi: GraphicsApi
-        get() = bridge.renderApi
-
-    var isTransparent: Boolean
-        get() = bridge.transparency
-        set(value) {
-            if (value != bridge.transparency) {
-                check(isUndecorated()) { "Transparent window should be undecorated!" }
-                check(!window.isDisplayable) {
-                    "Cannot change transparency if window is already displayable."
-                }
-                bridge.transparency = value
-                if (value) {
-                    if (hostOs != OS.Windows) {
-                        window.background = Color(0, 0, 0, 0)
-                    }
-                } else {
-                    window.background = null
-                }
-            }
-        }
 
     fun addMouseListener(listener: MouseListener) {
         bridge.component.addMouseListener(listener)

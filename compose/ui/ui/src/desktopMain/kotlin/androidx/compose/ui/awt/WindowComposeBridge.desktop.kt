@@ -76,10 +76,19 @@ internal class WindowComposeBridge(
     override val renderApi: GraphicsApi
         get() = component.renderApi
 
+    override val interopBlendingSupported: Boolean
+        get() = when(renderApi) {
+            GraphicsApi.DIRECT3D, GraphicsApi.METAL -> true
+            else -> false
+        }
+
+    override val clipComponents: MutableList<ClipRectangle>
+        get() = component.clipComponents
+
     override val focusComponentDelegate: Component
         get() = component.canvas
 
-    internal var transparency: Boolean
+    var transparency: Boolean
         get() = component.transparency
         set(value) {
             component.transparency = value

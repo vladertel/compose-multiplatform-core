@@ -72,6 +72,10 @@ internal abstract class ComposeBridge(
     abstract val component: JComponent
     abstract val renderApi: GraphicsApi
 
+    abstract val interopBlendingSupported: Boolean
+    abstract val clipComponents: MutableList<ClipRectangle>
+    private val clipMap = mutableMapOf<Component, ClipComponent>()
+
     // Needed for case when componentLayer is a wrapper for another Component that need to acquire focus events
     // e.g. canvas in case of ComposeWindowLayer
     // TODO: can we use [componentLayer] here?
@@ -332,6 +336,18 @@ internal abstract class ComposeBridge(
             }
         }
         initContent()
+    }
+
+    fun addClipComponent(component: Component) {
+        val clipComponent = ClipComponent(component)
+        clipMap[component] = clipComponent
+        clipComponents.add(clipComponent)
+    }
+
+    fun removeClipComponent(component: Component) {
+        clipMap.remove(component)?.let {
+            clipComponents.remove(it)
+        }
     }
 
     private var _initContent: (() -> Unit)? = null
