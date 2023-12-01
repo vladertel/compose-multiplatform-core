@@ -61,6 +61,7 @@ public final class ModifiersBuilders {
          * Fade in enter animation that fades in element when entering the layout, from fully
          * invisible to fully visible.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         private static final EnterTransition FADE_IN_ENTER_TRANSITION =
                 new EnterTransition.Builder().setFadeIn(FADE_IN_TRANSITION).build();
 
@@ -70,6 +71,7 @@ public final class ModifiersBuilders {
          *
          * @param direction The direction for sliding in transition.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         private static SlideInTransition slideInTransition(@SlideDirection int direction) {
             return new SlideInTransition.Builder().setDirection(direction).build();
         }
@@ -78,6 +80,7 @@ public final class ModifiersBuilders {
          * Enter content transition animation that fades in element when entering the layout, from
          * fully invisible to fully visible.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static EnterTransition fadeIn() {
             return FADE_IN_ENTER_TRANSITION;
@@ -87,6 +90,7 @@ public final class ModifiersBuilders {
          * Enter content transition animation that slides in element when entering the layout into
          * its position from the parent edge in the given direction.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static EnterTransition slideIn(@SlideDirection int slideDirection) {
             return new EnterTransition.Builder()
@@ -101,6 +105,7 @@ public final class ModifiersBuilders {
          *
          * @param slideDirection The direction for sliding in part of transition.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static EnterTransition fadeInSlideIn(@SlideDirection int slideDirection) {
             return new EnterTransition.Builder()
@@ -120,6 +125,7 @@ public final class ModifiersBuilders {
          * Fade out exit animation that fades out element when exiting the layout, from fully
          * visible to fully invisible.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         private static final ExitTransition FADE_OUT_EXIT_TRANSITION =
                 new ExitTransition.Builder().setFadeOut(FADE_OUT_TRANSITION).build();
 
@@ -129,6 +135,7 @@ public final class ModifiersBuilders {
          *
          * @param direction The direction for sliding out transition.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         private static SlideOutTransition slideOutTransition(@SlideDirection int direction) {
             return new SlideOutTransition.Builder().setDirection(direction).build();
         }
@@ -137,6 +144,7 @@ public final class ModifiersBuilders {
          * Exit content transition animation that fades out element when exiting the layout, from
          * fully visible to fully invisible.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static ExitTransition fadeOut() {
             return FADE_OUT_EXIT_TRANSITION;
@@ -146,6 +154,7 @@ public final class ModifiersBuilders {
          * Exit content transition animation that slides out element when exiting the layout from
          * its position to the parent edge in the given direction.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static ExitTransition slideOut(@SlideDirection int slideDirection) {
             return new ExitTransition.Builder()
@@ -160,6 +169,7 @@ public final class ModifiersBuilders {
          *
          * @param slideDirection The direction for sliding in part of transition.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static ExitTransition fadeOutSlideOut(@SlideDirection int slideDirection) {
             return new ExitTransition.Builder()
@@ -305,14 +315,12 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the ID associated with this action. */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @NonNull
         public String getId() {
             return mImpl.getId();
         }
 
         /** Gets the action to perform when the element this modifier is attached to is clicked. */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Action getOnClick() {
             if (mImpl.hasOnClick()) {
@@ -329,7 +337,6 @@ public final class ModifiersBuilders {
          * that this value does not affect the layout, so the minimum clickable width is not
          * guaranteed unless there is enough space around the element within its parent bounds.
          */
-        @RequiresSchemaVersion(major = 1, minor = 300)
         @NonNull
         public DpProp getMinimumClickableWidth() {
             if (mImpl.hasMinimumClickableWidth()) {
@@ -346,7 +353,6 @@ public final class ModifiersBuilders {
          * that this value does not affect the layout, so the minimum clickable height is not
          * guaranteed unless there is enough space around the element within its parent bounds.
          */
-        @RequiresSchemaVersion(major = 1, minor = 300)
         @NonNull
         public DpProp getMinimumClickableHeight() {
             if (mImpl.hasMinimumClickableHeight()) {
@@ -500,7 +506,6 @@ public final class ModifiersBuilders {
          * <p>While this field is statically accessible from 1.0, it's only bindable since version
          * 1.2 and renderers supporting version 1.2 will use the dynamic value (if set).
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public StringProp getContentDescription() {
             if (mImpl.hasContentDescription()) {
@@ -514,7 +519,6 @@ public final class ModifiersBuilders {
          * Gets the type of user interface element. Accessibility services might use this to
          * describe the element or do customizations.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @SemanticsRole
         public int getRole() {
             return mImpl.getRole().getNumber();
@@ -526,7 +530,6 @@ public final class ModifiersBuilders {
          *
          * <p>This field is bindable and will use the dynamic value (if set).
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public StringProp getStateDescription() {
             if (mImpl.hasStateDescription()) {
@@ -666,7 +669,6 @@ public final class ModifiersBuilders {
          * Gets the padding on the end of the content, depending on the layout direction, in DP and
          * the value of "rtl_aware".
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public DpProp getEnd() {
             if (mImpl.hasEnd()) {
@@ -680,7 +682,6 @@ public final class ModifiersBuilders {
          * Gets the padding on the start of the content, depending on the layout direction, in DP
          * and the value of "rtl_aware".
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public DpProp getStart() {
             if (mImpl.hasStart()) {
@@ -691,7 +692,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the padding at the top, in DP. */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public DpProp getTop() {
             if (mImpl.hasTop()) {
@@ -702,7 +702,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the padding at the bottom, in DP. */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public DpProp getBottom() {
             if (mImpl.hasBottom()) {
@@ -718,7 +717,6 @@ public final class ModifiersBuilders {
          * of the container if the device is using an RTL locale). If false, start/end will always
          * map to left/right, accordingly.
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public BoolProp getRtlAware() {
             if (mImpl.hasRtlAware()) {
@@ -860,10 +858,16 @@ public final class ModifiersBuilders {
              * start/end will follow the layout direction (i.e. start will refer to the right hand
              * side of the container if the device is using an RTL locale). If false, start/end will
              * always map to left/right, accordingly.
+             *
+             * <p>Note that this field only supports static values.
              */
             @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setRtlAware(@NonNull BoolProp rtlAware) {
+                if (rtlAware.getDynamicValue() != null) {
+                    throw new IllegalArgumentException(
+                            "Padding.Builder.setRtlAware doesn't support dynamic values.");
+                }
                 mImpl.setRtlAware(rtlAware.toProto());
                 mFingerprint.recordPropertyUpdate(
                         5, checkNotNull(rtlAware.getFingerprint()).aggregateValueAsInt());
@@ -880,7 +884,7 @@ public final class ModifiersBuilders {
             @SuppressLint("MissingGetterMatchingBuilder")
             @NonNull
             public Builder setRtlAware(boolean rtlAware) {
-                return setRtlAware(new BoolProp.Builder().setValue(rtlAware).build());
+                return setRtlAware(new BoolProp.Builder(rtlAware).build());
             }
 
             /** Sets the padding for all sides of the content, in DP. */
@@ -911,7 +915,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the width of the border, in DP. */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public DpProp getWidth() {
             if (mImpl.hasWidth()) {
@@ -927,7 +930,6 @@ public final class ModifiersBuilders {
          * <p>While this field is statically accessible from 1.0, it's only bindable since version
          * 1.2 and renderers supporting version 1.2 will use the dynamic value (if set).
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public ColorProp getColor() {
             if (mImpl.hasColor()) {
@@ -1031,7 +1033,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the radius of the corner in DP. */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public DpProp getRadius() {
             if (mImpl.hasRadius()) {
@@ -1126,7 +1127,6 @@ public final class ModifiersBuilders {
          * <p>While this field is statically accessible from 1.0, it's only bindable since version
          * 1.2 and renderers supporting version 1.2 will use the dynamic value (if set).
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public ColorProp getColor() {
             if (mImpl.hasColor()) {
@@ -1141,7 +1141,6 @@ public final class ModifiersBuilders {
          * if it has a background color or border. If not defined, defaults to having a square
          * corner.
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Corner getCorner() {
             if (mImpl.hasCorner()) {
@@ -1249,7 +1248,6 @@ public final class ModifiersBuilders {
          * Gets property describing the element with which it is associated. For use by libraries
          * building higher-level components only. This can be used to track component metadata.
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @NonNull
         public byte[] getTagData() {
             return mImpl.getTagData().toByteArray();
@@ -1337,7 +1335,6 @@ public final class ModifiersBuilders {
          * Gets the clickable property of the modified element. It allows its wrapped element to
          * have actions associated with it, which will be executed when the element is tapped.
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Clickable getClickable() {
             if (mImpl.hasClickable()) {
@@ -1351,7 +1348,6 @@ public final class ModifiersBuilders {
          * Gets the semantics of the modified element. This can be used to add metadata to the
          * modified element (eg. screen reader content descriptions).
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Semantics getSemantics() {
             if (mImpl.hasSemantics()) {
@@ -1362,7 +1358,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the padding of the modified element. */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Padding getPadding() {
             if (mImpl.hasPadding()) {
@@ -1373,7 +1368,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the border of the modified element. */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Border getBorder() {
             if (mImpl.hasBorder()) {
@@ -1384,7 +1378,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the background (with optional corner radius) of the modified element. */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Background getBackground() {
             if (mImpl.hasBackground()) {
@@ -1398,7 +1391,6 @@ public final class ModifiersBuilders {
          * Gets metadata about an element. For use by libraries building higher-level components
          * only. This can be used to track component metadata.
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public ElementMetadata getMetadata() {
             if (mImpl.hasMetadata()) {
@@ -1412,7 +1404,6 @@ public final class ModifiersBuilders {
          * Gets the content transition of an element. Any update to the element or its children will
          * trigger this animation for this element and everything underneath it.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @ProtoLayoutExperimental
         @Nullable
         public AnimatedVisibility getContentUpdateAnimation() {
@@ -1420,6 +1411,21 @@ public final class ModifiersBuilders {
                 return AnimatedVisibility.fromProto(mImpl.getContentUpdateAnimation());
             } else {
                 return null;
+            }
+        }
+
+        /**
+         * Gets whether the attached element is visible, or hidden. If the element is hidden, then
+         * it will still consume space in the layout, but will not render any contents, nor will any
+         * children render any contents. Defaults to visible.
+         */
+        @ProtoLayoutExperimental
+        @NonNull
+        public BoolProp isVisible() {
+            if (mImpl.hasVisible()) {
+                return BoolProp.fromProto(mImpl.getVisible());
+            } else {
+                return new BoolProp.Builder(true).build();
             }
         }
 
@@ -1474,6 +1480,8 @@ public final class ModifiersBuilders {
                     + getMetadata()
                     + ", contentUpdateAnimation="
                     + getContentUpdateAnimation()
+                    + ", visible="
+                    + isVisible()
                     + "}";
         }
 
@@ -1572,6 +1580,27 @@ public final class ModifiersBuilders {
                 return this;
             }
 
+            /**
+             * Sets whether the attached element is visible, or hidden. If the element is hidden,
+             * then it will still consume space in the layout, but will not render any contents, nor
+             * will any children render any contents. Defaults to visible.
+             *
+             * <p>Note that a hidden element also cannot be clickable (i.e. a {@link Clickable}
+             * modifier would be ignored).
+             *
+             * <p>This field is bindable and will use the dynamic value (if set).
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @ProtoLayoutExperimental
+            @SuppressLint("MissingGetterMatchingBuilder")
+            @NonNull
+            public Builder setVisible(@NonNull BoolProp visible) {
+                mImpl.setVisible(visible.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        10, checkNotNull(visible.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
             /** Builds an instance from accumulated values. */
             @NonNull
             public Modifiers build() {
@@ -1597,7 +1626,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the content transition that is triggered when element enters the layout. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public EnterTransition getEnterTransition() {
             if (mImpl.hasEnterTransition()) {
@@ -1611,7 +1639,6 @@ public final class ModifiersBuilders {
          * Gets the content transition that is triggered when element exits the layout. Note that
          * indefinite exit animations are ignored.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public ExitTransition getExitTransition() {
             if (mImpl.hasExitTransition()) {
@@ -1716,7 +1743,6 @@ public final class ModifiersBuilders {
          * Gets the fading in animation for content transition of an element and its children
          * happening when entering the layout.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public FadeInTransition getFadeIn() {
             if (mImpl.hasFadeIn()) {
@@ -1730,7 +1756,6 @@ public final class ModifiersBuilders {
          * Gets the sliding in animation for content transition of an element and its children
          * happening when entering the layout.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public SlideInTransition getSlideIn() {
             if (mImpl.hasSlideIn()) {
@@ -1835,14 +1860,12 @@ public final class ModifiersBuilders {
          * Gets the starting alpha of the fade in transition. It should be between 0 and 1. If not
          * set, defaults to fully transparent, i.e. 0.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @FloatRange(from = 0.0, to = 1.0)
         public float getInitialAlpha() {
             return mImpl.getInitialAlpha();
         }
 
         /** Gets the animation parameters for duration, delay, etc. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public AnimationSpec getAnimationSpec() {
             if (mImpl.hasAnimationSpec()) {
@@ -1947,7 +1970,6 @@ public final class ModifiersBuilders {
          * point to its destination in the layout. If not set, defaults to horizontal from left to
          * the right.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @SlideDirection
         public int getDirection() {
             return mImpl.getDirection().getNumber();
@@ -1959,7 +1981,6 @@ public final class ModifiersBuilders {
          * Note that sliding from the screen boundaries can only be achieved if all parent's sizes
          * are big enough to accommodate it.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public SlideBound getInitialSlideBound() {
             if (mImpl.hasInitialSlideBound()) {
@@ -1970,7 +1991,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the animation parameters for duration, delay, etc. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public AnimationSpec getAnimationSpec() {
             if (mImpl.hasAnimationSpec()) {
@@ -2092,7 +2112,6 @@ public final class ModifiersBuilders {
          * Gets the fading out animation for content transition of an element and its children
          * happening when exiting the layout.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public FadeOutTransition getFadeOut() {
             if (mImpl.hasFadeOut()) {
@@ -2106,7 +2125,6 @@ public final class ModifiersBuilders {
          * Gets the sliding out animation for content transition of an element and its children
          * happening when exiting the layout.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public SlideOutTransition getSlideOut() {
             if (mImpl.hasSlideOut()) {
@@ -2217,14 +2235,12 @@ public final class ModifiersBuilders {
          * Gets the target alpha of the fade out transition. It should be between 0 and 1. If not
          * set, defaults to fully invisible, i.e. 0.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @FloatRange(from = 0.0, to = 1.0)
         public float getTargetAlpha() {
             return mImpl.getTargetAlpha();
         }
 
         /** Gets the animation parameters for duration, delay, etc. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public AnimationSpec getAnimationSpec() {
             if (mImpl.hasAnimationSpec()) {
@@ -2286,7 +2302,6 @@ public final class ModifiersBuilders {
              * Sets the target alpha of the fade out transition. It should be between 0 and 1. If
              * not set, defaults to fully invisible, i.e. 0.
              */
-            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setTargetAlpha(@FloatRange(from = 0.0, to = 1.0) float targetAlpha) {
                 mImpl.setTargetAlpha(targetAlpha);
@@ -2330,7 +2345,6 @@ public final class ModifiersBuilders {
          * in the layout to the specified point. If not set, defaults to horizontal from right to
          * the left.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @SlideDirection
         public int getDirection() {
             return mImpl.getDirection().getNumber();
@@ -2342,7 +2356,6 @@ public final class ModifiersBuilders {
          * that sliding from the screen boundaries can only be achieved if all parent's sizes are
          * big enough to accommodate it.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public SlideBound getTargetSlideBound() {
             if (mImpl.hasTargetSlideBound()) {
@@ -2353,7 +2366,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the animation parameters for duration, delay, etc. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public AnimationSpec getAnimationSpec() {
             if (mImpl.hasAnimationSpec()) {
@@ -2432,7 +2444,6 @@ public final class ModifiersBuilders {
              * Note that sliding from the screen boundaries can only be achieved if all parent's
              * sizes are big enough to accommodate it.
              */
-            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setTargetSlideBound(@NonNull SlideBound targetSlideBound) {
                 mImpl.setTargetSlideBound(targetSlideBound.toSlideBoundProto());
@@ -2517,7 +2528,6 @@ public final class ModifiersBuilders {
          * Gets the snap options to use when sliding using parent boundaries. Defaults to
          * SLIDE_PARENT_SNAP_TO_INSIDE if not specified.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @SlideParentSnapOption
         public int getSnapTo() {
             return mImpl.getSnapTo().getNumber();
@@ -2612,7 +2622,6 @@ public final class ModifiersBuilders {
          * Gets allows its wrapped element to have actions associated with it, which will be
          * executed when the element is tapped.
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Clickable getClickable() {
             if (mImpl.hasClickable()) {
@@ -2626,7 +2635,6 @@ public final class ModifiersBuilders {
          * Gets adds metadata for the modified element, for example, screen reader content
          * descriptions.
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Semantics getSemantics() {
             if (mImpl.hasSemantics()) {
@@ -2736,7 +2744,6 @@ public final class ModifiersBuilders {
          * Gets allows its wrapped element to have actions associated with it, which will be
          * executed when the element is tapped.
          */
-        @RequiresSchemaVersion(major = 1, minor = 0)
         @Nullable
         public Clickable getClickable() {
             if (mImpl.hasClickable()) {
@@ -2824,7 +2831,6 @@ public final class ModifiersBuilders {
          * Gets the blur radius of the shadow. It controls the size of the blur that is drawn. When
          * set to zero, the shadow is not drawn. Defaults to zero.
          */
-        @RequiresSchemaVersion(major = 1, minor = 300)
         @NonNull
         public DpProp getBlurRadius() {
             if (mImpl.hasBlurRadius()) {
@@ -2835,7 +2841,6 @@ public final class ModifiersBuilders {
         }
 
         /** Gets the color used in the shadow. Defaults to Black. */
-        @RequiresSchemaVersion(major = 1, minor = 300)
         @NonNull
         public ColorProp getColor() {
             if (mImpl.hasColor()) {

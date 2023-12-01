@@ -46,6 +46,12 @@ class BluetoothAddress(val address: String, @AddressType val addressType: Int) {
         const val ADDRESS_TYPE_UNKNOWN: Int = 0xFFFF
     }
 
+    @Target(
+        AnnotationTarget.PROPERTY,
+        AnnotationTarget.LOCAL_VARIABLE,
+        AnnotationTarget.VALUE_PARAMETER,
+        AnnotationTarget.TYPE
+    )
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @Retention(AnnotationRetention.SOURCE)
     @IntDef(

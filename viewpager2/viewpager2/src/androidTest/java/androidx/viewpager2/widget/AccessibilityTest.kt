@@ -21,7 +21,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.test.filters.LargeTest
-import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import androidx.testutils.LocaleTestUtils
@@ -58,10 +57,8 @@ class AccessibilityTest(private val config: TestConfig) : BaseTest() {
             localeUtil.resetLocale()
             localeUtil.setLocale(LocaleTestUtils.RTL_LANGUAGE)
         }
-        if (Build.VERSION.SDK_INT >= 18) {
-            // Make sure accessibility is enabled (side effect of creating a UI Automator instance)
-            uiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-        }
+        // Make sure accessibility is enabled (side effect of creating a UI Automator instance)
+        uiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
     }
 
     override fun tearDown() {
@@ -71,7 +68,6 @@ class AccessibilityTest(private val config: TestConfig) : BaseTest() {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 16)
     fun test_onPerformPageAction() {
         setUpTest(config.orientation).apply {
             setAdapterSync(viewAdapterProvider.provider(stringSequence(6)))
@@ -102,13 +98,11 @@ class AccessibilityTest(private val config: TestConfig) : BaseTest() {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 19)
     fun test_collectionInfo() {
         test_collectionInfo(6)
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 19)
     fun test_collectionInfo_zeroItems() {
         test_collectionInfo(0)
     }
@@ -139,7 +133,6 @@ class AccessibilityTest(private val config: TestConfig) : BaseTest() {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 19)
     fun test_collectionItemInfo() {
         setUpTest(config.orientation).apply {
             setAdapterSync(viewAdapterProvider.provider(stringSequence(6)))

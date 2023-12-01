@@ -19,9 +19,7 @@ package androidx.compose.foundation.lazy
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.util.fastFirst
 import androidx.compose.ui.util.fastForEach
-import androidx.compose.ui.util.fastLastOrNull
 
 /**
  * The result of the measure pass for lazy list layout.
@@ -79,15 +77,19 @@ internal class LazyListMeasureResult(
      * If true is returned, only the placement phase is needed to apply new offsets.
      * If false is returned, it means we have to rerun the full measure phase to apply the [delta].
      */
-    fun tryToApplyScrollWithoutRemeasure(delta: Int): Boolean {
+    fun tryToApplyScrollWithoutRemeasure(delta: Int, updateAnimations: Boolean): Boolean {
         if (remeasureNeeded || visibleItemsInfo.isEmpty() || firstVisibleItem == null ||
             // applying this delta will change firstVisibleItem
             (firstVisibleItemScrollOffset - delta) !in 0 until firstVisibleItem.sizeWithSpacings
         ) {
             return false
         }
-        val first = visibleItemsInfo.fastFirst { !it.nonScrollableItem }
-        val last = visibleItemsInfo.fastLastOrNull { !it.nonScrollableItem }!!
+        val first = visibleItemsInfo.first()
+        val last = visibleItemsInfo.last()
+        if (first.nonScrollableItem || last.nonScrollableItem) {
+            // non scrollable items like headers require special handling in the measurement.
+            return false
+        }
         val canApply = if (delta < 0) {
             // scrolling forward
             val deltaToFirstItemChange =
@@ -106,7 +108,7 @@ internal class LazyListMeasureResult(
         return if (canApply) {
             firstVisibleItemScrollOffset -= delta
             visibleItemsInfo.fastForEach {
-                it.applyScrollDelta(delta)
+                it.applyScrollDelta(delta, updateAnimations)
             }
             consumedScroll = delta.toFloat()
             if (!canScrollForward && delta > 0) {

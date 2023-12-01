@@ -42,6 +42,7 @@ public final class TriggerBuilders {
      * Creates a {@link Trigger} that fires *every time* the condition switches from false to true.
      * If the condition is true initially, that will fire the trigger on load.
      */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @NonNull
     public static Trigger createOnConditionMetTrigger(@NonNull DynamicBool dynamicBool) {
         return new OnConditionMetTrigger.Builder().setCondition(dynamicBool).build();
@@ -132,7 +133,6 @@ public final class TriggerBuilders {
         }
 
         /** Gets dynamic boolean used as trigger. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public DynamicBool getCondition() {
             if (mImpl.hasCondition()) {

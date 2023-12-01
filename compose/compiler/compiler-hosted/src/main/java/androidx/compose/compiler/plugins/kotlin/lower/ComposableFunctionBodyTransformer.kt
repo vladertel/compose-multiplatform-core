@@ -117,7 +117,6 @@ import org.jetbrains.kotlin.ir.types.getClass
 import org.jetbrains.kotlin.ir.types.isClassWithFqName
 import org.jetbrains.kotlin.ir.types.isMarkedNullable
 import org.jetbrains.kotlin.ir.types.isNothing
-import org.jetbrains.kotlin.ir.types.isNullableNothing
 import org.jetbrains.kotlin.ir.types.isUnit
 import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
@@ -984,7 +983,7 @@ class ComposableFunctionBodyTransformer(
             }
         }
 
-        scope.applyIntrinsicRememberFixups { args, metas ->
+        scope.applyIntrinsicRememberFixups { isMemoizedLambda, args, metas ->
             // replace dirty with changed param in meta used for inference, as we are not
             // populating dirty
             if (!canSkipExecution) {
@@ -994,7 +993,7 @@ class ComposableFunctionBodyTransformer(
                     }
                 }
             }
-            irIntrinsicRememberInvalid(args, metas, ::irInferredChanged)
+            irIntrinsicRememberInvalid(isMemoizedLambda, args, metas, ::irInferredChanged)
         }
 
         if (canSkipExecution) {
@@ -1150,7 +1149,7 @@ class ComposableFunctionBodyTransformer(
             dirty
         } else changedParam
 
-        scope.applyIntrinsicRememberFixups { args, metas ->
+        scope.applyIntrinsicRememberFixups { isMemoizedLambda, args, metas ->
             // replace dirty with changed param in meta used for inference, as we are not
             // populating dirty
             if (!canSkipExecution) {
@@ -1160,7 +1159,7 @@ class ComposableFunctionBodyTransformer(
                     }
                 }
             }
-            irIntrinsicRememberInvalid(args, metas, ::irInferredChanged)
+            irIntrinsicRememberInvalid(isMemoizedLambda, args, metas, ::irInferredChanged)
         }
 
         val transformedBody = if (canSkipExecution) {
@@ -1637,13 +1636,13 @@ class ComposableFunctionBodyTransformer(
                 irCurrentComposer(),
                 irGet(param),
                 inferredStable = true,
-                strongSkippingEnabled = true
+                compareInstanceForUnstableValues = true
             ),
             elsePart = irChanged(
                 irCurrentComposer(),
                 irGet(param),
                 inferredStable = false,
-                strongSkippingEnabled = true
+                compareInstanceForUnstableValues = true
             )
         )
     } else {
@@ -1857,10 +1856,10 @@ class ComposableFunctionBodyTransformer(
                 (expectedTarget == null || expectedTarget == expr.returnTargetSymbol.owner)
             ) {
                 block.statements.pop()
-                return if (expr.value.type.isUnitOrNullableUnit() ||
-                    expr.value.type.isNothing() ||
-                    expr.value.type.isNullableNothing()
-                ) {
+                val valueType = expr.value.type
+                val returnType = (expr.returnTargetSymbol as? IrFunctionSymbol)?.owner?.returnType
+                    ?: valueType
+                return if (returnType.isUnit() || returnType.isNothing() || valueType.isNothing()) {
                     block.statements.add(expr.value)
                     original to null
                 } else {
@@ -2120,11 +2119,14 @@ class ComposableFunctionBodyTransformer(
         return irMethodCall(scope.irCurrentComposer(), endRestartGroupFunction)
     }
 
-    private fun irChanged(value: IrExpression): IrExpression = irChanged(
+    private fun irChanged(
+        value: IrExpression,
+        compareInstanceForUnstableValues: Boolean = strongSkippingEnabled
+    ): IrExpression = irChanged(
         irCurrentComposer(),
         value,
         inferredStable = false,
-        strongSkippingEnabled = strongSkippingEnabled
+        compareInstanceForUnstableValues = compareInstanceForUnstableValues
     )
 
     private fun irSkipToGroupEnd(startOffset: Int, endOffset: Int): IrExpression {
@@ -2779,6 +2781,9 @@ class ComposableFunctionBodyTransformer(
                     expression.transformChildrenVoid()
                 }
                 return if (captureScope.hasCapturedComposableCall) {
+                    // if the inlined lambda has composable calls, realize its coalescable groups
+                    // in the body to ensure that repeated invocations are not colliding.
+                    captureScope.realizeAllDirectChildren()
                     expression.asCoalescableGroup(captureScope)
                 } else {
                     expression
@@ -2807,7 +2812,7 @@ class ComposableFunctionBodyTransformer(
                     visitNormalComposableCall(expression)
                 }
             }
-            ComposeFqNames.key -> visitKeyCall(expression)
+            ComposeFqNames.key,
             DecoyFqNames.key -> visitKeyCall(expression)
             else -> visitNormalComposableCall(expression)
         }
@@ -3034,18 +3039,25 @@ class ComposableFunctionBodyTransformer(
         }
         val usesDirty = inputArgMetas.any { it.maskParam is IrChangedBitMaskVariable }
 
+        val isMemoizedLambda = expression.origin == ComposeMemoizedLambdaOrigin
+
         // We can only rely on the $changed or $dirty if the flags are correctly updated in
         // the restart function or the result of replacing remember with cached will be
         // different.
         val metaMaskConsistent = updateChangedFlagsFunction != null
-        val changedFunction: (IrExpression, ParamMeta) -> IrExpression? =
+        val changedFunction: (Boolean, IrExpression, ParamMeta) -> IrExpression? =
             if (usesDirty || !metaMaskConsistent) {
-                { arg, _ -> irChanged(arg) }
+                { _, arg, _ -> irChanged(arg, compareInstanceForUnstableValues = isMemoizedLambda) }
             } else {
                 ::irInferredChanged
             }
 
-        val invalidExpr = irIntrinsicRememberInvalid(inputArgs, inputArgMetas, changedFunction)
+        val invalidExpr = irIntrinsicRememberInvalid(
+            isMemoizedLambda,
+            inputArgs,
+            inputArgMetas,
+            changedFunction
+        )
         val functionScope = currentFunctionScope
         val cacheCall = irCache(
             irCurrentComposer(),
@@ -3057,6 +3069,7 @@ class ComposableFunctionBodyTransformer(
         )
         if (usesDirty && metaMaskConsistent) {
             functionScope.recordIntrinsicRememberFixUp(
+                isMemoizedLambda,
                 inputArgs,
                 inputArgMetas,
                 cacheCall
@@ -3093,20 +3106,32 @@ class ComposableFunctionBodyTransformer(
                 before = listOf(irStartReplaceableGroup(expression, blockScope)),
                 after = listOf(irEndReplaceableGroup(scope = blockScope))
             )
+        }.also { block ->
+            if (
+                stabilityInferencer.stabilityOf(block.type).knownStable() &&
+                    inputArgMetas.all { it.isStatic }
+            ) {
+                context.irTrace.record(ComposeWritableSlices.IS_STATIC_EXPRESSION, block, true)
+            }
         }
     }
 
     private fun irIntrinsicRememberInvalid(
+        isMemoizedLambda: Boolean,
         args: List<IrExpression>,
         metas: List<ParamMeta>,
-        changedExpr: (IrExpression, ParamMeta) -> IrExpression?
+        changedExpr: (Boolean, IrExpression, ParamMeta) -> IrExpression?
     ): IrExpression =
         args
-            .mapIndexedNotNull { i, arg -> changedExpr(arg, metas[i]) }
+            .mapIndexedNotNull { i, arg -> changedExpr(isMemoizedLambda, arg, metas[i]) }
             .reduceOrNull { acc, changed -> irBooleanOr(acc, changed) }
             ?: irConst(false)
 
-    private fun irInferredChanged(arg: IrExpression, meta: ParamMeta): IrExpression? {
+    private fun irInferredChanged(
+        isMemoizedLambda: Boolean,
+        arg: IrExpression,
+        meta: ParamMeta
+    ): IrExpression? {
         val param = meta.maskParam
         return when {
             meta.isStatic -> null
@@ -3138,7 +3163,7 @@ class ComposableFunctionBodyTransformer(
                 val stableBits = param.irSlotAnd(meta.maskSlot, StabilityBits.UNSTABLE.bits)
                 val maskIsUnstableAndChanged = irAndAnd(
                     irNotEqual(stableBits, irConst(0)),
-                    irChanged(arg)
+                    irChanged(arg, compareInstanceForUnstableValues = isMemoizedLambda)
                 )
                 irOrOr(
                     maskIsStableAndDifferent,
@@ -3167,7 +3192,7 @@ class ComposableFunctionBodyTransformer(
                 irOrOr(
                     irAndAnd(
                         maskIsUnstableOrUncertain,
-                        irChanged(arg)
+                        irChanged(arg, compareInstanceForUnstableValues = isMemoizedLambda)
                     ),
                     irEqual(
                         param.irIsolateBitsAtSlot(meta.maskSlot, includeStableBit = false),
@@ -3175,7 +3200,7 @@ class ComposableFunctionBodyTransformer(
                     )
                 )
             }
-            else -> irChanged(arg)
+            else -> irChanged(arg, compareInstanceForUnstableValues = isMemoizedLambda)
         }
     }
 
@@ -3564,7 +3589,7 @@ class ComposableFunctionBodyTransformer(
             // If a loop contains composable calls but not a otherwise need a group per iteration
             // group, none of the children can be coalesced and must be realized as the second
             // iteration as composable calls at the end might end of overlapping slots with the
-            // start of the loop. See b/205590513 for details.
+            // start of the loop. See b/232007227 for details.
             loopScope.realizeAllDirectChildren()
             loop.asCoalescableGroup(loopScope)
         } else {
@@ -3930,6 +3955,7 @@ class ComposableFunctionBodyTransformer(
             }
 
             private class IntrinsicRememberFixup(
+                val isMemoizedLambda: Boolean,
                 val args: List<IrExpression>,
                 val metas: List<ParamMeta>,
                 val call: IrCall
@@ -3937,13 +3963,16 @@ class ComposableFunctionBodyTransformer(
             private val intrinsicRememberFixups = mutableListOf<IntrinsicRememberFixup>()
 
             fun recordIntrinsicRememberFixUp(
+                isMemoizedLambda: Boolean,
                 args: List<IrExpression>,
                 metas: List<ParamMeta>,
                 call: IrCall
             ) {
                 val dirty = metas.find { it.maskParam is IrChangedBitMaskVariable }
                 if (dirty?.maskParam == this.dirty) {
-                    intrinsicRememberFixups.add(IntrinsicRememberFixup(args, metas, call))
+                    intrinsicRememberFixups.add(
+                        IntrinsicRememberFixup(isMemoizedLambda, args, metas, call)
+                    )
                 } else {
                     // capturing dirty is only allowed from inline function context, which doesn't
                     // have dirty params.
@@ -3951,15 +3980,19 @@ class ComposableFunctionBodyTransformer(
                     // means that we should apply the fixup higher in the tree.
                     var scope = parent
                     while (scope !is FunctionScope) scope = scope!!.parent
-                    scope.recordIntrinsicRememberFixUp(args, metas, call)
+                    scope.recordIntrinsicRememberFixUp(isMemoizedLambda, args, metas, call)
                 }
             }
 
             fun applyIntrinsicRememberFixups(
-                invalidExpr: (List<IrExpression>, List<ParamMeta>) -> IrExpression
+                invalidExpr: (
+                    isMemoizedLambda: Boolean,
+                    List<IrExpression>,
+                    List<ParamMeta>
+                ) -> IrExpression
             ) {
                 intrinsicRememberFixups.forEach {
-                    val invalid = invalidExpr(it.args, it.metas)
+                    val invalid = invalidExpr(it.isMemoizedLambda, it.args, it.metas)
                     // $composer.cache(invalid, calc)
                     it.call.putValueArgument(0, invalid)
                 }

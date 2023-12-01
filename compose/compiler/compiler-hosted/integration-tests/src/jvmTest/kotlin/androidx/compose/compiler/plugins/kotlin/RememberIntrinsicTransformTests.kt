@@ -737,6 +737,54 @@ class RememberIntrinsicTransformTests(useFir: Boolean) : AbstractIrTransformTest
                 @Composable fun Wrapper(block: @Composable () -> Unit) {}
             """,
     )
+
+    @Test
+    fun testRememberExpressionMeta() = verifyGoldenComposeIrTransform(
+        source = """
+            import androidx.compose.runtime.*
+
+            @Composable fun Test(param: String) {
+                val a = remember { param }
+                Test(a)
+            }
+        """,
+    )
+
+    @Test
+    fun testMemoizationWStableCapture() = verifyGoldenComposeIrTransform(
+        source = """
+            import androidx.compose.runtime.*
+
+            @Composable fun Test(param: String, unstable: List<*>) {
+                Wrapper {
+                    println(param)
+                }
+            }
+        """,
+        extra = """
+                import androidx.compose.runtime.*
+
+                @Composable fun Wrapper(block: () -> Unit) {}
+            """,
+    )
+
+    @Test
+    fun testMemoizationWUnstableCapture() = verifyGoldenComposeIrTransform(
+        source = """
+            import androidx.compose.runtime.*
+
+            @Composable fun Test(param: String, unstable: List<*>) {
+                Wrapper {
+                    println(unstable)
+                }
+            }
+        """,
+        extra = """
+                import androidx.compose.runtime.*
+
+                @Composable fun Wrapper(block: () -> Unit) {}
+            """,
+    )
 }
 
 class RememberIntrinsicTransformTestsStrongSkipping(
@@ -782,5 +830,18 @@ class RememberIntrinsicTransformTestsStrongSkipping(
 
                 @Composable fun Wrapper(block: () -> Unit) {}
             """,
+    )
+
+    @Test
+    fun testRememberWithUnstableParam() = verifyGoldenComposeIrTransform(
+        source = """
+            import androidx.compose.runtime.*
+
+            @Composable fun Test(param: String, unstable: List<*>) {
+                remember(unstable) {
+                    unstable[0]
+                }
+            }
+        """,
     )
 }

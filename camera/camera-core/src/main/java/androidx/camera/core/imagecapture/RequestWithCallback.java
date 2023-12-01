@@ -21,6 +21,7 @@ import static androidx.core.util.Preconditions.checkState;
 
 import static java.util.Objects.requireNonNull;
 
+import android.graphics.Bitmap;
 import android.os.Build;
 
 import androidx.annotation.MainThread;
@@ -143,12 +144,34 @@ class RequestWithCallback implements TakePictureCallback {
     public void onFinalResult(@NonNull ImageProxy imageProxy) {
         checkMainThread();
         if (mIsAborted) {
+            imageProxy.close();
             // Do not deliver result if the request has been aborted.
             return;
         }
         checkOnImageCaptured();
         markComplete();
         mTakePictureRequest.onResult(imageProxy);
+    }
+
+    @Override
+    public void onCaptureProcessProgressed(int progress) {
+        checkMainThread();
+        if (mIsAborted) {
+            return;
+        }
+
+        mTakePictureRequest.onCaptureProcessProgressed(progress);
+    }
+
+    @Override
+    public void onPostviewBitmapAvailable(@NonNull Bitmap bitmap) {
+        checkMainThread();
+        if (mIsAborted) {
+            // Do not deliver result if the request has been aborted.
+            return;
+        }
+
+        mTakePictureRequest.onPostviewBitmapAvailable(bitmap);
     }
 
     @MainThread

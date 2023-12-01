@@ -78,12 +78,28 @@ internal class FocusTargetNode :
      * Clears focus if this focus target has it.
      */
     override fun onReset() {
+        //  Note: onReset() is called after onEndApplyChanges, so we can't schedule any nodes for
+        //  invalidation here. If we do, they will be run on the next onEndApplyChanges.
         when (focusState) {
             // Clear focus from the current FocusTarget.
             // This currently clears focus from the entire hierarchy, but we can change the
             // implementation so that focus is sent to the immediate focus parent.
-            Active, Captured -> requireOwner().focusOwner.clearFocus(force = true)
-            ActiveParent, Inactive -> scheduleInvalidationForFocusEvents()
+            Active, Captured -> {
+                requireOwner().focusOwner.clearFocus(
+                    force = true,
+                    refreshFocusEvents = true,
+                    clearOwnerFocus = false
+                )
+                // We don't clear the owner's focus yet, because this could trigger an initial
+                // focus scenario after the focus is cleared. Instead, we schedule invalidation
+                // after onApplyChanges. The FocusInvalidationManager contains the invalidation
+                // logic and calls clearFocus() on the owner after all the nodes in the hierarchy
+                // are invalidated.
+                invalidateFocusTarget()
+            }
+            // This node might be reused, so reset the state to Inactive.
+            ActiveParent -> requireTransactionManager().withNewTransaction { focusState = Inactive }
+            Inactive -> {}
         }
         // This node might be reused, so we reset its state.
         committedFocusState = null
@@ -185,16 +201,14 @@ internal class FocusTargetNode :
     }
 
     internal fun scheduleInvalidationForFocusEvents() {
-        // include possibility for ourselves to also be a focus event modifier node in case
-        // we are being delegated to
-        node.dispatchForKind(Nodes.FocusEvent) { eventNode ->
-            eventNode.invalidateFocusEvent()
-        }
         // Since this is potentially called while _this_ node is getting detached, it is possible
         // that the nodes above us are already detached, thus, we check for isAttached here.
         // We should investigate changing the order that children.detach() is called relative to
         // actually nulling out / detaching ones self.
-        visitAncestors(Nodes.FocusEvent or Nodes.FocusTarget) {
+        visitAncestors(
+            mask = Nodes.FocusEvent or Nodes.FocusTarget,
+            includeSelf = true
+        ) {
             if (it.isKind(Nodes.FocusTarget)) return@visitAncestors
 
             if (it.isAttached) {
