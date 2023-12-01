@@ -59,8 +59,8 @@ import static java.util.Objects.requireNonNull;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
-import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.location.Location;
 import android.media.Image;
@@ -112,10 +112,11 @@ import androidx.camera.core.impl.StreamSpec;
 import androidx.camera.core.impl.UseCaseConfig;
 import androidx.camera.core.impl.UseCaseConfigFactory;
 import androidx.camera.core.impl.utils.CameraOrientationUtil;
-import androidx.camera.core.impl.utils.Exif;
+import androidx.camera.core.impl.utils.CompareSizesByArea;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.camera.core.internal.IoConfig;
+import androidx.camera.core.internal.SupportedOutputSizesSorter;
 import androidx.camera.core.internal.TargetConfig;
 import androidx.camera.core.internal.compat.quirk.SoftwareJpegEncodingPreferredQuirk;
 import androidx.camera.core.internal.compat.workaround.ExifRotationAvailability;
@@ -128,21 +129,18 @@ import androidx.lifecycle.LifecycleOwner;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -886,7 +884,6 @@ public final class ImageCapture extends UseCase {
      *
      * @return {@link ImageCaptureCapabilities}
      */
-    @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
     public static ImageCaptureCapabilities getImageCaptureCapabilities(
             @NonNull CameraInfo cameraInfo) {
@@ -1092,6 +1089,12 @@ public final class ImageCapture extends UseCase {
         }
     }
 
+    @Nullable
+    private SessionProcessor getSessionProcessor() {
+        CameraConfig cameraConfig = getCamera().getExtendedConfig();
+        return cameraConfig.getSessionProcessor(null);
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -1167,7 +1170,58 @@ public final class ImageCapture extends UseCase {
             // SessionConfig error callback and recreate children pipeline.
             mImagePipeline.close();
         }
-        mImagePipeline = new ImagePipeline(config, resolution, getEffect(), isVirtualCamera);
+
+        boolean isPostviewEnabled =
+                getCurrentConfig().retrieveOption(OPTION_POSTVIEW_ENABLED, false);
+        Size postViewSize = null;
+        int postviewFormat = ImageFormat.YUV_420_888;
+
+        if (isPostviewEnabled) {
+            SessionProcessor sessionProcessor = getSessionProcessor();
+            if (sessionProcessor != null) {
+                ResolutionSelector postviewSizeSelector =
+                        getCurrentConfig().retrieveOption(OPTION_POSTVIEW_RESOLUTION_SELECTOR,
+                                null);
+                Map<Integer, List<Size>> map =
+                        sessionProcessor.getSupportedPostviewSize(resolution);
+                // Prefer YUV because it takes less time to decode to bitmap.
+                List<Size> sizes = map.get(ImageFormat.YUV_420_888);
+                if (sizes == null || sizes.isEmpty()) {
+                    sizes = map.get(ImageFormat.JPEG);
+                    postviewFormat = ImageFormat.JPEG;
+                }
+
+                if (sizes != null && !sizes.isEmpty()) {
+                    if (postviewSizeSelector != null) {
+                        Collections.sort(sizes, new CompareSizesByArea(true));
+                        CameraInternal camera = getCamera();
+                        Rect sensorRect = camera.getCameraControlInternal().getSensorRect();
+                        CameraInfoInternal cameraInfo = camera.getCameraInfoInternal();
+                        Rational fullFov = new Rational(sensorRect.width(), sensorRect.height());
+                        List<Size> result =
+                                SupportedOutputSizesSorter
+                                        .sortSupportedOutputSizesByResolutionSelector(
+                                                postviewSizeSelector,
+                                                sizes,
+                                                null,
+                                                getTargetRotation(),
+                                                fullFov,
+                                                cameraInfo.getSensorRotationDegrees(),
+                                                cameraInfo.getLensFacing());
+                        if (result.isEmpty()) {
+                            throw new IllegalArgumentException("The postview ResolutionSelector "
+                                    + "cannot select a valid size for the postview.");
+                        }
+                        postViewSize = result.get(0);
+                    } else {
+                        postViewSize = Collections.max(sizes, new CompareSizesByArea());
+                    }
+                }
+            }
+        }
+
+        mImagePipeline = new ImagePipeline(config, resolution, getEffect(), isVirtualCamera,
+                postViewSize, postviewFormat);
 
         if (mTakePictureManager == null) {
             // mTakePictureManager is reused when the Surface is reset.
@@ -1372,6 +1426,26 @@ public final class ImageCapture extends UseCase {
     }
 
     /**
+     * Returns if postview is enabled or not.
+     *
+     * @see Builder#setPostviewEnabled(boolean)
+     */
+    public boolean isPostviewEnabled() {
+        return getCurrentConfig().retrieveOption(OPTION_POSTVIEW_ENABLED, false);
+    }
+
+    /**
+     * Returns the {@link ResolutionSelector} used to select the postview size.
+     *
+     * @see Builder#setPostviewResolutionSelector(ResolutionSelector)
+     */
+    @Nullable
+    public ResolutionSelector getPostviewResolutionSelector() {
+        return getCurrentConfig().retrieveOption(OPTION_POSTVIEW_RESOLUTION_SELECTOR,
+                null);
+    }
+
+    /**
      * Describes the error that occurred during an image capture operation (such as {@link
      * ImageCapture#takePicture(Executor, OnImageCapturedCallback)}).
      *
@@ -1449,6 +1523,45 @@ public final class ImageCapture extends UseCase {
          *                  error message and the throwable that caused it.
          */
         void onError(@NonNull ImageCaptureException exception);
+
+        /**
+         * Callback to report the progress of the capture's processing.
+         *
+         * <p>To know in advanced if this callback will be invoked or not, check the
+         * capabilities by {@link #getImageCaptureCapabilities(CameraInfo)} and
+         * {@link ImageCaptureCapabilities#isCaptureProcessProgressSupported()}. If supported,
+         * this callback will be called multiple times with monotonically increasing
+         * values. At the minimum the callback will be called once with value 100 to
+         * indicate the processing is finished. This callback will always be called before
+         * {@link #onImageSaved(OutputFileResults)}.
+         *
+         * @param progress the progress ranging from 0 to 100.
+         */
+        default void onCaptureProcessProgressed(int progress) {
+        }
+
+        /**
+         * Callback to notify that the postview bitmap is available. The postview is intended to be
+         * shown on UI before the long-processing capture is completed in order to provide a
+         * better UX.
+         *
+         * <p>The postview is only available when the
+         * {@link ImageCaptureCapabilities#isPostviewSupported()} returns true for the specified
+         * {@link CameraInfo} and applications must explicitly enable the postview using the
+         * {@link Builder#setPostviewEnabled(boolean)}. This callback will be called before
+         * {@link #onImageSaved(OutputFileResults)}. But if something goes wrong when processing
+         * the postview, this callback method could be skipped.
+         *
+         * <p>The bitmap is rotated according to the target rotation set to the {@link ImageCapture}
+         * to make it upright. If target rotation is not set, the display rotation is used.
+         *
+         * <p>See also {@link ImageCapture.Builder#setTargetRotation(int)} and
+         * {@link #setTargetRotation(int)}.
+         *
+         * @param bitmap the postview bitmap.
+         */
+        default void onPostviewBitmapAvailable(@NonNull Bitmap bitmap) {
+        }
     }
 
     /**
@@ -1508,6 +1621,46 @@ public final class ImageCapture extends UseCase {
          *                  error message and the throwable that caused it.
          */
         public void onError(@NonNull final ImageCaptureException exception) {
+        }
+
+        /**
+         * Callback to report the progress of the capture's processing.
+         *
+         * <p>To know in advanced if this callback will be invoked or not, check the
+         * capabilities by {@link #getImageCaptureCapabilities(CameraInfo)} and
+         * {@link ImageCaptureCapabilities#isCaptureProcessProgressSupported()}. If supported,
+         * this callback will be called multiple times with monotonically increasing
+         * values. At the minimum the callback will be called once with value 100 to
+         * indicate the processing is finished. This callback will always be called before
+         * {@link #onCaptureSuccess(ImageProxy)}.
+         *
+         * @param progress the progress ranging from 0 to 100.
+         */
+        public void onCaptureProcessProgressed(int progress) {
+        }
+
+        /**
+         * Callback to notify that the postview bitmap is available. The postview is intended to be
+         * shown on UI before the long-processing capture is completed in order to provide a
+         * better UX.
+         *
+         * <p>The postview is only available when the
+         * {@link ImageCaptureCapabilities#isPostviewSupported()} returns true for the specified
+         * {@link CameraInfo} and applications must explicitly enable the postview using the
+         * {@link Builder#setPostviewEnabled(boolean)}. This callback will be called before
+         * {@link #onCaptureSuccess(ImageProxy)}. But if something goes wrong when processing the
+         * postview, this callback method could be skipped.
+         *
+         * <p>The bitmap is rotated according to the target rotation set to the {@link ImageCapture}
+         * to make it upright. If target rotation is not set, the display rotation is used.
+         *
+         * <p>See also {@link ImageCapture.Builder#setTargetRotation(int)} and
+         * {@link #setTargetRotation(int)}.
+         *
+         * @param bitmap the postview bitmap.
+
+         */
+        public void onPostviewBitmapAvailable(@NonNull Bitmap bitmap) {
         }
     }
 
@@ -1939,145 +2092,6 @@ public final class ImageCapture extends UseCase {
                     + "mIsReversedVertical=" + mIsReversedVertical + ", "
                     + "mLocation=" + mLocation
                     + "}";
-        }
-    }
-
-    @VisibleForTesting
-    static class ImageCaptureRequest {
-        @RotationValue
-        final int mRotationDegrees;
-        @IntRange(from = 1, to = 100)
-        final int mJpegQuality;
-
-        private final Rational mTargetRatio;
-        @NonNull
-        private final Executor mListenerExecutor;
-        @NonNull
-        private final OnImageCapturedCallback mCallback;
-
-        AtomicBoolean mDispatched = new AtomicBoolean(false);
-
-        private final Rect mViewPortCropRect;
-
-        @NonNull
-        private final Matrix mSensorToBufferTransformMatrix;
-
-        /**
-         * @param rotationDegrees               The degrees to rotate the image buffer from sensor
-         *                                      coordinates into the final output coordinate space.
-         * @param jpegQuality                   The requested output JPEG image compression
-         *                                      quality. The value must
-         *                                      be in range [1..100] which larger is higher quality.
-         * @param targetRatio                   The aspect ratio of the image in final output
-         *                                      coordinate space.
-         *                                      This must be a non-negative, non-zero value.
-         * @param viewPortCropRect              The cropped rect of the field of view.
-         * @param sensorToBufferTransformMatrix The sensor to buffer transform matrix.
-         * @param executor                      The {@link Executor} which will be used for the
-         *                                      listener.
-         * @param callback                      The {@link OnImageCapturedCallback} for the quest.
-         * @throws IllegalArgumentException If targetRatio is not a valid value.
-         */
-        ImageCaptureRequest(
-                @RotationValue int rotationDegrees,
-                @IntRange(from = 1, to = 100) int jpegQuality,
-                Rational targetRatio,
-                @Nullable Rect viewPortCropRect,
-                @NonNull Matrix sensorToBufferTransformMatrix,
-                @NonNull Executor executor,
-                @NonNull OnImageCapturedCallback callback) {
-            mRotationDegrees = rotationDegrees;
-            mJpegQuality = jpegQuality;
-            if (targetRatio != null) {
-                Preconditions.checkArgument(!targetRatio.isZero(), "Target ratio cannot be zero");
-                Preconditions.checkArgument(targetRatio.floatValue() > 0, "Target ratio must be "
-                        + "positive");
-            }
-            mTargetRatio = targetRatio;
-            mViewPortCropRect = viewPortCropRect;
-            mSensorToBufferTransformMatrix = sensorToBufferTransformMatrix;
-            mListenerExecutor = executor;
-            mCallback = callback;
-        }
-
-        void dispatchImage(final ImageProxy image) {
-            // Check to make sure image hasn't been already dispatched or error has been notified
-            if (!mDispatched.compareAndSet(false, true)) {
-                image.close();
-                return;
-            }
-
-            Size dispatchResolution;
-            int dispatchRotationDegrees;
-
-            // Retrieve the dimension and rotation values from the embedded EXIF data in the
-            // captured image only if those information is available.
-            if (EXIF_ROTATION_AVAILABILITY.shouldUseExifOrientation(image)) {
-                // JPEG needs to have rotation/crop based on the EXIF
-                try {
-                    ImageProxy.PlaneProxy[] planes = image.getPlanes();
-                    ByteBuffer buffer = planes[0].getBuffer();
-                    Exif exif;
-
-                    buffer.rewind();
-
-                    byte[] data = new byte[buffer.capacity()];
-                    buffer.get(data);
-                    exif = Exif.createFromInputStream(new ByteArrayInputStream(data));
-                    buffer.rewind();
-
-                    dispatchResolution = new Size(exif.getWidth(), exif.getHeight());
-                    dispatchRotationDegrees = exif.getRotation();
-                } catch (IOException e) {
-                    notifyCallbackError(ERROR_FILE_IO, "Unable to parse JPEG exif", e);
-                    image.close();
-                    return;
-                }
-            } else {
-                // All other formats take the rotation based simply on the target rotation
-                dispatchResolution = new Size(image.getWidth(), image.getHeight());
-                dispatchRotationDegrees = mRotationDegrees;
-            }
-
-            // Construct the ImageProxy with the updated rotation & crop for the output
-            ImageInfo imageInfo = ImmutableImageInfo.create(
-                    image.getImageInfo().getTagBundle(),
-                    image.getImageInfo().getTimestamp(),
-                    dispatchRotationDegrees,
-                    mSensorToBufferTransformMatrix);
-
-            final ImageProxy dispatchedImageProxy = new SettableImageProxy(image,
-                    dispatchResolution, imageInfo);
-
-            // Update the crop rect aspect ratio after it has been rotated into the buffer
-            // orientation
-            Rect cropRect = computeDispatchCropRect(mViewPortCropRect, mTargetRatio,
-                    mRotationDegrees, dispatchResolution, dispatchRotationDegrees);
-            dispatchedImageProxy.setCropRect(cropRect);
-
-            try {
-                mListenerExecutor.execute(() -> mCallback.onCaptureSuccess(dispatchedImageProxy));
-            } catch (RejectedExecutionException e) {
-                Logger.e(TAG, "Unable to post to the supplied executor.");
-
-                // Unable to execute on the supplied executor, close the image.
-                image.close();
-            }
-        }
-
-        void notifyCallbackError(final @ImageCaptureError int imageCaptureError,
-                final String message, final Throwable cause) {
-            // Check to make sure image hasn't been already dispatched or error has been notified
-            if (!mDispatched.compareAndSet(false, true)) {
-                return;
-            }
-
-            try {
-                mListenerExecutor.execute(() -> mCallback.onError(
-                        new ImageCaptureException(imageCaptureError, message, cause)));
-            } catch (RejectedExecutionException e) {
-                Logger.e(TAG, "Unable to post to the supplied executor.");
-            }
         }
     }
 
@@ -2530,22 +2544,27 @@ public final class ImageCapture extends UseCase {
         }
 
         /**
-         * Enables the postview which allows you to get the unprocessed image before the processing
-          * is done during the <code>takePicture</code> call.
+         * Enables postview image generation. A postview image is a low-quality image
+         * that's produced earlier during image capture than the final high-quality image,
+         * and can be used as a thumbnail or placeholder until the final image is ready.
          *
-         * <p>By default the largest available postview size that are smaller or equal to the
+         * <p>When the postview is available,
+         * {@link OnImageCapturedCallback#onPostviewBitmapAvailable(Bitmap)} or
+         * {@link OnImageSavedCallback#onPostviewBitmapAvailable(Bitmap)} will be called.
+         *
+         * <p>By default the largest available postview size that is smaller or equal to the
          * ImagaeCapture size will be used to configure the postview. The {@link ResolutionSelector}
          * can also be used to select a specific size via
          * {@link #setPostviewResolutionSelector(ResolutionSelector)}.
          *
-         * <p>It is recommended to query the capture capability via
-         * {@link #getImageCaptureCapabilities(CameraInfo)} before enabling this feature to avoid
-         * unnecessary initializations.
+         * <p>You can query the postview capability by invoking
+         * {@link #getImageCaptureCapabilities(CameraInfo)}. If
+         * {@link ImageCaptureCapabilities#isPostviewSupported()} returns false and you still
+         * enable the postview, the postview image won't be generated.
          *
          * @param postviewEnabled whether postview is enabled or not
          * @return the current Builder.
          */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public Builder setPostviewEnabled(boolean postviewEnabled) {
             getMutableConfig().insertOption(OPTION_POSTVIEW_ENABLED,
@@ -2555,15 +2574,17 @@ public final class ImageCapture extends UseCase {
 
         /**
          * Set the {@link ResolutionSelector} to select the postview size from the available
-         * postview sizes. Please note the selected size will be smaller or equal to the
-         * ImageCapture size.
+         * postview sizes. These available postview sizes are smaller or equal to the
+         * ImageCapture size. You can implement the
+         * {@link androidx.camera.core.resolutionselector.ResolutionFilter} and set it to the
+         * {@link ResolutionSelector} to get the list of available sizes and determine which size
+         * to use.
          *
          * <p>If no sizes can be selected using the given {@link ResolutionSelector}, it will throw
          * an {@link IllegalArgumentException} when {@code bindToLifecycle()} is invoked.
          *
          * @return the current Builder.
          */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         public Builder setPostviewResolutionSelector(
                 @NonNull ResolutionSelector resolutionSelector) {

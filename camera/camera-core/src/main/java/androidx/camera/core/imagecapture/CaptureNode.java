@@ -86,6 +86,10 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
 
     @Nullable
     SafeCloseImageReaderProxy mSafeCloseImageReaderProxy;
+
+    @Nullable
+    SafeCloseImageReaderProxy mSafeCloseImageReaderForPostview;
+
     @Nullable
     private Out mOutputEdge;
     @Nullable
@@ -104,27 +108,38 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
         Consumer<ProcessingRequest> requestConsumer;
         ImageReaderProxy wrappedImageReader;
         boolean hasMetadata = !inputEdge.isVirtualCamera();
+        CameraCaptureCallback progressCallback = new CameraCaptureCallback() {
+            @Override
+            public void onCaptureStarted() {
+                mainThreadExecutor().execute(() -> {
+                    if (mCurrentRequest != null) {
+                        mCurrentRequest.onCaptureStarted();
+                    }
+                });
+            }
+
+            @Override
+            public void onCaptureProcessProgressed(int progress) {
+                mainThreadExecutor().execute(() -> {
+                    if (mCurrentRequest != null) {
+                        mCurrentRequest.onCaptureProcessProgressed(progress);
+                    }
+                });
+            }
+        };
+        CameraCaptureCallback cameraCaptureCallbacks;
         if (hasMetadata && inputEdge.getImageReaderProxyProvider() == null) {
-            CameraCaptureCallback progressCallback = new CameraCaptureCallback() {
-                @Override
-                public void onCaptureStarted() {
-                    mainThreadExecutor().execute(() -> {
-                        if (mCurrentRequest != null) {
-                            mCurrentRequest.onCaptureStarted();
-                        }
-                    });
-                }
-            };
+
             // Use MetadataImageReader if the input edge expects metadata.
             MetadataImageReader metadataImageReader = new MetadataImageReader(size.getWidth(),
                     size.getHeight(), format, MAX_IMAGES);
-            CameraCaptureCallback cameraCaptureCallbacks =
+            cameraCaptureCallbacks =
                     CameraCaptureCallbacks.createComboCallback(
                             progressCallback, metadataImageReader.getCameraCaptureCallback());
-            inputEdge.setCameraCaptureCallback(cameraCaptureCallbacks);
             wrappedImageReader = metadataImageReader;
             requestConsumer = this::onRequestAvailable;
         } else {
+            cameraCaptureCallbacks = progressCallback;
             // Use NoMetadataImageReader if the input edge does not expect metadata.
             NoMetadataImageReader noMetadataImageReader = new NoMetadataImageReader(
                     createImageReaderProxy(inputEdge.getImageReaderProxyProvider(),
@@ -136,6 +151,7 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
                 noMetadataImageReader.acceptProcessingRequest(request);
             };
         }
+        inputEdge.setCameraCaptureCallback(cameraCaptureCallbacks);
         inputEdge.setSurface(requireNonNull(wrappedImageReader.getSurface()));
         mSafeCloseImageReaderProxy = new SafeCloseImageReaderProxy(wrappedImageReader);
 
@@ -154,6 +170,31 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
                         + "acquire latest image", e));
             }
         }, mainThreadExecutor());
+
+        // Postview
+        if (inputEdge.getPostviewSize() != null) {
+            ImageReaderProxy postviewImageReader =
+                    createImageReaderProxy(inputEdge.getImageReaderProxyProvider(),
+                            inputEdge.getPostviewSize().getWidth(),
+                            inputEdge.getPostviewSize().getHeight(),
+                            inputEdge.getPostviewImageFormat());
+            postviewImageReader.setOnImageAvailableListener(imageReader -> {
+                try {
+                    ImageProxy image = imageReader.acquireLatestImage();
+                    if (image != null) {
+                        propagatePostviewImage(image);
+                    }
+                } catch (IllegalStateException e) {
+                    Logger.e(TAG, "Failed to acquire latest image of postview", e);
+                }
+            }, mainThreadExecutor());
+
+            mSafeCloseImageReaderForPostview = new SafeCloseImageReaderProxy(postviewImageReader);
+            inputEdge.setPostviewSurface(
+                    postviewImageReader.getSurface(),
+                    inputEdge.getPostviewSize(), inputEdge.getPostviewImageFormat());
+        }
+
         inputEdge.getRequestEdge().setListener(requestConsumer);
         inputEdge.getErrorEdge().setListener(this::sendCaptureError);
 
@@ -204,6 +245,10 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
         }
     }
 
+    private void propagatePostviewImage(@NonNull ImageProxy imageProxy) {
+        requireNonNull(mOutputEdge).getPostviewImageEdge().accept(imageProxy);
+    }
+
     @VisibleForTesting
     @MainThread
     void onRequestAvailable(@NonNull ProcessingRequest request) {
@@ -250,16 +295,23 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
     public void release() {
         checkMainThread();
         releaseInputResources(requireNonNull(mInputEdge),
-                requireNonNull(mSafeCloseImageReaderProxy));
+                requireNonNull(mSafeCloseImageReaderProxy),
+                mSafeCloseImageReaderForPostview);
+
     }
 
     private void releaseInputResources(@NonNull CaptureNode.In inputEdge,
-            @NonNull SafeCloseImageReaderProxy imageReader) {
+            @NonNull SafeCloseImageReaderProxy imageReader,
+            @Nullable SafeCloseImageReaderProxy imageReaderForPostview) {
         inputEdge.getSurface().close();
         // Wait for the termination to close the ImageReader or the Surface may be released
         // prematurely before it can be used by camera2.
-        inputEdge.getSurface().getTerminationFuture().addListener(
-                imageReader::safeClose, mainThreadExecutor());
+        inputEdge.getSurface().getTerminationFuture().addListener(() -> {
+            imageReader.safeClose();
+            if (imageReaderForPostview != null) {
+                imageReaderForPostview.safeClose();
+            }
+        }, mainThreadExecutor());
     }
 
     @VisibleForTesting
@@ -303,6 +355,9 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
         @Nullable
         private DeferrableSurface mSurface;
 
+        @Nullable
+        private DeferrableSurface mPostviewSurface = null;
+
         /**
          * Size of the {@link ImageReader} buffer.
          */
@@ -333,6 +388,17 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
         abstract ImageReaderProxyProvider getImageReaderProxyProvider();
 
         /**
+         * The size of the postview. Postview is configured if not null.
+         */
+        @Nullable
+        abstract Size getPostviewSize();
+
+        /**
+         * The image format of the postview.
+         */
+        abstract int getPostviewImageFormat();
+
+        /**
          * Edge that accepts {@link ProcessingRequest}.
          */
         @NonNull
@@ -354,9 +420,22 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
             return requireNonNull(mSurface);
         }
 
+        /**
+         * Edge that accepts the postview image frame.
+         */
+        @Nullable
+        DeferrableSurface getPostviewSurface() {
+            return mPostviewSurface;
+        }
+
+
         void setSurface(@NonNull Surface surface) {
             checkState(mSurface == null, "The surface is already set.");
             mSurface = new ImmediateSurface(surface, getSize(), getInputFormat());
+        }
+
+        void setPostviewSurface(@NonNull Surface surface, @NonNull Size size, int imageFormat) {
+            mPostviewSurface = new ImmediateSurface(surface, size, imageFormat);
         }
 
         /**
@@ -377,7 +456,17 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
         static In of(Size size, int inputFormat, int outputFormat, boolean isVirtualCamera,
                 @Nullable ImageReaderProxyProvider imageReaderProxyProvider) {
             return new AutoValue_CaptureNode_In(size, inputFormat, outputFormat, isVirtualCamera,
-                    imageReaderProxyProvider, new Edge<>(), new Edge<>());
+                    imageReaderProxyProvider, null, ImageFormat.YUV_420_888,
+                    new Edge<>(), new Edge<>());
+        }
+
+        @NonNull
+        static In of(Size size, int inputFormat, int outputFormat, boolean isVirtualCamera,
+                @Nullable ImageReaderProxyProvider imageReaderProxyProvider,
+                @Nullable Size postviewSize, int postviewImageFormat) {
+            return new AutoValue_CaptureNode_In(size, inputFormat, outputFormat, isVirtualCamera,
+                    imageReaderProxyProvider, postviewSize, postviewImageFormat,
+                    new Edge<>(), new Edge<>());
         }
     }
 
@@ -393,6 +482,13 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
          * <p>The frames will be closed by downstream nodes.
          */
         abstract Edge<ImageProxy> getImageEdge();
+
+        /**
+         * Edge that omits {@link ImageProxy}s for the postview.
+         *
+         * <p>The frames will be closed by downstream nodes.
+         */
+        abstract Edge<ImageProxy> getPostviewImageEdge();
 
         /**
          * Edge that omits {@link ProcessingRequest}.
@@ -413,8 +509,8 @@ class CaptureNode implements Node<CaptureNode.In, CaptureNode.Out> {
         abstract int getOutputFormat();
 
         static Out of(int inputFormat, int outputFormat) {
-            return new AutoValue_CaptureNode_Out(new Edge<>(), new Edge<>(), inputFormat,
-                    outputFormat);
+            return new AutoValue_CaptureNode_Out(new Edge<>(), new Edge<>(), new Edge<>(),
+                    inputFormat, outputFormat);
         }
     }
 }

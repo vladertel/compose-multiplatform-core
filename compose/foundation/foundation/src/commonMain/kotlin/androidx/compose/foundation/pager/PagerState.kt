@@ -24,7 +24,7 @@ import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.ScrollableState
-import androidx.compose.foundation.gestures.snapping.SnapPositionInLayout
+import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.layout.AwaitFirstLayoutModifier
@@ -76,8 +76,8 @@ fun rememberPagerState(
     initialPageOffsetFraction: Float = 0f,
     pageCount: () -> Int
 ): PagerState {
-    return rememberSaveable(saver = PagerStateImpl.Saver) {
-        PagerStateImpl(
+    return rememberSaveable(saver = DefaultPagerState.Saver) {
+        DefaultPagerState(
             initialPage,
             initialPageOffsetFraction,
             pageCount
@@ -87,12 +87,31 @@ fun rememberPagerState(
     }
 }
 
+/**
+ * Creates a default [PagerState] to be used with a [Pager]
+ *
+ * Please refer to the sample to learn how to use this API.
+ * @sample androidx.compose.foundation.samples.PagerWithStateSample
+ *
+ * @param currentPage The pager that should be shown first.
+ * @param currentPageOffsetFraction The offset of the initial page as a fraction of the page size.
+ * This should vary between -0.5 and 0.5 and indicates how to offset the initial page from the
+ * snapped position.
+ * @param pageCount The amount of pages this Pager will have.
+ */
 @ExperimentalFoundationApi
-internal class PagerStateImpl(
-    initialPage: Int,
-    initialPageOffsetFraction: Float,
+fun PagerState(
+    currentPage: Int = 0,
+    currentPageOffsetFraction: Float = 0f,
+    pageCount: () -> Int
+): PagerState = DefaultPagerState(currentPage, currentPageOffsetFraction, pageCount)
+
+@ExperimentalFoundationApi
+private class DefaultPagerState(
+    currentPage: Int,
+    currentPageOffsetFraction: Float,
     updatedPageCount: () -> Int
-) : PagerState(initialPage, initialPageOffsetFraction) {
+) : PagerState(currentPage, currentPageOffsetFraction) {
 
     var pageCountState = mutableStateOf(updatedPageCount)
     override val pageCount: Int get() = pageCountState.value.invoke()
@@ -101,7 +120,7 @@ internal class PagerStateImpl(
         /**
          * To keep current page and current page offset saved
          */
-        val Saver: Saver<PagerStateImpl, *> = listSaver(
+        val Saver: Saver<DefaultPagerState, *> = listSaver(
             save = {
                 listOf(
                     it.currentPage,
@@ -110,9 +129,9 @@ internal class PagerStateImpl(
                 )
             },
             restore = {
-                PagerStateImpl(
-                    initialPage = it[0] as Int,
-                    initialPageOffsetFraction = it[1] as Float,
+                DefaultPagerState(
+                    currentPage = it[0] as Int,
+                    currentPageOffsetFraction = it[1] as Float,
                     updatedPageCount = { it[2] as Int }
                 )
             }
@@ -141,7 +160,7 @@ abstract class PagerState(
 
     init {
         require(currentPageOffsetFraction in -0.5..0.5) {
-            "initialPageOffsetFraction $currentPageOffsetFraction is " +
+            "currentPageOffsetFraction $currentPageOffsetFraction is " +
                 "not within the range -0.5 to 0.5"
         }
     }
@@ -166,7 +185,7 @@ abstract class PagerState(
     internal var firstVisiblePageOffset = 0
         private set
 
-    private var maxScrollOffset: Int = Int.MAX_VALUE
+    private var maxScrollOffset: Float = Float.MAX_VALUE
         private set
 
     private var accumulator: Float = 0f
@@ -188,7 +207,7 @@ abstract class PagerState(
      * determine scroll deltas and max min scrolling.
      */
     private fun performScroll(delta: Float): Float {
-        val currentScrollPosition = scrollPosition.currentScrollOffset()
+        val currentScrollPosition = scrollPosition.currentAbsoluteScrollOffset()
         debugLog {
             "\nDelta=$delta " +
                 "\ncurrentScrollPosition=$currentScrollPosition " +
@@ -196,7 +215,7 @@ abstract class PagerState(
         }
 
         val absolute = (currentScrollPosition + delta + accumulator)
-        val newValue = absolute.coerceIn(0.0f, maxScrollOffset.toFloat())
+        val newValue = absolute.coerceIn(0.0f, maxScrollOffset)
         val changed = absolute != newValue
         val consumed = newValue - currentScrollPosition
 
@@ -440,9 +459,8 @@ abstract class PagerState(
      * destination page will be offset from its snapped position.
      */
     fun ScrollScope.updateCurrentPage(page: Int, pageOffsetFraction: Float = 0.0f) {
-        val targetPageOffsetToSnappedPosition = (pageOffsetFraction * pageSizeWithSpacing).toInt()
         with(animatedScrollScope) {
-            snapToItem(page, targetPageOffsetToSnappedPosition)
+            snapToItem(page, pageOffsetFraction)
         }
     }
 
@@ -719,6 +737,7 @@ internal object EmptyLayoutInfo : PagerLayoutInfo {
     override val viewportEndOffset: Int = 0
     override val reverseLayout: Boolean = false
     override val beyondBoundsPageCount: Int = 0
+    override val snapPosition: SnapPosition = SnapPosition.Start
 }
 
 private val UnitDensity = object : Density {
@@ -726,13 +745,8 @@ private val UnitDensity = object : Density {
     override val fontScale: Float = 1f
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-internal val SnapAlignmentStartToStart =
-    SnapPositionInLayout { _, _, _, _, _ -> 0 }
-
-private const val DEBUG = PagerDebugEnable
 private inline fun debugLog(generateMsg: () -> String) {
-    if (DEBUG) {
+    if (PagerDebugConfig.PagerState) {
         println("PagerState: ${generateMsg()}")
     }
 }
@@ -742,8 +756,8 @@ private val PagerLayoutInfo.singleAxisViewPort: Int
     get() = if (orientation == Orientation.Vertical) viewportSize.height else viewportSize.width
 
 @OptIn(ExperimentalFoundationApi::class)
-private fun PagerMeasureResult.calculateNewMaxScrollOffset(pageCount: Int): Int {
+private fun PagerMeasureResult.calculateNewMaxScrollOffset(pageCount: Int): Float {
     return beforeContentPadding +
-        pageCount * (pageSpacing + pageSize) +
+        pageCount * (pageSpacing + pageSize).toFloat() +
         afterContentPadding - pageSpacing - singleAxisViewPort
 }

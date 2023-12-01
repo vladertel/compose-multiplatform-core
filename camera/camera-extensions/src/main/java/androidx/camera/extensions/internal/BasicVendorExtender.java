@@ -49,6 +49,7 @@ import androidx.camera.extensions.impl.NightImageCaptureExtenderImpl;
 import androidx.camera.extensions.impl.NightPreviewExtenderImpl;
 import androidx.camera.extensions.impl.PreviewExtenderImpl;
 import androidx.camera.extensions.internal.compat.workaround.AvailableKeysRetriever;
+import androidx.camera.extensions.internal.compat.workaround.BasicExtenderSurfaceCombinationAvailability;
 import androidx.camera.extensions.internal.compat.workaround.ExtensionDisabledValidator;
 import androidx.camera.extensions.internal.compat.workaround.ImageAnalysisAvailability;
 import androidx.camera.extensions.internal.sessionprocessor.BasicExtenderSessionProcessor;
@@ -131,8 +132,8 @@ public class BasicVendorExtender implements VendorExtender {
     }
 
     @VisibleForTesting
-    BasicVendorExtender(ImageCaptureExtenderImpl imageCaptureExtenderImpl,
-            PreviewExtenderImpl previewExtenderImpl) {
+    public BasicVendorExtender(@Nullable ImageCaptureExtenderImpl imageCaptureExtenderImpl,
+            @Nullable PreviewExtenderImpl previewExtenderImpl) {
         mPreviewExtenderImpl = previewExtenderImpl;
         mImageCaptureExtenderImpl = imageCaptureExtenderImpl;
     }
@@ -310,15 +311,25 @@ public class BasicVendorExtender implements VendorExtender {
     @NonNull
     @Override
     public Size[] getSupportedYuvAnalysisResolutions() {
+        Preconditions.checkNotNull(mCameraInfo, "VendorExtender#init() must be called first");
+
+        // check if the ImageAnalysis is available.
         ImageAnalysisAvailability imageAnalysisAvailability = new ImageAnalysisAvailability();
+        if (!imageAnalysisAvailability.isAvailable(mCameraId, mMode)) {
+            return new Size[0];
+        }
+
+        // check if the surface combination supports the ImageAnalysis.
+        BasicExtenderSurfaceCombinationAvailability
+                surfaceCombinationAvailability = new BasicExtenderSurfaceCombinationAvailability();
         boolean hasPreviewProcessor = mPreviewExtenderImpl.getProcessorType()
                 == PreviewExtenderImpl.ProcessorType.PROCESSOR_TYPE_IMAGE_PROCESSOR;
         boolean hasImageCaptureProcessor = mImageCaptureExtenderImpl.getCaptureProcessor() != null;
-        if (!imageAnalysisAvailability.isAvailable(mCameraId, getHardwareLevel(), mMode,
-                hasPreviewProcessor, hasImageCaptureProcessor)) {
+        if (!surfaceCombinationAvailability.isImageAnalysisAvailable(
+                getHardwareLevel(), hasPreviewProcessor, hasImageCaptureProcessor)) {
             return new Size[0];
         }
-        Preconditions.checkNotNull(mCameraInfo, "VendorExtender#init() must be called first");
+
         return getOutputSizes(ImageFormat.YUV_420_888);
     }
 
@@ -383,7 +394,9 @@ public class BasicVendorExtender implements VendorExtender {
                     mImageCaptureExtenderImpl.getSupportedPostviewResolutions(captureSize);
             Map<Integer, List<Size>> result = new HashMap<>();
             for (Pair<Integer, Size[]> pair : list) {
-                result.put(pair.first, Arrays.asList(pair.second));
+                int format = pair.first;
+                Size[] sizes = pair.second;
+                result.put(format, Arrays.asList(sizes));
             }
             return Collections.unmodifiableMap(result);
         }
@@ -419,6 +432,7 @@ public class BasicVendorExtender implements VendorExtender {
                 mPreviewExtenderImpl, mImageCaptureExtenderImpl,
                 getSupportedParameterKeys(context),
                 getSupportedCaptureResultKeys(),
+                this,
                 context);
     }
 }

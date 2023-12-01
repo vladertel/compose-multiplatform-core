@@ -17,6 +17,8 @@
 package androidx.wear.protolayout.renderer.inflater;
 
 import static android.util.TypedValue.COMPLEX_UNIT_SP;
+import static android.view.View.INVISIBLE;
+import static android.view.View.VISIBLE;
 
 import static androidx.core.util.Preconditions.checkNotNull;
 import static androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer.FIRST_CHILD_INDEX;
@@ -161,6 +163,7 @@ import androidx.wear.protolayout.proto.StateProto.State;
 import androidx.wear.protolayout.proto.TriggerProto.OnConditionMetTrigger;
 import androidx.wear.protolayout.proto.TriggerProto.OnLoadTrigger;
 import androidx.wear.protolayout.proto.TriggerProto.Trigger;
+import androidx.wear.protolayout.proto.TypesProto.BoolProp;
 import androidx.wear.protolayout.proto.TypesProto.StringProp;
 import androidx.wear.protolayout.renderer.ProtoLayoutExtensionViewProvider;
 import androidx.wear.protolayout.renderer.ProtoLayoutTheme;
@@ -192,6 +195,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Renderer for ProtoLayout.
@@ -218,8 +222,7 @@ public final class ProtoLayoutInflater {
             Trigger.newBuilder().setOnLoadTrigger(OnLoadTrigger.getDefaultInstance()).build();
 
     /** The default minimal click target size, for meeting the accessibility requirement */
-    @VisibleForTesting
-    static final float DEFAULT_MIN_CLICKABLE_SIZE_DP = 48f;
+    @VisibleForTesting static final float DEFAULT_MIN_CLICKABLE_SIZE_DP = 48f;
 
     /**
      * Default maximum raw byte size for a bitmap drawable.
@@ -252,8 +255,7 @@ public final class ProtoLayoutInflater {
 
     private static final int TEXT_COLOR_DEFAULT = 0xFFFFFFFF;
     private static final int TEXT_MAX_LINES_DEFAULT = 1;
-    @VisibleForTesting
-    static final int TEXT_AUTOSIZES_LIMIT = 10;
+    @VisibleForTesting static final int TEXT_AUTOSIZES_LIMIT = 10;
     private static final int TEXT_MIN_LINES = 1;
 
     private static final ContainerDimension CONTAINER_DIMENSION_DEFAULT =
@@ -1176,9 +1178,7 @@ public final class ProtoLayoutInflater {
 
     private float toPx(SpProp spField) {
         return TypedValue.applyDimension(
-                COMPLEX_UNIT_SP,
-                spField.getValue(),
-                mUiContext.getResources().getDisplayMetrics());
+                COMPLEX_UNIT_SP, spField.getValue(), mUiContext.getResources().getDisplayMetrics());
     }
 
     private void applyFontStyle(
@@ -1207,10 +1207,10 @@ public final class ProtoLayoutInflater {
                 // value.
                 boolean atLeastOneCorrectSize =
                         sizes.stream()
-                                .mapToInt(sp -> (int) sp.getValue())
-                                .filter(sp -> sp > 0)
-                                .distinct()
-                                .count()
+                                        .mapToInt(sp -> (int) sp.getValue())
+                                        .filter(sp -> sp > 0)
+                                        .distinct()
+                                        .count()
                                 > 0;
 
                 if (atLeastOneCorrectSize) {
@@ -1241,7 +1241,9 @@ public final class ProtoLayoutInflater {
                 } else {
                     Log.w(
                             TAG,
-                            "More than " + TEXT_AUTOSIZES_LIMIT + " sizes has been added for the "
+                            "More than "
+                                    + TEXT_AUTOSIZES_LIMIT
+                                    + " sizes has been added for the "
                                     + "text autosizing. Ignoring all other sizes and using the last"
                                     + "one.");
                 }
@@ -1521,6 +1523,23 @@ public final class ProtoLayoutInflater {
             @NonNull Modifiers modifiers,
             @NonNull String posId,
             @NonNull Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
+        if (modifiers.hasVisible()) {
+            applyVisible(
+                    view,
+                    modifiers.getVisible(),
+                    posId,
+                    pipelineMaker,
+                    visible -> visible ? VISIBLE : INVISIBLE);
+        } else if (modifiers.hasHidden()) {
+            // This is a deprecated field
+            applyVisible(
+                    view,
+                    modifiers.getHidden(),
+                    posId,
+                    pipelineMaker,
+                    hidden -> hidden ? INVISIBLE : VISIBLE);
+        }
+
         if (modifiers.hasClickable()) {
             applyClickable(view, wrapper, modifiers.getClickable(), /* extendTouchTarget= */ true);
         }
@@ -1562,6 +1581,19 @@ public final class ProtoLayoutInflater {
         }
 
         return view;
+    }
+
+    private void applyVisible(
+            View view,
+            BoolProp visible,
+            String posId,
+            Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker,
+            Function<Boolean, Integer> toViewVisibility) {
+        handleProp(
+                visible,
+                visibility -> view.setVisibility(toViewVisibility.apply(visibility)),
+                posId,
+                pipelineMaker);
     }
 
     @SuppressWarnings("RestrictTo")
@@ -1846,7 +1878,7 @@ public final class ProtoLayoutInflater {
                 return TruncateAt.MARQUEE;
             case TEXT_OVERFLOW_UNDEFINED:
             case UNRECOGNIZED:
-            // TODO(b/302531877): Implement ellipsize.
+                // TODO(b/302531877): Implement ellipsize.
             case TEXT_OVERFLOW_ELLIPSIZE:
                 return TEXT_OVERFLOW_DEFAULT;
         }
@@ -2109,11 +2141,7 @@ public final class ProtoLayoutInflater {
 
         View wrappedView =
                 applyModifiers(
-                        frame,
-                        /* wrapper= */ null,
-                        box.getModifiers(),
-                        boxPosId,
-                        pipelineMaker);
+                        frame, /* wrapper= */ null, box.getModifiers(), boxPosId, pipelineMaker);
 
         parentViewWrapper.maybeAddView(wrappedView, layoutParams);
 
@@ -2185,9 +2213,9 @@ public final class ProtoLayoutInflater {
                 updateLayoutParams(
                         parentViewWrapper.getParentProperties(),
                         layoutParams,
-                        // This doesn't copy layout constraint for dynamic fields. That is fine, because that
-                        // will be later applied to the wrapper, and this layoutParams would have dimension
-                        // reset and put into the pipeline.
+                        // This doesn't copy layout constraint for dynamic fields. That is fine,
+                        // because that will be later applied to the wrapper, and this layoutParams
+                        // would have dimension reset and put into the pipeline.
                         spacerDimensionToContainerDimension(spacer.getWidth()),
                         spacerDimensionToContainerDimension(spacer.getHeight()));
 
@@ -2230,13 +2258,17 @@ public final class ProtoLayoutInflater {
 
             int gravity =
                     (spacer.getWidth().hasLinearDimension()
-                            ? horizontalAlignmentToGravity(
-                            spacer.getWidth().getLinearDimension().getHorizontalAlignmentForLayout())
-                            : UNSET_MASK)
+                                    ? horizontalAlignmentToGravity(
+                                            spacer.getWidth()
+                                                    .getLinearDimension()
+                                                    .getHorizontalAlignmentForLayout())
+                                    : UNSET_MASK)
                             | (spacer.getHeight().hasLinearDimension()
-                            ? verticalAlignmentToGravity(
-                            spacer.getHeight().getLinearDimension().getVerticalAlignmentForLayout())
-                            : UNSET_MASK);
+                                    ? verticalAlignmentToGravity(
+                                            spacer.getHeight()
+                                                    .getLinearDimension()
+                                                    .getVerticalAlignmentForLayout())
+                                    : UNSET_MASK);
 
             // This layoutParams will override what we initially had and will be used for Spacer
             // itself. This means that the wrapper's layout params should follow the rules for
@@ -2324,7 +2356,8 @@ public final class ProtoLayoutInflater {
                 handleProp(
                         spacer.getWidth().getLinearDimension(),
                         width -> {
-                            // We still need to update layout params in case other dimension is expand, so 0 could
+                            // We still need to update layout params in case other dimension is
+                            // expand, so 0 could
                             // be miss interpreted.
                             LayoutParams lp = view.getLayoutParams();
                             if (lp == null) {
@@ -2343,8 +2376,8 @@ public final class ProtoLayoutInflater {
                 handleProp(
                         spacer.getHeight().getLinearDimension(),
                         height -> {
-                            // We still need to update layout params in case other dimension is expand, so 0 could
-                            // be miss interpreted.
+                            // We still need to update layout params in case other dimension is
+                            // expand, so 0 could be miss interpreted.
                             LayoutParams lp = view.getLayoutParams();
                             if (lp == null) {
                                 Log.e(TAG, "LayoutParams was null when updating spacer height");
@@ -2514,12 +2547,7 @@ public final class ProtoLayoutInflater {
         // Setting colours **must** go after setting the Text Appearance, otherwise it will get
         // immediately overridden.
         if (text.hasFontStyle()) {
-            applyFontStyle(
-                    text.getFontStyle(),
-                    textView,
-                    posId,
-                    pipelineMaker,
-                    isAutoSizeAllowed);
+            applyFontStyle(text.getFontStyle(), textView, posId, pipelineMaker, isAutoSizeAllowed);
         } else {
             applyFontStyle(
                     FontStyle.getDefaultInstance(),
@@ -2789,11 +2817,7 @@ public final class ProtoLayoutInflater {
         ratioViewWrapper.setAspectRatio(ratio);
         View wrappedImageView =
                 applyModifiers(
-                        imageView,
-                        ratioViewWrapper,
-                        image.getModifiers(),
-                        posId,
-                        pipelineMaker);
+                        imageView, ratioViewWrapper, image.getModifiers(), posId, pipelineMaker);
         ratioViewWrapper.addView(wrappedImageView);
 
         parentViewWrapper.maybeAddView(ratioViewWrapper, ratioWrapperLayoutParams);
@@ -3155,10 +3179,11 @@ public final class ProtoLayoutInflater {
                 Log.w(
                         TAG,
                         "Font size with multiple values has been used on Span Text. Ignoring "
-                        + "all size except the first one.");
+                                + "all size except the first one.");
             }
-            AbsoluteSizeSpan span = new AbsoluteSizeSpan(round(toPx(
-                    fontStyle.getSize(fontStyle.getSizeCount() - 1))));
+            AbsoluteSizeSpan span =
+                    new AbsoluteSizeSpan(
+                            round(toPx(fontStyle.getSize(fontStyle.getSizeCount() - 1))));
             builder.setSpan(span, start, end, Spanned.SPAN_MARK_MARK);
         }
 
@@ -3435,11 +3460,7 @@ public final class ProtoLayoutInflater {
 
         View wrappedView =
                 applyModifiers(
-                        tv,
-                        /* wrapper= */ null,
-                        spannable.getModifiers(),
-                        posId,
-                        pipelineMaker);
+                        tv, /* wrapper= */ null, spannable.getModifiers(), posId, pipelineMaker);
         parentViewWrapper.maybeAddView(wrappedView, layoutParams);
 
         return new InflatedView(
@@ -3756,6 +3777,23 @@ public final class ProtoLayoutInflater {
             }
         } else {
             consumer.accept(colorProp.getArgb());
+        }
+    }
+
+    private void handleProp(
+            BoolProp boolProp,
+            Consumer<Boolean> consumer,
+            String posId,
+            Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
+        if (boolProp.hasDynamicValue() && pipelineMaker.isPresent()) {
+            try {
+                pipelineMaker.get().addPipelineFor(boolProp, boolProp.getValue(), posId, consumer);
+            } catch (RuntimeException ex) {
+                Log.e(TAG, "Error building pipeline", ex);
+                consumer.accept(boolProp.getValue());
+            }
+        } else {
+            consumer.accept(boolProp.getValue());
         }
     }
 

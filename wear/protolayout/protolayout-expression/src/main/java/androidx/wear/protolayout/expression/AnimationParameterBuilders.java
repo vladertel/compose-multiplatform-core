@@ -67,7 +67,6 @@ public final class AnimationParameterBuilders {
         }
 
         /** Gets animation parameters including duration, easing and repeat delay. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public AnimationParameters getAnimationParameters() {
             if (mImpl.hasAnimationParameters()) {
@@ -81,7 +80,6 @@ public final class AnimationParameterBuilders {
          * Gets the repeatable mode to be used for specifying repetition parameters for the
          * animation.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public Repeatable getRepeatable() {
             if (mImpl.hasRepeatable()) {
@@ -160,7 +158,6 @@ public final class AnimationParameterBuilders {
              * Sets the repeatable mode to be used for specifying repetition parameters for the
              * animation. If not set, animation won't be repeated.
              */
-            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setRepeatable(@NonNull Repeatable repeatable) {
                 mImpl.setRepeatable(repeatable.toProto());
@@ -191,14 +188,12 @@ public final class AnimationParameterBuilders {
         }
 
         /** Gets the duration of the animation in milliseconds. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @IntRange(from = 0)
         public long getDurationMillis() {
             return mImpl.getDurationMillis();
         }
 
         /** Gets the easing to be used for adjusting an animation's fraction. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public Easing getEasing() {
             if (mImpl.hasEasing()) {
@@ -213,7 +208,6 @@ public final class AnimationParameterBuilders {
          * the animation in milliseconds. When set inside repeatable, this is the delay before
          * repeating animation in milliseconds.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @IntRange(from = 0)
         public long getDelayMillis() {
             return mImpl.getDelayMillis();
@@ -349,7 +343,9 @@ public final class AnimationParameterBuilders {
          *
          * <p>This is equivalent to the Compose {@code FastOutSlowInEasing}.
          */
-        @NonNull Easing FAST_OUT_SLOW_IN_EASING = cubicBezier(0.4f, 0.0f, 0.2f, 1.0f);
+        @RequiresSchemaVersion(major = 1, minor = 200)
+        @NonNull
+        Easing FAST_OUT_SLOW_IN_EASING = cubicBezier(0.4f, 0.0f, 0.2f, 1.0f);
 
         /**
          * Incoming elements are animated using deceleration easing, which starts a transition at
@@ -357,7 +353,9 @@ public final class AnimationParameterBuilders {
          *
          * <p>This is equivalent to the Compose {@code LinearOutSlowInEasing}.
          */
-        @NonNull Easing LINEAR_OUT_SLOW_IN_EASING = cubicBezier(0.0f, 0.0f, 0.2f, 1.0f);
+        @RequiresSchemaVersion(major = 1, minor = 200)
+        @NonNull
+        Easing LINEAR_OUT_SLOW_IN_EASING = cubicBezier(0.0f, 0.0f, 0.2f, 1.0f);
 
         /**
          * Elements exiting a screen use acceleration easing, where they start at rest and end at
@@ -365,7 +363,9 @@ public final class AnimationParameterBuilders {
          *
          * <p>This is equivalent to the Compose {@code FastOutLinearInEasing}.
          */
-        @NonNull Easing FAST_OUT_LINEAR_IN_EASING = cubicBezier(0.4f, 0.0f, 1.0f, 1.0f);
+        @RequiresSchemaVersion(major = 1, minor = 200)
+        @NonNull
+        Easing FAST_OUT_LINEAR_IN_EASING = cubicBezier(0.4f, 0.0f, 1.0f, 1.0f);
 
         /** Get the protocol buffer representation of this object. */
         @RestrictTo(Scope.LIBRARY_GROUP)
@@ -440,7 +440,6 @@ public final class AnimationParameterBuilders {
          * Gets the x coordinate of the first control point. The line through the point (0, 0) and
          * the first control point is tangent to the easing at the point (0, 0).
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         public float getX1() {
             return mImpl.getX1();
         }
@@ -449,7 +448,6 @@ public final class AnimationParameterBuilders {
          * Gets the y coordinate of the first control point. The line through the point (0, 0) and
          * the first control point is tangent to the easing at the point (0, 0).
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         public float getY1() {
             return mImpl.getY1();
         }
@@ -458,7 +456,6 @@ public final class AnimationParameterBuilders {
          * Gets the x coordinate of the second control point. The line through the point (1, 1) and
          * the second control point is tangent to the easing at the point (1, 1).
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         public float getX2() {
             return mImpl.getX2();
         }
@@ -467,7 +464,6 @@ public final class AnimationParameterBuilders {
          * Gets the y coordinate of the second control point. The line through the point (1, 1) and
          * the second control point is tangent to the easing at the point (1, 1).
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         public float getY2() {
             return mImpl.getY2();
         }
@@ -594,10 +590,12 @@ public final class AnimationParameterBuilders {
         /**
          * An infinite {@link Repeatable} where animation restarts from the beginning when repeated.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         public static final Repeatable INFINITE_REPEATABLE_WITH_RESTART =
                 new Repeatable.Builder().setRepeatMode(REPEAT_MODE_RESTART).build();
 
         /** An infinite {@link Repeatable} where animation is played in reverse when repeated. */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         public static final Repeatable INFINITE_REPEATABLE_WITH_REVERSE =
                 new Repeatable.Builder().setRepeatMode(REPEAT_MODE_REVERSE).build();
 
@@ -615,7 +613,6 @@ public final class AnimationParameterBuilders {
          *
          * @throws IllegalStateException if {@link #hasInfiniteIteration()} is true.
          */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         public int getIterations() {
             if (hasInfiniteIteration()) {
                 throw new IllegalStateException("Repeatable has infinite iteration.");
@@ -629,14 +626,12 @@ public final class AnimationParameterBuilders {
         }
 
         /** Gets the repeat mode to specify how animation will behave when repeated. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @RepeatMode
         public int getRepeatMode() {
             return mImpl.getRepeatMode().getNumber();
         }
 
         /** Gets optional custom parameters for the forward passes of animation. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public AnimationParameters getForwardRepeatOverride() {
             if (mImpl.hasForwardRepeatOverride()) {
@@ -647,7 +642,6 @@ public final class AnimationParameterBuilders {
         }
 
         /** Gets optional custom parameters for the reverse passes of animation. */
-        @RequiresSchemaVersion(major = 1, minor = 200)
         @Nullable
         public AnimationParameters getReverseRepeatOverride() {
             if (mImpl.hasReverseRepeatOverride()) {

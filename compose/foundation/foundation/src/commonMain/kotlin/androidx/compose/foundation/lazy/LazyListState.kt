@@ -54,8 +54,8 @@ import androidx.compose.ui.layout.RemeasurementModifier
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastRoundToInt
 import kotlin.math.abs
-import kotlin.math.roundToInt
 import kotlin.ranges.IntRange
 import kotlin.ranges.until
 import kotlinx.coroutines.CoroutineScope
@@ -326,12 +326,19 @@ class LazyListState constructor(
         if (abs(scrollToBeConsumed) > 0.5f) {
             val layoutInfo = layoutInfoState.value
             val preScrollToBeConsumed = scrollToBeConsumed
-            val intDelta = scrollToBeConsumed.roundToInt()
+            val intDelta = scrollToBeConsumed.fastRoundToInt()
             val postLookaheadInfo = postLookaheadLayoutInfo
-            if (layoutInfo.tryToApplyScrollWithoutRemeasure(intDelta) &&
-                (postLookaheadInfo == null ||
-                    postLookaheadInfo.tryToApplyScrollWithoutRemeasure(intDelta))
-            ) {
+            var scrolledWithoutRemeasure = layoutInfo.tryToApplyScrollWithoutRemeasure(
+                delta = intDelta,
+                updateAnimations = !hasLookaheadPassOccurred
+            )
+            if (scrolledWithoutRemeasure && postLookaheadInfo != null) {
+                scrolledWithoutRemeasure = postLookaheadInfo.tryToApplyScrollWithoutRemeasure(
+                    delta = intDelta,
+                    updateAnimations = true
+                )
+            }
+            if (scrolledWithoutRemeasure) {
                 applyMeasureResult(
                     result = layoutInfo,
                     isLookingAhead = hasLookaheadPassOccurred,

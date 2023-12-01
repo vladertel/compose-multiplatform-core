@@ -31,16 +31,16 @@ package androidx.compose.foundation {
   }
 
   public final class BasicMarqueeKt {
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static androidx.compose.foundation.MarqueeSpacing MarqueeSpacing(float spacing);
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier basicMarquee(androidx.compose.ui.Modifier, optional int iterations, optional int animationMode, optional int delayMillis, optional int initialDelayMillis, optional androidx.compose.foundation.MarqueeSpacing spacing, optional float velocity);
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static int getDefaultMarqueeDelayMillis();
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static int getDefaultMarqueeIterations();
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static androidx.compose.foundation.MarqueeSpacing getDefaultMarqueeSpacing();
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static float getDefaultMarqueeVelocity();
-    property @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static final int DefaultMarqueeDelayMillis;
-    property @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static final int DefaultMarqueeIterations;
-    property @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static final androidx.compose.foundation.MarqueeSpacing DefaultMarqueeSpacing;
-    property @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static final float DefaultMarqueeVelocity;
+    method public static androidx.compose.foundation.MarqueeSpacing MarqueeSpacing(float spacing);
+    method @androidx.compose.runtime.Stable public static androidx.compose.ui.Modifier basicMarquee(androidx.compose.ui.Modifier, optional int iterations, optional int animationMode, optional int delayMillis, optional int initialDelayMillis, optional androidx.compose.foundation.MarqueeSpacing spacing, optional float velocity);
+    method public static int getDefaultMarqueeDelayMillis();
+    method public static int getDefaultMarqueeIterations();
+    method public static androidx.compose.foundation.MarqueeSpacing getDefaultMarqueeSpacing();
+    method public static float getDefaultMarqueeVelocity();
+    property public static final int DefaultMarqueeDelayMillis;
+    property public static final int DefaultMarqueeIterations;
+    property public static final androidx.compose.foundation.MarqueeSpacing DefaultMarqueeSpacing;
+    property public static final float DefaultMarqueeVelocity;
   }
 
   @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public final class BasicTooltipDefaults {
@@ -147,17 +147,23 @@ package androidx.compose.foundation {
   }
 
   @androidx.compose.runtime.Stable public interface Indication {
-    method @androidx.compose.runtime.Composable public androidx.compose.foundation.IndicationInstance rememberUpdatedInstance(androidx.compose.foundation.interaction.InteractionSource interactionSource);
+    method @Deprecated @androidx.compose.runtime.Composable public default androidx.compose.foundation.IndicationInstance rememberUpdatedInstance(androidx.compose.foundation.interaction.InteractionSource interactionSource);
   }
 
-  public interface IndicationInstance {
-    method public void drawIndication(androidx.compose.ui.graphics.drawscope.ContentDrawScope);
+  @Deprecated public interface IndicationInstance {
+    method @Deprecated public void drawIndication(androidx.compose.ui.graphics.drawscope.ContentDrawScope);
   }
 
   public final class IndicationKt {
     method public static androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.foundation.Indication> getLocalIndication();
     method public static androidx.compose.ui.Modifier indication(androidx.compose.ui.Modifier, androidx.compose.foundation.interaction.InteractionSource interactionSource, androidx.compose.foundation.Indication? indication);
     property public static final androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.foundation.Indication> LocalIndication;
+  }
+
+  @androidx.compose.runtime.Stable public interface IndicationNodeFactory extends androidx.compose.foundation.Indication {
+    method public androidx.compose.ui.node.DelegatableNode create(androidx.compose.foundation.interaction.InteractionSource interactionSource);
+    method public boolean equals(Object? other);
+    method public int hashCode();
   }
 
   @SuppressCompatibility @kotlin.RequiresOptIn(message="This API is internal to library.") @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) @kotlin.annotation.Target(allowedTargets={kotlin.annotation.AnnotationTarget.CLASS, kotlin.annotation.AnnotationTarget.FUNCTION, kotlin.annotation.AnnotationTarget.PROPERTY, kotlin.annotation.AnnotationTarget.PROPERTY_GETTER, kotlin.annotation.AnnotationTarget.PROPERTY_SETTER}) public @interface InternalFoundationApi {
@@ -167,24 +173,24 @@ package androidx.compose.foundation {
     method public static androidx.compose.ui.Modifier magnifier(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function1<? super androidx.compose.ui.unit.Density,androidx.compose.ui.geometry.Offset> sourceCenter, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.unit.Density,androidx.compose.ui.geometry.Offset>? magnifierCenter, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.unit.DpSize,kotlin.Unit>? onSizeChanged, optional float zoom, optional long size, optional float cornerRadius, optional float elevation, optional boolean clip);
   }
 
-  @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @kotlin.jvm.JvmInline public final value class MarqueeAnimationMode {
+  @kotlin.jvm.JvmInline public final value class MarqueeAnimationMode {
     field public static final androidx.compose.foundation.MarqueeAnimationMode.Companion Companion;
   }
 
   public static final class MarqueeAnimationMode.Companion {
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public int getImmediately();
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public int getWhileFocused();
-    property @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public final int Immediately;
-    property @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public final int WhileFocused;
+    method public int getImmediately();
+    method public int getWhileFocused();
+    property public final int Immediately;
+    property public final int WhileFocused;
   }
 
-  @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Stable public fun interface MarqueeSpacing {
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public int calculateSpacing(androidx.compose.ui.unit.Density, int contentWidth, int containerWidth);
+  @androidx.compose.runtime.Stable public fun interface MarqueeSpacing {
+    method public int calculateSpacing(androidx.compose.ui.unit.Density, int contentWidth, int containerWidth);
     field public static final androidx.compose.foundation.MarqueeSpacing.Companion Companion;
   }
 
   public static final class MarqueeSpacing.Companion {
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public androidx.compose.foundation.MarqueeSpacing fractionOfContainer(float fraction);
+    method public androidx.compose.foundation.MarqueeSpacing fractionOfContainer(float fraction);
   }
 
   public enum MutatePriority {
@@ -538,11 +544,11 @@ package androidx.compose.foundation.gestures {
 package androidx.compose.foundation.gestures.snapping {
 
   public final class LazyGridSnapLayoutInfoProviderKt {
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider SnapLayoutInfoProvider(androidx.compose.foundation.lazy.grid.LazyGridState lazyGridState, optional androidx.compose.foundation.gestures.snapping.SnapPositionInLayout positionInLayout);
+    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider SnapLayoutInfoProvider(androidx.compose.foundation.lazy.grid.LazyGridState lazyGridState, optional androidx.compose.foundation.gestures.snapping.SnapPosition snapPosition);
   }
 
   public final class LazyListSnapLayoutInfoProviderKt {
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider SnapLayoutInfoProvider(androidx.compose.foundation.lazy.LazyListState lazyListState, optional androidx.compose.foundation.gestures.snapping.SnapPositionInLayout positionInLayout);
+    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider SnapLayoutInfoProvider(androidx.compose.foundation.lazy.LazyListState lazyListState, optional androidx.compose.foundation.gestures.snapping.SnapPosition snapPosition);
     method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Composable public static androidx.compose.foundation.gestures.FlingBehavior rememberSnapFlingBehavior(androidx.compose.foundation.lazy.LazyListState lazyListState);
   }
 
@@ -562,14 +568,18 @@ package androidx.compose.foundation.gestures.snapping {
     method public float calculateSnappingOffset(float currentVelocity);
   }
 
-  @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public fun interface SnapPositionInLayout {
+  @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public fun interface SnapPosition {
     method public int position(int layoutSize, int itemSize, int beforeContentPadding, int afterContentPadding, int itemIndex);
-    field public static final androidx.compose.foundation.gestures.snapping.SnapPositionInLayout.Companion Companion;
+    field public static final androidx.compose.foundation.gestures.snapping.SnapPosition.Companion Companion;
   }
 
-  public static final class SnapPositionInLayout.Companion {
-    method public androidx.compose.foundation.gestures.snapping.SnapPositionInLayout getCenterToCenter();
-    property public final androidx.compose.foundation.gestures.snapping.SnapPositionInLayout CenterToCenter;
+  public static final class SnapPosition.Companion {
+    method public androidx.compose.foundation.gestures.snapping.SnapPosition getCenter();
+    method public androidx.compose.foundation.gestures.snapping.SnapPosition getEnd();
+    method public androidx.compose.foundation.gestures.snapping.SnapPosition getStart();
+    property public final androidx.compose.foundation.gestures.snapping.SnapPosition Center;
+    property public final androidx.compose.foundation.gestures.snapping.SnapPosition End;
+    property public final androidx.compose.foundation.gestures.snapping.SnapPosition Start;
   }
 
 }
@@ -1177,8 +1187,8 @@ package androidx.compose.foundation.pager {
   }
 
   public final class PagerKt {
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Composable public static void HorizontalPager(androidx.compose.foundation.pager.PagerState state, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.layout.PaddingValues contentPadding, optional androidx.compose.foundation.pager.PageSize pageSize, optional int beyondBoundsPageCount, optional float pageSpacing, optional androidx.compose.ui.Alignment.Vertical verticalAlignment, optional androidx.compose.foundation.gestures.snapping.SnapFlingBehavior flingBehavior, optional boolean userScrollEnabled, optional boolean reverseLayout, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?>? key, optional androidx.compose.ui.input.nestedscroll.NestedScrollConnection pageNestedScrollConnection, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.pager.PagerScope,? super java.lang.Integer,kotlin.Unit> pageContent);
-    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Composable public static void VerticalPager(androidx.compose.foundation.pager.PagerState state, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.layout.PaddingValues contentPadding, optional androidx.compose.foundation.pager.PageSize pageSize, optional int beyondBoundsPageCount, optional float pageSpacing, optional androidx.compose.ui.Alignment.Horizontal horizontalAlignment, optional androidx.compose.foundation.gestures.snapping.SnapFlingBehavior flingBehavior, optional boolean userScrollEnabled, optional boolean reverseLayout, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?>? key, optional androidx.compose.ui.input.nestedscroll.NestedScrollConnection pageNestedScrollConnection, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.pager.PagerScope,? super java.lang.Integer,kotlin.Unit> pageContent);
+    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Composable public static void HorizontalPager(androidx.compose.foundation.pager.PagerState state, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.layout.PaddingValues contentPadding, optional androidx.compose.foundation.pager.PageSize pageSize, optional int beyondBoundsPageCount, optional float pageSpacing, optional androidx.compose.ui.Alignment.Vertical verticalAlignment, optional androidx.compose.foundation.gestures.snapping.SnapFlingBehavior flingBehavior, optional boolean userScrollEnabled, optional boolean reverseLayout, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?>? key, optional androidx.compose.ui.input.nestedscroll.NestedScrollConnection pageNestedScrollConnection, optional androidx.compose.foundation.gestures.snapping.SnapPosition snapPosition, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.pager.PagerScope,? super java.lang.Integer,kotlin.Unit> pageContent);
+    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Composable public static void VerticalPager(androidx.compose.foundation.pager.PagerState state, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.foundation.layout.PaddingValues contentPadding, optional androidx.compose.foundation.pager.PageSize pageSize, optional int beyondBoundsPageCount, optional float pageSpacing, optional androidx.compose.ui.Alignment.Horizontal horizontalAlignment, optional androidx.compose.foundation.gestures.snapping.SnapFlingBehavior flingBehavior, optional boolean userScrollEnabled, optional boolean reverseLayout, optional kotlin.jvm.functions.Function1<? super java.lang.Integer,?>? key, optional androidx.compose.ui.input.nestedscroll.NestedScrollConnection pageNestedScrollConnection, optional androidx.compose.foundation.gestures.snapping.SnapPosition snapPosition, kotlin.jvm.functions.Function2<? super androidx.compose.foundation.pager.PagerScope,? super java.lang.Integer,kotlin.Unit> pageContent);
   }
 
   @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public sealed interface PagerLayoutInfo {
@@ -1189,6 +1199,7 @@ package androidx.compose.foundation.pager {
     method public int getPageSize();
     method public int getPageSpacing();
     method public boolean getReverseLayout();
+    method public androidx.compose.foundation.gestures.snapping.SnapPosition getSnapPosition();
     method public int getViewportEndOffset();
     method public long getViewportSize();
     method public int getViewportStartOffset();
@@ -1200,6 +1211,7 @@ package androidx.compose.foundation.pager {
     property public abstract int pageSize;
     property public abstract int pageSpacing;
     property public abstract boolean reverseLayout;
+    property public abstract androidx.compose.foundation.gestures.snapping.SnapPosition snapPosition;
     property public abstract int viewportEndOffset;
     property public abstract long viewportSize;
     property public abstract int viewportStartOffset;
@@ -1250,6 +1262,7 @@ package androidx.compose.foundation.pager {
   }
 
   public final class PagerStateKt {
+    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static androidx.compose.foundation.pager.PagerState PagerState(optional int currentPage, optional float currentPageOffsetFraction, kotlin.jvm.functions.Function0<java.lang.Integer> pageCount);
     method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Composable public static androidx.compose.foundation.pager.PagerState rememberPagerState(optional int initialPage, optional float initialPageOffsetFraction, kotlin.jvm.functions.Function0<java.lang.Integer> pageCount);
   }
 

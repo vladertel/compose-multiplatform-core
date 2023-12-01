@@ -38,6 +38,7 @@ import androidx.compose.foundation.text.selection.textFieldMagnifier
 import androidx.compose.foundation.text.selection.updateSelectionTouchMode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.DontMemoize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.RecomposeScope
@@ -123,8 +124,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastRoundToInt
 import kotlin.math.max
-import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -353,7 +354,7 @@ internal fun CoreTextField(
                         startInputSession(
                             textInputService,
                             state,
-                            value,
+                            manager.value,
                             imeOptions,
                             offsetMapping
                         )
@@ -629,7 +630,7 @@ internal fun CoreTextField(
         .textFieldScrollable(scrollerPosition, interactionSource, enabled)
         .then(pointerModifier)
         .then(semanticsModifier)
-        .onGloballyPositioned {
+        .onGloballyPositioned @DontMemoize {
             state.layoutResult?.decorationBoxCoordinates = it
         }
 
@@ -705,8 +706,8 @@ internal fun CoreTextField(
                                 width = width,
                                 height = height,
                                 alignmentLines = mapOf(
-                                    FirstBaseline to result.firstBaseline.roundToInt(),
-                                    LastBaseline to result.lastBaseline.roundToInt()
+                                    FirstBaseline to result.firstBaseline.fastRoundToInt(),
+                                    LastBaseline to result.lastBaseline.fastRoundToInt()
                                 )
                             ) {}
                         }

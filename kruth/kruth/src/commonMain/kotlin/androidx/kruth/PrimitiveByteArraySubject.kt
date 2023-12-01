@@ -16,29 +16,26 @@
 
 package androidx.kruth
 
-import androidx.kruth.Fact.Companion.simpleFact
-
 class PrimitiveByteArraySubject internal constructor(
     actual: ByteArray?,
     metadata: FailureMetadata = FailureMetadata(),
 ) : Subject<ByteArray?>(actual = actual, metadata = metadata) {
 
+    private val helper =
+        HelperArraySubject(
+            actual = actual,
+            size = ByteArray::size,
+            metadata = metadata,
+        )
+
     /** Fails if the array is not empty (i.e. `array.size > 0`). */
     fun isEmpty() {
-        metadata.assertNotNull(actual) { "Expected array to be empty, but was null" }
-
-        if (actual.isNotEmpty()) {
-            failWithActual(simpleFact("Expected to be empty"))
-        }
+        helper.isEmpty()
     }
 
     /** Fails if the array is empty (i.e. `array.size == 0`). */
     fun isNotEmpty() {
-        metadata.assertNotNull(actual) { "Expected array not to be empty, but was null" }
-
-        if (actual.isEmpty()) {
-            failWithoutActual(simpleFact("Expected not to be empty"))
-        }
+        helper.isNotEmpty()
     }
 
     /**
@@ -47,19 +44,13 @@ class PrimitiveByteArraySubject internal constructor(
      * @throws IllegalArgumentException if [length] < 0
      */
     fun hasLength(length: Int) {
-        require(length >= 0) { "length (%d) must be >= 0" }
-
-        metadata.assertNotNull(actual) { "Expected length to be equal to $length, but was null" }
-
-        metadata.assertEquals(length, actual.size) {
-            "Expected length to be equal to $length, but was ${actual.size}"
-        }
+        helper.hasLength(length)
     }
 
     /** Converts this [PrimitiveByteArraySubject] to [IterableSubject].*/
     fun asList(): IterableSubject<Byte> {
         metadata.assertNotNull(actual)
 
-        return IterableSubject(actual = actual.toList(), metadata = metadata)
+        return IterableSubject(actual = actual.asList(), metadata = metadata)
     }
 }

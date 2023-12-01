@@ -39,10 +39,10 @@ incap = "0.2"
 jcodec = "0.2.5"
 kotlin17 = "1.7.10"
 kotlin18 = "1.8.22"
-kotlin19 = "1.9.20"
-kotlin = "1.9.20"
+kotlin19 = "1.9.21"
+kotlin = "1.9.21"
 kotlinBenchmark = "0.4.8"
-kotlinNative = "1.9.20"
+kotlinNative = "1.9.21"
 kotlinCompileTesting = "1.4.9"
 kotlinCoroutines = "1.7.3"
 kotlinSerialization = "1.3.3"
@@ -85,7 +85,7 @@ androidToolsSdkCommon = { module = "com.android.tools:sdk-common", version.ref =
 androidToolsAnalyticsProtos = { module = "com.android.tools.analytics-library:protos", version.ref = "androidLint" }
 androidKotlinMultiplatform = { module = "com.android.kotlin.multiplatform.library:com.android.kotlin.multiplatform.library.gradle.plugin", version.ref = "androidGradlePlugin" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotationVersion" }
-autoCommon = { module = "com.google.auto:auto-common", version = "0.11" }
+autoCommon = { module = "com.google.auto:auto-common", version = "1.2.1" }
 atomicFu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "atomicFu" }
 atomicFuPluginz = { module = "org.jetbrains.kotlinx:atomicfu-gradle-plugin", version.ref = "atomicFu" }
 autoServiceAnnotations = { module = "com.google.auto.service:auto-service-annotations", version.ref = "autoService" }
@@ -106,7 +106,7 @@ byteBuddyAgent = { module = "net.bytebuddy:byte-buddy-agent", version.ref = "byt
 checkerframework = { module = "org.checkerframework:checker-qual", version = "2.5.3" }
 checkmark = { module = "net.saff.checkmark:checkmark", version = "0.1.6" }
 constraintLayout = { module = "androidx.constraintlayout:constraintlayout", version = "2.0.1"}
-dackka = { module = "com.google.devsite:dackka", version = "1.4.0" }
+dackka = { module = "com.google.devsite:dackka", version = "1.4.1" }
 dagger = { module = "com.google.dagger:dagger", version.ref = "dagger" }
 daggerCompiler = { module = "com.google.dagger:dagger-compiler", version.ref = "dagger" }
 desugarJdkLibs = { module = "com.android.tools:desugar_jdk_libs", version = "2.0.3" }

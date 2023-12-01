@@ -16,14 +16,12 @@
 
 package androidx.core.location;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import android.annotation.SuppressLint;
 import android.location.Location;
 import android.os.Build.VERSION;
 import android.os.Bundle;
-import android.os.SystemClock;
 
 import androidx.annotation.DoNotInline;
 import androidx.annotation.FloatRange;
@@ -111,11 +109,7 @@ public final class LocationCompat {
      * location derivation is different from the system clock, the results may be inaccurate.
      */
     public static long getElapsedRealtimeNanos(@NonNull Location location) {
-        if (VERSION.SDK_INT >= 17) {
-            return Api17Impl.getElapsedRealtimeNanos(location);
-        } else {
-            return MILLISECONDS.toNanos(getElapsedRealtimeMillis(location));
-        }
+        return location.getElapsedRealtimeNanos();
     }
 
     /**
@@ -124,21 +118,7 @@ public final class LocationCompat {
      * @see #getElapsedRealtimeNanos(Location)
      */
     public static long getElapsedRealtimeMillis(@NonNull Location location) {
-        if (VERSION.SDK_INT >= 17) {
-            return NANOSECONDS.toMillis(Api17Impl.getElapsedRealtimeNanos(location));
-        } else {
-            long timeDeltaMs = System.currentTimeMillis() - location.getTime();
-            long elapsedRealtimeMs = SystemClock.elapsedRealtime();
-            if (timeDeltaMs < 0) {
-                // don't return an elapsed realtime from the future
-                return elapsedRealtimeMs;
-            } else if (timeDeltaMs > elapsedRealtimeMs) {
-                // don't return an elapsed realtime from before boot
-                return 0;
-            } else {
-                return elapsedRealtimeMs - timeDeltaMs;
-            }
-        }
+        return NANOSECONDS.toMillis(location.getElapsedRealtimeNanos());
     }
 
     /**
@@ -517,16 +497,7 @@ public final class LocationCompat {
      * @see android.location.LocationManager#addTestProvider
      */
     public static boolean isMock(@NonNull Location location) {
-        if (VERSION.SDK_INT >= 18) {
-            return Api18Impl.isMock(location);
-        } else {
-            Bundle extras = location.getExtras();
-            if (extras == null) {
-                return false;
-            }
-
-            return extras.getBoolean(EXTRA_IS_MOCK, false);
-        }
+        return location.isFromMockProvider();
     }
 
     /**
@@ -537,9 +508,9 @@ public final class LocationCompat {
      * boolean extra with the key {@link #EXTRA_IS_MOCK} to mark the location as mock. Be aware that
      * this will overwrite any prior extra value under the same key.
      */
+    @SuppressLint("BanUncheckedReflection")
     public static void setMock(@NonNull Location location, boolean mock) {
-        if (VERSION.SDK_INT >= 18) {
-            try {
+        try {
                 getSetIsFromMockProviderMethod().invoke(location, mock);
             } catch (NoSuchMethodException e) {
                 Error error = new NoSuchMethodError();
@@ -552,25 +523,6 @@ public final class LocationCompat {
             } catch (InvocationTargetException e) {
                 throw new RuntimeException(e);
             }
-        } else {
-            Bundle extras = location.getExtras();
-            if (extras == null) {
-                if (mock) {
-                    extras = new Bundle();
-                    extras.putBoolean(EXTRA_IS_MOCK, true);
-                    location.setExtras(extras);
-                }
-            } else {
-                if (mock) {
-                    extras.putBoolean(EXTRA_IS_MOCK, true);
-                } else {
-                    extras.remove(EXTRA_IS_MOCK);
-                    if (extras.isEmpty()) {
-                        location.setExtras(null);
-                    }
-                }
-            }
-        }
     }
 
     @RequiresApi(34)
@@ -957,30 +909,6 @@ public final class LocationCompat {
                 error.initCause(e);
                 throw error;
             }
-        }
-    }
-
-    @RequiresApi(18)
-    private static class Api18Impl {
-
-        private Api18Impl() {
-        }
-
-        @DoNotInline
-        static boolean isMock(Location location) {
-            return location.isFromMockProvider();
-        }
-    }
-
-    @RequiresApi(17)
-    private static class Api17Impl {
-
-        private Api17Impl() {
-        }
-
-        @DoNotInline
-        static long getElapsedRealtimeNanos(Location location) {
-            return location.getElapsedRealtimeNanos();
         }
     }
 

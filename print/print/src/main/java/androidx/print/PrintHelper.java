@@ -155,7 +155,7 @@ public final class PrintHelper {
      */
     public static boolean systemSupportsPrint() {
         // Supported on Android 4.4 or later.
-        return Build.VERSION.SDK_INT >= 19;
+        return true;
     }
 
     /**
@@ -233,7 +233,7 @@ public final class PrintHelper {
      */
     public int getOrientation() {
         // Unset defaults to landscape but might turn image
-        if (Build.VERSION.SDK_INT >= 19 && mOrientation == 0) {
+        if (mOrientation == 0) {
             return ORIENTATION_LANDSCAPE;
         }
         return mOrientation;
@@ -259,7 +259,7 @@ public final class PrintHelper {
      */
     public void printBitmap(@NonNull final String jobName, @NonNull final Bitmap bitmap,
             @Nullable final OnPrintFinishCallback callback) {
-        if (Build.VERSION.SDK_INT < 19 || bitmap == null) {
+        if (bitmap == null) {
             return;
         }
 
@@ -357,10 +357,6 @@ public final class PrintHelper {
     public void printBitmap(@NonNull final String jobName, @NonNull final Uri imageFile,
             @Nullable final OnPrintFinishCallback callback)
             throws FileNotFoundException {
-        if (Build.VERSION.SDK_INT < 19) {
-            return;
-        }
-
         PrintDocumentAdapter printDocumentAdapter = new PrintUriAdapter(jobName, imageFile,
                 callback, mScaleMode);
 
