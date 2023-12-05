@@ -93,6 +93,11 @@ internal class ComposeWindowDelegate(
     val renderApi: GraphicsApi
         get() = bridge.renderApi
 
+    private val _interopBlending: Boolean
+        get() = System.getProperty("compose.interop.blending").toBoolean()
+    private val interopBlending: Boolean
+        get() = _interopBlending && bridge.interopBlendingSupported
+
     var isWindowTransparent: Boolean = false
         set(value) {
             if (field != value) {
@@ -101,8 +106,6 @@ internal class ComposeWindowDelegate(
                     "Cannot change transparency if window is already displayable."
                 }
                 field = value
-
-                // required
                 bridge.transparency = value
 
                 /*
@@ -122,9 +125,21 @@ internal class ComposeWindowDelegate(
                     pane.isOpaque = false
                 }
 
-                window.background = if (value) Color(0, 0, 0, 0) else null
+                window.background = if (value && !skikoTransparentWindowHack) Color(0, 0, 0, 0) else null
             }
         }
+
+    /**
+     * There is a hack inside skiko OpenGL and Software redrawers for Windows that makes current
+     * window transparent without setting `background` to JDK's window. It's done by getting native
+     * component parent and calling `DwmEnableBlurBehindWindow`.
+     *
+     * FIXME: Make OpenGL work inside transparent window (background == Color(0, 0, 0, 0)) without this hack.
+     *
+     * See `enableTransparentWindow` (skiko/src/awtMain/cpp/windows/window_util.cc)
+     */
+    private val skikoTransparentWindowHack: Boolean
+        get() = hostOs == OS.Windows && renderApi != GraphicsApi.DIRECT3D
 
     private val _pane = object : JLayeredPane() {
         override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
@@ -165,11 +180,6 @@ internal class ComposeWindowDelegate(
         private val bridgeLayer: Int get() = 10
         private val componentLayer: Int
             get() = if (interopBlending) 0 else 20
-
-        private val _interopBlending: Boolean
-            get() = System.getProperty("compose.interop.blending").toBoolean()
-        private val interopBlending: Boolean
-            get() = _interopBlending && bridge.interopBlendingSupported
 
         override fun addNotify() {
             super.addNotify()

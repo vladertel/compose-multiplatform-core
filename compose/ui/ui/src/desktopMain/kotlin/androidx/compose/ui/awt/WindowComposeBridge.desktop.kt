@@ -91,12 +91,13 @@ internal class WindowComposeBridge(
     var transparency: Boolean
         get() = component.transparency
         set(value) {
-            component.transparency = value
+            component.transparency = value || interopBlendingSupported
             platformContext.isWindowTransparent = value
         }
 
     init {
         component.skikoView = skikoView
+        component.transparency = interopBlendingSupported
         attachComposeToComponent()
     }
 

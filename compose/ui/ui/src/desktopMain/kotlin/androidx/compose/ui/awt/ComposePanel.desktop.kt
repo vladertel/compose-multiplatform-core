@@ -228,7 +228,6 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
     private fun createComposeBridge(): ComposeBridge {
         val bridge: ComposeBridge = if (renderOnGraphics) {
-            // TODO: Add window transparent info
             SwingComposeBridge(skiaLayerAnalytics, layoutDirectionFor(this))
         } else {
             WindowComposeBridge(skiaLayerAnalytics, layoutDirectionFor(this))
