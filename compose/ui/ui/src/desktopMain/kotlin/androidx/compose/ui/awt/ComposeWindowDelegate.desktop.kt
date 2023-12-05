@@ -160,11 +160,6 @@ internal class ComposeWindowDelegate(
             super.remove(component)
         }
 
-        private fun addBridge(bridge: ComposeBridge) {
-            addToLayer(bridge.invisibleComponent, bridgeLayer)
-            addToLayer(bridge.component, bridgeLayer)
-        }
-
         private fun addToLayer(component: Component, layer: Int) {
             if (renderApi == GraphicsApi.METAL) {
                 // Applying layer on macOS makes our bridge non-transparent
@@ -191,7 +186,8 @@ internal class ComposeWindowDelegate(
 
         init {
             layout = null
-            addBridge(bridge)
+            addToLayer(bridge.invisibleComponent, bridgeLayer)
+            addToLayer(bridge.component, bridgeLayer)
         }
 
         fun dispose() {

@@ -184,11 +184,6 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
         super.remove(component)
     }
 
-    private fun addBridge(bridge: ComposeBridge) {
-        addToLayer(bridge.invisibleComponent, bridgeLayer)
-        addToLayer(bridge.component, bridgeLayer)
-    }
-
     private fun addToLayer(component: Component, layer: Int) {
         if (renderApi == GraphicsApi.METAL && bridge !is SwingComposeBridge) {
             // Applying layer on macOS makes our bridge non-transparent
@@ -222,7 +217,8 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
             val bridge = createComposeBridge()
             this.bridge = bridge
             initContent()
-            addBridge(bridge)
+            addToLayer(bridge.invisibleComponent, bridgeLayer)
+            addToLayer(bridge.component, bridgeLayer)
         }
     }
 
