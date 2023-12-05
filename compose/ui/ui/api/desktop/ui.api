@@ -474,6 +474,7 @@ public final class androidx/compose/ui/awt/ComposePanel : javax/swing/JLayeredPa
 	public fun isFocusOwner ()Z
 	public fun isFocusable ()Z
 	public fun isRequestFocusEnabled ()Z
+	public fun remove (Ljava/awt/Component;)V
 	public fun removeFocusListener (Ljava/awt/event/FocusListener;)V
 	public fun removeNotify ()V
 	public fun requestFocus ()V
@@ -3119,7 +3120,6 @@ public abstract interface class androidx/compose/ui/platform/PlatformContext {
 	public fun isWindowTransparent ()Z
 	public fun requestFocus ()Z
 	public fun setPointerIcon (Landroidx/compose/ui/input/pointer/PointerIcon;)V
-	public fun setWindowTransparent (Z)V
 }
 
 public final class androidx/compose/ui/platform/PlatformContext$Companion {
