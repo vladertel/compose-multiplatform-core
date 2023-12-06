@@ -88,7 +88,22 @@ internal class WindowComposeBridge(
     override val focusComponentDelegate: Component
         get() = component.canvas
 
-    var transparency: Boolean by component::transparency
+    var transparency: Boolean
+        get() = component.transparency
+        set(value) {
+            component.transparency = value
+            if (value && !isWindowTransparent && renderApi == GraphicsApi.METAL) {
+                /*
+                 * SkiaLayer sets background inside transparency setter, that is required for
+                 * cases like software rendering.
+                 * In case of transparent Metal canvas on opaque window, background values with
+                 * alpha == 0 will make the result color black after clearing the canvas.
+                 *
+                 * Reset it to null to keep the color default.
+                 */
+                component.background = null
+            }
+        }
 
     init {
         component.skikoView = skikoView

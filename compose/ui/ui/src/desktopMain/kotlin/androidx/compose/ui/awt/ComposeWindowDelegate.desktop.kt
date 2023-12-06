@@ -106,8 +106,8 @@ internal class ComposeWindowDelegate(
                     "Cannot change transparency if window is already displayable."
                 }
                 field = value
-                bridge.transparency = value || interopBlending
                 bridge.isWindowTransparent = value
+                bridge.transparency = value || interopBlending
 
                 /*
                  * Windows makes clicks on transparent pixels fall through, but it doesn't work
