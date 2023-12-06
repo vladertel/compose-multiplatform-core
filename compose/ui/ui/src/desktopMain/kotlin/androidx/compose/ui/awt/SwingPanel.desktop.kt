@@ -97,8 +97,7 @@ public fun <T : Component> SwingPanel(
     val focusSwitcher = remember { FocusSwitcher(componentInfo, focusManager) }
 
     Box(
-        modifier = modifier.onGloballyPositioned { childCoordinates ->
-            val coordinates = childCoordinates.parentCoordinates!!
+        modifier = modifier.onGloballyPositioned { coordinates ->
             val bounds = coordinates.boundsInWindow().round(density)
             componentInfo.container.setBounds(bounds.left, bounds.top, bounds.width, bounds.height)
             componentInfo.container.validate()
