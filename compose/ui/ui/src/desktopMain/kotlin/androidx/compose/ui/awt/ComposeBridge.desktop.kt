@@ -150,6 +150,7 @@ internal abstract class ComposeBridge(
     private val desktopTextInputService = DesktopTextInputService(platformComponent)
     protected val platformContext = DesktopPlatformContext()
     internal var rootForTestListener: PlatformContext.RootForTestListener? by DelegateRootForTestListener()
+    internal var isWindowTransparent by platformContext::isWindowTransparent
 
     private val semanticsOwnerListener = DesktopSemanticsOwnerListener()
     val sceneAccessible = ComposeSceneAccessible {

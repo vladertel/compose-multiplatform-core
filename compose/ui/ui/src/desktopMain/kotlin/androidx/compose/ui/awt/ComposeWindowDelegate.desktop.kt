@@ -106,7 +106,8 @@ internal class ComposeWindowDelegate(
                     "Cannot change transparency if window is already displayable."
                 }
                 field = value
-                bridge.transparency = value
+                bridge.transparency = value || interopBlending
+                bridge.isWindowTransparent = value
 
                 /*
                  * Windows makes clicks on transparent pixels fall through, but it doesn't work
@@ -207,6 +208,7 @@ internal class ComposeWindowDelegate(
             override fun getDefaultComponent(aContainer: Container?) = null
         }
         pane.isFocusCycleRoot = true
+        bridge.transparency = interopBlending
         setContent {}
     }
 

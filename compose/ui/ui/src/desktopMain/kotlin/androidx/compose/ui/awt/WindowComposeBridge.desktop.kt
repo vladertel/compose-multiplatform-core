@@ -88,16 +88,10 @@ internal class WindowComposeBridge(
     override val focusComponentDelegate: Component
         get() = component.canvas
 
-    var transparency: Boolean
-        get() = component.transparency
-        set(value) {
-            component.transparency = value || interopBlendingSupported
-            platformContext.isWindowTransparent = value
-        }
+    var transparency: Boolean by component::transparency
 
     init {
         component.skikoView = skikoView
-        component.transparency = interopBlendingSupported
         attachComposeToComponent()
     }
 
