@@ -18,25 +18,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@implementation CMPAccessibilityElement {
-    CMPAccessibilityElementUpdater _updater;
-    _Nullable id _currentSemanticsNode;
-}
-
--(instancetype)initWithAccessibilityContainer:(id)container updater:(CMPAccessibilityElementUpdater)updater {
-    self = [super initWithAccessibilityContainer:container];
-    
-    if (self) {
-        _updater = updater;
-    }
-    
-    return self;
-}
-
-- (void)updateUsingNewSemanticsNode:(id)newSemanticsNode {
-    _updater(self, _currentSemanticsNode, newSemanticsNode);
-    _currentSemanticsNode = newSemanticsNode;
-}
+@implementation CMPAccessibilityElement
 
 @end
 

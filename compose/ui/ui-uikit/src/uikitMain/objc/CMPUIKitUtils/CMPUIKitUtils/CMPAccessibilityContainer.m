@@ -11,36 +11,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 @implementation CMPAccessibilityContainer
 
-
--(instancetype)initWithAccessibilityContainer:(id)container {
-    self = [super initWithAccessibilityContainer:container];
-    
-    if (self) {
-        self.children = [NSMutableArray new];
-    }
-    
-    return self;
+-(NSInteger)accessibilityElementCount {
+    assert(false && "MUST_OVERRIDE");
 }
 
-- (NSInteger)accessibilityElementCount {
-    return self.children.count + 1;
+-(NSInteger)indexOfAccessibilityElement:(nonnull id)element {
+    assert(false && "MUST_OVERRIDE");
 }
 
-- (NSInteger)indexOfAccessibilityElement:(nonnull id)element {
-    if (element == self.wrappedElement) {
-        return 0;
-    }
-    
-    NSInteger index = [self.children indexOfObject:element];
-    if (index == NSNotFound) {
-        return NSNotFound;
-    } else {
-        return index + 1;
-    }
-}
-
-- (nullable id)accessibilityElementAtIndex:(NSInteger)index {
-    return self;
+-(nullable id)accessibilityElementAtIndex:(NSInteger)index {
+    assert(false && "MUST_OVERRIDE");
 }
 
 @end

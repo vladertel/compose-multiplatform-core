@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.utils.CMPAccessibilityContainer
 import kotlin.test.todo
 import platform.UIKit.UIAccessibilityCustomAction
 import platform.UIKit.UIAccessibilityTraitAdjustable
@@ -240,7 +241,7 @@ private class ComposeAccessibilityContainer(
     semanticsNode: SemanticsNode,
     semanticsNodeChildren: List<SemanticsNode>,
     parent: Any,
-) : UIAccessibilityElement(parent) {
+) : CMPAccessibilityContainer(parent) {
     private val children: List<Any>
     private val wrappedElement = ComposeAccessibilityElement(controller, semanticsNode, this)
 
@@ -255,7 +256,7 @@ private class ComposeAccessibilityContainer(
         }
     }
 
-    fun accessibilityElementAtIndex(index: NSInteger): Any? {
+    override fun accessibilityElementAtIndex(index: NSInteger): Any? {
         val idx = index.toInt()
 
         if (idx < 0 || idx >= accessibilityElementCount().toInt()) {
@@ -269,9 +270,9 @@ private class ComposeAccessibilityContainer(
         return children[idx - 1]
     }
 
-    fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
+    override fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
 
-    fun indexOfAccessibilityElement(element: Any?): NSInteger {
+    override fun indexOfAccessibilityElement(element: Any): NSInteger {
         // TODO: store the elements in Any->Int map, if that lookup takes significant time
         if (element == null) {
             return NSNotFound

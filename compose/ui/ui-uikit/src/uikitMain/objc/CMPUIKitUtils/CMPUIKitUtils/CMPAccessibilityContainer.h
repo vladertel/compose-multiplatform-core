@@ -6,13 +6,11 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "CMPAccessibilityElement.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface CMPAccessibilityContainer : UIAccessibilityElement
-
-@property(nonatomic) NSMutableArray* children;
-@property(nonatomic, nullable) id wrappedElement;
+@interface CMPAccessibilityContainer : CMPAccessibilityElement
 
 -(nullable id)accessibilityElementAtIndex:(NSInteger)index;
 -(NSInteger)accessibilityElementCount;

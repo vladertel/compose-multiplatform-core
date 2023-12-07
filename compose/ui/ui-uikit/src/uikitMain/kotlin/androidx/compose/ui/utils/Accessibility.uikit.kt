@@ -17,13 +17,13 @@
 package androidx.compose.ui.utils
 
 import platform.UIKit.UIView
+import platform.darwin.NSObject
 
-class AccessibilityElement(
-    private val container: UIView
-): Accessibility() {
-    private val element = CMPAccessibilityElement(container)
-
-    override fun getPlatform(): String {
-        return "iOS"
-    }
-}
+//class AccessibilityElement(
+//    private val container: UIView
+//): Accessibility() {
+//
+//    override fun getPlatform(): String {
+//        return "iOS"
+//    }
+//}
