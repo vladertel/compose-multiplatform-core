@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Android Open Source Project
+ * Copyright 2023 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.awt
+package androidx.compose.ui.scene
 
-import androidx.compose.runtime.staticCompositionLocalOf
-import java.awt.Container
-
-internal val LocalLayerContainer = staticCompositionLocalOf<Container> {
-    error("CompositionLocal LayerContainer not provided")
+internal abstract class DesktopComposeSceneLayer : ComposeSceneLayer {
 }
