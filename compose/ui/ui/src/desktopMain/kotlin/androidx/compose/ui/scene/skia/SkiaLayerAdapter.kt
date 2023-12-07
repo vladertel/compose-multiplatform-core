@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.scene.skia
 
+import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.scene.ComposeSceneMediator
 import java.awt.Dimension
 import java.awt.Graphics
@@ -26,6 +27,7 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
 
 internal class SkiaLayerAdapter(
     private val mediator: ComposeSceneMediator,
+    private val windowContext: PlatformWindowContext,
     skiaLayerAnalytics: SkiaLayerAnalytics,
 ) : SkiaLayerComponent {
     private val skiaLayer = object : SkiaLayer(
@@ -74,7 +76,7 @@ internal class SkiaLayerAdapter(
         get() = skiaLayer.transparency
         set(value) {
             skiaLayer.transparency = value
-            if (value && !mediator.isWindowTransparent && renderApi == GraphicsApi.METAL) {
+            if (value && !windowContext.isWindowTransparent && renderApi == GraphicsApi.METAL) {
                 /*
                  * SkiaLayer sets background inside transparency setter, that is required for
                  * cases like software rendering.
@@ -100,5 +102,11 @@ internal class SkiaLayerAdapter(
 
     override fun onComposeSceneInvalidate() {
         skiaLayer.needRedraw()
+    }
+
+    override fun onRenderApiChanged(action: () -> Unit) {
+        skiaLayer.onStateChanged(SkiaLayer.PropertyKind.Renderer) {
+            action()
+        }
     }
 }

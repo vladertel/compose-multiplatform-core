@@ -54,6 +54,7 @@ internal class ComposeWindowPanel(
         get() = requireNotNull(_composeContainer) {
             "ComposeContainer is disposed"
         }
+    private val contentComponent by composeContainer::contentComponent
 
     val windowAccessible by composeContainer::accessible
     var rootForTestListener by composeContainer::rootForTestListener
@@ -116,8 +117,6 @@ internal class ComposeWindowPanel(
             override fun getDefaultComponent(aContainer: Container?) = null
         }
         isFocusCycleRoot = true
-//        bridge.transparency = interopBlending
-        setContent {} // TODO ????
     }
 
     override fun add(component: Component): Component {
@@ -179,10 +178,7 @@ internal class ComposeWindowPanel(
     }
 
     fun onRenderApiChanged(action: () -> Unit) {
-        // TODO
-//        bridge.component.onStateChanged(SkiaLayer.PropertyKind.Renderer) {
-//            action()
-//        }
+        composeContainer.onRenderApiChanged(action)
     }
 
     // We need overridden listeners because we mix Swing and AWT components in the
@@ -190,20 +186,20 @@ internal class ComposeWindowPanel(
     // TODO(demin): is it possible to fix that without overriding?
 
     override fun addMouseListener(listener: MouseListener) =
-        composeContainer.contentComponent.addMouseListener(listener)
+        contentComponent.addMouseListener(listener)
 
     override fun removeMouseListener(listener: MouseListener) =
-        composeContainer.contentComponent.removeMouseListener(listener)
+        contentComponent.removeMouseListener(listener)
 
     override fun addMouseMotionListener(listener: MouseMotionListener) =
-        composeContainer.contentComponent.addMouseMotionListener(listener)
+        contentComponent.addMouseMotionListener(listener)
 
     override fun removeMouseMotionListener(listener: MouseMotionListener) =
-        composeContainer.contentComponent.removeMouseMotionListener(listener)
+        contentComponent.removeMouseMotionListener(listener)
 
     override fun addMouseWheelListener(listener: MouseWheelListener) =
-        composeContainer.contentComponent.addMouseWheelListener(listener)
+        contentComponent.addMouseWheelListener(listener)
 
     override fun removeMouseWheelListener(listener: MouseWheelListener) =
-        composeContainer.contentComponent.removeMouseWheelListener(listener)
+        contentComponent.removeMouseWheelListener(listener)
 }

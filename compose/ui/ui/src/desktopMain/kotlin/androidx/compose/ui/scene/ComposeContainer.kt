@@ -22,11 +22,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.platform.PlatformContext
-import androidx.compose.ui.platform.WindowInfoImpl
+import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.scene.skia.SkiaLayerAdapter
 import androidx.compose.ui.scene.skia.SkiaLayerComponent
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.layoutDirectionFor
@@ -37,7 +38,6 @@ import java.awt.Window
 import java.awt.event.ComponentEvent
 import java.awt.event.ComponentListener
 import java.awt.event.HierarchyEvent
-import java.awt.event.HierarchyListener
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
 import javax.swing.JLayeredPane
@@ -45,7 +45,6 @@ import javax.swing.SwingUtilities
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineExceptionHandler
-import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.MainUIDispatcher
 import org.jetbrains.skiko.SkiaLayerAnalytics
 
@@ -55,18 +54,19 @@ internal val LocalLayerContainer = staticCompositionLocalOf<Container> {
 
 internal class ComposeContainer(
     val container: JLayeredPane,
-    private val skiaLayerAnalytics: SkiaLayerAnalytics,
+    val skiaLayerAnalytics: SkiaLayerAnalytics,
 ) : ComponentListener, WindowFocusListener {
-    private val windowInfo = WindowInfoImpl()
-    private var window: Window? = null
+    private val windowContext = PlatformWindowContext()
+    var window: Window? = null
+        private set
     private val layers = mutableListOf<DesktopComposeSceneLayer>()
 
     private val coroutineExceptionHandler = DesktopCoroutineExceptionHandler()
     private val coroutineContext = MainUIDispatcher + coroutineExceptionHandler
 
-    private val mainScene = ComposeSceneMediator(
+    private val mediator = ComposeSceneMediator(
         container = container,
-        windowInfo = windowInfo,
+        windowContext = windowContext,
         exceptionHandler = {
             exceptionHandler?.onException(it) ?: throw it
         },
@@ -75,18 +75,21 @@ internal class ComposeContainer(
         composeSceneFactory = ::createComposeScene,
     )
 
-    val contentComponent by mainScene::contentComponent
-    val accessible by mainScene::accessible // TODO Another layers?
-    var rootForTestListener by mainScene::rootForTestListener
-    var fullscreen by mainScene::fullscreen // TODO: Dialogs in fullscreen?
-    var compositionLocalContext by mainScene::compositionLocalContext
+    val contentComponent by mediator::contentComponent
+    val focusManager by mediator::focusManager
+    val accessible by mediator::accessible
+    var rootForTestListener by mediator::rootForTestListener
+    // TODO: Changing fullscreen probably will require recreate our layers
+    //  It will require add this flag as remember parameters in rememberComposeSceneLayer
+    var fullscreen by mediator::fullscreen
+    var compositionLocalContext by mediator::compositionLocalContext
     var exceptionHandler: WindowExceptionHandler? = null
-    val windowHandle by mainScene::windowHandle
-    val renderApi by mainScene::renderApi
-    val preferredSize by mainScene::preferredSize
+    val windowHandle by mediator::windowHandle
+    val renderApi by mediator::renderApi
+    val preferredSize by mediator::preferredSize
 
     fun dispose() {
-        mainScene.dispose()
+        mediator.dispose()
         // Dispose layers
     }
 
@@ -99,34 +102,34 @@ internal class ComposeContainer(
     override fun windowLostFocus(event: WindowEvent) = onChangeWindowFocus()
 
     private fun onChangeWindowFocus() {
-        windowInfo.isWindowFocused = window?.isFocused ?: false
-        mainScene.onChangeWindowFocus()
-        // TODO: update layers
+        windowContext.setWindowFocused(window?.isFocused ?: false)
+        mediator.onChangeWindowFocus()
+        layers.fastForEach {
+            it.onChangeWindowFocus()
+        }
     }
 
     private fun onChangeWindowBounds() {
         val component = window ?: container
-        val scaledSize = component.scaledSize
-        if (windowInfo.containerSize != scaledSize) {
-            windowInfo.containerSize = scaledSize
-        }
+        windowContext.setContainerSize(component.scaledSize)
     }
 
     fun onChangeWindowTransparency(value: Boolean) {
-        // TODO: Consider to move to windowInfo (again)
-        mainScene.isWindowTransparent = value
-        // TODO: update layers
-//        mainScene.transparency = value || interopBlending
+        windowContext.isWindowTransparent = value
+        mediator.onChangeWindowTransparency(value)
     }
 
     fun onChangeLayoutDirection() {
         val layoutDirection = layoutDirectionFor(container)
-        mainScene.onChangeLayoutDirection(layoutDirection)
-        // TODO: update layers
+        mediator.onChangeLayoutDirection(layoutDirection)
+    }
+
+    fun onRenderApiChanged(action: () -> Unit) {
+        mediator.onRenderApiChanged(action)
     }
 
     fun addNotify() {
-        mainScene.onComponentAttached()
+        mediator.onComponentAttached()
         setWindow(SwingUtilities.getWindowAncestor(container))
     }
 
@@ -135,11 +138,11 @@ internal class ComposeContainer(
     }
 
     fun addToComponentLayer(component: Component) {
-        mainScene.addToComponentLayer(component)
+        mediator.addToComponentLayer(component)
     }
 
     fun setSize(width: Int, height: Int) {
-        mainScene.setSize(width, height)
+        mediator.setSize(width, height)
     }
 
     private fun setWindow(window: Window?) {
@@ -158,11 +161,11 @@ internal class ComposeContainer(
         onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
         onKeyEvent: (KeyEvent) -> Boolean = { false },
     ) {
-        mainScene.setKeyEventListeners(onPreviewKeyEvent, onKeyEvent)
+        mediator.setKeyEventListeners(onPreviewKeyEvent, onKeyEvent)
     }
 
     fun setContent(content: @Composable () -> Unit) {
-        mainScene.setContent {
+        mediator.setContent {
             ProvideContainerCompositionLocals(this) {
                 content()
             }
@@ -174,7 +177,7 @@ internal class ComposeContainer(
 //            SwingSkiaLayerAdapter()
             TODO()
         } else {
-            SkiaLayerAdapter(mediator, skiaLayerAnalytics)
+            SkiaLayerAdapter(mediator, windowContext, skiaLayerAnalytics)
         }
     }
 
@@ -211,9 +214,9 @@ internal class ComposeContainer(
         compositionContext: CompositionContext
     ): ComposeSceneLayer {
         return if (ComposeFeatureFlags.useWindowLayers) {
-            WindowComposeSceneLayer()
+            WindowComposeSceneLayer(this, density, layoutDirection, focusable, compositionContext)
         } else {
-            SwingComposeSceneLayer()
+            SwingComposeSceneLayer(this, density, layoutDirection, focusable, compositionContext)
         }
     }
 
@@ -233,7 +236,7 @@ internal class ComposeContainer(
             layoutDirection: LayoutDirection,
             focusable: Boolean,
             compositionContext: CompositionContext
-        ): ComposeSceneLayer = createPlatformLayer(
+        ): ComposeSceneLayer = this@ComposeContainer.createPlatformLayer(
             density = density,
             layoutDirection = layoutDirection,
             focusable = focusable,

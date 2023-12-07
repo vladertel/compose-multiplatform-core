@@ -37,9 +37,8 @@ import androidx.compose.ui.platform.DesktopTextInputService
 import androidx.compose.ui.platform.EmptyViewConfiguration
 import androidx.compose.ui.platform.PlatformComponent
 import androidx.compose.ui.platform.PlatformContext
+import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.platform.ViewConfiguration
-import androidx.compose.ui.platform.WindowInfo
-import androidx.compose.ui.platform.WindowInfoImpl
 import androidx.compose.ui.scene.skia.SkiaLayerComponent
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.PlatformTextInputService
@@ -82,7 +81,7 @@ import org.jetbrains.skiko.hostOs
 
 internal class ComposeSceneMediator(
     private val container: JLayeredPane,
-    private val windowInfo: WindowInfoImpl,
+    private val windowContext: PlatformWindowContext,
     private var exceptionHandler: WindowExceptionHandler?,
 
     val coroutineContext: CoroutineContext,
@@ -106,7 +105,6 @@ internal class ComposeSceneMediator(
     private val textInputService = DesktopTextInputService(platformComponent)
     private val _platformContext = DesktopPlatformContext()
     val platformContext: PlatformContext get() = _platformContext
-    var isWindowTransparent by _platformContext::isWindowTransparent
 
     private val skiaLayerComponent by lazy { skiaLayerComponentFactory(this) }
     private val clipRectangles by skiaLayerComponent::clipComponents
@@ -116,6 +114,7 @@ internal class ComposeSceneMediator(
     val renderApi by skiaLayerComponent::renderApi
 
     private val scene by lazy { composeSceneFactory(this) }
+    val focusManager get() = scene.focusManager
     var compositionLocalContext: CompositionLocalContext?
         get() = scene.compositionLocalContext
         set(value) { scene.compositionLocalContext = value }
@@ -174,6 +173,8 @@ internal class ComposeSceneMediator(
         container.addToLayer(contentComponent, bridgeLayer)
         container.addContainerListener(this)
         attachToComponent(contentComponent)
+
+        skiaLayerComponent.transparency = useInteropBlending
     }
 
     fun dispose() {
@@ -254,10 +255,6 @@ internal class ComposeSceneMediator(
         })
     }
 
-    private fun setCurrentKeyboardModifiers(modifiers: PointerKeyboardModifiers) {
-        windowInfo.keyboardModifiers = modifiers
-    }
-
     fun setSize(width: Int, height: Int) {
         contentComponent.setSize(width, height)
     }
@@ -279,8 +276,16 @@ internal class ComposeSceneMediator(
         }
     }
 
+    fun onChangeWindowTransparency(value: Boolean) {
+        skiaLayerComponent.transparency = value || useInteropBlending
+    }
+
     fun onChangeLayoutDirection(layoutDirection: LayoutDirection) {
         scene.layoutDirection = layoutDirection
+    }
+
+    fun onRenderApiChanged(action: () -> Unit) {
+        skiaLayerComponent.onRenderApiChanged(action)
     }
 
     fun onChangeWindowFocus() {
@@ -299,7 +304,7 @@ internal class ComposeSceneMediator(
         if (isDisposed) return
         if (keyboardModifiersRequireUpdate) {
             keyboardModifiersRequireUpdate = false
-            setCurrentKeyboardModifiers(event.keyboardModifiers)
+            windowContext.setKeyboardModifiers(event.keyboardModifiers)
         }
         val density = contentComponent.density
         scene.onMouseEvent(density, event)
@@ -314,7 +319,7 @@ internal class ComposeSceneMediator(
     private fun onKeyEvent(event: java.awt.event.KeyEvent) = catchExceptions {
         if (isDisposed) return
         textInputService.onKeyEvent(event)
-        setCurrentKeyboardModifiers(event.toPointerKeyboardModifiers())
+        windowContext.setKeyboardModifiers(event.toPointerKeyboardModifiers())
 
         val composeEvent = KeyEvent(event)
         if (onPreviewKeyEvent(composeEvent) ||
@@ -477,8 +482,8 @@ internal class ComposeSceneMediator(
     }
 
     private inner class DesktopPlatformContext : PlatformContext by PlatformContext.Empty {
-        override val windowInfo: WindowInfo get() = this@ComposeSceneMediator.windowInfo
-        override var isWindowTransparent: Boolean = false
+        override val windowInfo by windowContext::windowInfo
+        override var isWindowTransparent by windowContext::isWindowTransparent
         override val viewConfiguration: ViewConfiguration = DesktopViewConfiguration()
         override val textInputService: PlatformTextInputService = this@ComposeSceneMediator.textInputService
 

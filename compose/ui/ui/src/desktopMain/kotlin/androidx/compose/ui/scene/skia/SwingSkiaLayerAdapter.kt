@@ -22,6 +22,7 @@ import java.awt.Graphics
 import javax.accessibility.Accessible
 import javax.accessibility.AccessibleContext
 import org.jetbrains.skiko.ExperimentalSkikoApi
+import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.SkiaLayerAnalytics
 import org.jetbrains.skiko.swing.SkiaSwingLayer
 
@@ -89,5 +90,8 @@ internal class SwingSkiaLayerAdapter(
 
     override fun onComposeSceneInvalidate() {
         skiaLayer.repaint()
+    }
+
+    override fun onRenderApiChanged(action: () -> Unit) {
     }
 }

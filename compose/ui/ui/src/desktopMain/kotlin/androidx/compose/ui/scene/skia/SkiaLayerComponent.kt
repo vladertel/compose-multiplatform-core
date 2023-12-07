@@ -39,4 +39,5 @@ internal interface SkiaLayerComponent {
 
     fun requestNativeFocusOnAccessible(accessible: Accessible)
     fun onComposeSceneInvalidate()
+    fun onRenderApiChanged(action: () -> Unit)
 }
