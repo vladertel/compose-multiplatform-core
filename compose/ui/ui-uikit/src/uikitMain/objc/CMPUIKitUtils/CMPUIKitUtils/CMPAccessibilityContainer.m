@@ -33,9 +33,10 @@ NS_ASSUME_NONNULL_BEGIN
     
     NSInteger index = [self.children indexOfObject:element];
     if (index == NSNotFound) {
-        
+        return NSNotFound;
+    } else {
+        return index + 1;
     }
-    
 }
 
 - (nullable id)accessibilityElementAtIndex:(NSInteger)index {
