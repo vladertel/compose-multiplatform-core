@@ -18,9 +18,15 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class CMPAccessibilityElement;
+
+typedef void (^CMPAccessibilityElementUpdater)(CMPAccessibilityElement *element, _Nullable id oldSemanticsNode, id newSemanticsNode);
+
 @interface CMPAccessibilityElement : UIAccessibilityElement
 
-- (NSString *)getName;
+-(instancetype)initWithAccessibilityContainer:(id)container updater:(CMPAccessibilityElementUpdater)updater;
+
+-(void)updateUsingNewSemanticsNode:(id)newSemanticsNode;
 
 @end
 

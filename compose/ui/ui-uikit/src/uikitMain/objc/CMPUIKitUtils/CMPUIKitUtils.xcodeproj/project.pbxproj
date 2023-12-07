@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		996EFEF42B02CE750000FE0F /* CMPAccessibilityElement.m in Sources */ = {isa = PBXBuildFile; fileRef = 9975AAEB2AEADDA900AF155F /* CMPAccessibilityElement.m */; };
+		EA70A7E02B20BBE900300068 /* CMPAccessibilityContainer.m in Sources */ = {isa = PBXBuildFile; fileRef = EA70A7DF2B20BBE900300068 /* CMPAccessibilityContainer.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -27,6 +28,8 @@
 		996EFEF52B02CE8A0000FE0F /* CMPUIKitUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPUIKitUtils.h; sourceTree = "<group>"; };
 		9975AAEA2AEADDA900AF155F /* CMPAccessibilityElement.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPAccessibilityElement.h; sourceTree = "<group>"; };
 		9975AAEB2AEADDA900AF155F /* CMPAccessibilityElement.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPAccessibilityElement.m; sourceTree = "<group>"; };
+		EA70A7DE2B20BBE900300068 /* CMPAccessibilityContainer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPAccessibilityContainer.h; sourceTree = "<group>"; };
+		EA70A7DF2B20BBE900300068 /* CMPAccessibilityContainer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPAccessibilityContainer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,6 +49,8 @@
 				9975AAEA2AEADDA900AF155F /* CMPAccessibilityElement.h */,
 				9975AAEB2AEADDA900AF155F /* CMPAccessibilityElement.m */,
 				996EFEF52B02CE8A0000FE0F /* CMPUIKitUtils.h */,
+				EA70A7DE2B20BBE900300068 /* CMPAccessibilityContainer.h */,
+				EA70A7DF2B20BBE900300068 /* CMPAccessibilityContainer.m */,
 			);
 			path = CMPUIKitUtils;
 			sourceTree = "<group>";
@@ -124,6 +129,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				996EFEF42B02CE750000FE0F /* CMPAccessibilityElement.m in Sources */,
+				EA70A7E02B20BBE900300068 /* CMPAccessibilityContainer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

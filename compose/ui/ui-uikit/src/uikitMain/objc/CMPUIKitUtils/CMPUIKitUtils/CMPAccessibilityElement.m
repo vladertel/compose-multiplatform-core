@@ -16,25 +16,28 @@
 
 #import "CMPAccessibilityElement.h"
 
-@implementation CMPAccessibilityElement
+NS_ASSUME_NONNULL_BEGIN
 
-- (NSInteger)accessibilityElementCount {
-    NSLog(@"CMPAccessibilityElement: accessibilityElementCount");
-    return 0;
+@implementation CMPAccessibilityElement {
+    CMPAccessibilityElementUpdater _updater;
+    _Nullable id _currentSemanticsNode;
 }
 
-- (nullable id)accessibilityElementAtIndex:(NSInteger)index {
-    NSLog(@"CMPAccessibilityElement: accessibilityElementAtIndex");
-    return nil;
+-(instancetype)initWithAccessibilityContainer:(id)container updater:(CMPAccessibilityElementUpdater)updater {
+    self = [super initWithAccessibilityContainer:container];
+    
+    if (self) {
+        _updater = updater;
+    }
+    
+    return self;
 }
 
-- (NSInteger)indexOfAccessibilityElement:(id)element {
-    NSLog(@"CMPAccessibilityElement: indexOfAccessibilityElement");
-    return 0;
-}
-
-- (NSString *)getName {
-    return @"Hello from CMPAccessibility";
+- (void)updateUsingNewSemanticsNode:(id)newSemanticsNode {
+    _updater(self, _currentSemanticsNode, newSemanticsNode);
+    _currentSemanticsNode = newSemanticsNode;
 }
 
 @end
+
+NS_ASSUME_NONNULL_END
