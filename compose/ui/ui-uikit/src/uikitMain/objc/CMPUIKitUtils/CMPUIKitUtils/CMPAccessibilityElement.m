@@ -63,6 +63,10 @@ NS_ASSUME_NONNULL_BEGIN
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
+- (id)actualAccessibilityElement {
+    return self;
+}
+
 @end
 
 NS_ASSUME_NONNULL_END

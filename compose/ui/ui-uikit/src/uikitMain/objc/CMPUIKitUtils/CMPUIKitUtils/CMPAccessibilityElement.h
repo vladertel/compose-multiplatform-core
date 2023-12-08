@@ -18,6 +18,7 @@
 #import "CMPAccessibilityMacros.h"
 
 @protocol CMPAccessibilityBridge;
+@class CMPAccessibilityContainer;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -26,6 +27,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (id)initWithBridge:(id<CMPAccessibilityBridge>)bridge NS_DESIGNATED_INITIALIZER;
 
 - (__nullable id)resolveAccessibilityContainer CMP_MUST_BE_OVERRIDED;
+
+/**
+  The default implementation returns `self`. Could be overrided to interop with a `LayoutNode` with scrollable semantics,  because default `UIAccessibility` methods don't have hooks for scrolling, only `UIScrollView` does.
+ */
+- (id)actualAccessibilityElement;
 
 @end
 

@@ -58,8 +58,63 @@ private class AccessibilityElement(
     val semanticsNode: SemanticsNode,
     val bridge: AccessibilityBridge,
 ) : CMPAccessibilityElement(bridge) {
+    private var parent: AccessibilityElement? = null
+    private var children = mutableListOf<AccessibilityElement>()
+    private var container: AccessibilityContainer? = null
+
+    val hasChildren: Boolean
+        get() = children.isNotEmpty()
+
+    val childrenCount: NSInteger
+        get() = children.size.toLong()
+
     init {
         fillInAccessibilityProperties()
+    }
+
+    fun childAtIndex(index: NSInteger): AccessibilityElement? {
+        if (index < 0L || index >= childrenCount) {
+            return null
+        }
+
+        return children[index.toInt()]
+    }
+
+    /**
+     * Tries to match the given [element] with the actual hierarchy resolution callback from
+     * iOS Accessibility services. If the element is found, returns its index in the children list.
+     * Otherwise, returns null.
+     */
+    fun indexOfChildAccessibilityElement(element: Any): NSInteger? {
+        for (index in 0 until children.size) {
+            val child = children[index]
+
+            // There are two exclusive cases here.
+            // 1. The element is a container, and it's the same as the container of the child.
+            // 2. The element is an actual accessibility element, and it's the same as one of the child.
+            // The first case is true if the child has children itself, and hence [AccessibilityContainer] was communicated to iOS.
+            // The second case is true if the child doesn't have children, and hence its [actualAccessibilityElement] was communicated to iOS.
+
+            return if (child.hasChildren) {
+                if (element == child.accessibilityContainer) {
+                    index.toLong()
+                } else {
+                    null
+                }
+            } else {
+                if (element == child.actualAccessibilityElement) {
+                    index.toLong()
+                } else {
+                    null
+                }
+            }
+        }
+
+        return null
+    }
+
+    override fun resolveAccessibilityContainer(): Any? {
+        return nil
     }
 
     private fun fillInAccessibilityProperties() {
@@ -81,7 +136,7 @@ private class AccessibilityElement(
             accessibilityTraits = accessibilityTraits or trait
         }
 
-        fun <T>getValue(key: SemanticsPropertyKey<T>): T = semanticsNode.config[key]
+        fun <T> getValue(key: SemanticsPropertyKey<T>): T = semanticsNode.config[key]
 
         // Iterate through all semantic properties and map them to values that are expected by iOS Accessibility services for the node with given semantics
         semanticsNode.config.forEach { pair ->
@@ -213,90 +268,68 @@ private class AccessibilityElement(
  *     SemanticsNode_B
  *         SemanticsNode_C
  * ```
- * Will be represented like:
+ * Is expected by iOS Accessibility services to be represented as:
  * ```
- * ComposeAccessibilityContainer_A
- *     ComposeAccessibilityElement_A
- *     ComposeAccessibilityContainer_B
- *         ComposeAccessibilityElement_B
- *         ComposeAccessibilityElement_C
+ * AccessibilityContainer_A
+ *     AccessibilityElement_A -> AccessibilityElement
+ *     AccessibilityContainer_B
+ *         AccessibilityElement_B -> AccessibilityScrollableElement(for example)
+ *         AccessibilityElement_C -> AccessibilityElement
  * ```
+ *
+ * The actual internal representation of the tree is:
+ * ```
+ * AccessibilityElement_A
+ *   AccessibilityElement_B
+ *      AccessibilityElement_C
+ * ```
+ * But once accessibility services call `UIAcccessibility` API on `AccessibilityElement_A`,
+ * this hierarchy will be lazily resolved to the expected one. This is needed, because the actual
+ * [SemanticsNode]s can be inserted and removed dynamically, so building it in advance and
+ * modifying proactively is not an optimal solution.
+ *
+ * This implementation is inspired by Flutter's
+ * https://github.com/flutter/engine/blob/main/shell/platform/darwin/ios/framework/Source/SemanticsObject.h
  */
-//private class ComposeAccessibilityContainer(
-//    controller: AccessibilityControllerImpl,
-//    semanticsNode: SemanticsNode,
-//    semanticsNodeChildren: List<SemanticsNode>,
-//    parent: Any,
-//) : CMPAccessibilityContainer(parent) {
-//    private val children: List<Any>
-//    private val wrappedElement = ComposeAccessibilityElement(controller, semanticsNode, this)
-//
-//    init {
-//        isAccessibilityElement = false
-//        accessibilityIdentifier = "Container for ${semanticsNode.id}"
-//        accessibilityFrame = wrappedElement.accessibilityFrame
-//        accessibilityContainer = parent
-//
-//        children = semanticsNodeChildren.map {
-//            createComposeAccessibleObject(wrappedElement.controller, it, this)
-//        }
-//    }
-//
-//    override fun accessibilityElementAtIndex(index: NSInteger): Any? {
-//        val idx = index.toInt()
-//
-//        if (idx < 0 || idx >= accessibilityElementCount().toInt()) {
-//            return null
-//        }
-//
-//        if (idx == 0) {
-//            return wrappedElement
-//        }
-//
-//        return children[idx - 1]
-//    }
-//
-//    override fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
-//
-//    override fun indexOfAccessibilityElement(element: Any): NSInteger {
-//        // TODO: store the elements in Any->Int map, if that lookup takes significant time
-//        if (element == null) {
-//            return NSNotFound
-//        }
-//
-//        if (element == wrappedElement) {
-//            return 0
-//        }
-//
-//        val index = children.indexOf(element)
-//
-//        return if (index == -1) {
-//            NSNotFound
-//        } else {
-//            (index + 1).toLong()
-//        }
-//    }
-//}
+private class AccessibilityContainer(
+    private val element: AccessibilityElement,
+    bridge: AccessibilityBridge,
+) : CMPAccessibilityContainer(element, bridge) {
+    override fun accessibilityElementAtIndex(index: NSInteger): Any? {
+        if (index == 0L) {
+            return element.actualAccessibilityElement
+        }
 
-//private fun createComposeAccessibleObject(
-//    controller: AccessibilityControllerImpl,
-//    semanticsNode: SemanticsNode,
-//    parent: Any
-//): Any {
-//    val children = semanticsNode.replacedChildren.sortedByAccesibilityOrder()
-//
-//    return if (children.isEmpty()) {
-//        ComposeAccessibilityElement(controller, semanticsNode, parent)
-//    } else {
-//        ComposeAccessibilityContainer(controller, semanticsNode, children, parent)
-//    }
-//}
+        val child = element.childAtIndex(index - 1) ?: return null
+
+        if (child.hasChildren) {
+            return child.accessibilityContainer
+        }
+
+        return child.actualAccessibilityElement
+    }
+
+    override fun accessibilityElementCount(): NSInteger = (element.childrenCount + 1)
+
+    /**
+     * Reverse lookup of [accessibilityElementAtIndex]
+     */
+    override fun indexOfAccessibilityElement(element: Any): NSInteger {
+        if (element == this.element.actualAccessibilityElement) {
+            return 0
+        }
+
+        return this.element.indexOfChildAccessibilityElement(element)?.let { index ->
+            index + 1
+        } ?: NSNotFound
+    }
+}
 
 internal class AccessibilityBridge(
     private val rootAccessibleContainer: UIView,
     private val checkIfAlive: () -> Boolean,
     val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
-): NSObject(), CMPAccessibilityBridgeProtocol {
+) : NSObject(), CMPAccessibilityBridgeProtocol {
     override fun container(): Any =
         rootAccessibleContainer
 
@@ -360,25 +393,19 @@ internal class AccessibilityControllerImpl(
 
         isCurrentComposeAccessibleTreeDirty = false
 
-//        val accessibilityElements = rooSemanticstNode.replacedChildren.sortedByAccesibilityOrder()
-//            .sortedByAccesibilityOrder()
-//            .map {
-//                createComposeAccessibleObject(this, it, rootAccessibleContainer)
-//            }
-
         val accessibilityElements = mutableListOf<Any>()
 
         fun traverseSemanticsNode(node: SemanticsNode) {
-           accessibilityElements.add(
-               AccessibilityElement(
-                   bridge = bridge,
-                   semanticsNode = node
-               )
-           )
+            accessibilityElements.add(
+                AccessibilityElement(
+                    bridge = bridge,
+                    semanticsNode = node
+                )
+            )
 
-           for (child in node.replacedChildren) {
-               traverseSemanticsNode(child)
-           }
+            for (child in node.replacedChildren) {
+                traverseSemanticsNode(child)
+            }
         }
 
         traverseSemanticsNode(rooSemanticstNode)

@@ -15,11 +15,14 @@
  */
 
 #import <UIKit/UIKit.h>
+#import "CMPAccessibilityElement.h"
 #import "CMPAccessibilityMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface CMPAccessibilityContainer : UIAccessibilityElement
+
+-(instancetype)initWithElement:(CMPAccessibilityElement*)element bridge:(id<CMPAccessibilityBridge>)bridge NS_DESIGNATED_INITIALIZER;
 
 // Redeclared to make it visible to Kotlin, workaround for the following issue:
 // https://youtrack.jetbrains.com/issue/KT-56001/Kotlin-Native-import-Objective-C-category-members-as-class-members-if-the-category-is-located-in-the-same-file
@@ -27,6 +30,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (__nullable id)accessibilityElementAtIndex:(NSInteger)index CMP_MUST_BE_OVERRIDED;
 - (NSInteger)accessibilityElementCount CMP_MUST_BE_OVERRIDED;
 - (NSInteger)indexOfAccessibilityElement:(id)element CMP_MUST_BE_OVERRIDED;
+
+- (__nullable id)resolveAccessibilityContainer CMP_MUST_BE_OVERRIDED;
 
 @end
 

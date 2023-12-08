@@ -15,10 +15,25 @@
  */
 
 #import "CMPAccessibilityContainer.h"
+#import "CMPAccessibilityBridge.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@implementation CMPAccessibilityContainer
+@implementation CMPAccessibilityContainer {
+    CMPAccessibilityElement* _element;
+    __weak id<CMPAccessibilityBridge> _bridge;
+}
+
+-(instancetype)initWithElement:(CMPAccessibilityElement*)element bridge:(id<CMPAccessibilityBridge>)bridge {
+    self = [super initWithAccessibilityContainer:bridge.container];
+    
+    if (self) {
+        _element = element;
+        _bridge = bridge;
+    }
+    
+    return self;
+}
 
 // MARK: overrided UIAccessibilityContainer methods
 
@@ -31,6 +46,30 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (__nullable id)accessibilityElementAtIndex:(NSInteger)index {
+    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+}
+
+- (BOOL)isAccessibilityElement {
+    return NO;
+}
+
+- (void)setAccessibilityContainer:(__nullable id)accessibilityContainer {
+    // NoOp
+}
+
+- (__nullable id)accessibilityContainer {
+    if (_bridge) {
+        if (!_bridge.isAlive) {
+            return nil;
+        }
+    } else {
+        return nil;
+    }
+    
+    return [self resolveAccessibilityContainer];
+}
+
+- (__nullable id)resolveAccessibilityContainer {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
