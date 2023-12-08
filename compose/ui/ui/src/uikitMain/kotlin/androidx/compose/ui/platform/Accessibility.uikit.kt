@@ -34,7 +34,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.utils.CMPAccessibilityContainer
+import androidx.compose.ui.utils.*
 import kotlin.test.todo
 import platform.UIKit.UIAccessibilityCustomAction
 import platform.UIKit.UIAccessibilityTraitAdjustable
@@ -54,166 +54,152 @@ import platform.UIKit.accessibilityTraits
 import platform.UIKit.accessibilityValue
 import platform.darwin.NSInteger
 
-/**
- * Set current object UIAccessibility properties using the [SemanticsNode] properties
- *
- * accessibilityLabel: A string that succinctly identifies the element. It's what a screen reader speaks to describe the element.
- * accessibilityHint: Provides additional context about an element, typically describing what will happen if the user interacts with it. It helps users understand actions associated with the element.
- * accessibilityValue: Conveys the value of an element, such as the current setting of a slider or the text inside a text field.
- * accessibilityTraits: Describes the characteristics of the element, such as being a button, selected, a link, a header, etc. This helps users understand how to interact with the element.
- * accessibilityElementsHidden: When set to true, it hides the element and all its children from the accessibility system. Useful when a widget is present in the hierarchy but covered with other widget.
- * isAccessibilityElement: Determines whether the element should be exposed to the accessibility system.
- * accessibilityFrame: The frame of the element in screen coordinates, helping the accessibility system to know where it is located.
- * accessibilityPath: A path object that defines the shape of the element, used for more precise element description and interaction.
- * accessibilityViewIsModal: Indicates whether interacting with this element requires the user to dismiss a modal view first.
- */
-private fun NSObject.fillInAccessibilityProperties(semanticsNode: SemanticsNode) {
-    // If the node doesn't have any semantics that can be projected to iOS UIAccessibility entities, it will be invisible to accessibility services
-    isAccessibilityElement = false
-
-    var hasAnyMeaningfulSemantics = false
-
-    fun onMeaningfulSemanticAdded() {
-        hasAnyMeaningfulSemantics = true
+private class AccessibilityElement(
+    val semanticsNode: SemanticsNode,
+    val bridge: AccessibilityBridge,
+) : CMPAccessibilityElement(bridge) {
+    init {
+        fillInAccessibilityProperties()
     }
 
-    println(semanticsNode.config)
+    private fun fillInAccessibilityProperties() {
+        // If the node doesn't have any semantics that can be projected to iOS UIAccessibility entities, it will be invisible to accessibility services
+        isAccessibilityElement = false
 
-    val accessibilityLabelStrings = mutableListOf<String>()
-    val accessibilityValueStrings = mutableListOf<String>()
+        var hasAnyMeaningfulSemantics = false
 
-    fun addTrait(trait: UIAccessibilityTraits) {
-        accessibilityTraits = accessibilityTraits or trait
-    }
+        fun onMeaningfulSemanticAdded() {
+            hasAnyMeaningfulSemantics = true
+        }
 
-    fun <T>getValue(key: SemanticsPropertyKey<T>): T = semanticsNode.config[key]
+        println(semanticsNode.config)
 
-    // Iterate through all semantic properties and map them to values that are expected by iOS Accessibility services for the node with given semantics
-    semanticsNode.config.forEach { pair ->
-        when (val key = pair.key) {
-            // == Properties ==
+        val accessibilityLabelStrings = mutableListOf<String>()
+        val accessibilityValueStrings = mutableListOf<String>()
 
-            SemanticsProperties.InvisibleToUser -> {
-                // Return immediately. Function won't reach a point where [isAccessibilityElement] is set to true
-                return
-            }
+        fun addTrait(trait: UIAccessibilityTraits) {
+            accessibilityTraits = accessibilityTraits or trait
+        }
 
-            SemanticsProperties.LiveRegion -> {
-                onMeaningfulSemanticAdded()
-                addTrait(UIAccessibilityTraitUpdatesFrequently)
-            }
+        fun <T>getValue(key: SemanticsPropertyKey<T>): T = semanticsNode.config[key]
 
-            SemanticsProperties.ContentDescription -> {
-                accessibilityLabelStrings.addAll(getValue(key))
-            }
+        // Iterate through all semantic properties and map them to values that are expected by iOS Accessibility services for the node with given semantics
+        semanticsNode.config.forEach { pair ->
+            when (val key = pair.key) {
+                // == Properties ==
 
-            SemanticsProperties.Text -> {
-                accessibilityLabelStrings.addAll(getValue(key).map { it.text })
-            }
-
-            SemanticsProperties.PaneTitle -> {
-                accessibilityLabelStrings.add(getValue(key))
-            }
-
-            SemanticsProperties.Disabled -> {
-                addTrait(UIAccessibilityTraitNotEnabled)
-            }
-
-            SemanticsProperties.Heading -> {
-                onMeaningfulSemanticAdded()
-                addTrait(UIAccessibilityTraitHeader)
-            }
-
-            SemanticsProperties.StateDescription -> {
-                val state = getValue(key)
-                accessibilityValueStrings.add(state)
-            }
-
-            SemanticsProperties.ToggleableState -> {
-                val state = getValue(key)
-
-                when (state) {
-                    ToggleableState.On -> {
-                        addTrait(UIAccessibilityTraitSelected)
-                        accessibilityValueStrings.add("On")
-                    }
-
-                    ToggleableState.Off -> {
-                        accessibilityValueStrings.add("Off")
-                    }
-
-                    ToggleableState.Indeterminate -> {
-                        accessibilityValueStrings.add("Indeterminate")
-                    }
+                SemanticsProperties.InvisibleToUser -> {
+                    // Return immediately. Function won't reach a point where [isAccessibilityElement] is set to true
+                    return
                 }
-            }
 
-            SemanticsProperties.Role -> {
-                val role = getValue(key)
-
-                when (role) {
-                    Role.Button, Role.RadioButton, Role.Checkbox, Role.Switch -> {
-                        onMeaningfulSemanticAdded()
-                        addTrait(UIAccessibilityTraitButton)
-                    }
-
-                    Role.DropdownList -> {
-                        onMeaningfulSemanticAdded()
-                        addTrait(UIAccessibilityTraitAdjustable)
-                    }
-
-                    Role.Image -> {
-                        onMeaningfulSemanticAdded()
-                        addTrait(UIAccessibilityTraitImage)
-                    }
+                SemanticsProperties.LiveRegion -> {
+                    onMeaningfulSemanticAdded()
+                    addTrait(UIAccessibilityTraitUpdatesFrequently)
                 }
-            }
 
-            // == Actions ==
+                SemanticsProperties.ContentDescription -> {
+                    accessibilityLabelStrings.addAll(getValue(key))
+                }
 
-            SemanticsActions.OnClick -> {
-                onMeaningfulSemanticAdded()
-            }
+                SemanticsProperties.Text -> {
+                    accessibilityLabelStrings.addAll(getValue(key).map { it.text })
+                }
 
-            SemanticsActions.CustomActions -> {
-                onMeaningfulSemanticAdded()
+                SemanticsProperties.PaneTitle -> {
+                    accessibilityLabelStrings.add(getValue(key))
+                }
 
-                val actions = getValue(key)
-                accessibilityCustomActions = actions.map {
-                    UIAccessibilityCustomAction(
-                        name = it.label,
-                        actionHandler = { _ ->
-                            it.action.invoke()
+                SemanticsProperties.Disabled -> {
+                    addTrait(UIAccessibilityTraitNotEnabled)
+                }
+
+                SemanticsProperties.Heading -> {
+                    onMeaningfulSemanticAdded()
+                    addTrait(UIAccessibilityTraitHeader)
+                }
+
+                SemanticsProperties.StateDescription -> {
+                    val state = getValue(key)
+                    accessibilityValueStrings.add(state)
+                }
+
+                SemanticsProperties.ToggleableState -> {
+                    val state = getValue(key)
+
+                    when (state) {
+                        ToggleableState.On -> {
+                            addTrait(UIAccessibilityTraitSelected)
+                            accessibilityValueStrings.add("On")
                         }
-                    )
+
+                        ToggleableState.Off -> {
+                            accessibilityValueStrings.add("Off")
+                        }
+
+                        ToggleableState.Indeterminate -> {
+                            accessibilityValueStrings.add("Indeterminate")
+                        }
+                    }
+                }
+
+                SemanticsProperties.Role -> {
+                    val role = getValue(key)
+
+                    when (role) {
+                        Role.Button, Role.RadioButton, Role.Checkbox, Role.Switch -> {
+                            onMeaningfulSemanticAdded()
+                            addTrait(UIAccessibilityTraitButton)
+                        }
+
+                        Role.DropdownList -> {
+                            onMeaningfulSemanticAdded()
+                            addTrait(UIAccessibilityTraitAdjustable)
+                        }
+
+                        Role.Image -> {
+                            onMeaningfulSemanticAdded()
+                            addTrait(UIAccessibilityTraitImage)
+                        }
+                    }
+                }
+
+                // == Actions ==
+
+                SemanticsActions.OnClick -> {
+                    onMeaningfulSemanticAdded()
+                }
+
+                SemanticsActions.CustomActions -> {
+                    onMeaningfulSemanticAdded()
+
+                    val actions = getValue(key)
+                    accessibilityCustomActions = actions.map {
+                        UIAccessibilityCustomAction(
+                            name = it.label,
+                            actionHandler = { _ ->
+                                it.action.invoke()
+                            }
+                        )
+                    }
                 }
             }
         }
-    }
 
-    if (accessibilityLabelStrings.isNotEmpty()) {
-        onMeaningfulSemanticAdded()
-        accessibilityLabel = accessibilityLabelStrings.joinToString("\n") { it }
-    }
+        if (accessibilityLabelStrings.isNotEmpty()) {
+            onMeaningfulSemanticAdded()
+            accessibilityLabel = accessibilityLabelStrings.joinToString("\n") { it }
+        }
 
-    if (accessibilityValueStrings.isNotEmpty()) {
-        onMeaningfulSemanticAdded()
-        accessibilityValue = accessibilityLabelStrings.joinToString("\n") { it }
-    }
+        if (accessibilityValueStrings.isNotEmpty()) {
+            onMeaningfulSemanticAdded()
+            accessibilityValue = accessibilityLabelStrings.joinToString("\n") { it }
+        }
 
-    isAccessibilityElement = hasAnyMeaningfulSemantics
-}
+        isAccessibilityElement = hasAnyMeaningfulSemantics
 
-private class ComposeAccessibilityElement(
-    val controller: AccessibilityControllerImpl,
-    val semanticsNode: SemanticsNode,
-    parent: Any,
-) : UIAccessibilityElement(parent) {
-    init {
         accessibilityIdentifier = "Element for ${semanticsNode.id}"
-        accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
-
-        fillInAccessibilityProperties(semanticsNode)
+        accessibilityFrame = bridge.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
     }
 }
 
@@ -236,74 +222,86 @@ private class ComposeAccessibilityElement(
  *         ComposeAccessibilityElement_C
  * ```
  */
-private class ComposeAccessibilityContainer(
-    controller: AccessibilityControllerImpl,
-    semanticsNode: SemanticsNode,
-    semanticsNodeChildren: List<SemanticsNode>,
-    parent: Any,
-) : CMPAccessibilityContainer(parent) {
-    private val children: List<Any>
-    private val wrappedElement = ComposeAccessibilityElement(controller, semanticsNode, this)
+//private class ComposeAccessibilityContainer(
+//    controller: AccessibilityControllerImpl,
+//    semanticsNode: SemanticsNode,
+//    semanticsNodeChildren: List<SemanticsNode>,
+//    parent: Any,
+//) : CMPAccessibilityContainer(parent) {
+//    private val children: List<Any>
+//    private val wrappedElement = ComposeAccessibilityElement(controller, semanticsNode, this)
+//
+//    init {
+//        isAccessibilityElement = false
+//        accessibilityIdentifier = "Container for ${semanticsNode.id}"
+//        accessibilityFrame = wrappedElement.accessibilityFrame
+//        accessibilityContainer = parent
+//
+//        children = semanticsNodeChildren.map {
+//            createComposeAccessibleObject(wrappedElement.controller, it, this)
+//        }
+//    }
+//
+//    override fun accessibilityElementAtIndex(index: NSInteger): Any? {
+//        val idx = index.toInt()
+//
+//        if (idx < 0 || idx >= accessibilityElementCount().toInt()) {
+//            return null
+//        }
+//
+//        if (idx == 0) {
+//            return wrappedElement
+//        }
+//
+//        return children[idx - 1]
+//    }
+//
+//    override fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
+//
+//    override fun indexOfAccessibilityElement(element: Any): NSInteger {
+//        // TODO: store the elements in Any->Int map, if that lookup takes significant time
+//        if (element == null) {
+//            return NSNotFound
+//        }
+//
+//        if (element == wrappedElement) {
+//            return 0
+//        }
+//
+//        val index = children.indexOf(element)
+//
+//        return if (index == -1) {
+//            NSNotFound
+//        } else {
+//            (index + 1).toLong()
+//        }
+//    }
+//}
 
-    init {
-        isAccessibilityElement = false
-        accessibilityIdentifier = "Container for ${semanticsNode.id}"
-        accessibilityFrame = wrappedElement.accessibilityFrame
-        accessibilityContainer = parent
+//private fun createComposeAccessibleObject(
+//    controller: AccessibilityControllerImpl,
+//    semanticsNode: SemanticsNode,
+//    parent: Any
+//): Any {
+//    val children = semanticsNode.replacedChildren.sortedByAccesibilityOrder()
+//
+//    return if (children.isEmpty()) {
+//        ComposeAccessibilityElement(controller, semanticsNode, parent)
+//    } else {
+//        ComposeAccessibilityContainer(controller, semanticsNode, children, parent)
+//    }
+//}
 
-        children = semanticsNodeChildren.map {
-            createComposeAccessibleObject(wrappedElement.controller, it, this)
-        }
-    }
+internal class AccessibilityBridge(
+    private val rootAccessibleContainer: UIView,
+    private val checkIfAlive: () -> Boolean,
+    val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
+): NSObject(), CMPAccessibilityBridgeProtocol {
+    override fun container(): Any =
+        rootAccessibleContainer
 
-    override fun accessibilityElementAtIndex(index: NSInteger): Any? {
-        val idx = index.toInt()
-
-        if (idx < 0 || idx >= accessibilityElementCount().toInt()) {
-            return null
-        }
-
-        if (idx == 0) {
-            return wrappedElement
-        }
-
-        return children[idx - 1]
-    }
-
-    override fun accessibilityElementCount(): NSInteger = (children.size + 1).toLong()
-
-    override fun indexOfAccessibilityElement(element: Any): NSInteger {
-        // TODO: store the elements in Any->Int map, if that lookup takes significant time
-        if (element == null) {
-            return NSNotFound
-        }
-
-        if (element == wrappedElement) {
-            return 0
-        }
-
-        val index = children.indexOf(element)
-
-        return if (index == -1) {
-            NSNotFound
-        } else {
-            (index + 1).toLong()
-        }
-    }
-}
-
-private fun createComposeAccessibleObject(
-    controller: AccessibilityControllerImpl,
-    semanticsNode: SemanticsNode,
-    parent: Any
-): Any {
-    val children = semanticsNode.replacedChildren.sortedByAccesibilityOrder()
-
-    return if (children.isEmpty()) {
-        ComposeAccessibilityElement(controller, semanticsNode, parent)
-    } else {
-        ComposeAccessibilityContainer(controller, semanticsNode, children, parent)
-    }
+    override fun isAlive(): Boolean =
+        checkIfAlive()
 }
 
 internal class AccessibilityControllerImpl(
@@ -311,6 +309,16 @@ internal class AccessibilityControllerImpl(
     val owner: SemanticsOwner,
     val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
 ) : AccessibilityController {
+    var alive = true
+
+    private val bridge = AccessibilityBridge(
+        rootAccessibleContainer = rootAccessibleContainer,
+        checkIfAlive = {
+            alive
+        },
+        convertRectToWindowSpaceCGRect = convertRectToWindowSpaceCGRect
+    )
+
     /**
      * Represents the current tree cleanliness.
      *
@@ -352,11 +360,28 @@ internal class AccessibilityControllerImpl(
 
         isCurrentComposeAccessibleTreeDirty = false
 
-        val accessibilityElements = rooSemanticstNode.replacedChildren.sortedByAccesibilityOrder()
-            .sortedByAccesibilityOrder()
-            .map {
-                createComposeAccessibleObject(this, it, rootAccessibleContainer)
-            }
+//        val accessibilityElements = rooSemanticstNode.replacedChildren.sortedByAccesibilityOrder()
+//            .sortedByAccesibilityOrder()
+//            .map {
+//                createComposeAccessibleObject(this, it, rootAccessibleContainer)
+//            }
+
+        val accessibilityElements = mutableListOf<Any>()
+
+        fun traverseSemanticsNode(node: SemanticsNode) {
+           accessibilityElements.add(
+               AccessibilityElement(
+                   bridge = bridge,
+                   semanticsNode = node
+               )
+           )
+
+           for (child in node.replacedChildren) {
+               traverseSemanticsNode(child)
+           }
+        }
+
+        traverseSemanticsNode(rooSemanticstNode)
 
         rootAccessibleContainer.accessibilityElements = accessibilityElements
     }

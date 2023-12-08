@@ -6,21 +6,24 @@
 //
 
 #import "CMPAccessibilityContainer.h"
+#import "CMPAccessibilityMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @implementation CMPAccessibilityContainer
 
--(NSInteger)accessibilityElementCount {
-    assert(false && "MUST_OVERRIDE");
+// MARK: overrided UIAccessibilityContainer methods
+
+- (NSInteger)accessibilityElementCount {
+    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
--(NSInteger)indexOfAccessibilityElement:(nonnull id)element {
-    assert(false && "MUST_OVERRIDE");
+- (NSInteger)indexOfAccessibilityElement:(id)element {
+    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
--(nullable id)accessibilityElementAtIndex:(NSInteger)index {
-    assert(false && "MUST_OVERRIDE");
+- (__nullable id)accessibilityElementAtIndex:(NSInteger)index {
+    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
 @end

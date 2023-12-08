@@ -6,15 +6,17 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "CMPAccessibilityElement.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface CMPAccessibilityContainer : CMPAccessibilityElement
+@interface CMPAccessibilityContainer : UIAccessibilityElement
 
--(nullable id)accessibilityElementAtIndex:(NSInteger)index;
--(NSInteger)accessibilityElementCount;
--(NSInteger)indexOfAccessibilityElement:(id)element;
+// need to be redeclared here because of the following issue
+// https://youtrack.jetbrains.com/issue/KT-56001/Kotlin-Native-import-Objective-C-category-members-as-class-members-if-the-category-is-located-in-the-same-file
+
+- (__nullable id)accessibilityElementAtIndex:(NSInteger)index;
+- (NSInteger)accessibilityElementCount;
+- (NSInteger)indexOfAccessibilityElement:(id)element;
 
 @end
 

@@ -30,6 +30,8 @@
 		9975AAEB2AEADDA900AF155F /* CMPAccessibilityElement.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPAccessibilityElement.m; sourceTree = "<group>"; };
 		EA70A7DE2B20BBE900300068 /* CMPAccessibilityContainer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPAccessibilityContainer.h; sourceTree = "<group>"; };
 		EA70A7DF2B20BBE900300068 /* CMPAccessibilityContainer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPAccessibilityContainer.m; sourceTree = "<group>"; };
+		EA70A7E42B232B0000300068 /* CMPAccessibilityBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPAccessibilityBridge.h; sourceTree = "<group>"; };
+		EA70A7E52B23319A00300068 /* CMPAccessibilityMacros.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPAccessibilityMacros.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +53,8 @@
 				996EFEF52B02CE8A0000FE0F /* CMPUIKitUtils.h */,
 				EA70A7DE2B20BBE900300068 /* CMPAccessibilityContainer.h */,
 				EA70A7DF2B20BBE900300068 /* CMPAccessibilityContainer.m */,
+				EA70A7E42B232B0000300068 /* CMPAccessibilityBridge.h */,
+				EA70A7E52B23319A00300068 /* CMPAccessibilityMacros.h */,
 			);
 			path = CMPUIKitUtils;
 			sourceTree = "<group>";

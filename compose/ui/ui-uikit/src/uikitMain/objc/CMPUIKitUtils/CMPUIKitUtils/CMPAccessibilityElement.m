@@ -15,10 +15,54 @@
  */
 
 #import "CMPAccessibilityElement.h"
+#import "CMPAccessibilityBridge.h"
+#import "CMPAccessibilityMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@implementation CMPAccessibilityElement
+@implementation CMPAccessibilityElement {
+    BOOL _inDealloc;
+    __weak id<CMPAccessibilityBridge> _bridge;
+}
+
+- (id)initWithBridge:(id<CMPAccessibilityBridge>)bridge {
+    self = [super initWithAccessibilityContainer:bridge.container];
+    
+    if (self) {
+        _inDealloc = NO;
+        _bridge = bridge;
+    }
+    
+    return self;
+}
+
+- (void)dealloc {
+    _inDealloc = YES;
+}
+
+- (void)setAccessibilityContainer:(__nullable id)accessibilityContainer {
+    // NoOp
+}
+
+- (__nullable id)accessibilityContainer {
+    if (_inDealloc) {
+        return nil;
+    }
+    
+    if (_bridge) {
+        if (!_bridge.isAlive) {
+            return nil;
+        }
+    } else {
+        return nil;
+    }
+    
+    return [self resolveAccessibilityContainer];
+}
+
+- (__nullable id)resolveAccessibilityContainer {
+    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+}
 
 @end
 

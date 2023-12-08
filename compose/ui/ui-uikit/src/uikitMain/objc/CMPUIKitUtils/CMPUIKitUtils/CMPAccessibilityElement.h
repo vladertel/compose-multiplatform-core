@@ -16,9 +16,15 @@
 
 #import <UIKit/UIKit.h>
 
+@protocol CMPAccessibilityBridge;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface CMPAccessibilityElement : UIAccessibilityElement
+
+- (id)initWithBridge:(id<CMPAccessibilityBridge>)bridge NS_DESIGNATED_INITIALIZER;
+
+- (__nullable id)resolveAccessibilityContainer;
 
 @end
 
