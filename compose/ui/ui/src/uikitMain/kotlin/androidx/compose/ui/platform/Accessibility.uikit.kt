@@ -21,21 +21,17 @@ import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import kotlinx.cinterop.CValue
 import kotlinx.coroutines.delay
 import platform.CoreGraphics.CGRect
 import platform.Foundation.NSNotFound
-import platform.UIKit.UIAccessibilityElement
 import platform.UIKit.accessibilityElements
 import platform.UIKit.isAccessibilityElement
-import platform.darwin.NSObject
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.utils.*
-import kotlin.test.todo
 import platform.UIKit.UIAccessibilityCustomAction
 import platform.UIKit.UIAccessibilityTraitAdjustable
 import platform.UIKit.UIAccessibilityTraitButton
@@ -47,26 +43,30 @@ import platform.UIKit.UIAccessibilityTraitUpdatesFrequently
 import platform.UIKit.UIAccessibilityTraits
 import platform.UIKit.UIView
 import platform.UIKit.accessibilityCustomActions
-import platform.UIKit.accessibilityElementsHidden
-import platform.UIKit.accessibilityLabel
-import platform.UIKit.accessibilityTextualContext
-import platform.UIKit.accessibilityTraits
-import platform.UIKit.accessibilityValue
 import platform.darwin.NSInteger
 
 private class AccessibilityElement(
-    val semanticsNode: SemanticsNode,
-    val bridge: AccessibilityBridge,
-) : CMPAccessibilityElement(bridge) {
-    private var parent: AccessibilityElement? = null
-    private var children = mutableListOf<AccessibilityElement>()
-    private var container: AccessibilityContainer? = null
+    private val semanticsNode: SemanticsNode,
+    private val controller: AccessibilityControllerImpl,
+) : CMPAccessibilityElement(controller.view) {
+    val semanticsNodeId: Int
+        get() = semanticsNode.id
 
     val hasChildren: Boolean
         get() = children.isNotEmpty()
 
     val childrenCount: NSInteger
         get() = children.size.toLong()
+
+
+    val actualAccessibilityElement: Any
+        get() = this
+
+    var parent: AccessibilityElement? = null
+        private set
+
+    private var children = mutableListOf<AccessibilityElement>()
+    private var container: AccessibilityContainer? = null
 
     init {
         fillInAccessibilityProperties()
@@ -114,7 +114,11 @@ private class AccessibilityElement(
     }
 
     override fun resolveAccessibilityContainer(): Any? {
-        return nil
+        if (!controller.isAlive) {
+            return null
+        }
+
+        TODO()
     }
 
     private fun fillInAccessibilityProperties() {
@@ -254,7 +258,7 @@ private class AccessibilityElement(
         isAccessibilityElement = hasAnyMeaningfulSemantics
 
         accessibilityIdentifier = "Element for ${semanticsNode.id}"
-        accessibilityFrame = bridge.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
+        accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
     }
 }
 
@@ -293,8 +297,8 @@ private class AccessibilityElement(
  */
 private class AccessibilityContainer(
     private val element: AccessibilityElement,
-    bridge: AccessibilityBridge,
-) : CMPAccessibilityContainer(element, bridge) {
+    private val controller: AccessibilityControllerImpl,
+) : CMPAccessibilityContainer(controller.view) {
     override fun accessibilityElementAtIndex(index: NSInteger): Any? {
         if (index == 0L) {
             return element.actualAccessibilityElement
@@ -323,34 +327,30 @@ private class AccessibilityContainer(
             index + 1
         } ?: NSNotFound
     }
-}
 
-internal class AccessibilityBridge(
-    private val rootAccessibleContainer: UIView,
-    private val checkIfAlive: () -> Boolean,
-    val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
-) : NSObject(), CMPAccessibilityBridgeProtocol {
-    override fun container(): Any =
-        rootAccessibleContainer
+    override fun resolveAccessibilityContainer(): Any? {
+        if (!controller.isAlive) {
+            return null
+        }
 
-    override fun isAlive(): Boolean =
-        checkIfAlive()
+        return if (element.semanticsNodeId == controller.rootSemanticsNodeId) {
+            controller.view
+        } else {
+            element.parent?.accessibilityContainer
+        }
+    }
 }
 
 internal class AccessibilityControllerImpl(
-    val rootAccessibleContainer: UIView,
+    val view: UIView,
     val owner: SemanticsOwner,
     val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
 ) : AccessibilityController {
-    var alive = true
+    // TODO: when is it dead?
+    var isAlive = true
 
-    private val bridge = AccessibilityBridge(
-        rootAccessibleContainer = rootAccessibleContainer,
-        checkIfAlive = {
-            alive
-        },
-        convertRectToWindowSpaceCGRect = convertRectToWindowSpaceCGRect
-    )
+    val rootSemanticsNodeId: Int
+        get() = owner.rootSemanticsNode.id
 
     /**
      * Represents the current tree cleanliness.
@@ -389,8 +389,6 @@ internal class AccessibilityControllerImpl(
             return
         }
 
-        println("Recalculating tree")
-
         isCurrentComposeAccessibleTreeDirty = false
 
         val accessibilityElements = mutableListOf<Any>()
@@ -398,7 +396,7 @@ internal class AccessibilityControllerImpl(
         fun traverseSemanticsNode(node: SemanticsNode) {
             accessibilityElements.add(
                 AccessibilityElement(
-                    bridge = bridge,
+                    controller = this,
                     semanticsNode = node
                 )
             )
@@ -410,7 +408,7 @@ internal class AccessibilityControllerImpl(
 
         traverseSemanticsNode(rooSemanticstNode)
 
-        rootAccessibleContainer.accessibilityElements = accessibilityElements
+        view.accessibilityElements = accessibilityElements
     }
 }
 

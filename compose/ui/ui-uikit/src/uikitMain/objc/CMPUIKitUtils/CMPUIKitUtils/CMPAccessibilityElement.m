@@ -15,21 +15,18 @@
  */
 
 #import "CMPAccessibilityElement.h"
-#import "CMPAccessibilityBridge.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @implementation CMPAccessibilityElement {
     BOOL _inDealloc;
-    __weak id<CMPAccessibilityBridge> _bridge;
 }
 
-- (id)initWithBridge:(id<CMPAccessibilityBridge>)bridge {
-    self = [super initWithAccessibilityContainer:bridge.container];
+- (id)initWithAccessibilityContainer:(id)container {
+    self = [super initWithAccessibilityContainer:container];
     
     if (self) {
         _inDealloc = NO;
-        _bridge = bridge;
     }
     
     return self;
@@ -44,15 +41,8 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (__nullable id)accessibilityContainer {
+    // see https://github.com/flutter/flutter/issues/87247
     if (_inDealloc) {
-        return nil;
-    }
-    
-    if (_bridge) {
-        if (!_bridge.isAlive) {
-            return nil;
-        }
-    } else {
         return nil;
     }
     
@@ -61,10 +51,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (__nullable id)resolveAccessibilityContainer {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
-}
-
-- (id)actualAccessibilityElement {
-    return self;
 }
 
 @end
