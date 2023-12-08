@@ -297,7 +297,7 @@ private fun createComposeAccessibleObject(
     semanticsNode: SemanticsNode,
     parent: Any
 ): Any {
-    val children = semanticsNode.replacedChildren
+    val children = semanticsNode.replacedChildren.sortedByAccesibilityOrder()
 
     return if (children.isEmpty()) {
         ComposeAccessibilityElement(controller, semanticsNode, parent)
@@ -352,29 +352,17 @@ internal class AccessibilityControllerImpl(
 
         isCurrentComposeAccessibleTreeDirty = false
 
-        val accessibilityElements = rooSemanticstNode.replacedChildren
-            .reversed()
+        val accessibilityElements = rooSemanticstNode.replacedChildren.sortedByAccesibilityOrder()
+            .sortedByAccesibilityOrder()
             .map {
                 createComposeAccessibleObject(this, it, rootAccessibleContainer)
             }
 
-        fun traverse(any: Any, depth: Int = 0) {
-            fun gap(): String =
-                "  ".repeat(depth)
-
-            println("${gap()} $any")
-
-//            if (any is UIAccessibilityContainerWorkaroundProtocol) {
-//                for (i in 0 until any.accessibilityElementCount()) {
-//                    any.accessibilityElementAtIndex(i)?.let {
-//                        traverse(it, depth + 1)
-//                    }
-//                }
-//            }
-        }
-
-        accessibilityElements.forEach { traverse(it) }
-
         rootAccessibleContainer.accessibilityElements = accessibilityElements
     }
+}
+
+fun List<SemanticsNode>.sortedByAccesibilityOrder(): List<SemanticsNode> {
+    // TODO: consider RTL layout
+    return sortedBy { it.boundsInWindow.top }
 }
