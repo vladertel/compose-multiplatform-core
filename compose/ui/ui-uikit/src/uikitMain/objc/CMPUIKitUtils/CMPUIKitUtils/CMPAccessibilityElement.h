@@ -15,6 +15,7 @@
  */
 
 #import <UIKit/UIKit.h>
+#import "CMPAccessibilityMacros.h"
 
 @protocol CMPAccessibilityBridge;
 
@@ -24,7 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (id)initWithBridge:(id<CMPAccessibilityBridge>)bridge NS_DESIGNATED_INITIALIZER;
 
-- (__nullable id)resolveAccessibilityContainer;
+- (__nullable id)resolveAccessibilityContainer CMP_MUST_BE_OVERRIDED;
 
 @end
 

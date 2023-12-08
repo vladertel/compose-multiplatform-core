@@ -15,7 +15,6 @@
  */
 
 #import "CMPAccessibilityContainer.h"
-#import "CMPAccessibilityMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 

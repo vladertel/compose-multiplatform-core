@@ -16,4 +16,5 @@
 
 #import <Foundation/Foundation.h>
 
+#define CMP_MUST_BE_OVERRIDED
 #define CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION assert(false && "MUST_OVERRIDE");

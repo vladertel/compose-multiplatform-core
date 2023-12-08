@@ -15,6 +15,7 @@
  */
 
 #import <UIKit/UIKit.h>
+#import "CMPAccessibilityMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -23,9 +24,9 @@ NS_ASSUME_NONNULL_BEGIN
 // Redeclared to make it visible to Kotlin, workaround for the following issue:
 // https://youtrack.jetbrains.com/issue/KT-56001/Kotlin-Native-import-Objective-C-category-members-as-class-members-if-the-category-is-located-in-the-same-file
 
-- (__nullable id)accessibilityElementAtIndex:(NSInteger)index;
-- (NSInteger)accessibilityElementCount;
-- (NSInteger)indexOfAccessibilityElement:(id)element;
+- (__nullable id)accessibilityElementAtIndex:(NSInteger)index CMP_MUST_BE_OVERRIDED;
+- (NSInteger)accessibilityElementCount CMP_MUST_BE_OVERRIDED;
+- (NSInteger)indexOfAccessibilityElement:(id)element CMP_MUST_BE_OVERRIDED;
 
 @end
 
