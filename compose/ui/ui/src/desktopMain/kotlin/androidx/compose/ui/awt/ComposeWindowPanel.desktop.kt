@@ -49,7 +49,7 @@ internal class ComposeWindowPanel(
     // so we nullify bridge on dispose, to prevent keeping
     // big objects in memory (like the whole LayoutNode tree of the window)
     private var _composeContainer: ComposeContainer? =
-        ComposeContainer(this, skiaLayerAnalytics)
+        ComposeContainer(this, skiaLayerAnalytics, window)
     private val composeContainer
         get() = requireNotNull(_composeContainer) {
             "ComposeContainer is disposed"
@@ -125,7 +125,7 @@ internal class ComposeWindowPanel(
     }
 
     override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
-        composeContainer.setSize(width, height)
+        composeContainer.setBounds(0, 0, width, height)
         super.setBounds(x, y, width, height)
     }
 

@@ -139,7 +139,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     override fun setBounds(x: Int, y: Int, width: Int, height: Int) {
-        _composeContainer?.setSize(width, height)
+        _composeContainer?.setBounds(0, 0, width, height)
         super.setBounds(x, y, width, height)
     }
 
@@ -173,7 +173,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
     override fun addNotify() {
         super.addNotify()
-        composeContainer.setSize(width, height)
+        composeContainer.setBounds(0, 0, width, height)
         composeContainer.focusManager.releaseFocus()
         composeContainer.exceptionHandler = exceptionHandler
         composeContainer.addNotify()

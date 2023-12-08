@@ -53,6 +53,7 @@ import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Point
+import java.awt.Rectangle
 import java.awt.Toolkit
 import java.awt.event.ContainerEvent
 import java.awt.event.ContainerListener
@@ -109,9 +110,19 @@ internal class ComposeSceneMediator(
     private val skiaLayerComponent by lazy { skiaLayerComponentFactory(this) }
     private val clipRectangles by skiaLayerComponent::clipComponents
     val contentComponent by skiaLayerComponent::contentComponent
+    var transparency: Boolean
+        get() = skiaLayerComponent.transparency
+        set(value) {
+            skiaLayerComponent.transparency = value || useInteropBlending
+        }
     var fullscreen by skiaLayerComponent::fullscreen
     val windowHandle by skiaLayerComponent::windowHandle
     val renderApi by skiaLayerComponent::renderApi
+    var contentBounds
+        get() = contentComponent.bounds
+        set(value) {
+            contentComponent.bounds = value
+        }
 
     private val scene by lazy { composeSceneFactory(this) }
     val focusManager get() = scene.focusManager
@@ -255,29 +266,24 @@ internal class ComposeSceneMediator(
         })
     }
 
-    fun setSize(width: Int, height: Int) {
-        contentComponent.setSize(width, height)
-    }
-
     fun onChangeComponentSize() {
+        if (!container.isDisplayable) return
+
         // Zero size will literally limit scene's content size to zero,
         // so it case of late initialization skip this to avoid extra layout run.
-        val scaledSize = contentComponent.scaledSize.takeIf { it != IntSize.Zero }
+        val scaledSize = container.scaledSize.takeIf { it != IntSize.Zero }
         if (scene.size != scaledSize) {
             scene.size = scaledSize
         }
     }
 
     fun onChangeComponentDensity() {
-        val density = contentComponent.density
+        if (!container.isDisplayable) return
+        val density = container.density
         if (scene.density != density) {
             scene.density = density
             onChangeComponentSize()
         }
-    }
-
-    fun onChangeWindowTransparency(value: Boolean) {
-        skiaLayerComponent.transparency = value || useInteropBlending
     }
 
     fun onChangeLayoutDirection(layoutDirection: LayoutDirection) {
@@ -409,7 +415,13 @@ internal class ComposeSceneMediator(
 
         override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
             catchExceptions {
-                scene.render(canvas.asComposeCanvas(), nanoTime)
+                val composeCanvas = canvas.asComposeCanvas()
+                val scale = scene.density.density
+                val dx = contentBounds.x.toFloat() * scale
+                val dy = contentBounds.y.toFloat() * scale
+                composeCanvas.translate(-dx, -dy)
+                scene.render(composeCanvas, nanoTime)
+                composeCanvas.translate(dx, dy)
             }
         }
     }

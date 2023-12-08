@@ -17,6 +17,9 @@
 package androidx.compose.ui.scene
 
 internal abstract class DesktopComposeSceneLayer : ComposeSceneLayer {
-    fun onChangeWindowFocus() {
+    open fun onChangeWindowFocus() {
+    }
+
+    open fun onChangeWindowBounds() {
     }
 }

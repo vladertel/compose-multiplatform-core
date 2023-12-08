@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.scene.skia.SkiaLayerAdapter
 import androidx.compose.ui.scene.skia.SkiaLayerComponent
+import androidx.compose.ui.scene.skia.SwingSkiaLayerAdapter
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
@@ -34,6 +35,7 @@ import androidx.compose.ui.window.layoutDirectionFor
 import androidx.compose.ui.window.scaledSize
 import java.awt.Component
 import java.awt.Container
+import java.awt.Rectangle
 import java.awt.Window
 import java.awt.event.ComponentEvent
 import java.awt.event.ComponentListener
@@ -55,9 +57,10 @@ internal val LocalLayerContainer = staticCompositionLocalOf<Container> {
 internal class ComposeContainer(
     val container: JLayeredPane,
     val skiaLayerAnalytics: SkiaLayerAnalytics,
+    window: Window? = null,
 ) : ComponentListener, WindowFocusListener {
-    private val windowContext = PlatformWindowContext()
-    var window: Window? = null
+    val windowContext = PlatformWindowContext()
+    var window: Window? = window
         private set
     private val layers = mutableListOf<DesktopComposeSceneLayer>()
 
@@ -88,9 +91,13 @@ internal class ComposeContainer(
     val renderApi by mediator::renderApi
     val preferredSize by mediator::preferredSize
 
+    init {
+        window?.addComponentListener(this)
+    }
+
     fun dispose() {
         mediator.dispose()
-        // Dispose layers
+        layers.fastForEach(DesktopComposeSceneLayer::close)
     }
 
     override fun componentResized(e: ComponentEvent?) = onChangeWindowBounds()
@@ -104,19 +111,18 @@ internal class ComposeContainer(
     private fun onChangeWindowFocus() {
         windowContext.setWindowFocused(window?.isFocused ?: false)
         mediator.onChangeWindowFocus()
-        layers.fastForEach {
-            it.onChangeWindowFocus()
-        }
+        layers.fastForEach(DesktopComposeSceneLayer::onChangeWindowFocus)
     }
 
     private fun onChangeWindowBounds() {
         val component = window ?: container
         windowContext.setContainerSize(component.scaledSize)
+        layers.fastForEach(DesktopComposeSceneLayer::onChangeWindowBounds)
     }
 
     fun onChangeWindowTransparency(value: Boolean) {
         windowContext.isWindowTransparent = value
-        mediator.onChangeWindowTransparency(value)
+        mediator.transparency = value
     }
 
     fun onChangeLayoutDirection() {
@@ -141,11 +147,15 @@ internal class ComposeContainer(
         mediator.addToComponentLayer(component)
     }
 
-    fun setSize(width: Int, height: Int) {
-        mediator.setSize(width, height)
+    fun setBounds(x: Int, y: Int, width: Int, height: Int) {
+        mediator.contentBounds = Rectangle(x, y, width, height)
     }
 
     private fun setWindow(window: Window?) {
+        if (this.window == window) {
+            return
+        }
+
         this.window?.removeWindowFocusListener(this)
         this.window?.removeComponentListener(this)
 
@@ -174,8 +184,7 @@ internal class ComposeContainer(
 
     private fun createSkiaLayerComponent(mediator: ComposeSceneMediator): SkiaLayerComponent {
         return if (ComposeFeatureFlags.useSwingGraphics) {
-//            SwingSkiaLayerAdapter()
-            TODO()
+            SwingSkiaLayerAdapter(mediator, skiaLayerAnalytics)
         } else {
             SkiaLayerAdapter(mediator, windowContext, skiaLayerAnalytics)
         }
@@ -190,14 +199,14 @@ internal class ComposeContainer(
                 density = density,
                 invalidate = mediator::onComposeSceneInvalidate,
                 layoutDirection = layoutDirection,
-                composeSceneContext = ComposeSceneContextImpl(
+                composeSceneContext = createComposeSceneContext(
                     platformContext = mediator.platformContext
                 ),
             )
         } else {
             MultiLayerComposeScene(
                 coroutineContext = mediator.coroutineContext,
-                composeSceneContext = ComposeSceneContextImpl(
+                composeSceneContext = createComposeSceneContext(
                     platformContext = mediator.platformContext
                 ),
                 density = density,
@@ -214,12 +223,24 @@ internal class ComposeContainer(
         compositionContext: CompositionContext
     ): ComposeSceneLayer {
         return if (ComposeFeatureFlags.useWindowLayers) {
-            WindowComposeSceneLayer(this, density, layoutDirection, focusable, compositionContext)
+            WindowComposeSceneLayer(
+                composeContainer = this,
+                density = density,
+                layoutDirection = layoutDirection,
+                focusable = focusable,
+                compositionContext = compositionContext
+            )
         } else {
-            SwingComposeSceneLayer(this, density, layoutDirection, focusable, compositionContext)
+            SwingComposeSceneLayer(
+                composeContainer = this,
+                skiaLayerAnalytics = skiaLayerAnalytics,
+                density = density,
+                layoutDirection = layoutDirection,
+                focusable = focusable,
+                compositionContext = compositionContext
+            )
         }
     }
-
     fun attachLayer(layer: DesktopComposeSceneLayer) {
         layers.add(layer)
     }
@@ -227,6 +248,9 @@ internal class ComposeContainer(
     fun detachLayer(layer: DesktopComposeSceneLayer) {
         layers.remove(layer)
     }
+
+    fun createComposeSceneContext(platformContext: PlatformContext): ComposeSceneContext =
+        ComposeSceneContextImpl(platformContext)
 
     private inner class ComposeSceneContextImpl(
         override val platformContext: PlatformContext,

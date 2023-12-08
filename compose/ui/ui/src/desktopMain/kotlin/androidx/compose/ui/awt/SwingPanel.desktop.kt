@@ -160,7 +160,7 @@ public fun <T : Component> SwingPanel(
     }
 
     SideEffect {
-        componentInfo.container.background = parseColor(background)
+        componentInfo.container.background = background.toAwtColor()
         componentInfo.updater.update = update
     }
 }
@@ -248,15 +248,6 @@ private fun Box(modifier: Modifier, content: @Composable () -> Unit = {}) {
                 }
             }
         }
-    )
-}
-
-private fun parseColor(color: Color): java.awt.Color {
-    return java.awt.Color(
-        color.component1(),
-        color.component2(),
-        color.component3(),
-        color.component4()
     )
 }
 
