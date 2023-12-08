@@ -18,9 +18,9 @@ package androidx.compose.ui.scene
 
 internal object ComposeFeatureFlags {
     val usePlatformLayers: Boolean
-        get() = false // TODO feature flag
+        get() = true // TODO feature flag
     val useWindowLayers: Boolean
-        get() = false // TODO feature flag
+        get() = true // TODO feature flag
     val useSwingGraphics: Boolean
         get() = System.getProperty("compose.swing.render.on.graphics").toBoolean()
     val useInteropBlending: Boolean

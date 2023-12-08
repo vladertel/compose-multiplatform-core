@@ -43,6 +43,7 @@ import androidx.compose.ui.scene.skia.SkiaLayerComponent
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -71,6 +72,8 @@ import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
 import javax.swing.JLayeredPane
 import kotlin.coroutines.CoroutineContext
+import kotlin.math.round
+import kotlin.math.roundToInt
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.ClipRectangle
@@ -118,10 +121,26 @@ internal class ComposeSceneMediator(
     var fullscreen by skiaLayerComponent::fullscreen
     val windowHandle by skiaLayerComponent::windowHandle
     val renderApi by skiaLayerComponent::renderApi
-    var contentBounds
+
+    var contentBounds: Rectangle
         get() = contentComponent.bounds
         set(value) {
             contentComponent.bounds = value
+        }
+    private val scaledOffset: Offset
+        get() {
+            val scale = scene.density.density
+            return Offset(
+                x = contentBounds.x * scale,
+                y = contentBounds.y * scale
+            )
+        }
+
+    var overrideOffset: Offset? = null
+    var overrideSize: IntSize? = null
+        set(value) {
+            field = value
+            onChangeComponentSize()
         }
 
     private val scene by lazy { composeSceneFactory(this) }
@@ -271,7 +290,7 @@ internal class ComposeSceneMediator(
 
         // Zero size will literally limit scene's content size to zero,
         // so it case of late initialization skip this to avoid extra layout run.
-        val scaledSize = container.scaledSize.takeIf { it != IntSize.Zero }
+        val scaledSize = overrideSize ?: container.scaledSize.takeIf { it != IntSize.Zero }
         if (scene.size != scaledSize) {
             scene.size = scaledSize
         }
@@ -313,13 +332,15 @@ internal class ComposeSceneMediator(
             windowContext.setKeyboardModifiers(event.keyboardModifiers)
         }
         val density = contentComponent.density
-        scene.onMouseEvent(density, event)
+        val scaledOffset = overrideOffset ?: scaledOffset
+        scene.onMouseEvent(scaledOffset, density, event)
     }
 
     private fun onMouseWheelEvent(event: MouseWheelEvent): Unit = catchExceptions {
         if (isDisposed) return
         val density = contentComponent.density
-        scene.onMouseWheelEvent(density, event)
+        val scaledOffset = overrideOffset ?: scaledOffset
+        scene.onMouseWheelEvent(scaledOffset, density, event)
     }
 
     private fun onKeyEvent(event: java.awt.event.KeyEvent) = catchExceptions {
@@ -416,9 +437,9 @@ internal class ComposeSceneMediator(
         override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
             catchExceptions {
                 val composeCanvas = canvas.asComposeCanvas()
-                val scale = scene.density.density
-                val dx = contentBounds.x.toFloat() * scale
-                val dy = contentBounds.y.toFloat() * scale
+                val scaledOffset = overrideOffset ?: scaledOffset
+                val dx = scaledOffset.x
+                val dy = scaledOffset.y
                 composeCanvas.translate(-dx, -dy)
                 scene.render(composeCanvas, nanoTime)
                 composeCanvas.translate(dx, dy)
@@ -547,6 +568,7 @@ internal class ComposeSceneMediator(
     }
 }
 private fun ComposeScene.onMouseEvent(
+    offset: Offset,
     density: Density,
     event: MouseEvent
 ) {
@@ -559,9 +581,10 @@ private fun ComposeScene.onMouseEvent(
         MouseEvent.MOUSE_EXITED -> PointerEventType.Exit
         else -> PointerEventType.Unknown
     }
+    val position = Offset(event.x.toFloat(), event.y.toFloat()) * density.density
     sendPointerEvent(
         eventType = eventType,
-        position = Offset(event.x.toFloat(), event.y.toFloat()) * density.density,
+        position = position + offset,
         timeMillis = event.`when`,
         type = PointerType.Mouse,
         buttons = event.buttons,
@@ -581,12 +604,14 @@ private fun MouseEvent.getPointerButton(): PointerButton? {
 }
 
 private fun ComposeScene.onMouseWheelEvent(
+    offset: Offset,
     density: Density,
     event: MouseWheelEvent
 ) {
+    val position = Offset(event.x.toFloat(), event.y.toFloat()) * density.density
     sendPointerEvent(
         eventType = PointerEventType.Scroll,
-        position = Offset(event.x.toFloat(), event.y.toFloat()) * density.density,
+        position = position + offset,
         scrollDelta = if (event.isShiftDown) {
             Offset(event.preciseWheelRotation.toFloat(), 0f)
         } else {

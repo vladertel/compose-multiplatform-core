@@ -225,6 +225,7 @@ internal class ComposeContainer(
         return if (ComposeFeatureFlags.useWindowLayers) {
             WindowComposeSceneLayer(
                 composeContainer = this,
+                skiaLayerAnalytics = skiaLayerAnalytics,
                 density = density,
                 layoutDirection = layoutDirection,
                 focusable = focusable,
