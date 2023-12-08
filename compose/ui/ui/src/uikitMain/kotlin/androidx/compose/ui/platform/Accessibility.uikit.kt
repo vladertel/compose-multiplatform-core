@@ -66,7 +66,19 @@ private class AccessibilityElement(
         private set
 
     private var children = mutableListOf<AccessibilityElement>()
-    private var container: AccessibilityContainer? = null
+
+    /**
+     * Constructed lazily if :
+     * - The element has children of its own
+     * or
+     * - The element is representing the root node
+     */
+    private val container: AccessibilityContainer by lazy {
+        AccessibilityContainer(
+            element = this,
+            controller = controller
+        )
+    }
 
     init {
         fillInAccessibilityProperties()
@@ -118,7 +130,11 @@ private class AccessibilityElement(
             return null
         }
 
-        TODO()
+        return if (hasChildren || semanticsNodeId == controller.rootSemanticsNodeId) {
+            container
+        } else {
+            parent?.accessibilityContainer
+        }
     }
 
     private fun fillInAccessibilityProperties() {
