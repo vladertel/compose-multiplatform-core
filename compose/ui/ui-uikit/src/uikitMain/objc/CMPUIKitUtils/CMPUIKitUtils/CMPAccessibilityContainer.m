@@ -46,6 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
     // NoOp
 }
 
+// Overrides default accessibilityContainer implementation.
 - (__nullable id)accessibilityContainer {
     return [self resolveAccessibilityContainer];
 }

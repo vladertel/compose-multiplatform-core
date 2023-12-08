@@ -22,7 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
     BOOL _inDealloc;
 }
 
-- (id)initWithAccessibilityContainer:(id)container {
+- (instancetype)initWithAccessibilityContainer:(id)container {
     self = [super initWithAccessibilityContainer:container];
     
     if (self) {
@@ -40,6 +40,7 @@ NS_ASSUME_NONNULL_BEGIN
     // NoOp
 }
 
+// Overrides default accessibilityContainer implementation.
 - (__nullable id)accessibilityContainer {
     // see https://github.com/flutter/flutter/issues/87247
     if (_inDealloc) {
@@ -50,6 +51,10 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (__nullable id)resolveAccessibilityContainer {
+    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+}
+
+- (BOOL)accessibilityActivate {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 

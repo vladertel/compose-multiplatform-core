@@ -30,6 +30,7 @@ import platform.UIKit.isAccessibilityElement
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.utils.*
 import platform.UIKit.UIAccessibilityCustomAction
@@ -123,6 +124,17 @@ private class AccessibilityElement(
         }
 
         return null
+    }
+
+    override fun accessibilityActivate(): Boolean {
+        if (!controller.isAlive) {
+            return false
+        }
+
+        val onClick = semanticsNode.config.getOrNull(SemanticsActions.OnClick) ?: return false
+        val action = onClick.action ?: return false
+
+        return action()
     }
 
     override fun resolveAccessibilityContainer(): Any? {

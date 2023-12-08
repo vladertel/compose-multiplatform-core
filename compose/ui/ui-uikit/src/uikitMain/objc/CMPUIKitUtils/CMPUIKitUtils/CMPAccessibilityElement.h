@@ -23,6 +23,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (__nullable id)resolveAccessibilityContainer CMP_MUST_BE_OVERRIDED;
 
+// MARK: Redeclaration block
+// Redeclared to make it visible to Kotlin for override purposes, workaround for the following issue:
+// https://youtrack.jetbrains.com/issue/KT-56001/Kotlin-Native-import-Objective-C-category-members-as-class-members-if-the-category-is-located-in-the-same-file
+
+-(BOOL)accessibilityActivate CMP_MUST_BE_OVERRIDED;
+
 @end
 
 NS_ASSUME_NONNULL_END
