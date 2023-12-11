@@ -37,6 +37,7 @@ import platform.UIKit.UIAccessibilityTraitAdjustable
 import platform.UIKit.UIAccessibilityTraitButton
 import platform.UIKit.UIAccessibilityTraitHeader
 import platform.UIKit.UIAccessibilityTraitImage
+import platform.UIKit.UIAccessibilityTraitNone
 import platform.UIKit.UIAccessibilityTraitNotEnabled
 import platform.UIKit.UIAccessibilityTraitSelected
 import platform.UIKit.UIAccessibilityTraitUpdatesFrequently
@@ -73,7 +74,7 @@ private class AccessibilityElement(
      * or
      * - The element is representing the root node
      */
-    private val container by lazy {
+    private val synthesizedAccessibilityContainer by lazy {
         AccessibilityContainer(
             element = this,
             controller = controller
@@ -147,7 +148,7 @@ private class AccessibilityElement(
         }
 
         return if (hasChildren || semanticsNodeId == controller.rootSemanticsNodeId) {
-            container
+            synthesizedAccessibilityContainer
         } else {
             parent?.accessibilityContainer
         }
@@ -167,6 +168,7 @@ private class AccessibilityElement(
 
         val accessibilityLabelStrings = mutableListOf<String>()
         val accessibilityValueStrings = mutableListOf<String>()
+        var accessibilityTraits = UIAccessibilityTraitNone
 
         fun addTrait(trait: UIAccessibilityTraits) {
             accessibilityTraits = accessibilityTraits or trait
@@ -287,6 +289,7 @@ private class AccessibilityElement(
             accessibilityValue = accessibilityLabelStrings.joinToString("\n") { it }
         }
 
+        this.accessibilityTraits = accessibilityTraits
         isAccessibilityElement = hasAnyMeaningfulSemantics
 
         accessibilityIdentifier = "Element for ${semanticsNode.id}"
@@ -388,8 +391,6 @@ internal class AccessibilityMediator(
         get() = owner.rootSemanticsNode.id
 
     /**
-     * Represents the current tree cleanliness.
-     *
      * A value of true indicates that the Compose accessible tree is dirty, meaning that compose semantics tree was modified since last sync,
      * false otherwise.
      */

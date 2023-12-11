@@ -17,9 +17,11 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DensityProvider
+import platform.UIKit.UIView
 
 internal class IOSPlatformContextImpl(
     inputServices: PlatformTextInputService,
@@ -36,4 +38,25 @@ internal class IOSPlatformContextImpl(
             }
     }
     override val inputModeManager = DefaultInputModeManager(InputMode.Touch)
+
+    override val semanticsOwnerListener: PlatformContext.SemanticsOwnerListener =
+        object : PlatformContext.SemanticsOwnerListener {
+            private val ownerToMediatorMap = mutableMapOf<SemanticsOwner, AccessibilityMediator>()
+
+            override fun onSemanticsOwnerAppended(semanticsOwner: SemanticsOwner) {
+                check(!ownerToMediatorMap.containsKey(semanticsOwner))
+
+                val mediator = AccessibilityMediator(
+                    UIView(),
+                    semanticsOwner,
+
+                )
+            }
+
+            override fun onSemanticsOwnerRemoved(semanticsOwner: SemanticsOwner) {
+            }
+
+            override fun onSemanticsChange(semanticsOwner: SemanticsOwner) {
+            }
+        }
 }
