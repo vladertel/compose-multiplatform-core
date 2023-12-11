@@ -62,6 +62,7 @@ internal class ComposeContainer(
     val windowContext = PlatformWindowContext()
     var window: Window? = window
         private set
+    private var layoutDirection = layoutDirectionFor(window ?: container)
     private val layers = mutableListOf<DesktopComposeSceneLayer>()
 
     private val coroutineExceptionHandler = DesktopCoroutineExceptionHandler()
@@ -125,8 +126,9 @@ internal class ComposeContainer(
         mediator.transparency = value
     }
 
-    fun onChangeLayoutDirection() {
-        val layoutDirection = layoutDirectionFor(container)
+    fun onChangeLayoutDirection(component: Component) {
+        // ComposeWindow and ComposeDialog relies on self orientation, not on container's one
+        layoutDirection = layoutDirectionFor(component)
         mediator.onChangeLayoutDirection(layoutDirection)
     }
 
@@ -192,7 +194,6 @@ internal class ComposeContainer(
 
     private fun createComposeScene(mediator: ComposeSceneMediator): ComposeScene {
         val density = container.density
-        val layoutDirection = layoutDirectionFor(container)
         return if (ComposeFeatureFlags.usePlatformLayers) {
             SingleLayerComposeScene(
                 coroutineContext = mediator.coroutineContext,

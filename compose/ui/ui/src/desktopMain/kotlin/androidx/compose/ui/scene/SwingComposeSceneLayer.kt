@@ -142,7 +142,6 @@ internal class SwingComposeSceneLayer(
 
     private fun createComposeScene(mediator: ComposeSceneMediator): ComposeScene {
         val density = container.density
-        val layoutDirection = layoutDirectionFor(container)
         return SingleLayerComposeScene(
             coroutineContext = mediator.coroutineContext,
             density = density,

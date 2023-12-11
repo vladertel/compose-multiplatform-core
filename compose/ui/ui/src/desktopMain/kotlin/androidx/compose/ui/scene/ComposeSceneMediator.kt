@@ -43,7 +43,6 @@ import androidx.compose.ui.scene.skia.SkiaLayerComponent
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -72,8 +71,6 @@ import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
 import javax.swing.JLayeredPane
 import kotlin.coroutines.CoroutineContext
-import kotlin.math.round
-import kotlin.math.roundToInt
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.ClipRectangle

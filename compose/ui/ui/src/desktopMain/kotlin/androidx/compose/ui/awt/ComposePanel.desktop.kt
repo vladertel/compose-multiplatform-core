@@ -28,7 +28,7 @@ import java.awt.Dimension
 import java.awt.FocusTraversalPolicy
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
-import java.util.Locale
+import java.util.*
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities.isEventDispatchThread
 import org.jetbrains.skiko.GraphicsApi
@@ -91,9 +91,6 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
             "ComposeContainer is disposed"
         }
     private val contentComponent by composeContainer::contentComponent
-
-//    private fun createComposeBridge(): ComposeBridge {
-//    }
 
     /**
      * Determines whether the Compose state in [ComposePanel] should be disposed
@@ -216,13 +213,13 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     override fun setComponentOrientation(o: ComponentOrientation?) {
         super.setComponentOrientation(o)
 
-        _composeContainer?.onChangeLayoutDirection()
+        _composeContainer?.onChangeLayoutDirection(this)
     }
 
     override fun setLocale(l: Locale?) {
         super.setLocale(l)
 
-        _composeContainer?.onChangeLayoutDirection()
+        _composeContainer?.onChangeLayoutDirection(this)
     }
 
     override fun addFocusListener(l: FocusListener?) {

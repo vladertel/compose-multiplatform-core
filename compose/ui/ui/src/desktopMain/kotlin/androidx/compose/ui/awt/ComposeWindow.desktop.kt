@@ -31,7 +31,7 @@ import java.awt.GraphicsConfiguration
 import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelListener
-import java.util.Locale
+import java.util.*
 import javax.accessibility.Accessible
 import javax.swing.JFrame
 import org.jetbrains.skiko.GraphicsApi
@@ -87,7 +87,7 @@ class ComposeWindow @ExperimentalComposeUiApi constructor(
     override fun setComponentOrientation(o: ComponentOrientation?) {
         super.setComponentOrientation(o)
 
-        composePanel.onChangeLayoutDirection()
+        composePanel.onChangeLayoutDirection(this)
     }
 
     override fun setLocale(l: Locale?) {
@@ -95,7 +95,7 @@ class ComposeWindow @ExperimentalComposeUiApi constructor(
 
         // setLocale is called from JFrame constructor, before ComposeWindow has been initialized
         @Suppress("UNNECESSARY_SAFE_CALL")
-        composePanel?.onChangeLayoutDirection()
+        composePanel?.onChangeLayoutDirection(this)
     }
 
     /**

@@ -26,7 +26,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.window.DialogWindowScope
 import androidx.compose.ui.window.UndecoratedWindowResizer
 import androidx.compose.ui.window.WindowExceptionHandler
-import org.jetbrains.skiko.GraphicsApi
 import java.awt.Component
 import java.awt.ComponentOrientation
 import java.awt.Frame
@@ -35,8 +34,9 @@ import java.awt.Window
 import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelListener
-import java.util.Locale
+import java.util.*
 import javax.swing.JDialog
+import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayerAnalytics
 
 /**
@@ -138,7 +138,7 @@ class ComposeDialog : JDialog {
     override fun setComponentOrientation(o: ComponentOrientation?) {
         super.setComponentOrientation(o)
 
-        composePanel.onChangeLayoutDirection()
+        composePanel.onChangeLayoutDirection(this)
     }
 
     override fun setLocale(l: Locale?) {
@@ -146,9 +146,8 @@ class ComposeDialog : JDialog {
 
         // setLocale is called from JFrame constructor, before ComposeDialog has been initialized
         @Suppress("UNNECESSARY_SAFE_CALL")
-        composePanel?.onChangeLayoutDirection()
+        composePanel?.onChangeLayoutDirection(this)
     }
-
 
     /**
      * Composes the given composable into the ComposeDialog.

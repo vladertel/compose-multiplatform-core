@@ -174,8 +174,8 @@ internal class ComposeWindowPanel(
         isDisposed = true
     }
 
-    fun onChangeLayoutDirection() {
-        composeContainer.onChangeLayoutDirection()
+    fun onChangeLayoutDirection(component: Component) {
+        composeContainer.onChangeLayoutDirection(component)
     }
 
     fun onRenderApiChanged(action: () -> Unit) {
