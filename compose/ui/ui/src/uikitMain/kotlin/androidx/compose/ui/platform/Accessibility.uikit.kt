@@ -32,7 +32,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.utils.*
+import androidx.compose.ui.uikit.utils.*
 import platform.UIKit.UIAccessibilityCustomAction
 import platform.UIKit.UIAccessibilityTraitAdjustable
 import platform.UIKit.UIAccessibilityTraitButton
@@ -137,6 +137,11 @@ private class AccessibilityElement(
         return action()
     }
 
+    /**
+     * This function is the final one called during the accessibility tree resolution for iOS services
+     * and is invoked from underlying Obj-C library. If this node has children, then we return its
+     * synthesized container, otherwise we look up the parent and return its container.
+     */
     override fun resolveAccessibilityContainer(): Any? {
         if (!controller.isAlive) {
             return null
@@ -367,6 +372,13 @@ private class AccessibilityContainer(
             element.parent?.accessibilityContainer
         }
     }
+}
+
+// TODO: replace it with a new refactored interface
+internal interface AccessibilityController {
+    suspend fun syncLoop()
+    fun onSemanticsChange()
+    fun onLayoutChange(layoutNode: LayoutNode)
 }
 
 internal class AccessibilityControllerImpl(
