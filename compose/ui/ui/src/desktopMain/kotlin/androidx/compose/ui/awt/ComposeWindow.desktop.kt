@@ -69,6 +69,7 @@ class ComposeWindow @ExperimentalComposeUiApi constructor(
     )
     private val undecoratedWindowResizer = UndecoratedWindowResizer(this)
 
+    internal val windowContext by composePanel::windowContext
     internal var rootForTestListener by composePanel::rootForTestListener
 
     // Don't override the accessible context of JFrame, since accessibility work through HardwareLayer

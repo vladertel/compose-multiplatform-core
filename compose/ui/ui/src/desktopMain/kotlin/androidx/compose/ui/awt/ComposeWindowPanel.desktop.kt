@@ -57,6 +57,7 @@ internal class ComposeWindowPanel(
     private val contentComponent by composeContainer::contentComponent
 
     val windowAccessible by composeContainer::accessible
+    val windowContext by composeContainer::windowContext
     var rootForTestListener by composeContainer::rootForTestListener
     var fullscreen by composeContainer::fullscreen
     var compositionLocalContext by composeContainer::compositionLocalContext
