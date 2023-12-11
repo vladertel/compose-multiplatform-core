@@ -31,7 +31,10 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.toCGRect
 import androidx.compose.ui.uikit.utils.*
+import platform.CoreGraphics.CGRectMake
+import platform.CoreGraphics.CGRectZero
 import platform.UIKit.UIAccessibilityCustomAction
 import platform.UIKit.UIAccessibilityTraitAdjustable
 import platform.UIKit.UIAccessibilityTraitButton
@@ -381,8 +384,7 @@ private class AccessibilityContainer(
  */
 internal class AccessibilityMediator(
     val view: UIView,
-    val owner: SemanticsOwner,
-    val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
+    val owner: SemanticsOwner
 ) {
     // TODO: when is it dead?
     var isAlive = true
@@ -400,18 +402,44 @@ internal class AccessibilityMediator(
         isCurrentComposeAccessibleTreeDirty = true
     }
 
+    fun convertRectToWindowSpaceCGRect(rect: Rect): CValue<CGRect> {
+        val window = view.window ?: return CGRectMake(0.0, 0.0, 0.0, 0.0)
+
+        val localSpaceCGRect = rect.toCGRect(window.screen.scale)
+        return window.convertRect(localSpaceCGRect, fromView = view)
+    }
+
     suspend fun syncLoop() {
-        // Copied from desktop implementation
-        while (true) {
+        while (isAlive) {
             syncNodes()
             delay(100)
         }
     }
 
+    fun dispose() {
+        isAlive = false
+
+        view.accessibilityElements = null
+    }
+
+    private fun traverseSemanticsNode(node: SemanticsNode): AccessibilityElement {
+        val accessibilityElement = AccessibilityElement(
+            controller = this,
+            semanticsNode = node
+        )
+
+        for (child in node.replacedChildren) {
+            traverseSemanticsNode(child)
+        }
+
+        return accessibilityElement
+    }
+
     private fun syncNodes() {
         val rooSemanticstNode = owner.rootSemanticsNode
 
-        // TODO: the entire NSObject tree is eagerly recreated now when semantics are invalidated. This is not optimal (and most likely not correct).
+        // TODO: the entire NSObject tree is eagerly recreated now when semantics are invalidated. This
+        //  is not correct behavior
         if (!rooSemanticstNode.layoutNode.isPlaced) {
             return
         }
@@ -422,24 +450,10 @@ internal class AccessibilityMediator(
 
         isCurrentComposeAccessibleTreeDirty = false
 
-        val accessibilityElements = mutableListOf<Any>()
-
-        fun traverseSemanticsNode(node: SemanticsNode) {
-            accessibilityElements.add(
-                AccessibilityElement(
-                    controller = this,
-                    semanticsNode = node
-                )
-            )
-
-            for (child in node.replacedChildren) {
-                traverseSemanticsNode(child)
-            }
-        }
-
-        traverseSemanticsNode(rooSemanticstNode)
-
-        view.accessibilityElements = accessibilityElements
+        view.accessibilityElements = listOf(
+            // Root node will always have synthesized container, look at [AccessibilityElement.resolveAccessibilityContainer]
+            traverseSemanticsNode(rooSemanticstNode).resolveAccessibilityContainer()
+        )
     }
 }
 

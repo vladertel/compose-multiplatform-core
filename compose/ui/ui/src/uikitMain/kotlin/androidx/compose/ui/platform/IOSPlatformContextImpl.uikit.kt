@@ -28,6 +28,7 @@ internal class IOSPlatformContextImpl(
     override val textToolbar: TextToolbar,
     override val windowInfo: WindowInfo,
     densityProvider: DensityProvider,
+    override val semanticsOwnerListener: PlatformContext.SemanticsOwnerListener
 ) : PlatformContext by PlatformContext.Empty {
     override val textInputService: PlatformTextInputService = inputServices
     override val viewConfiguration = object : ViewConfiguration by EmptyViewConfiguration {
@@ -38,25 +39,4 @@ internal class IOSPlatformContextImpl(
             }
     }
     override val inputModeManager = DefaultInputModeManager(InputMode.Touch)
-
-    override val semanticsOwnerListener: PlatformContext.SemanticsOwnerListener =
-        object : PlatformContext.SemanticsOwnerListener {
-            private val ownerToMediatorMap = mutableMapOf<SemanticsOwner, AccessibilityMediator>()
-
-            override fun onSemanticsOwnerAppended(semanticsOwner: SemanticsOwner) {
-                check(!ownerToMediatorMap.containsKey(semanticsOwner))
-
-                val mediator = AccessibilityMediator(
-                    UIView(),
-                    semanticsOwner,
-
-                )
-            }
-
-            override fun onSemanticsOwnerRemoved(semanticsOwner: SemanticsOwner) {
-            }
-
-            override fun onSemanticsChange(semanticsOwner: SemanticsOwner) {
-            }
-        }
 }
