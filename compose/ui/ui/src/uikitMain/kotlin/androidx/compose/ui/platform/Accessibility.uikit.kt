@@ -33,6 +33,11 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.toCGRect
 import androidx.compose.ui.uikit.utils.*
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGRectZero
 import platform.UIKit.UIAccessibilityCustomAction
@@ -384,7 +389,8 @@ private class AccessibilityContainer(
  */
 internal class AccessibilityMediator(
     val view: UIView,
-    val owner: SemanticsOwner
+    val owner: SemanticsOwner,
+    coroutineContext: CoroutineContext
 ) {
     // TODO: when is it dead?
     var isAlive = true
@@ -398,6 +404,18 @@ internal class AccessibilityMediator(
      */
     private var isCurrentComposeAccessibleTreeDirty = false
 
+    private val job = Job()
+    private val coroutineScope = CoroutineScope(coroutineContext + job)
+
+    init {
+        coroutineScope.launch {
+            while (isAlive) {
+                syncNodes()
+                delay(100)
+            }
+        }
+    }
+
     fun onSemanticsChange() {
         isCurrentComposeAccessibleTreeDirty = true
     }
@@ -409,16 +427,11 @@ internal class AccessibilityMediator(
         return window.convertRect(localSpaceCGRect, fromView = view)
     }
 
-    suspend fun syncLoop() {
-        while (isAlive) {
-            syncNodes()
-            delay(100)
-        }
-    }
-
     fun dispose() {
-        isAlive = false
+        check(isAlive)
 
+        job.cancel()
+        isAlive = false
         view.accessibilityElements = null
     }
 
@@ -448,10 +461,11 @@ internal class AccessibilityMediator(
             return
         }
 
+        println("syncNodes")
         isCurrentComposeAccessibleTreeDirty = false
 
         view.accessibilityElements = listOf(
-            // Root node will always have synthesized container, look at [AccessibilityElement.resolveAccessibilityContainer]
+            // Root node will always have a synthesized container, look at [AccessibilityElement.resolveAccessibilityContainer]
             traverseSemanticsNode(rooSemanticstNode).resolveAccessibilityContainer()
         )
     }

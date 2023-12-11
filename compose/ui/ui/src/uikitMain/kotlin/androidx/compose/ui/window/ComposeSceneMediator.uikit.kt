@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
+import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ObjCAction
@@ -81,6 +82,7 @@ internal class ComposeSceneMediator(
     private val focusStack: FocusStack<UIView>?,
     private val windowInfo: WindowInfo,
     transparency: Boolean,
+    private val coroutineContext: CoroutineContext,
     buildScene: (ComposeSceneMediator) -> ComposeScene,
 ) {
     private val focusable: Boolean get() = focusStack != null
@@ -126,7 +128,7 @@ internal class ComposeSceneMediator(
 
             override fun onSemanticsOwnerAppended(semanticsOwner: SemanticsOwner) {
                 if (current == null) {
-                    current = semanticsOwner to AccessibilityMediator(viewController.view, semanticsOwner)
+                    current = semanticsOwner to AccessibilityMediator(viewController.view, semanticsOwner, coroutineContext)
                 } else {
                     // Multiple SemanticsOwner`s per ComposeSceneMediator is a legacy behavior and will not be supported
                     // TODO: refactor PlatformContext when legacy behavior is removed altogether
