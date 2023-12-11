@@ -84,13 +84,8 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     private var _isFocusable = true
     private var _isRequestFocusEnabled = false
 
-    private var _composeContainer: ComposeContainer? =
-        ComposeContainer(this, skiaLayerAnalytics)
-    private val composeContainer
-        get() = requireNotNull(_composeContainer) {
-            "ComposeContainer is disposed"
-        }
-    private val contentComponent by composeContainer::contentComponent
+    private var _composeContainer: ComposeContainer? = null
+    private var _composeContent: (@Composable () -> Unit)? = null
 
     /**
      * Determines whether the Compose state in [ComposePanel] should be disposed
@@ -156,11 +151,12 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
         // to keep the lambda describing composable content and set the content only when
         // everything is ready to avoid accidental crashes and memory leaks on all supported OS
         // types.
-        composeContainer.setContent(content)
+        _composeContent = content
+        _composeContainer?.setContent(content)
     }
 
     override fun add(component: Component): Component {
-        composeContainer.addToComponentLayer(component)
+        _composeContainer?.addToComponentLayer(component)
         return component
     }
 
@@ -170,36 +166,50 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
     override fun addNotify() {
         super.addNotify()
-        composeContainer.setBounds(0, 0, width, height)
-        composeContainer.focusManager.releaseFocus()
-        composeContainer.exceptionHandler = exceptionHandler
+
+        // After [super.addNotify] is called we can safely initialize the bridge and composable
+        // content.
+        val composeContainer = _composeContainer ?: createComposeContainer().also {
+            _composeContainer = it
+            val composeContent = _composeContent
+            if (composeContent != null) {
+                it.setContent(composeContent)
+            }
+        }
         composeContainer.addNotify()
+    }
 
-        contentComponent.isFocusable = _isFocusable
-        contentComponent.isRequestFocusEnabled = _isRequestFocusEnabled
-        _focusListeners.forEach(contentComponent::addFocusListener)
-        contentComponent.addFocusListener(object : FocusListener {
-            override fun focusGained(e: FocusEvent) {
-                // The focus can be switched from the child component inside SwingPanel.
-                // In that case, SwingPanel will take care of it.
-                if (!isParentOf(e.oppositeComponent)) {
-                    composeContainer.focusManager.requestFocus()
-                    when (e.cause) {
-                        FocusEvent.Cause.TRAVERSAL_FORWARD -> {
-                            composeContainer.focusManager.moveFocus(FocusDirection.Next)
+    private fun createComposeContainer(): ComposeContainer {
+        return ComposeContainer(this, skiaLayerAnalytics).apply {
+            focusManager.releaseFocus()
+            setBounds(0, 0, width, height)
+            contentComponent.isFocusable = _isFocusable
+            contentComponent.isRequestFocusEnabled = _isRequestFocusEnabled
+            exceptionHandler = this@ComposePanel.exceptionHandler
+            _focusListeners.forEach(contentComponent::addFocusListener)
+            contentComponent.addFocusListener(object : FocusListener {
+                override fun focusGained(e: FocusEvent) {
+                    // The focus can be switched from the child component inside SwingPanel.
+                    // In that case, SwingPanel will take care of it.
+                    if (!isParentOf(e.oppositeComponent)) {
+                        focusManager.requestFocus()
+                        when (e.cause) {
+                            FocusEvent.Cause.TRAVERSAL_FORWARD -> {
+                                focusManager.moveFocus(FocusDirection.Next)
+                            }
+
+                            FocusEvent.Cause.TRAVERSAL_BACKWARD -> {
+                                focusManager.moveFocus(FocusDirection.Previous)
+                            }
+
+                            else -> Unit
                         }
-
-                        FocusEvent.Cause.TRAVERSAL_BACKWARD -> {
-                            composeContainer.focusManager.moveFocus(FocusDirection.Previous)
-                        }
-
-                        else -> Unit
                     }
                 }
-            }
 
-            override fun focusLost(e: FocusEvent) = Unit
-        })
+                override fun focusLost(e: FocusEvent) = Unit
+            })
+        }
     }
 
     override fun removeNotify() {
@@ -223,12 +233,12 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     override fun addFocusListener(l: FocusListener?) {
-        contentComponent.addFocusListener(l)
+        _composeContainer?.contentComponent?.addFocusListener(l)
         _focusListeners.add(l)
     }
 
     override fun removeFocusListener(l: FocusListener?) {
-        contentComponent.removeFocusListener(l)
+        _composeContainer?.contentComponent?.removeFocusListener(l)
         _focusListeners.remove(l)
     }
 
@@ -236,42 +246,42 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
     override fun setFocusable(focusable: Boolean) {
         _isFocusable = focusable
-        contentComponent.isFocusable = focusable
+        _composeContainer?.contentComponent?.isFocusable = focusable
     }
 
     override fun isRequestFocusEnabled(): Boolean = _isRequestFocusEnabled
 
     override fun setRequestFocusEnabled(requestFocusEnabled: Boolean) {
         _isRequestFocusEnabled = requestFocusEnabled
-        contentComponent.isRequestFocusEnabled = requestFocusEnabled
+        _composeContainer?.contentComponent?.isRequestFocusEnabled = requestFocusEnabled
     }
 
     override fun hasFocus(): Boolean {
-        return contentComponent.hasFocus()
+        return _composeContainer?.contentComponent?.hasFocus() ?: false
     }
 
     override fun isFocusOwner(): Boolean {
-        return contentComponent.isFocusOwner
+        return _composeContainer?.contentComponent?.isFocusOwner ?: false
     }
 
     override fun requestFocus() {
-        contentComponent.requestFocus()
+        _composeContainer?.contentComponent?.requestFocus()
     }
 
     override fun requestFocus(temporary: Boolean): Boolean {
-        return contentComponent.requestFocus(temporary)
+        return _composeContainer?.contentComponent?.requestFocus(temporary) ?: false
     }
 
     override fun requestFocus(cause: FocusEvent.Cause?) {
-        contentComponent.requestFocus(cause)
+        _composeContainer?.contentComponent?.requestFocus(cause)
     }
 
     override fun requestFocusInWindow(): Boolean {
-        return contentComponent.requestFocusInWindow()
+        return _composeContainer?.contentComponent?.requestFocusInWindow() ?: false
     }
 
     override fun requestFocusInWindow(cause: FocusEvent.Cause?): Boolean {
-        return contentComponent.requestFocusInWindow(cause)
+        return _composeContainer?.contentComponent?.requestFocusInWindow(cause) ?: false
     }
 
     override fun setFocusTraversalKeysEnabled(focusTraversalKeysEnabled: Boolean) {
@@ -288,5 +298,5 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
      * environment variable.
      */
     val renderApi: GraphicsApi
-        get() = composeContainer?.renderApi ?: GraphicsApi.UNKNOWN
+        get() = _composeContainer?.renderApi ?: GraphicsApi.UNKNOWN
 }
