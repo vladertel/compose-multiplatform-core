@@ -17,7 +17,6 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -48,7 +47,7 @@ import platform.darwin.NSInteger
 
 private class AccessibilityElement(
     private val semanticsNode: SemanticsNode,
-    private val controller: AccessibilityControllerImpl,
+    private val controller: AccessibilityMediator,
 ) : CMPAccessibilityElement(controller.view) {
     val semanticsNodeId: Int
         get() = semanticsNode.id
@@ -74,7 +73,7 @@ private class AccessibilityElement(
      * or
      * - The element is representing the root node
      */
-    private val container: AccessibilityContainer by lazy {
+    private val container by lazy {
         AccessibilityContainer(
             element = this,
             controller = controller
@@ -330,7 +329,7 @@ private class AccessibilityElement(
  */
 private class AccessibilityContainer(
     private val element: AccessibilityElement,
-    private val controller: AccessibilityControllerImpl,
+    private val controller: AccessibilityMediator,
 ) : CMPAccessibilityContainer(controller.view) {
     override fun accessibilityElementAtIndex(index: NSInteger): Any? {
         if (index == 0L) {
@@ -374,18 +373,14 @@ private class AccessibilityContainer(
     }
 }
 
-// TODO: replace it with a new refactored interface
-internal interface AccessibilityController {
-    suspend fun syncLoop()
-    fun onSemanticsChange()
-    fun onLayoutChange(layoutNode: LayoutNode)
-}
-
-internal class AccessibilityControllerImpl(
+/**
+ * A class responsible for mediating between the tree of specific SemanticsOwner and the iOS accessibility tree.
+ */
+internal class AccessibilityMediator(
     val view: UIView,
     val owner: SemanticsOwner,
     val convertRectToWindowSpaceCGRect: (Rect) -> CValue<CGRect>
-) : AccessibilityController {
+) {
     // TODO: when is it dead?
     var isAlive = true
 
@@ -400,16 +395,11 @@ internal class AccessibilityControllerImpl(
      */
     private var isCurrentComposeAccessibleTreeDirty = false
 
-    override fun onSemanticsChange() {
+    fun onSemanticsChange() {
         isCurrentComposeAccessibleTreeDirty = true
-
-        println("Semantics invalidated")
     }
 
-    override fun onLayoutChange(layoutNode: LayoutNode) {
-    }
-
-    override suspend fun syncLoop() {
+    suspend fun syncLoop() {
         // Copied from desktop implementation
         while (true) {
             syncNodes()
