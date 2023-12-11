@@ -15,7 +15,7 @@
  */
 
 #import <UIKit/UIKit.h>
-#import "CMPAccessibilityMacros.h"
+#import "CMPMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
