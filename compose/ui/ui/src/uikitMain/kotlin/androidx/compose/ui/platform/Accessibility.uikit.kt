@@ -123,6 +123,11 @@ private class AccessibilityElement(
             // The second case is true if the child doesn't have children, and hence its [actualAccessibilityElement] was communicated to iOS.
 
             if (child.hasChildren) {
+                // accessibilityContainerOfObject retrieves the container of the given element in
+                // ObjC via dispatching `accessibilityContainer` to type erased `id` object.
+                // In [AccessibilityElement] it will resolve to the synthesized container.
+                // Inherited classes with custom [actualAccessibilityElement] can have their own resolution
+                // path.
                 if (element == accessibilityContainerOfObject(child.actualAccessibilityElement)) {
                     return index.toLong()
                 }
