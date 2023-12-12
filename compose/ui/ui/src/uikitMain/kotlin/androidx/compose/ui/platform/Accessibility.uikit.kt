@@ -122,17 +122,13 @@ private class AccessibilityElement(
             // The first case is true if the child has children itself, and hence [AccessibilityContainer] was communicated to iOS.
             // The second case is true if the child doesn't have children, and hence its [actualAccessibilityElement] was communicated to iOS.
 
-            return if (child.hasChildren) {
-                if (element == child.accessibilityContainer) {
-                    index.toLong()
-                } else {
-                    null
+            if (child.hasChildren) {
+                if (element == accessibilityContainerOfObject(child.actualAccessibilityElement)) {
+                    return index.toLong()
                 }
             } else {
                 if (element == child.actualAccessibilityElement) {
-                    index.toLong()
-                } else {
-                    null
+                    return index.toLong()
                 }
             }
         }
@@ -355,7 +351,15 @@ private class AccessibilityElement(
 
     fun debugPrint(depth: Int) {
         val indent = " ".repeat(depth * 2)
-        println("${indent}AccessibilityElement_$semanticsNodeId chain: ${debugContainmentChain(this)}")
+
+        val container = resolveAccessibilityContainer() as AccessibilityContainer
+        val indexOfSelf = container.indexOfAccessibilityElement(this)
+
+        check(indexOfSelf != NSNotFound)
+        check(container.accessibilityElementAtIndex(indexOfSelf) == this.actualAccessibilityElement)
+
+        println("${indent}AccessibilityElement_$semanticsNodeId")
+        println("$indent  containmentChain: ${debugContainmentChain(this)}: ${parent?.semanticsNodeId}")
         println("$indent  isAccessibilityElement: $isAccessibilityElement")
         println("$indent  accessibilityLabel: $accessibilityLabel")
         println("$indent  accessibilityValue: $accessibilityValue")
@@ -363,7 +367,6 @@ private class AccessibilityElement(
         println("$indent  accessibilityFrame: ${NSStringFromCGRect(accessibilityFrame)}")
         println("$indent  accessibilityIdentifier: $accessibilityIdentifier")
         println("$indent  accessibilityCustomActions: $accessibilityCustomActions")
-        println("$indent  --- --- ---")
     }
 }
 
@@ -393,11 +396,12 @@ private class AccessibilityElement(
  *      AccessibilityElement_C
  * ```
  * But the actual object we put into the accessibility root set is the synthesized [AccessibilityContainer]
- * for AccessibilityElement_A. The methods that will be called on from iOS Accessibility services will
- * be lazily resolve the hierarchy from the internal one to expected.
+ * for AccessibilityElement_A. The methods that are be called from iOS Accessibility services will
+ * lazily resolve the hierarchy from the internal one to expected.
  *
  * This is needed, because the actual [SemanticsNode]s can be inserted and removed dynamically, so building
- * the whole container hierarchy in advance and maintaining it proactively is not an optimal solution.
+ * the whole container hierarchy in advance and maintaining it proactively will make the code even more
+ * hard to follow than it is now.
  *
  * This implementation is inspired by Flutter's
  * https://github.com/flutter/engine/blob/main/shell/platform/darwin/ios/framework/Source/SemanticsObject.h
@@ -665,9 +669,9 @@ private fun debugContainmentChain(accessibilityObject: Any): String {
     while (currentObject != null) {
         when (val constCurrentObject = currentObject) {
             is AccessibilityElement -> {
-                strings.add("AccessibilityElement_${constCurrentObject.semanticsNodeId}")
                 currentObject = constCurrentObject.resolveAccessibilityContainer()
             }
+
             is UIView -> {
                 strings.add("View")
                 currentObject = null
@@ -675,7 +679,6 @@ private fun debugContainmentChain(accessibilityObject: Any): String {
 
             is AccessibilityContainer -> {
                 strings.add("AccessibilityContainer_${constCurrentObject.semanticsNodeId}")
-
                 currentObject = constCurrentObject.accessibilityContainer()
             }
 

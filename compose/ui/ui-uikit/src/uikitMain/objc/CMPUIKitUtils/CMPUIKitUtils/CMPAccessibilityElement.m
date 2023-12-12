@@ -55,6 +55,11 @@ NS_ASSUME_NONNULL_BEGIN
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
++ (__nullable id)accessibilityContainerOfObject:(id)object {
+    // Duck-typing selector dispatch
+    return [object accessibilityContainer];
+}
+
 - (BOOL)accessibilityActivate {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
