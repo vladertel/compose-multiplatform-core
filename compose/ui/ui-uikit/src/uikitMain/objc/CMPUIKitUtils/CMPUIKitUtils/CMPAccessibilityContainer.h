@@ -21,7 +21,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface CMPAccessibilityContainer : UIAccessibilityElement
-// MARK: Redeclaration block
+
+// MARK: Unexported methods redeclaration block
 // Redeclared to make it visible to Kotlin, workaround for the following issue:
 // https://youtrack.jetbrains.com/issue/KT-56001/Kotlin-Native-import-Objective-C-category-members-as-class-members-if-the-category-is-located-in-the-same-file
 
@@ -30,6 +31,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSInteger)accessibilityElementCount CMP_MUST_BE_OVERRIDED;
 
 - (NSInteger)indexOfAccessibilityElement:(id)element CMP_MUST_BE_OVERRIDED;
+
+// MARK: Overrided property access redeclaration block
 
 - (CGRect)accessibilityFrame CMP_MUST_BE_OVERRIDED;
 

@@ -54,6 +54,8 @@ import platform.UIKit.accessibilityCustomActions
 import platform.darwin.NSInteger
 import platform.darwin.NSObject
 
+private val DUMMY_UI_ACCESSIBILITY_CONTAINER = NSObject()
+
 private class AccessibilityElement(
     private var semanticsNode: SemanticsNode,
     private val controller: AccessibilityMediator,
@@ -61,7 +63,7 @@ private class AccessibilityElement(
     // The super call below is needed because this constructor is designated in the Obj-C class,
     // the real container will be resolved dynamically by [accessibilityContainer] and
     // [resolveAccessibilityContainer]
-) : CMPAccessibilityElement(controller.view) {
+) : CMPAccessibilityElement(DUMMY_UI_ACCESSIBILITY_CONTAINER) {
     val semanticsNodeId: Int
         get() = semanticsNode.id
 
@@ -361,7 +363,7 @@ private class AccessibilityElement(
         println("$indent  accessibilityFrame: ${NSStringFromCGRect(accessibilityFrame)}")
         println("$indent  accessibilityIdentifier: $accessibilityIdentifier")
         println("$indent  accessibilityCustomActions: $accessibilityCustomActions")
-        println("$indent ${resolveAccessibilityContainer()}")
+        println("$indent  --- --- ---")
     }
 }
 
@@ -409,8 +411,8 @@ private class AccessibilityContainer(
     private val controller: AccessibilityMediator,
 
     // The super call below is needed because this constructor is designated in the Obj-C class,
-    // the real container will be resolved dynamically by [accessibilityContainer]
-) : CMPAccessibilityContainer(controller.view) {
+    // the real parent container will be resolved dynamically by [accessibilityContainer]
+) : CMPAccessibilityContainer(DUMMY_UI_ACCESSIBILITY_CONTAINER) {
     override fun accessibilityElementAtIndex(index: NSInteger): Any? {
         if (index == 0L) {
             return element.actualAccessibilityElement
@@ -459,8 +461,7 @@ private class AccessibilityContainer(
 
     fun debugPrint(depth: Int) {
         val indent = " ".repeat(depth * 2)
-        println("${indent}AccessibilityContainer_${element.semanticsNodeId} $this")
-        println("$indent ${accessibilityContainer()}")
+        println("${indent}AccessibilityContainer_${element.semanticsNodeId} isAccessibilityElement: $isAccessibilityElement")
     }
 }
 
@@ -469,7 +470,7 @@ private class AccessibilityContainer(
  */
 internal class AccessibilityMediator(
     val view: UIView,
-    val owner: SemanticsOwner,
+    private val owner: SemanticsOwner,
     coroutineContext: CoroutineContext
 ) {
     // TODO: when is it dead?
@@ -599,7 +600,10 @@ internal class AccessibilityMediator(
         println("syncNodes")
         isCurrentComposeAccessibleTreeDirty = false
 
-        view.isAccessibilityElement = true
+        check(!view.isAccessibilityElement) {
+            "Root view must not be an accessibility element"
+        }
+
         view.accessibilityElements = listOf(
             traverseSemanticsTree(rooSemanticstNode)
         )
