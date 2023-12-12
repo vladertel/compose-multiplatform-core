@@ -697,6 +697,14 @@ private fun debugContainmentChain(accessibilityObject: Any): String {
 }
 
 fun List<SemanticsNode>.sortedByAccesibilityOrder(): List<SemanticsNode> {
-    // TODO: consider RTL layout
-    return sortedBy { it.boundsInWindow.top }
+    return sortedWith { lhs, rhs ->
+        val result = lhs.boundsInWindow.topLeft.y.compareTo(rhs.boundsInWindow.topLeft.y)
+
+        if (result == 0) {
+            // TODO: consider RTL layout
+            lhs.boundsInWindow.topLeft.x.compareTo(rhs.boundsInWindow.topLeft.x)
+        } else {
+            result
+        }
+    }
 }
