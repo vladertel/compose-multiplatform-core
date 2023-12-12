@@ -616,6 +616,10 @@ private fun debugTraverse(accessibilityObject: Any, depth: Int = 0) {
                 }
             }
         }
+
+        else -> {
+            throw IllegalStateException("Unexpected accessibility object type: ${accessibilityObject::class}")
+        }
     }
 }
 
