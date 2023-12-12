@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.scene
+package androidx.compose.ui
 
 internal object ComposeFeatureFlags {
     val usePlatformLayers: Boolean
-        get() = true // TODO feature flag
+        get() = false // TODO feature flag
     val useWindowLayers: Boolean
-        get() = true // TODO feature flag
+        get() = false // TODO feature flag
     val useSwingGraphics: Boolean
         get() = System.getProperty("compose.swing.render.on.graphics").toBoolean()
     val useInteropBlending: Boolean
