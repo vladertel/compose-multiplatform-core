@@ -328,34 +328,24 @@ private class AccessibilityElement(
         this.parent = null
     }
 
-    /**
-     * Removes all children from this element and allows to add one using the [block] scope.
-     */
-    fun rewriteChildren(block: AccessibilityElementChildrenRewriteScope.() -> Unit) {
+    fun removeAllChildren() {
         for (child in children) {
             child.parent = null
         }
 
         children.clear()
+    }
 
-        block(object : AccessibilityElementChildrenRewriteScope {
-            override fun addChild(element: AccessibilityElement) {
-                // If child was moved from another parent, remove it from there first
-                // I can't prove, that situation where an [AccessibilityElement] is contained in multiple
-                // parents is impossible, and that it won't lead to issues
-                element.removeFromParent()
+    fun addChild(element: AccessibilityElement) {
+        // If child was moved from another parent, remove it from there first
+        // I can't prove, that situation where an [AccessibilityElement] is contained in multiple
+        // parents is impossible, and that it won't lead to issues
+        element.removeFromParent()
 
-                children.add(element)
-                element.parent = this@AccessibilityElement
-            }
-        })
+        children.add(element)
+        element.parent = this@AccessibilityElement
     }
 }
-
-private interface AccessibilityElementChildrenRewriteScope {
-    fun addChild(element: AccessibilityElement)
-}
-
 
 /**
  * UIAccessibilityElement can't be a container and an element at the same time.
@@ -382,10 +372,12 @@ private interface AccessibilityElementChildrenRewriteScope {
  *   AccessibilityElement_B
  *      AccessibilityElement_C
  * ```
- * But once accessibility services call `UIAcccessibility` API on `AccessibilityElement_A`,
- * this hierarchy will be lazily resolved to the expected one. This is needed, because the actual
- * [SemanticsNode]s can be inserted and removed dynamically, so building it in advance and
- * modifying proactively is not an optimal solution.
+ * But the actual object we put into the accessibility root set is the synthesized [AccessibilityContainer]
+ * for AccessibilityElement_A. The methods that will be called on from iOS Accessibility services will
+ * be lazily resolve the hierarchy from the internal one to expected.
+ *
+ * This is needed, because the actual [SemanticsNode]s can be inserted and removed dynamically, so building
+ * the whole container hierarchy in advance and maintaining it proactively is not an optimal solution.
  *
  * This implementation is inspired by Flutter's
  * https://github.com/flutter/engine/blob/main/shell/platform/darwin/ios/framework/Source/SemanticsObject.h
@@ -521,24 +513,25 @@ internal class AccessibilityMediator(
      * Traverses semantics tree starting from rootNode and returns an accessibility object which will
      * be put into iOS view's [accessibilityElements] property.
      *
-     * Updates [accessibilityElementsMap] with new elements, updates the old ones, and removes elements
+     * Inserts new elements to [accessibilityElementsMap], updates the old ones, and removes the elements
      * that are not present in the tree anymore.
      */
     private fun traverseSemanticsTree(rootNode: SemanticsNode): Any {
+        // TODO: should we move it to the class scope to avoid reallocation?
         val presentIds = mutableSetOf<Int>()
 
         fun traverseSemanticsNode(node: SemanticsNode): AccessibilityElement {
             presentIds.add(node.id)
             val element = createOrUpdateAccessibilityElementForSemanticsNode(node)
 
-            element.rewriteChildren {
-                val semanticsNodesInAccessibilityOrder = node
-                    .replacedChildren
-                    .sortedByAccesibilityOrder()
+            element.removeAllChildren()
+            val childSemanticsNodesInAccessibilityOrder = node
+                .replacedChildren
+                .sortedByAccesibilityOrder()
 
-                for (child in semanticsNodesInAccessibilityOrder) {
-                    addChild(traverseSemanticsNode(child))
-                }
+            for (childNode in childSemanticsNodesInAccessibilityOrder) {
+                val childElement = traverseSemanticsNode(childNode)
+                element.addChild(childElement)
             }
 
             return element
