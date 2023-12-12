@@ -35,11 +35,9 @@ import androidx.compose.ui.toCGRect
 import androidx.compose.ui.uikit.utils.*
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGRectMake
-import platform.CoreGraphics.CGRectZero
 import platform.UIKit.UIAccessibilityCustomAction
 import platform.UIKit.UIAccessibilityTraitAdjustable
 import platform.UIKit.UIAccessibilityTraitButton
@@ -55,7 +53,7 @@ import platform.UIKit.accessibilityCustomActions
 import platform.darwin.NSInteger
 
 private class AccessibilityElement(
-    private val semanticsNode: SemanticsNode,
+    private var semanticsNode: SemanticsNode,
     private val controller: AccessibilityMediator,
 ) : CMPAccessibilityElement(controller.view) {
     val semanticsNodeId: Int
@@ -160,6 +158,23 @@ private class AccessibilityElement(
         } else {
             parent?.accessibilityContainer
         }
+    }
+
+    /**
+     * Compose doesn't communicate fine-grain changes in semantics tree, thus all changes in the particular
+     * persistent object to match the latest resolved SemanticsNode should be done via full-scan of all properties
+     * of previous and current SemanticsNode.
+     *
+     * TODO: is it possible to optimize this? Can we calculate the actual `UIAccessibility` properties
+     *   lazily? How should we notify iOS about the changes in the properties without direct changes
+     *   in `UIAccessibility` properties (are they KVO-observed by iOS?)
+     */
+    fun updateFromSemanticsNode(semanticsNode: SemanticsNode) {
+        check(this.semanticsNode.id == semanticsNode.id)
+        this.semanticsNode = semanticsNode
+
+        // TODO: clear the old ones
+        fillInAccessibilityProperties()
     }
 
     private fun fillInAccessibilityProperties() {
@@ -303,7 +318,44 @@ private class AccessibilityElement(
         accessibilityIdentifier = "Element for ${semanticsNode.id}"
         accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
     }
+
+    private fun removeFromParent() {
+        val parent = parent ?: return
+
+        val removed = parent.children.remove(this)
+        assert(removed)
+
+        this.parent = null
+    }
+
+    /**
+     * Removes all children from this element and allows to add one using the [block] scope.
+     */
+    fun rewriteChildren(block: AccessibilityElementChildrenRewriteScope.() -> Unit) {
+        for (child in children) {
+            child.parent = null
+        }
+
+        children.clear()
+
+        block(object : AccessibilityElementChildrenRewriteScope {
+            override fun addChild(element: AccessibilityElement) {
+                // If child was moved from another parent, remove it from there first
+                // I can't prove, that situation where an [AccessibilityElement] is contained in multiple
+                // parents is impossible, and that it won't lead to issues
+                element.removeFromParent()
+
+                children.add(element)
+                element.parent = this@AccessibilityElement
+            }
+        })
+    }
 }
+
+private interface AccessibilityElementChildrenRewriteScope {
+    fun addChild(element: AccessibilityElement)
+}
+
 
 /**
  * UIAccessibilityElement can't be a container and an element at the same time.
@@ -404,8 +456,20 @@ internal class AccessibilityMediator(
      */
     private var isCurrentComposeAccessibleTreeDirty = false
 
+    /**
+     * Job to cancel tree syncing when the mediator is disposed.
+     */
     private val job = Job()
+
+    /**
+     * CoroutineScope to launch the tree syncing job on.
+     */
     private val coroutineScope = CoroutineScope(coroutineContext + job)
+
+    /**
+     * A map of all [SemanticsNode.id] currently present in the tree to corresponding [AccessibilityElement].
+     */
+    private val accessibilityElementsMap = mutableMapOf<Int, AccessibilityElement>()
 
     init {
         coroutineScope.launch {
@@ -435,17 +499,61 @@ internal class AccessibilityMediator(
         view.accessibilityElements = null
     }
 
-    private fun traverseSemanticsNode(node: SemanticsNode): AccessibilityElement {
-        val accessibilityElement = AccessibilityElement(
-            controller = this,
-            semanticsNode = node
-        )
+    private fun createOrUpdateAccessibilityElementForSemanticsNode(node: SemanticsNode): AccessibilityElement {
+        val element = accessibilityElementsMap[node.id]
 
-        for (child in node.replacedChildren) {
-            traverseSemanticsNode(child)
+        if (element != null) {
+            element.updateFromSemanticsNode(node)
+            return element
         }
 
-        return accessibilityElement
+        val newElement = AccessibilityElement(
+            semanticsNode = node,
+            controller = this
+        )
+
+        accessibilityElementsMap[node.id] = newElement
+
+        return newElement
+    }
+
+    /**
+     * Traverses semantics tree starting from rootNode and returns an accessibility object which will
+     * be put into iOS view's [accessibilityElements] property.
+     *
+     * Updates [accessibilityElementsMap] with new elements, updates the old ones, and removes elements
+     * that are not present in the tree anymore.
+     */
+    private fun traverseSemanticsTree(rootNode: SemanticsNode): Any {
+        val presentIds = mutableSetOf<Int>()
+
+        fun traverseSemanticsNode(node: SemanticsNode): AccessibilityElement {
+            presentIds.add(node.id)
+            val element = createOrUpdateAccessibilityElementForSemanticsNode(node)
+
+            element.rewriteChildren {
+                val semanticsNodesInAccessibilityOrder = node
+                    .replacedChildren
+                    .sortedByAccesibilityOrder()
+
+                for (child in semanticsNodesInAccessibilityOrder) {
+                    addChild(traverseSemanticsNode(child))
+                }
+            }
+
+            return element
+        }
+
+        val rootAccessibilityElement = traverseSemanticsNode(rootNode)
+
+        // Filter out [AccessibilityElement] in [accessibilityElementsMap] that are not present in the tree anymore
+        accessibilityElementsMap.keys.retainAll {
+            it in presentIds
+        }
+
+        return checkNotNull(rootAccessibilityElement.resolveAccessibilityContainer()) {
+            "Root element must always have an enclosing container"
+        }
     }
 
     private fun syncNodes() {
@@ -465,8 +573,7 @@ internal class AccessibilityMediator(
         isCurrentComposeAccessibleTreeDirty = false
 
         view.accessibilityElements = listOf(
-            // Root node will always have a synthesized container, look at [AccessibilityElement.resolveAccessibilityContainer]
-            traverseSemanticsNode(rooSemanticstNode).resolveAccessibilityContainer()
+            traverseSemanticsTree(rooSemanticstNode)
         )
     }
 }
