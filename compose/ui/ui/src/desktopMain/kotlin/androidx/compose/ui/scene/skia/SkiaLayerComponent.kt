@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.scene.skia
 
-import java.awt.Component
 import javax.accessibility.Accessible
 import javax.swing.JComponent
 import org.jetbrains.skiko.ClipRectangle
@@ -24,7 +23,6 @@ import org.jetbrains.skiko.GraphicsApi
 
 internal interface SkiaLayerComponent {
     val contentComponent: JComponent
-    val focusComponent: Component
 
     val renderApi: GraphicsApi
     val interopBlendingSupported: Boolean

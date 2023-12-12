@@ -139,6 +139,7 @@ internal class ComposeWindowPanel(
     override fun addNotify() {
         super.addNotify()
         _composeContainer?.addNotify()
+        _composeContainer?.contentComponent?.requestFocus()
     }
 
     override fun removeNotify() {

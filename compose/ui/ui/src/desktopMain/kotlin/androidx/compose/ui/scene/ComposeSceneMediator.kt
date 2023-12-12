@@ -22,7 +22,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asComposeCanvas
-import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 import androidx.compose.ui.input.pointer.AwtCursor
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerButtons
@@ -62,11 +62,13 @@ import java.awt.event.FocusListener
 import java.awt.event.InputEvent
 import java.awt.event.InputMethodEvent
 import java.awt.event.InputMethodListener
-import java.awt.event.KeyAdapter
-import java.awt.event.MouseAdapter
+import java.awt.event.KeyEvent
+import java.awt.event.KeyListener
 import java.awt.event.MouseEvent
-import java.awt.event.MouseMotionAdapter
+import java.awt.event.MouseListener
+import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelEvent
+import java.awt.event.MouseWheelListener
 import java.awt.im.InputMethodRequests
 import javax.accessibility.Accessible
 import javax.swing.JLayeredPane
@@ -79,7 +81,6 @@ import org.jetbrains.skiko.SkikoInput
 import org.jetbrains.skiko.SkikoView
 import org.jetbrains.skiko.hostOs
 
-
 internal class ComposeSceneMediator(
     private val container: JLayeredPane,
     private val windowContext: PlatformWindowContext,
@@ -89,15 +90,16 @@ internal class ComposeSceneMediator(
 
     skiaLayerComponentFactory: (ComposeSceneMediator) -> SkiaLayerComponent,
     composeSceneFactory: (ComposeSceneMediator) -> ComposeScene,
-) : ContainerListener {
+) : ContainerListener, InputMethodListener, FocusListener, MouseListener, MouseMotionListener,
+    MouseWheelListener, KeyListener {
     private var isDisposed = false
     private val invisibleComponent = InvisibleComponent()
 
     val skikoView: SkikoView = DesktopSkikoView()
 
     private val clipComponents = mutableMapOf<Component, ClipRectangle>()
-    private var onPreviewKeyEvent: (KeyEvent) -> Boolean = { false }
-    private var onKeyEvent: (KeyEvent) -> Boolean = { false }
+    private var onPreviewKeyEvent: (ComposeKeyEvent) -> Boolean = { false }
+    private var onKeyEvent: (ComposeKeyEvent) -> Boolean = { false }
 
     private val semanticsOwnerListener = DesktopSemanticsOwnerListener()
     var rootForTestListener: PlatformContext.RootForTestListener? by DelegateRootForTestListener()
@@ -199,7 +201,12 @@ internal class ComposeSceneMediator(
         container.addToLayer(invisibleComponent, bridgeLayer)
         container.addToLayer(contentComponent, bridgeLayer)
         container.addContainerListener(this)
-        attachToComponent(contentComponent)
+
+        // It will be enabled dynamically. See DesktopPlatformComponent
+        contentComponent.enableInputMethods(false)
+        contentComponent.focusTraversalKeysEnabled = false
+
+        subscribe(contentComponent)
 
         skiaLayerComponent.transparency = useInteropBlending
     }
@@ -208,9 +215,12 @@ internal class ComposeSceneMediator(
         check(!isDisposed) { "ComposeSceneMediator is already disposed" }
         isDisposed = true
 
+        unsubscribe(contentComponent)
+
         container.removeContainerListener(this)
         container.remove(contentComponent)
         container.remove(invisibleComponent)
+
         scene.close()
         skiaLayerComponent.dispose()
     }
@@ -223,63 +233,22 @@ internal class ComposeSceneMediator(
         }
     }
 
-    private fun attachToComponent(component: Component) {
-        component.enableInputMethods(false)
-        component.addInputMethodListener(object : InputMethodListener {
-            override fun caretPositionChanged(event: InputMethodEvent?) {
-                if (isDisposed) return
-                // Which OSes and which input method could produce such events? We need to have some
-                // specific cases in mind before implementing this
-            }
+    private fun subscribe(component: Component) {
+        component.addInputMethodListener(this)
+        component.addFocusListener(this)
+        component.addMouseListener(this)
+        component.addMouseMotionListener(this)
+        component.addMouseWheelListener(this)
+        component.addKeyListener(this)
+    }
 
-            override fun inputMethodTextChanged(event: InputMethodEvent) {
-                if (isDisposed) return
-                catchExceptions {
-                    textInputService.inputMethodTextChanged(event)
-                }
-            }
-        })
-
-        component.addFocusListener(object : FocusListener {
-            override fun focusGained(e: FocusEvent) {
-                // We don't reset focus for Compose when the component loses focus temporary.
-                // Partially because we don't support restoring focus after clearing it.
-                // Focus can be lost temporary when another window or popup takes focus.
-                if (!e.isTemporary) {
-                    scene.focusManager.requestFocus()
-                }
-            }
-
-            override fun focusLost(e: FocusEvent) {
-                // We don't reset focus for Compose when the component loses focus temporary.
-                // Partially because we don't support restoring focus after clearing it.
-                // Focus can be lost temporary when another window or popup takes focus.
-                if (!e.isTemporary) {
-                    scene.focusManager.releaseFocus()
-                }
-            }
-        })
-
-        component.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(event: MouseEvent) = Unit
-            override fun mousePressed(event: MouseEvent) = onMouseEvent(event)
-            override fun mouseReleased(event: MouseEvent) = onMouseEvent(event)
-            override fun mouseEntered(event: MouseEvent) = onMouseEvent(event)
-            override fun mouseExited(event: MouseEvent) = onMouseEvent(event)
-        })
-        component.addMouseMotionListener(object : MouseMotionAdapter() {
-            override fun mouseDragged(event: MouseEvent) = onMouseEvent(event)
-            override fun mouseMoved(event: MouseEvent) = onMouseEvent(event)
-        })
-        component.addMouseWheelListener { event ->
-            onMouseWheelEvent(event)
-        }
-        component.focusTraversalKeysEnabled = false
-        component.addKeyListener(object : KeyAdapter() {
-            override fun keyPressed(event: java.awt.event.KeyEvent) = onKeyEvent(event)
-            override fun keyReleased(event: java.awt.event.KeyEvent) = onKeyEvent(event)
-            override fun keyTyped(event: java.awt.event.KeyEvent) = onKeyEvent(event)
-        })
+    private fun unsubscribe(component: Component) {
+        component.removeInputMethodListener(this)
+        component.removeFocusListener(this)
+        component.removeMouseListener(this)
+        component.removeMouseMotionListener(this)
+        component.removeMouseWheelListener(this)
+        component.removeKeyListener(this)
     }
 
     fun onChangeComponentSize() {
@@ -340,12 +309,12 @@ internal class ComposeSceneMediator(
         scene.onMouseWheelEvent(scaledOffset, density, event)
     }
 
-    private fun onKeyEvent(event: java.awt.event.KeyEvent) = catchExceptions {
+    private fun onKeyEvent(event: KeyEvent) = catchExceptions {
         if (isDisposed) return
         textInputService.onKeyEvent(event)
         windowContext.setKeyboardModifiers(event.toPointerKeyboardModifiers())
 
-        val composeEvent = KeyEvent(event)
+        val composeEvent = ComposeKeyEvent(event)
         if (onPreviewKeyEvent(composeEvent) ||
             scene.sendKeyEvent(composeEvent) ||
             onKeyEvent(composeEvent)
@@ -371,8 +340,8 @@ internal class ComposeSceneMediator(
     }
 
     fun setKeyEventListeners(
-        onPreviewKeyEvent: (KeyEvent) -> Boolean = { false },
-        onKeyEvent: (KeyEvent) -> Boolean = { false },
+        onPreviewKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
+        onKeyEvent: (ComposeKeyEvent) -> Boolean = { false },
     ) {
         this.onPreviewKeyEvent = onPreviewKeyEvent
         this.onKeyEvent = onKeyEvent
@@ -410,6 +379,8 @@ internal class ComposeSceneMediator(
         }
     }
 
+    // region ContainerListener
+
     override fun componentAdded(e: ContainerEvent) {
         if (useInteropBlending) {
             return
@@ -427,6 +398,80 @@ internal class ComposeSceneMediator(
         }
     }
 
+    // endregion
+
+    // region InputMethodListener
+
+    override fun caretPositionChanged(event: InputMethodEvent?) {
+        if (isDisposed) return
+        // Which OSes and which input method could produce such events? We need to have some
+        // specific cases in mind before implementing this
+    }
+
+    override fun inputMethodTextChanged(event: InputMethodEvent) {
+        if (isDisposed) return
+        catchExceptions {
+            textInputService.inputMethodTextChanged(event)
+        }
+    }
+
+    // endregion
+
+    // region FocusListener
+
+    override fun focusGained(e: FocusEvent) {
+        // We don't reset focus for Compose when the component loses focus temporary.
+        // Partially because we don't support restoring focus after clearing it.
+        // Focus can be lost temporary when another window or popup takes focus.
+        if (!e.isTemporary) {
+            scene.focusManager.requestFocus()
+        }
+    }
+
+    override fun focusLost(e: FocusEvent) {
+        // We don't reset focus for Compose when the component loses focus temporary.
+        // Partially because we don't support restoring focus after clearing it.
+        // Focus can be lost temporary when another window or popup takes focus.
+        if (!e.isTemporary) {
+            scene.focusManager.releaseFocus()
+        }
+    }
+
+    // endregion
+
+    // region MouseListener
+
+    override fun mouseClicked(event: MouseEvent) = Unit
+    override fun mousePressed(event: MouseEvent) = onMouseEvent(event)
+    override fun mouseReleased(event: MouseEvent) = onMouseEvent(event)
+    override fun mouseEntered(event: MouseEvent) = onMouseEvent(event)
+    override fun mouseExited(event: MouseEvent) = onMouseEvent(event)
+
+    // endregion
+
+    // region MouseMotionListener
+
+    override fun mouseDragged(event: MouseEvent) = onMouseEvent(event)
+    override fun mouseMoved(event: MouseEvent) = onMouseEvent(event)
+
+    // endregion
+
+    // region MouseWheelListener
+
+    override fun mouseWheelMoved(event: MouseWheelEvent) {
+        onMouseWheelEvent(event)
+    }
+
+    // endregion
+
+    // region KeyListener
+
+    override fun keyPressed(event: KeyEvent) = onKeyEvent(event)
+    override fun keyReleased(event: KeyEvent) = onKeyEvent(event)
+    override fun keyTyped(event: KeyEvent) = onKeyEvent(event)
+
+    // endregion
+
     private inner class DesktopSkikoView : SkikoView {
         override val input: SkikoInput
             get() = SkikoInput.Empty
@@ -434,9 +479,7 @@ internal class ComposeSceneMediator(
         override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
             catchExceptions {
                 val composeCanvas = canvas.asComposeCanvas()
-                val scaledOffset = overrideOffset ?: scaledOffset
-                val dx = scaledOffset.x
-                val dy = scaledOffset.y
+                val (dx, dy) = overrideOffset ?: scaledOffset
                 composeCanvas.translate(-dx, -dy)
                 scene.render(composeCanvas, nanoTime)
                 composeCanvas.translate(dx, dy)
@@ -495,7 +538,7 @@ internal class ComposeSceneMediator(
                 desktopComponent = platformComponent,
                 coroutineContext = coroutineContext,
                 onFocusReceived = {
-                    skiaLayerComponent.requestNativeFocusOnAccessible(accessible)
+                    skiaLayerComponent.requestNativeFocusOnAccessible(it)
                 }
             ).also {
                 it.syncLoop()
@@ -526,9 +569,9 @@ internal class ComposeSceneMediator(
             return contentComponent.hasFocus() || contentComponent.requestFocusInWindow()
         }
 
-        override val rootForTestListener: PlatformContext.RootForTestListener?
+        override val rootForTestListener
             get() = this@ComposeSceneMediator.rootForTestListener
-        override val semanticsOwnerListener: PlatformContext.SemanticsOwnerListener?
+        override val semanticsOwnerListener
             get() = this@ComposeSceneMediator.semanticsOwnerListener
     }
 
@@ -564,6 +607,7 @@ internal class ComposeSceneMediator(
         }
     }
 }
+
 private fun ComposeScene.onMouseEvent(
     offset: Offset,
     density: Density,
@@ -650,9 +694,9 @@ private val MouseEvent.keyboardModifiers get() = PointerKeyboardModifiers(
     isAltGraphPressed = (modifiersEx and InputEvent.ALT_GRAPH_DOWN_MASK) != 0,
     isSymPressed = false,
     isFunctionPressed = false,
-    isCapsLockOn = getLockingKeyStateSafe(java.awt.event.KeyEvent.VK_CAPS_LOCK),
-    isScrollLockOn = getLockingKeyStateSafe(java.awt.event.KeyEvent.VK_SCROLL_LOCK),
-    isNumLockOn = getLockingKeyStateSafe(java.awt.event.KeyEvent.VK_NUM_LOCK),
+    isCapsLockOn = getLockingKeyStateSafe(KeyEvent.VK_CAPS_LOCK),
+    isScrollLockOn = getLockingKeyStateSafe(KeyEvent.VK_SCROLL_LOCK),
+    isNumLockOn = getLockingKeyStateSafe(KeyEvent.VK_NUM_LOCK),
 )
 
 private fun getLockingKeyStateSafe(

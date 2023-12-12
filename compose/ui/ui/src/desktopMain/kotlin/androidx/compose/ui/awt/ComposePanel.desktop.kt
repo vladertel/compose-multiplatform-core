@@ -285,7 +285,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     override fun setFocusTraversalKeysEnabled(focusTraversalKeysEnabled: Boolean) {
-        // ignore, traversal keys should always be handled by ComposeBridge
+        // ignore, traversal keys should always be handled by ComposeContainer
     }
 
     override fun getFocusTraversalKeysEnabled(): Boolean {

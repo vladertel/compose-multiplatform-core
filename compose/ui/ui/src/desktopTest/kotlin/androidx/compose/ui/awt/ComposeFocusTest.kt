@@ -40,6 +40,7 @@ import java.awt.event.KeyEvent
 import javax.swing.JButton
 import javax.swing.JFrame
 import kotlin.random.Random
+import kotlin.test.assertNotNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.skiko.MainUIDispatcher
@@ -744,6 +745,7 @@ class FocusTestScope {
 
     suspend fun pressNextFocusKey() {
         val focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
+        assertNotNull(focusOwner)
         focusOwner.dispatchEvent(KeyEvent(focusOwner, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_TAB, '\t'))
         focusOwner.dispatchEvent(KeyEvent(focusOwner, KeyEvent.KEY_RELEASED, 0, 0, KeyEvent.VK_TAB, '\t'))
         awaitEdtAfterDelay()
@@ -751,6 +753,7 @@ class FocusTestScope {
 
     suspend fun pressPreviousFocusKey() {
         val focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
+        assertNotNull(focusOwner)
         focusOwner.dispatchEvent(KeyEvent(focusOwner, KeyEvent.KEY_PRESSED, 0, KeyEvent.SHIFT_DOWN_MASK, KeyEvent.VK_TAB, '\t'))
         focusOwner.dispatchEvent(KeyEvent(focusOwner, KeyEvent.KEY_RELEASED, 0, KeyEvent.SHIFT_DOWN_MASK, KeyEvent.VK_TAB, '\t'))
         awaitEdtAfterDelay()

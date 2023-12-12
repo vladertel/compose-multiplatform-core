@@ -52,15 +52,13 @@ internal class SwingSkiaLayerAdapter(
         } else {
             mediator.preferredSize
         }
+
         override fun getAccessibleContext(): AccessibleContext? {
             return mediator.accessible.accessibleContext
         }
     }
 
     override val contentComponent
-        get() = skiaLayer
-
-    override val focusComponent
         get() = skiaLayer
 
     override val renderApi by skiaLayer::renderApi

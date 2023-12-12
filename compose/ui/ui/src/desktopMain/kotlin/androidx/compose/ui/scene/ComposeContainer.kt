@@ -243,6 +243,7 @@ internal class ComposeContainer(
             )
         }
     }
+
     fun attachLayer(layer: DesktopComposeSceneLayer) {
         layers.add(layer)
     }

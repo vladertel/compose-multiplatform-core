@@ -60,8 +60,6 @@ internal class SkiaLayerAdapter(
     override val contentComponent
         get() = skiaLayer
 
-    override val focusComponent by skiaLayer::canvas
-
     override val renderApi by skiaLayer::renderApi
 
     override val interopBlendingSupported
