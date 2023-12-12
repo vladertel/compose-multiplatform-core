@@ -359,7 +359,7 @@ private class AccessibilityElement(
         check(container.accessibilityElementAtIndex(indexOfSelf) == this.actualAccessibilityElement)
 
         println("${indent}AccessibilityElement_$semanticsNodeId")
-        println("$indent  containmentChain: ${debugContainmentChain(this)}: ${parent?.semanticsNodeId}")
+        println("$indent  containmentChain: ${debugContainmentChain(this)}")
         println("$indent  isAccessibilityElement: $isAccessibilityElement")
         println("$indent  accessibilityLabel: $accessibilityLabel")
         println("$indent  accessibilityValue: $accessibilityValue")
