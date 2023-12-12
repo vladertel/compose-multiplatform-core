@@ -51,6 +51,7 @@ import platform.UIKit.UIAccessibilityTraits
 import platform.UIKit.UIView
 import platform.UIKit.accessibilityCustomActions
 import platform.darwin.NSInteger
+import platform.darwin.NSObject
 
 private class AccessibilityElement(
     private var semanticsNode: SemanticsNode,
@@ -88,7 +89,7 @@ private class AccessibilityElement(
     }
 
     init {
-        fillInAccessibilityProperties()
+        update(null, semanticsNode)
     }
 
     fun childAtIndex(index: NSInteger): AccessibilityElement? {
@@ -169,15 +170,16 @@ private class AccessibilityElement(
      *   lazily? How should we notify iOS about the changes in the properties without direct changes
      *   in `UIAccessibility` properties (are they KVO-observed by iOS?)
      */
-    fun updateFromSemanticsNode(semanticsNode: SemanticsNode) {
-        check(this.semanticsNode.id == semanticsNode.id)
-        this.semanticsNode = semanticsNode
-
-        // TODO: clear the old ones
-        fillInAccessibilityProperties()
+    fun updateWithNewSemanticsNode(newSemanticsNode: SemanticsNode) {
+        check(semanticsNode.id == newSemanticsNode.id)
+        update(semanticsNode, newSemanticsNode)
+        semanticsNode = newSemanticsNode
     }
 
-    private fun fillInAccessibilityProperties() {
+    private fun update(oldNode: SemanticsNode? = null, newNode: SemanticsNode) {
+        // TODO: check that the field for the properties that were present in the old node but not in
+        //  the new one are cleared
+
         // If the node doesn't have any semantics that can be projected to iOS UIAccessibility entities, it will be invisible to accessibility services
         isAccessibilityElement = false
 
@@ -186,8 +188,6 @@ private class AccessibilityElement(
         fun onMeaningfulSemanticAdded() {
             hasAnyMeaningfulSemantics = true
         }
-
-        println(semanticsNode.config)
 
         val accessibilityLabelStrings = mutableListOf<String>()
         val accessibilityValueStrings = mutableListOf<String>()
@@ -345,6 +345,11 @@ private class AccessibilityElement(
         children.add(element)
         element.parent = this@AccessibilityElement
     }
+
+    fun debugPrint(depth: Int) {
+        val indent = " ".repeat(depth * 2)
+        println("$indent AccessibilityElement_$semanticsNodeId")
+    }
 }
 
 /**
@@ -426,6 +431,11 @@ private class AccessibilityContainer(
             element.parent?.accessibilityContainer
         }
     }
+
+    fun debugPrint(depth: Int) {
+        val indent = " ".repeat(depth * 2)
+        println("$indent AccessibilityContainer_${element.semanticsNodeId}")
+    }
 }
 
 /**
@@ -495,7 +505,7 @@ internal class AccessibilityMediator(
         val element = accessibilityElementsMap[node.id]
 
         if (element != null) {
-            element.updateFromSemanticsNode(node)
+            element.updateWithNewSemanticsNode(node)
             return element
         }
 
@@ -566,6 +576,46 @@ internal class AccessibilityMediator(
         view.accessibilityElements = listOf(
             traverseSemanticsTree(rooSemanticstNode)
         )
+
+        debugTraverse(view)
+    }
+}
+
+/**
+ * Traverse the accessibility tree starting from [accessibilityObject] using the same logic as iOS
+ * Accessibility services, and prints it debug data.
+ */
+private fun debugTraverse(accessibilityObject: Any, depth: Int = 0) {
+    val indent = " ".repeat(depth * 2)
+
+    when (accessibilityObject) {
+        is UIView -> {
+            println("$indent$accessibilityObject")
+
+            accessibilityObject.accessibilityElements?.let { elements ->
+                for (element in elements) {
+                    element?.let {
+                        debugTraverse(element, depth + 1)
+                    }
+                }
+            }
+        }
+
+        is AccessibilityElement -> {
+            accessibilityObject.debugPrint(depth)
+        }
+
+        is AccessibilityContainer -> {
+            accessibilityObject.debugPrint(depth)
+
+            val count = accessibilityObject.accessibilityElementCount()
+            for (index in 0 until count) {
+                val element = accessibilityObject.accessibilityElementAtIndex(index)
+                element?.let {
+                    debugTraverse(element, depth + 1)
+                }
+            }
+        }
     }
 }
 
