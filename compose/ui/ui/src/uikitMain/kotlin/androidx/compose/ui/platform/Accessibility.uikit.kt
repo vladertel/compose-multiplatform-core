@@ -355,7 +355,7 @@ private class AccessibilityElement(
 
     fun debugPrint(depth: Int) {
         val indent = " ".repeat(depth * 2)
-        println("${indent}AccessibilityElement_$semanticsNodeId")
+        println("${indent}AccessibilityElement_$semanticsNodeId chain: ${debugContainmentChain(this)}")
         println("$indent  isAccessibilityElement: $isAccessibilityElement")
         println("$indent  accessibilityLabel: $accessibilityLabel")
         println("$indent  accessibilityValue: $accessibilityValue")
@@ -413,6 +413,9 @@ private class AccessibilityContainer(
     // The super call below is needed because this constructor is designated in the Obj-C class,
     // the real parent container will be resolved dynamically by [accessibilityContainer]
 ) : CMPAccessibilityContainer(DUMMY_UI_ACCESSIBILITY_CONTAINER) {
+    val semanticsNodeId: Int
+        get() = element.semanticsNodeId
+
     override fun accessibilityElementAtIndex(index: NSInteger): Any? {
         if (index == 0L) {
             return element.actualAccessibilityElement
@@ -452,7 +455,7 @@ private class AccessibilityContainer(
             return null
         }
 
-        return if (element.semanticsNodeId == controller.rootSemanticsNodeId) {
+        return if (semanticsNodeId == controller.rootSemanticsNodeId) {
             controller.view
         } else {
             element.parent?.accessibilityContainer
@@ -461,7 +464,7 @@ private class AccessibilityContainer(
 
     fun debugPrint(depth: Int) {
         val indent = " ".repeat(depth * 2)
-        println("${indent}AccessibilityContainer_${element.semanticsNodeId} isAccessibilityElement: $isAccessibilityElement")
+        println("${indent}AccessibilityContainer_${semanticsNodeId}")
     }
 }
 
@@ -652,6 +655,37 @@ private fun debugTraverse(accessibilityObject: Any, depth: Int = 0) {
             throw IllegalStateException("Unexpected accessibility object type: ${accessibilityObject::class}")
         }
     }
+}
+
+private fun debugContainmentChain(accessibilityObject: Any): String {
+    val strings = mutableListOf<String>()
+
+    var currentObject = accessibilityObject as? Any
+
+    while (currentObject != null) {
+        when (val constCurrentObject = currentObject) {
+            is AccessibilityElement -> {
+                strings.add("AccessibilityElement_${constCurrentObject.semanticsNodeId}")
+                currentObject = constCurrentObject.resolveAccessibilityContainer()
+            }
+            is UIView -> {
+                strings.add("View")
+                currentObject = null
+            }
+
+            is AccessibilityContainer -> {
+                strings.add("AccessibilityContainer_${constCurrentObject.semanticsNodeId}")
+
+                currentObject = constCurrentObject.accessibilityContainer()
+            }
+
+            else -> {
+                throw IllegalStateException("Unexpected accessibility object type: ${accessibilityObject::class}")
+            }
+        }
+    }
+
+    return strings.joinToString(" -> ")
 }
 
 fun List<SemanticsNode>.sortedByAccesibilityOrder(): List<SemanticsNode> {
