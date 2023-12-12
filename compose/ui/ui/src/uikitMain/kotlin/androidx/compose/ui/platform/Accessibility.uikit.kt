@@ -552,8 +552,6 @@ internal class AccessibilityMediator(
     private fun syncNodes() {
         val rooSemanticstNode = owner.rootSemanticsNode
 
-        // TODO: the entire NSObject tree is eagerly recreated now when semantics are invalidated. This
-        //  is not correct behavior
         if (!rooSemanticstNode.layoutNode.isPlaced) {
             return
         }
