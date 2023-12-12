@@ -46,12 +46,15 @@ NS_ASSUME_NONNULL_BEGIN
     // NoOp
 }
 
-// Overrides default accessibilityContainer implementation.
 - (__nullable id)accessibilityContainer {
-    return [self resolveAccessibilityContainer];
+    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
-- (__nullable id)resolveAccessibilityContainer {
+- (void)setAccessibilityFrame:(CGRect)accessibilityFrame {
+    // NoOp
+}
+
+- (CGRect)accessibilityFrame {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 

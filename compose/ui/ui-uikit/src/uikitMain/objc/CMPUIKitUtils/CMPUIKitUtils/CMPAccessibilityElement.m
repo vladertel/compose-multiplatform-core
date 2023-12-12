@@ -43,6 +43,7 @@ NS_ASSUME_NONNULL_BEGIN
 // Overrides default accessibilityContainer implementation.
 - (__nullable id)accessibilityContainer {
     // see https://github.com/flutter/flutter/issues/87247
+    // TODO: investigate if this bug is still present on supported iOS versions, if it's not, fuse `accessibilityContainer` and `resolveAccessibilityContainer` implementations into a single one (like in `CMPAccessibilityContainer`)
     if (_inDealloc) {
         return nil;
     }
