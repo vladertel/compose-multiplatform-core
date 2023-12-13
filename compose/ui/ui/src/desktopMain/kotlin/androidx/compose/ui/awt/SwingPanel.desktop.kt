@@ -333,6 +333,13 @@ private class InteropPointerInputModifier<T : Component>(
         pass: PointerEventPass,
         bounds: IntSize,
     ) {
+        /*
+         * If the event was a down or up event, we dispatch to platform as early as possible.
+         * If the event is a move event, and we can still intercept, we dispatch to platform after
+         * we have a chance to intercept due to movement.
+         *
+         * See Android's PointerInteropFilter as original source for this logic.
+         */
         val dispatchDuringInitialTunnel = pointerEvent.changes.fastAny {
             it.changedToDownIgnoreConsumed() || it.changedToUpIgnoreConsumed()
         }
