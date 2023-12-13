@@ -485,7 +485,6 @@ internal class AccessibilityMediator(
     private val owner: SemanticsOwner,
     coroutineContext: CoroutineContext
 ) {
-    // TODO: when is it dead?
     var isAlive = true
 
     val rootSemanticsNodeId: Int
@@ -533,7 +532,7 @@ internal class AccessibilityMediator(
     }
 
     fun dispose() {
-        check(isAlive)
+        check(isAlive) { "AccessibilityMediator is already disposed" }
 
         job.cancel()
         isAlive = false
