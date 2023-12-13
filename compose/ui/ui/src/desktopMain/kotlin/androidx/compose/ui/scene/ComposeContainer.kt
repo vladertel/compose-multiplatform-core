@@ -61,7 +61,7 @@ internal class ComposeContainer(
     window: Window? = null,
 ) : ComponentListener, WindowFocusListener {
     val windowContext = PlatformWindowContext()
-    var window: Window? = window
+    var window: Window? = null
         private set
     private var layoutDirection = layoutDirectionFor(window ?: container)
     private val layers = mutableListOf<DesktopComposeSceneLayer>()
@@ -94,7 +94,7 @@ internal class ComposeContainer(
     val preferredSize by mediator::preferredSize
 
     init {
-        window?.addComponentListener(this)
+        setWindow(window)
     }
 
     fun dispose() {
@@ -152,6 +152,10 @@ internal class ComposeContainer(
 
     fun setBounds(x: Int, y: Int, width: Int, height: Int) {
         mediator.contentBounds = Rectangle(x, y, width, height)
+
+        // In case of preferred size there is no separate event for changing window size,
+        // so re-checking the actual size on container resize too.
+        onChangeWindowBounds()
     }
 
     private fun setWindow(window: Window?) {
