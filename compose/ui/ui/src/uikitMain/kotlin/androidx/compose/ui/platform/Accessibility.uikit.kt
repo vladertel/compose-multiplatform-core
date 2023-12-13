@@ -56,9 +56,26 @@ import platform.darwin.NSObject
 
 private val DUMMY_UI_ACCESSIBILITY_CONTAINER = NSObject()
 
+/**
+ * Represents a projection of the Compose semantics node to the iOS world. The actual accessibility
+ * object communicated to iOS accessibility services is returned by [actualAccessibilityElement]
+ * property.
+ *
+ * For default implementation, it's the same object as the [AccessibilityElement] itself, but it can
+ * be overriden by subclasses to return a different object (like a dummy UIScrollView, UITextInput,
+ * etc.)
+ *
+ * The object itself is a node in a generated tree that matches 1-to-1 with the [SemanticsNode]
+ * tree. The actual tree that is communicated to iOS accessibility services is synthesized from it
+ * lazily in [AccessibilityContainer] class.
+ *
+ * @param semanticsNode The semantics node with initial data that this element should represent
+ *  (can be changed later via [updateWithNewSemanticsNode])
+ * @param mediator The mediator that is associated with iOS and Compose tree that this element.
+ */
 private class AccessibilityElement(
     private var semanticsNode: SemanticsNode,
-    private val controller: AccessibilityMediator,
+    private val mediator: AccessibilityMediator,
 
     // The super call below is needed because this constructor is designated in the Obj-C class,
     // the real container will be resolved dynamically by [accessibilityContainer] and
@@ -72,7 +89,6 @@ private class AccessibilityElement(
 
     val childrenCount: NSInteger
         get() = children.size.toLong()
-
 
     val actualAccessibilityElement: Any
         get() = this
@@ -90,8 +106,8 @@ private class AccessibilityElement(
      */
     private val synthesizedAccessibilityContainer by lazy {
         AccessibilityContainer(
-            element = this,
-            controller = controller
+            wrappedElement = this,
+            controller = mediator
         )
     }
 
@@ -142,7 +158,7 @@ private class AccessibilityElement(
     }
 
     override fun accessibilityActivate(): Boolean {
-        if (!controller.isAlive) {
+        if (!mediator.isAlive) {
             return false
         }
 
@@ -158,11 +174,11 @@ private class AccessibilityElement(
      * synthesized container, otherwise we look up the parent and return its container.
      */
     override fun resolveAccessibilityContainer(): Any? {
-        if (!controller.isAlive) {
+        if (!mediator.isAlive) {
             return null
         }
 
-        return if (hasChildren || semanticsNodeId == controller.rootSemanticsNodeId) {
+        return if (hasChildren || semanticsNodeId == mediator.rootSemanticsNodeId) {
             synthesizedAccessibilityContainer
         } else {
             parent?.accessibilityContainer
@@ -176,7 +192,7 @@ private class AccessibilityElement(
      *
      * TODO: is it possible to optimize this? Can we calculate the actual `UIAccessibility` properties
      *   lazily? How should we notify iOS about the changes in the properties without direct changes
-     *   in `UIAccessibility` properties (are they KVO-observed by iOS?)
+     *   in `UIAccessibility` properties (are they KVO-observed by iOS? how can we trigger it?)
      */
     fun updateWithNewSemanticsNode(newSemanticsNode: SemanticsNode) {
         check(semanticsNode.id == newSemanticsNode.id)
@@ -324,7 +340,7 @@ private class AccessibilityElement(
         isAccessibilityElement = hasAnyMeaningfulSemantics
 
         accessibilityIdentifier = "${semanticsNode.id}"
-        accessibilityFrame = controller.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
+        accessibilityFrame = mediator.convertRectToWindowSpaceCGRect(semanticsNode.boundsInWindow)
     }
 
     private fun removeFromParent() {
@@ -390,9 +406,13 @@ private class AccessibilityElement(
  * AccessibilityContainer_A
  *     AccessibilityElement_A -> AccessibilityElement
  *     AccessibilityContainer_B
- *         AccessibilityElement_B -> AccessibilityScrollableElement(for example)
+ *         AccessibilityElement_B -> AccessibilityElement
  *         AccessibilityElement_C -> AccessibilityElement
  * ```
+ *
+ * ` -> ` above designates [AccessibilityElement.actualAccessibilityElement] property,
+ * [AccessibilityElement] default implementation returns itself. However, it can be overriden
+ * in subclasses to return a different object (like a dummy UIScrollView, UITextInput, etc.)
  *
  * The actual internal representation of the tree is:
  * ```
@@ -400,7 +420,7 @@ private class AccessibilityElement(
  *   AccessibilityElement_B
  *      AccessibilityElement_C
  * ```
- * But the actual object we put into the accessibility root set is the synthesized [AccessibilityContainer]
+ * But the object we put into the accessibility root set is the synthesized [AccessibilityContainer]
  * for AccessibilityElement_A. The methods that are be called from iOS Accessibility services will
  * lazily resolve the hierarchy from the internal one to expected.
  *
@@ -416,21 +436,32 @@ private class AccessibilityContainer(
     /**
      * The element wrapped by this container
      */
-    private val element: AccessibilityElement,
+    private val wrappedElement: AccessibilityElement,
     private val controller: AccessibilityMediator,
 
     // The super call below is needed because this constructor is designated in the Obj-C class,
     // the real parent container will be resolved dynamically by [accessibilityContainer]
 ) : CMPAccessibilityContainer(DUMMY_UI_ACCESSIBILITY_CONTAINER) {
     val semanticsNodeId: Int
-        get() = element.semanticsNodeId
+        get() = wrappedElement.semanticsNodeId
 
+    /**
+     * This function will be called by iOS Accessibility services to traverse the hierarchy of all
+     * accessibility elements starting with the root one.
+     *
+     * The zero element is always the element wrapped by this container due to the restriction of
+     * an object not being able to be a container and an element at the same time.
+     *
+     * Consequent elements correspond to the children of the [wrappedElement]:
+     * - The [actualAccessibilityElement] if the child is a leaf node.
+     * - The synthesized [CMPAccessibilityContainer] otherwise
+     */
     override fun accessibilityElementAtIndex(index: NSInteger): Any? {
         if (index == 0L) {
-            return element.actualAccessibilityElement
+            return wrappedElement.actualAccessibilityElement
         }
 
-        val child = element.childAtIndex(index - 1) ?: return null
+        val child = wrappedElement.childAtIndex(index - 1) ?: return null
 
         if (child.hasChildren) {
             return child.accessibilityContainer
@@ -441,20 +472,27 @@ private class AccessibilityContainer(
 
     override fun accessibilityFrame(): CValue<CGRect> {
         // Same as wrapped element
-        return element.accessibilityFrame
+        //
+        // Accessibility container clips reacheability of its children, if their frame doesn't interesect
+        // with their container's frame
+        return wrappedElement.accessibilityFrame
     }
 
-    override fun accessibilityElementCount(): NSInteger = (element.childrenCount + 1)
+    /**
+     * The number of elements in the container:
+     * The wrapped element itself + the number of children
+     */
+    override fun accessibilityElementCount(): NSInteger = (wrappedElement.childrenCount + 1)
 
     /**
      * Reverse lookup of [accessibilityElementAtIndex]
      */
     override fun indexOfAccessibilityElement(element: Any): NSInteger {
-        if (element == this.element.actualAccessibilityElement) {
+        if (element == wrappedElement.actualAccessibilityElement) {
             return 0
         }
 
-        return this.element.indexOfChildAccessibilityElement(element)?.let { index ->
+        return wrappedElement.indexOfChildAccessibilityElement(element)?.let { index ->
             index + 1
         } ?: NSNotFound
     }
@@ -467,7 +505,7 @@ private class AccessibilityContainer(
         return if (semanticsNodeId == controller.rootSemanticsNodeId) {
             controller.view
         } else {
-            element.parent?.accessibilityContainer
+            wrappedElement.parent?.accessibilityContainer
         }
     }
 
@@ -512,6 +550,9 @@ internal class AccessibilityMediator(
     private val accessibilityElementsMap = mutableMapOf<Int, AccessibilityElement>()
 
     init {
+        // TODO: this approach was copied from desktop implementation, obviously it has a 100ms lag
+        //  between the actual change in the semantics tree and the change in the accessibility tree.
+        //  should we use some other approach?
         coroutineScope.launch {
             while (isAlive) {
                 syncNodes()
@@ -549,7 +590,7 @@ internal class AccessibilityMediator(
 
         val newElement = AccessibilityElement(
             semanticsNode = node,
-            controller = this
+            mediator = this
         )
 
         accessibilityElementsMap[node.id] = newElement
@@ -565,7 +606,7 @@ internal class AccessibilityMediator(
      * that are not present in the tree anymore.
      */
     private fun traverseSemanticsTree(rootNode: SemanticsNode): Any {
-        // TODO: should we move it to the class scope to avoid reallocation?
+        // TODO: should we move [presentIds] to the class scope to avoid reallocation?
         val presentIds = mutableSetOf<Int>()
 
         fun traverseSemanticsNode(node: SemanticsNode): AccessibilityElement {
@@ -597,7 +638,22 @@ internal class AccessibilityMediator(
         }
     }
 
+    /**
+     * Syncs the accessibility tree with the current semantics tree.
+     * TODO: Does a full tree traversal on every sync. Explore new Google solution in 1.6, that should
+     *   perform affected subtree traversal instead.
+     */
     private fun syncNodes() {
+        // TODO: investigate what happens if the user has an accessibility focus on the element that
+        //  is removed from the tree:
+        //  - Does it use the index path of containers traversal to restore the focus?
+        //  - Does it use the accessibility identifier of the element to restore the focus?
+        //  - Does it hold the reference to the focused element? Should we
+        //      take some action to reset focus on the element, that got deleted in such case?
+
+        // TODO: investigate what needs to be done to reflect that this hiearchy is probably covered
+        //   by overlay/popup/dialogue
+
         val rooSemanticstNode = owner.rootSemanticsNode
 
         if (!rooSemanticstNode.layoutNode.isPlaced) {
@@ -624,8 +680,8 @@ internal class AccessibilityMediator(
 }
 
 /**
- * Traverse the accessibility tree starting from [accessibilityObject] using the same logic as iOS
- * Accessibility services, and prints it debug data.
+ * Traverse the accessibility tree starting from [accessibilityObject] using the same(assumed) logic
+ * as iOS Accessibility services, and prints it debug data.
  */
 private fun debugTraverse(accessibilityObject: Any, depth: Int = 0) {
     val indent = " ".repeat(depth * 2)
@@ -695,12 +751,21 @@ private fun debugContainmentChain(accessibilityObject: Any): String {
     return strings.joinToString(" -> ")
 }
 
-fun List<SemanticsNode>.sortedByAccesibilityOrder(): List<SemanticsNode> {
+/**
+ * Sort the elements in their visual order using their bounds:
+ * - from top to bottom,
+ * - from left to right // TODO: consider RTL layout
+ *
+ * The sort is needed because [SemanticsNode.replacedChildren] order doesn't match the
+ * expected order of the children in the accessibility tree.
+ *
+ * TODO: investigate if it's a bug, or some assumptions about the order are wrong.
+ */
+private fun List<SemanticsNode>.sortedByAccesibilityOrder(): List<SemanticsNode> {
     return sortedWith { lhs, rhs ->
         val result = lhs.boundsInWindow.topLeft.y.compareTo(rhs.boundsInWindow.topLeft.y)
 
         if (result == 0) {
-            // TODO: consider RTL layout
             lhs.boundsInWindow.topLeft.x.compareTo(rhs.boundsInWindow.topLeft.x)
         } else {
             result
