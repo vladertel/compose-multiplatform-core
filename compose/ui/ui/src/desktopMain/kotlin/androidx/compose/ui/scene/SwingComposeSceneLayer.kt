@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.layoutDirectionFor
+import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Rectangle
 import javax.swing.JFrame
@@ -56,14 +57,17 @@ internal class SwingComposeSceneLayer(
         }
 
         override fun paint(g: Graphics) {
-            super.paint(g)
             g.color = background
             g.fillRect(0,0, width, height)
+
+            // Draw content after background
+            super.paint(g)
         }
     }.also {
         it.layout = null
         it.isOpaque = false
         it.background = Color.Transparent.toAwtColor()
+        it.size = Dimension(window.width, window.height)
 
         // TODO: Currently it works only with offscreen rendering
         layersContainer.add(it, JLayeredPane.POPUP_LAYER, 0)
@@ -111,6 +115,7 @@ internal class SwingComposeSceneLayer(
         }
 
     init {
+        bounds = IntRect(0, 0, window.width, window.height)
         _mediator = ComposeSceneMediator(
             container = container,
             windowContext = composeContainer.windowContext,
@@ -122,8 +127,8 @@ internal class SwingComposeSceneLayer(
             composeSceneFactory = ::createComposeScene,
         ).also {
             it.transparency = true
+            it.contentBounds = bounds.toAwtRectangle(density)
         }
-        bounds = IntRect(0, 0, window.width, window.height)
         composeContainer.attachLayer(this)
     }
 

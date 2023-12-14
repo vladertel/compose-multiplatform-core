@@ -210,13 +210,13 @@ internal class ComposeSceneMediator(
     private val useInteropBlending: Boolean
         get() = ComposeFeatureFlags.useInteropBlending && skiaLayerComponent.interopBlendingSupported
 
-    private val bridgeLayer: Int = 10
-    private val componentLayer: Int
+    private val contentLayer: Int = 10
+    private val interopLayer: Int
         get() = if (useInteropBlending) 0 else 20
 
     init {
-        container.addToLayer(invisibleComponent, bridgeLayer)
-        container.addToLayer(contentComponent, bridgeLayer)
+        container.addToLayer(invisibleComponent, contentLayer)
+        container.addToLayer(contentComponent, contentLayer)
         container.addContainerListener(this)
 
         // It will be enabled dynamically. See DesktopPlatformComponent
@@ -353,7 +353,7 @@ internal class ComposeSceneMediator(
     }
 
     fun addToComponentLayer(component: Component) {
-        container.addToLayer(component, componentLayer)
+        container.addToLayer(component, interopLayer)
     }
 
     fun setKeyEventListeners(
