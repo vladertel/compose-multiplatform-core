@@ -37,6 +37,9 @@ import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.SkiaLayerAnalytics
 import org.jetbrains.skiko.hostOs
 
+/**
+ * A panel used as a main view in [ComposeWindow] and [ComposeDialog].
+ */
 internal class ComposeWindowPanel(
     private val window: Window,
     private val isUndecorated: () -> Boolean,

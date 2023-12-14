@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.window.LocalWindow
 
-
+/**
+ * Base layout for full-window Compose content.
+ */
 @Composable
 internal fun WindowContentLayout(
     modifier: Modifier = Modifier,

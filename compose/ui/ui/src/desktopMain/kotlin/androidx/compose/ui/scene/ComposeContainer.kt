@@ -30,6 +30,8 @@ import androidx.compose.ui.scene.skia.SwingSkiaLayerAdapter
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.layoutDirectionFor
@@ -55,6 +57,12 @@ internal val LocalLayerContainer = staticCompositionLocalOf<Container> {
     error("CompositionLocal LayerContainer not provided")
 }
 
+/**
+ * Internal entry point to Compose.
+ *
+ * It binds Skia canvas and [ComposeScene] to [container].
+ * It also configures compose based on [ComposeFeatureFlags].
+ */
 internal class ComposeContainer(
     val container: JLayeredPane,
     val skiaLayerAnalytics: SkiaLayerAnalytics,
@@ -64,6 +72,10 @@ internal class ComposeContainer(
     var window: Window? = null
         private set
     private var layoutDirection = layoutDirectionFor(window ?: container)
+
+    /**
+     * A list of additional layers. Layers are used to render [Popup]s and [Dialog]s.
+     */
     private val layers = mutableListOf<DesktopComposeSceneLayer>()
 
     private val coroutineExceptionHandler = DesktopCoroutineExceptionHandler()

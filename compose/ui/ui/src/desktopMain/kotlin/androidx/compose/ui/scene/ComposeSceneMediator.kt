@@ -82,6 +82,11 @@ import org.jetbrains.skiko.SkikoInput
 import org.jetbrains.skiko.SkikoView
 import org.jetbrains.skiko.hostOs
 
+/**
+ * Mediator between [ComposeScene] and skia canvas.
+ *
+ * It passes input from native components to Compose and renders Compose to native canvas.
+ */
 internal class ComposeSceneMediator(
     private val container: JLayeredPane,
     private val windowContext: PlatformWindowContext,

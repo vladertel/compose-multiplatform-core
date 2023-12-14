@@ -16,13 +16,51 @@
 
 package androidx.compose.ui
 
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.Popup
+
+/**
+ * The helper singleton object that provides the access to feature flags that
+ * configure Compose behaviour.
+ */
 internal object ComposeFeatureFlags {
+
+    /**
+     * Indicates whether the platform layers feature is enabled.
+     * The default value is `false`, implying that new layers (such as for [Popup] and [Dialog])
+     * are created within the initial canvas.
+     *
+     * TODO: Provide configuration options via system properties when it is fully developed.
+     */
     val usePlatformLayers: Boolean
-        get() = false // TODO feature flag
+        get() = false
+
+    /**
+     * Indicates whether the platform layers should use separate windows.
+     *
+     * TODO: Provide configuration options via system properties when it is fully developed.
+     * TODO: Consider to combine it with `usePlatformLayers`
+     */
     val useWindowLayers: Boolean
-        get() = false // TODO feature flag
+        get() = false
+
+    /**
+     * Indicates whether the Compose should use Swing graphics for rendering.
+     * This prevents transitional rendering issues when panels are being shown, hidden, or resized.
+     * It also enables proper layering when combining Swing components and compose panels.
+     *
+     * Please note that it requires additional copy from offscreen texture to Swing graphics,
+     * so it has some performance penalty.
+     */
     val useSwingGraphics: Boolean
         get() = System.getProperty("compose.swing.render.on.graphics").toBoolean()
+
+    /**
+     * Indicates whether interop blending is enabled.
+     * It allows drawing compose elements above interop and apply clip/shape modifiers to it.
+     *
+     * Note that it currently works only with Metal, DirectX and offscreen rendering.
+     */
     val useInteropBlending: Boolean
         get() = System.getProperty("compose.interop.blending").toBoolean()
 }
