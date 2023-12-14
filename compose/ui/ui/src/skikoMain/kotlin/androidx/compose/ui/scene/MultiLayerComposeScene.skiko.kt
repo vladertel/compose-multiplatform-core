@@ -496,7 +496,7 @@ private class MultiLayerComposeSceneImpl(
             inputHandler = inputHandler,
         )
         private var composition: Composition? = null
-        private var callback: ((Boolean) -> Unit)? = null
+        private var outsidePointerCallback: ((Boolean) -> Unit)? = null
         private var isClosed = false
 
         var size: IntSize? = size
@@ -570,7 +570,7 @@ private class MultiLayerComposeSceneImpl(
         override fun setOutsidePointerEventListener(
             onOutsidePointerEvent: ((Boolean) -> Unit)?,
         ) {
-            callback = onOutsidePointerEvent
+            outsidePointerCallback = onOutsidePointerEvent
         }
 
         override fun setContent(content: @Composable () -> Unit) {
@@ -588,7 +588,7 @@ private class MultiLayerComposeSceneImpl(
         }
 
         fun onOutsidePointerEvent(event: PointerInputEvent) {
-            callback?.invoke(event.isDismissRequest())
+            outsidePointerCallback?.invoke(event.isDismissRequest())
         }
     }
 }

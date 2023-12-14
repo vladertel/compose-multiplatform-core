@@ -32,6 +32,8 @@ import androidx.compose.ui.window.layoutDirectionFor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Rectangle
+import java.awt.event.MouseEvent
+import java.awt.event.MouseListener
 import javax.swing.JFrame
 import javax.swing.JLayeredPane
 import kotlin.math.ceil
@@ -45,7 +47,7 @@ internal class SwingComposeSceneLayer(
     layoutDirection: LayoutDirection,
     focusable: Boolean,
     compositionContext: CompositionContext
-) : DesktopComposeSceneLayer() {
+) : DesktopComposeSceneLayer(), MouseListener {
     private val window get() = requireNotNull(composeContainer.window)
     private val layersContainer get() = requireNotNull(composeContainer.layersContainer)
 
@@ -68,6 +70,7 @@ internal class SwingComposeSceneLayer(
         it.isOpaque = false
         it.background = Color.Transparent.toAwtColor()
         it.size = Dimension(window.width, window.height)
+        it.addMouseListener(this)
 
         // TODO: Currently it works only with offscreen rendering
         layersContainer.add(it, JLayeredPane.POPUP_LAYER, 0)
@@ -82,6 +85,7 @@ internal class SwingComposeSceneLayer(
         }
 
     private var _mediator: ComposeSceneMediator? = null
+    private var outsidePointerCallback: ((Boolean) -> Unit)? = null
 
     override var density: Density = density
         set(value) {
@@ -135,6 +139,7 @@ internal class SwingComposeSceneLayer(
     override fun close() {
         composeContainer.detachLayer(this)
         _mediator?.dispose()
+        _mediator = null
         window.remove(container)
     }
 
@@ -152,8 +157,10 @@ internal class SwingComposeSceneLayer(
         )
     }
 
-    override fun setOutsidePointerEventListener(onOutsidePointerEvent: ((dismissRequest: Boolean) -> Unit)?) {
-        // TODO
+    override fun setOutsidePointerEventListener(
+        onOutsidePointerEvent: ((dismissRequest: Boolean) -> Unit)?
+    ) {
+        outsidePointerCallback = onOutsidePointerEvent
     }
 
     private fun createSkiaLayerComponent(mediator: ComposeSceneMediator): SkiaLayerComponent {
@@ -175,6 +182,22 @@ internal class SwingComposeSceneLayer(
 
     override fun onChangeWindowBounds() {
         containerSize = IntSize(window.width, window.height)
+    }
+
+    // region MouseListener
+
+    override fun mouseClicked(event: MouseEvent) = Unit
+    override fun mousePressed(event: MouseEvent) = onMouseEvent(event)
+    override fun mouseReleased(event: MouseEvent) = onMouseEvent(event)
+    override fun mouseEntered(event: MouseEvent) = onMouseEvent(event)
+    override fun mouseExited(event: MouseEvent) = onMouseEvent(event)
+
+    // endregion
+
+    private fun onMouseEvent(event: MouseEvent) {
+        // TODO: Filter/consume based on [focused] flag
+        val dismissRequest = event.button == MouseEvent.BUTTON1 && event.id == MouseEvent.MOUSE_RELEASED
+        outsidePointerCallback?.invoke(dismissRequest)
     }
 }
 
