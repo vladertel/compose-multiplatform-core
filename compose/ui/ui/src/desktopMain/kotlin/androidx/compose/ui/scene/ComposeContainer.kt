@@ -65,7 +65,7 @@ internal val LocalLayerContainer = staticCompositionLocalOf<Container> {
  */
 internal class ComposeContainer(
     val container: JLayeredPane,
-    val skiaLayerAnalytics: SkiaLayerAnalytics,
+    private val skiaLayerAnalytics: SkiaLayerAnalytics,
     window: Window? = null,
 ) : ComponentListener, WindowFocusListener {
     val windowContext = PlatformWindowContext()
@@ -77,6 +77,12 @@ internal class ComposeContainer(
      * A list of additional layers. Layers are used to render [Popup]s and [Dialog]s.
      */
     private val layers = mutableListOf<DesktopComposeSceneLayer>()
+
+    /**
+     * A container used for additional layers.
+     */
+    var layersContainer: JLayeredPane? = null
+        get() = field ?: container
 
     private val coroutineExceptionHandler = DesktopCoroutineExceptionHandler()
     private val coroutineContext = MainUIDispatcher + coroutineExceptionHandler

@@ -132,19 +132,34 @@ internal class ComposeSceneMediator(
         set(value) {
             contentComponent.bounds = value
         }
-    private val scaledOffset: Offset
+
+    /**
+     * Offset of the content. Might be overridden in cases when [contentComponent] doesn't
+     * occupy full content size.
+     */
+    private var _contentOffset: Offset? = null
+    var contentOffset: Offset
         get() {
             val scale = scene.density.density
-            return Offset(
+            return _contentOffset ?: Offset(
                 x = contentBounds.x * scale,
                 y = contentBounds.y * scale
             )
         }
-
-    var overrideOffset: Offset? = null
-    var overrideSize: IntSize? = null
         set(value) {
-            field = value
+            _contentOffset = value
+        }
+
+    /**
+     * Size of the container. Might be overridden in cases when real content size doesn't match
+     * desired value. For example if we want to show dialog in a separate window with size of this
+     * dialog, but constrains (and scene size) should remain the size of the main window.
+     */
+    private var _containerSize: IntSize? = null
+    var containerSize: IntSize
+        get() = _containerSize ?: container.scaledSize
+        set(value) {
+            _containerSize = value
             onChangeComponentSize()
         }
 
@@ -262,7 +277,7 @@ internal class ComposeSceneMediator(
 
         // Zero size will literally limit scene's content size to zero,
         // so it case of late initialization skip this to avoid extra layout run.
-        val scaledSize = overrideSize ?: container.scaledSize.takeIf { it != IntSize.Zero }
+        val scaledSize = containerSize.takeIf { it != IntSize.Zero }
         if (scene.size != scaledSize) {
             scene.size = scaledSize
         }
@@ -304,15 +319,13 @@ internal class ComposeSceneMediator(
             windowContext.setKeyboardModifiers(event.keyboardModifiers)
         }
         val density = contentComponent.density
-        val scaledOffset = overrideOffset ?: scaledOffset
-        scene.onMouseEvent(scaledOffset, density, event)
+        scene.onMouseEvent(contentOffset, density, event)
     }
 
     private fun onMouseWheelEvent(event: MouseWheelEvent): Unit = catchExceptions {
         if (isDisposed) return
         val density = contentComponent.density
-        val scaledOffset = overrideOffset ?: scaledOffset
-        scene.onMouseWheelEvent(scaledOffset, density, event)
+        scene.onMouseWheelEvent(contentOffset, density, event)
     }
 
     private fun onKeyEvent(event: KeyEvent) = catchExceptions {
@@ -485,10 +498,10 @@ internal class ComposeSceneMediator(
         override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
             catchExceptions {
                 val composeCanvas = canvas.asComposeCanvas()
-                val (dx, dy) = overrideOffset ?: scaledOffset
-                composeCanvas.translate(-dx, -dy)
+                val offset = requireNotNull(contentOffset)
+                composeCanvas.translate(-offset.x, -offset.y)
                 scene.render(composeCanvas, nanoTime)
-                composeCanvas.translate(dx, dy)
+                composeCanvas.translate(offset.x, offset.y)
             }
         }
     }

@@ -75,8 +75,22 @@ internal class WindowComposeSceneLayer(
     private var _mediator: ComposeSceneMediator? = null
 
     override var density: Density = density
+        set(value) {
+            field = value
+            // TODO: Pass it to mediator/scene
+        }
+
     override var layoutDirection: LayoutDirection = layoutDirection
+        set(value) {
+            field = value
+            // TODO: Pass it to mediator/scene
+        }
+
     override var focusable: Boolean = focusable
+        set(value) {
+            field = value
+            // TODO: Pass it to mediator/scene
+        }
 
     override var bounds: IntRect = IntRect.Zero
         set(value) {
@@ -88,10 +102,15 @@ internal class WindowComposeSceneLayer(
             val windowLocation = window.location
             dialog.setLocation(windowLocation.x + scaledRectangle.x, windowLocation.y + scaledRectangle.y)
             dialog.setSize(scaledRectangle.width, scaledRectangle.height)
-            _mediator?.overrideOffset = bounds.topLeft.toOffset()
+            _mediator?.contentOffset = bounds.topLeft.toOffset()
             _mediator?.contentBounds = Rectangle(0, 0, scaledRectangle.width, scaledRectangle.height)
         }
+
     override var scrimColor: Color? = null
+        set(value) {
+            field = value
+            // TODO: Draw scrim in the main window
+        }
 
     init {
         _mediator = ComposeSceneMediator(
@@ -105,7 +124,7 @@ internal class WindowComposeSceneLayer(
             composeSceneFactory = ::createComposeScene,
         ).also {
             it.transparency = true
-            it.overrideSize = window.scaledSize
+            it.containerSize = window.scaledSize
         }
         dialog.bounds = window.bounds
         dialog.isVisible = true
@@ -140,7 +159,7 @@ internal class WindowComposeSceneLayer(
         val scaledRectangle = bounds.toAwtRectangle(density)
         val windowLocation = window.location
         dialog.setLocation(windowLocation.x + scaledRectangle.x, windowLocation.y + scaledRectangle.y)
-        _mediator?.overrideSize = window.scaledSize
+        _mediator?.containerSize = window.scaledSize
     }
 
     private fun createSkiaLayerComponent(mediator: ComposeSceneMediator): SkiaLayerComponent {

@@ -46,6 +46,8 @@ internal class SwingComposeSceneLayer(
     compositionContext: CompositionContext
 ) : DesktopComposeSceneLayer() {
     private val window get() = requireNotNull(composeContainer.window)
+    private val layersContainer get() = requireNotNull(composeContainer.layersContainer)
+
     private val container = object : JLayeredPane() {
         override fun addNotify() {
             super.addNotify()
@@ -63,10 +65,8 @@ internal class SwingComposeSceneLayer(
         it.isOpaque = false
         it.background = Color.Transparent.toAwtColor()
 
-        // TODO: CORRECTLY add it to window
-        val window = window as JFrame
-        val contentPane = window.contentPane
-        contentPane.add(it, 0)
+        // TODO: Currently it works only with offscreen rendering
+        layersContainer.add(it, JLayeredPane.POPUP_LAYER, 0)
     }
     private var containerSize = IntSize.Zero
         set(value) {
@@ -80,14 +80,29 @@ internal class SwingComposeSceneLayer(
     private var _mediator: ComposeSceneMediator? = null
 
     override var density: Density = density
+        set(value) {
+            field = value
+            // TODO: Pass it to mediator/scene
+        }
+
     override var layoutDirection: LayoutDirection = layoutDirection
+        set(value) {
+            field = value
+            // TODO: Pass it to mediator/scene
+        }
+
     override var focusable: Boolean = focusable
+        set(value) {
+            field = value
+            // TODO: Pass it to mediator/scene
+        }
 
     override var bounds: IntRect = IntRect.Zero
         set(value) {
             field = value
             _mediator?.contentBounds = value.toAwtRectangle(container.density)
         }
+
     override var scrimColor: Color? = null
         set(value) {
             field = value

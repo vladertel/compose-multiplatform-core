@@ -20,7 +20,14 @@ import javax.accessibility.Accessible
 import javax.swing.JComponent
 import org.jetbrains.skiko.ClipRectangle
 import org.jetbrains.skiko.GraphicsApi
+import org.jetbrains.skiko.SkiaLayer
+import org.jetbrains.skiko.swing.SkiaSwingLayer
 
+/**
+ * Represents a component that is capable of rendering graphics using Skia library.
+ *
+ * It's implemented as adapter to [SkiaLayer] or [SkiaSwingLayer].
+ */
 internal interface SkiaLayerComponent {
     val contentComponent: JComponent
 
