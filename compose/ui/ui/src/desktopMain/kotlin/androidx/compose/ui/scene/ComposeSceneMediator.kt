@@ -16,14 +16,15 @@
 
 package androidx.compose.ui.scene
 
+import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalContext
+import androidx.compose.ui.ComposeFeatureFlags
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asComposeCanvas
-import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
-import androidx.compose.ui.ComposeFeatureFlags
 import androidx.compose.ui.input.pointer.AwtCursor
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerButtons
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
+import androidx.compose.ui.window.scaledOffset
 import androidx.compose.ui.window.scaledSize
 import java.awt.Component
 import java.awt.Cursor
@@ -139,13 +141,7 @@ internal class ComposeSceneMediator(
      */
     private var _contentOffset: Offset? = null
     var contentOffset: Offset
-        get() {
-            val scale = scene.density.density
-            return _contentOffset ?: Offset(
-                x = contentBounds.x * scale,
-                y = contentBounds.y * scale
-            )
-        }
+        get() = _contentOffset ?: contentComponent.scaledOffset
         set(value) {
             _contentOffset = value
         }
@@ -155,8 +151,8 @@ internal class ComposeSceneMediator(
      * desired value. For example if we want to show dialog in a separate window with size of this
      * dialog, but constrains (and scene size) should remain the size of the main window.
      */
-    private var _containerSize: IntSize? = null
-    var containerSize: IntSize
+    private var _containerSize: Size? = null
+    var containerSize: Size
         get() = _containerSize ?: container.scaledSize
         set(value) {
             _containerSize = value
@@ -277,7 +273,9 @@ internal class ComposeSceneMediator(
 
         // Zero size will literally limit scene's content size to zero,
         // so it case of late initialization skip this to avoid extra layout run.
-        val scaledSize = containerSize.takeIf { it != IntSize.Zero }
+        // TODO: Support floats for scene size.
+        val (width, height) = containerSize
+        val scaledSize = IntSize(width.toInt(), height.toInt()).takeIf { it != IntSize.Zero }
         if (scene.size != scaledSize) {
             scene.size = scaledSize
         }
@@ -498,10 +496,10 @@ internal class ComposeSceneMediator(
         override fun onRender(canvas: Canvas, width: Int, height: Int, nanoTime: Long) {
             catchExceptions {
                 val composeCanvas = canvas.asComposeCanvas()
-                val offset = requireNotNull(contentOffset)
-                composeCanvas.translate(-offset.x, -offset.y)
+                val (dx, dy) = contentOffset
+                composeCanvas.translate(-dx, -dy)
                 scene.render(composeCanvas, nanoTime)
-                composeCanvas.translate(offset.x, offset.y)
+                composeCanvas.translate(dx, dy)
             }
         }
     }

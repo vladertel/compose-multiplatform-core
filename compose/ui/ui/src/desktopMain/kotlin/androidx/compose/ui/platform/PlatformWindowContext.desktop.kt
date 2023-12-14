@@ -19,6 +19,7 @@ package androidx.compose.ui.platform
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.window.Dialog
@@ -46,9 +47,11 @@ internal class PlatformWindowContext {
         _windowInfo.isWindowFocused = focused
     }
 
-    fun setContainerSize(containerSize: IntSize) {
-        if (_windowInfo.containerSize != containerSize) {
-            _windowInfo.containerSize = containerSize
+    fun setContainerSize(containerSize: Size) {
+        // TODO: support float size for containerSize
+        val size = IntSize(containerSize.width.toInt(), containerSize.height.toInt())
+        if (_windowInfo.containerSize != size) {
+            _windowInfo.containerSize = size
         }
     }
 }
