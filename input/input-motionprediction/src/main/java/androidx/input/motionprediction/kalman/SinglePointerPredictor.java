@@ -24,6 +24,7 @@ import android.view.MotionEvent;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
+import androidx.input.motionprediction.common.Configuration;
 import androidx.input.motionprediction.kalman.matrix.DVector2;
 
 import java.util.LinkedList;
@@ -92,6 +93,9 @@ public class SinglePointerPredictor implements KalmanPredictor {
     private double mLastOrientation = 0;
     private double mLastTilt = 0;
 
+    private final boolean mPredictLift;
+    private final int mStrategy;
+
     /**
      * Kalman based predictor, predicting the location of the pen `predictionTarget`
      * milliseconds into the future.
@@ -100,13 +104,15 @@ public class SinglePointerPredictor implements KalmanPredictor {
      * achieving close-to-zero latency, prediction errors can be more visible and the target should
      * be reduced to 20ms.
      */
-    public SinglePointerPredictor(int pointerId, int toolType) {
+    public SinglePointerPredictor(int strategy, int pointerId, int toolType) {
+        mStrategy = strategy;
         mKalman.reset();
         mLastSeenEventTime = 0;
         mLastPredictEventTime = 0;
         mDownEventTime = 0;
         mPointerId = pointerId;
         mToolType = toolType;
+        mPredictLift = Configuration.getInstance().predictLift();
     }
 
     private void update(float x, float y, float pressure, float orientation,
@@ -228,6 +234,11 @@ public class SinglePointerPredictor implements KalmanPredictor {
         double jankFactor = 1.0 - normalizeRange(jankAbs, lowJank, highJank);
         double confidenceFactor = speedFactor * jankFactor;
 
+        if (mStrategy == Configuration.STRATEGY_AGGRESSIVE) {
+            // We are very confident
+            confidenceFactor = 1;
+        }
+
         MotionEvent predictedEvent = null;
         final MotionEvent.PointerProperties[] pointerProperties =
                 new MotionEvent.PointerProperties[1];
@@ -256,6 +267,11 @@ public class SinglePointerPredictor implements KalmanPredictor {
             }
         }
 
+        if (mStrategy == Configuration.STRATEGY_SAFE) {
+            // Just a single prediction step is very accurate
+            predictionTargetInSamples = Math.max(predictionTargetInSamples, 1);
+        }
+
         long predictedEventTime = mLastSeenEventTime;
         int i = 0;
         for (; i < predictionTargetInSamples; i++) {
@@ -277,7 +293,8 @@ public class SinglePointerPredictor implements KalmanPredictor {
             long nextPredictedEventTime = predictedEventTime + Math.round(mReportRateMs);
 
             // Abort prediction if the pen is to be lifted.
-            if (mPressure < 0.1
+            if (mPredictLift
+                    && mPressure < 0.1
                     && nextPredictedEventTime > mLastPredictEventTime) {
                 //TODO: Should we generate ACTION_UP MotionEvent instead of ACTION_MOVE?
                 break;

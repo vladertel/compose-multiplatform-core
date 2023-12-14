@@ -4016,6 +4016,49 @@ class CompositionTests {
         revalidate()
     }
 
+    @Test
+    fun readingDerivedState_invalidatesWhenValueNotChanged() = compositionTest {
+        var state by mutableStateOf(0)
+        var condition by mutableStateOf(false)
+        val derived by derivedStateOf { if (!condition) 0 else state }
+        compose {
+            Text(derived.toString())
+        }
+        validate {
+            Text(derived.toString())
+        }
+
+        condition = true
+        expectNoChanges()
+        revalidate()
+
+        state++
+        expectChanges()
+        revalidate()
+    }
+
+    @Composable
+    fun goBoom(): Boolean {
+
+        return true
+    }
+
+    @Test
+    fun earlyReturnFromInlined() = compositionTest {
+        compose {
+            run {
+                if (true) {
+                    return@run
+                } else {
+                    Text("")
+                    return@run
+                }
+            }
+        }
+
+        validate { }
+    }
+
     private inline fun CoroutineScope.withGlobalSnapshotManager(block: CoroutineScope.() -> Unit) {
         val channel = Channel<Unit>(Channel.CONFLATED)
         val job = launch {

@@ -58,6 +58,7 @@ import androidx.compose.ui.test.swipeWithVelocity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import kotlin.math.absoluteValue
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
 
@@ -127,7 +128,7 @@ open class BasePagerTest(private val config: ParamConfig) :
         reverseLayout: Boolean = config.reverseLayout,
         snapPositionalThreshold: Float = 0.5f,
         key: ((index: Int) -> Any)? = null,
-        snapPosition: SnapPosition = SnapPosition.Start,
+        snapPosition: SnapPosition = config.snapPosition.first,
         pageContent: @Composable PagerScope.(page: Int) -> Unit = { Page(index = it) }
     ) {
 
@@ -289,7 +290,7 @@ open class BasePagerTest(private val config: ParamConfig) :
         flingBehavior: SnapFlingBehavior = PagerDefaults.flingBehavior(state = state),
         pageSpacing: Dp = 0.dp,
         key: ((index: Int) -> Any)? = null,
-        snapPosition: SnapPosition = config.snapPosition,
+        snapPosition: SnapPosition = config.snapPosition.first,
         pageContent: @Composable PagerScope.(pager: Int) -> Unit
     ) {
         if (vertical) {
@@ -357,12 +358,12 @@ open class BasePagerTest(private val config: ParamConfig) :
             pagerState.currentPageOffsetFraction != 0.0f
         } // wait for first move from drag
         rule.mainClock.advanceTimeUntil {
-            pagerState.currentPageOffsetFraction == 0.0f
+            pagerState.currentPageOffsetFraction.absoluteValue < 0.00001
         } // wait for fling settling
         // pump the clock twice and check we're still settled.
         rule.mainClock.advanceTimeByFrame()
         rule.mainClock.advanceTimeByFrame()
-        assertTrue { pagerState.currentPageOffsetFraction == 0.0f }
+        assertTrue { pagerState.currentPageOffsetFraction.absoluteValue < 0.00001 }
     }
 }
 
@@ -374,7 +375,7 @@ class ParamConfig(
     val pageSpacing: Dp = 0.dp,
     val mainAxisContentPadding: PaddingValues = PaddingValues(0.dp),
     val beyondBoundsPageCount: Int = 0,
-    val snapPosition: SnapPosition = SnapPosition.Start
+    val snapPosition: Pair<SnapPosition, String> = SnapPosition.Start to "Start",
 ) {
     override fun toString(): String {
         return "orientation=$orientation " +
@@ -382,8 +383,8 @@ class ParamConfig(
             "layoutDirection=$layoutDirection " +
             "pageSpacing=$pageSpacing " +
             "mainAxisContentPadding=$mainAxisContentPadding " +
-            "beyondBoundsPageCount=$beyondBoundsPageCount" +
-            "snapPosition=$snapPosition"
+            "beyondBoundsPageCount=$beyondBoundsPageCount " +
+            "snapPosition=${snapPosition.second}"
     }
 }
 
@@ -401,7 +402,11 @@ internal val TestReverseLayout = listOf(false, true)
 internal val TestLayoutDirection = listOf(LayoutDirection.Rtl, LayoutDirection.Ltr)
 internal val TestPageSpacing = listOf(0.dp, 8.dp)
 @OptIn(ExperimentalFoundationApi::class)
-internal val TestSnapPosition = listOf(SnapPosition.Start, SnapPosition.Center, SnapPosition.End)
+internal val TestSnapPosition = listOf(
+    SnapPosition.Start to "Start",
+    SnapPosition.Center to "Center",
+    SnapPosition.End to "End"
+)
 internal fun testContentPaddings(orientation: Orientation) = listOf(
     PaddingValues(0.dp),
     if (orientation == Orientation.Vertical)

@@ -195,7 +195,10 @@ public final class ColorBuilders {
             this.mFingerprint = fingerprint;
         }
 
-        /** Gets the color for this stop. */
+        /**
+         * Gets the color for this stop. Only opaque colors are supported. Any transparent colors
+         * will have their alpha component set to 0xFF (opaque).
+         */
         @NonNull
         public ColorProp getColor() {
             return ColorProp.fromProto(mImpl.getColor());
@@ -212,38 +215,6 @@ public final class ColorBuilders {
             } else {
                 return null;
             }
-        }
-
-        /**
-         * Constructor for {@link ColorStop}.
-         *
-         * <p>When all {@link ColorStop} in a Gradient have no offset, the colors are evenly
-         * distributed in the gradient.
-         *
-         * @param color the color for this stop.
-         *     <p>Note that this parameter only supports static values.
-         */
-        @RequiresSchemaVersion(major = 1, minor = 300)
-        public ColorStop(@NonNull ColorProp color) {
-            ColorStop inst = new Builder().setColor(color).build();
-            this.mImpl = inst.mImpl;
-            this.mFingerprint = inst.mFingerprint;
-        }
-
-        /**
-         * Constructor for {@link ColorStop}.
-         *
-         * <p>Note that all parameters only support static values.
-         *
-         * @param color the color for this stop.
-         * @param offset the relative offset for this color, between 0 and 1. This determines where
-         *     the color is positioned relative to a gradient space.
-         */
-        @RequiresSchemaVersion(major = 1, minor = 300)
-        public ColorStop(@NonNull ColorProp color, @NonNull FloatProp offset) {
-            ColorStop inst = new Builder().setColor(color).setOffset(offset).build();
-            this.mImpl = inst.mImpl;
-            this.mFingerprint = inst.mFingerprint;
         }
 
         /** Get the fingerprint for this object, or null if unknown. */
@@ -280,15 +251,13 @@ public final class ColorBuilders {
         }
 
         /** Builder for {@link ColorStop} */
-        static final class Builder {
+        public static final class Builder {
             private final ColorProto.ColorStop.Builder mImpl = ColorProto.ColorStop.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(-468737254);
 
-            /** Creates an instance of {@link Builder}. */
-            public Builder() {}
-
             /**
-             * Sets the color for this stop.
+             * Sets the color for this stop. Only opaque colors are supported. Any transparent
+             * colors will have their alpha component set to 0xFF (opaque).
              *
              * <p>Note that this field only supports static values.
              */
@@ -330,6 +299,25 @@ public final class ColorBuilders {
                         2, checkNotNull(offset.getFingerprint()).aggregateValueAsInt());
                 return this;
             }
+
+            /**
+             * Creates an instance of {@link Builder}.
+             *
+             * @param color the color for this stop. Only opaque colors are supported. Any
+             *     transparent colors will have their alpha component set to 0xFF (opaque). Note
+             *     that this parameter only supports static values.
+             * @param offset the relative offset for this color, between 0 and 1. This determines
+             *     where the color is positioned relative to a gradient space. Note that this
+             *     parameter only supports static values.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            public Builder(@NonNull ColorProp color, @NonNull FloatProp offset) {
+                this.setColor(color);
+                this.setOffset(offset);
+            }
+
+            /** Creates an instance of {@link Builder}. */
+            Builder() {}
 
             /** Builds an instance from accumulated values. */
             @NonNull
@@ -540,33 +528,48 @@ public final class ColorBuilders {
              * Creates an instance of {@link Builder}.
              *
              * @param colorStops The color stops defining how the colors are distributed around the
-             *     gradient center. The color sequence starts at the start angle and spans 360
-             *     degrees clockwise, finishing at the same angle.
+             *     gradient center.
              *     <p>A color stop is composed of a color and its offset in the gradient. The offset
              *     is the relative position of the color, beginning with 0 from the start angle and
              *     ending with 1.0 at the end angle, spanning clockwise.
-             *     <p>If offsets are not set, the colors are evenly distributed in the gradient.
              * @throws IllegalArgumentException if the number of colors is less than 2 or larger
              *     than 10.
-             * @throws IllegalArgumentException if offsets in {@code colorStops} are partially set.
-             *     Either all or none of the {@link ColorStop} parameters should have an offset.
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @SafeVarargs
             public Builder(@NonNull ColorStop... colorStops) {
                 if (colorStops.length < 2 || colorStops.length > 10) {
-                    throw new IllegalStateException(
+                    throw new IllegalArgumentException(
                             "Size of colorStops must not be less than 2 or greater than 10. Got "
                                     + colorStops.length);
                 }
-                boolean offsetsShouldBePresent = colorStops[0].getOffset() != null;
                 for (ColorStop colorStop : colorStops) {
-                    boolean stopHasOffset = colorStop.getOffset() != null;
-                    if (offsetsShouldBePresent != stopHasOffset) {
-                        throw new IllegalArgumentException(
-                                "Either all or none of the colorStops should have an offset.");
-                    }
                     addColorStop(colorStop);
+                }
+            }
+
+            /**
+             * Creates an instance of {@link Builder}.
+             *
+             * <p>The colors are evenly distributed in the gradient.
+             *
+             * @param colors The color sequence to be distributed around the gradient center. The
+             *     color sequence is distributed between the gradient's start and end angles.
+             *
+             * @throws IllegalArgumentException if the number of colors is less than 2 or larger
+             *     than 10.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @SafeVarargs
+            public Builder(@NonNull ColorProp... colors) {
+                if (colors.length < 2 || colors.length > 10) {
+                    throw new IllegalArgumentException(
+                            "Size of colors must not be less than 2 or greater than 10. Got "
+                                    + colors.length);
+                }
+                for (ColorProp colorProp : colors) {
+                    ColorStop stop = new ColorStop.Builder().setColor(colorProp).build();
+                    addColorStop(stop);
                 }
             }
 

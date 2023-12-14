@@ -16,7 +16,11 @@
 
 package androidx.compose.material3.adaptive
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
@@ -28,6 +32,7 @@ import androidx.compose.ui.Modifier
  * @param modifier [Modifier] of the scaffold layout.
  * @param scaffoldState the state of the scaffold, which provides the current scaffold directive
  *        and scaffold value.
+ * @param windowInsets window insets that the scaffold will respect.
  * @param extraPane the list pane of the scaffold. See [ListDetailPaneScaffoldRole.Extra].
  * @param detailPane the list pane of the scaffold. See [ListDetailPaneScaffoldRole.Detail].
  */
@@ -37,6 +42,7 @@ fun ListDetailPaneScaffold(
     listPane: @Composable ThreePaneScaffoldScope.() -> Unit,
     modifier: Modifier = Modifier,
     scaffoldState: ThreePaneScaffoldState = calculateListDetailPaneScaffoldState(),
+    windowInsets: WindowInsets = ListDetailPaneScaffoldDefaults.windowInsets,
     extraPane: (@Composable ThreePaneScaffoldScope.() -> Unit)? = null,
     detailPane: @Composable ThreePaneScaffoldScope.() -> Unit
 ) {
@@ -45,6 +51,7 @@ fun ListDetailPaneScaffold(
         scaffoldDirective = scaffoldState.scaffoldDirective,
         scaffoldValue = scaffoldState.scaffoldValue,
         paneOrder = ThreePaneScaffoldDefaults.ListDetailLayoutPaneOrder,
+        windowInsets = windowInsets,
         secondaryPane = listPane,
         tertiaryPane = extraPane,
         primaryPane = detailPane
@@ -71,13 +78,13 @@ fun calculateListDetailPaneScaffoldState(
         calculateStandardPaneScaffoldDirective(currentWindowAdaptiveInfo()),
     adaptStrategies: ThreePaneScaffoldAdaptStrategies =
         ListDetailPaneScaffoldDefaults.adaptStrategies(),
-    currentPaneDestination: ListDetailPaneScaffoldRole = ListDetailPaneScaffoldRole.List
+    currentPaneDestination: ThreePaneScaffoldRole = ListDetailPaneScaffoldRole.List
 ): ThreePaneScaffoldState = ThreePaneScaffoldStateImpl(
     scaffoldDirective,
     calculateThreePaneScaffoldValue(
         scaffoldDirective.maxHorizontalPartitions,
         adaptStrategies,
-        currentPaneDestination.threePaneScaffoldRole
+        currentPaneDestination
     )
 )
 
@@ -86,6 +93,13 @@ fun calculateListDetailPaneScaffoldState(
  */
 @ExperimentalMaterial3AdaptiveApi
 object ListDetailPaneScaffoldDefaults {
+    /**
+     * Default insets that will be used and consumed by [ListDetailPaneScaffold]. By default it will
+     * be the union of [WindowInsets.Companion.systemBars] and
+     * [WindowInsets.Companion.displayCutout].
+     */
+    val windowInsets @Composable get() = WindowInsets.systemBars.union(WindowInsets.displayCutout)
+
     /**
      * Creates a default [ThreePaneScaffoldAdaptStrategies] for [ListDetailPaneScaffold].
      *
@@ -106,22 +120,28 @@ object ListDetailPaneScaffoldDefaults {
 }
 
 /**
- * The set of the available pane roles of [ListDetailPaneScaffold].
+ * The set of the available pane roles of [ListDetailPaneScaffold]. Basically those values are
+ * aliases of [ThreePaneScaffoldRole]. We suggest you to use the values defined here instead of
+ * the raw [ThreePaneScaffoldRole] under the context of [ListDetailPaneScaffold] for better
+ * code clarity.
  */
 @ExperimentalMaterial3AdaptiveApi
-enum class ListDetailPaneScaffoldRole(internal val threePaneScaffoldRole: ThreePaneScaffoldRole) {
+object ListDetailPaneScaffoldRole {
     /**
-     * The list pane of [ListDetailPaneScaffold]. It is mapped to [ThreePaneScaffoldRole.Secondary].
+     * The list pane of [ListDetailPaneScaffold]. It is an alias of
+     * [ThreePaneScaffoldRole.Secondary].
      */
-    List(ThreePaneScaffoldRole.Secondary),
+    val List = ThreePaneScaffoldRole.Secondary
 
     /**
-     * The detail pane of [ListDetailPaneScaffold]. It is mapped to [ThreePaneScaffoldRole.Primary].
+     * The detail pane of [ListDetailPaneScaffold]. It is an alias of
+     * [ThreePaneScaffoldRole.Primary].
      */
-    Detail(ThreePaneScaffoldRole.Primary),
+    val Detail = ThreePaneScaffoldRole.Primary
 
     /**
-     * The extra pane of [ListDetailPaneScaffold]. It is mapped to [ThreePaneScaffoldRole.Tertiary].
+     * The extra pane of [ListDetailPaneScaffold]. It is an alias of
+     * [ThreePaneScaffoldRole.Tertiary].
      */
-    Extra(ThreePaneScaffoldRole.Tertiary);
+    val Extra = ThreePaneScaffoldRole.Tertiary
 }

@@ -31,7 +31,10 @@ class ThreePaneScaffoldValueTest {
             adaptStrategies = MockAdaptStrategies
         )
         scaffoldState.assertState(ThreePaneScaffoldRole.Primary, PaneAdaptedValue.Expanded)
-        scaffoldState.assertState(ThreePaneScaffoldRole.Secondary, SecondaryPaneAdaptedState)
+        scaffoldState.assertState(
+            ThreePaneScaffoldRole.Secondary,
+            SecondaryPaneAdaptedState
+        )
         scaffoldState.assertState(ThreePaneScaffoldRole.Tertiary, TertiaryPaneAdaptedState)
     }
 
@@ -40,10 +43,12 @@ class ThreePaneScaffoldValueTest {
         val scaffoldState = calculateThreePaneScaffoldValue(
             maxHorizontalPartitions = 1,
             adaptStrategies = MockAdaptStrategies,
-            currentFocus = ThreePaneScaffoldRole.Secondary
+            currentDestination = ThreePaneScaffoldRole.Secondary
         )
         scaffoldState.assertState(ThreePaneScaffoldRole.Primary, PrimaryPaneAdaptedState)
-        scaffoldState.assertState(ThreePaneScaffoldRole.Secondary, PaneAdaptedValue.Expanded)
+        scaffoldState.assertState(
+            ThreePaneScaffoldRole.Secondary,
+            PaneAdaptedValue.Expanded)
         scaffoldState.assertState(ThreePaneScaffoldRole.Tertiary, TertiaryPaneAdaptedState)
     }
 
@@ -54,7 +59,9 @@ class ThreePaneScaffoldValueTest {
             adaptStrategies = MockAdaptStrategies
         )
         scaffoldState.assertState(ThreePaneScaffoldRole.Primary, PaneAdaptedValue.Expanded)
-        scaffoldState.assertState(ThreePaneScaffoldRole.Secondary, PaneAdaptedValue.Expanded)
+        scaffoldState.assertState(
+            ThreePaneScaffoldRole.Secondary, PaneAdaptedValue.Expanded
+        )
         scaffoldState.assertState(ThreePaneScaffoldRole.Tertiary, TertiaryPaneAdaptedState)
     }
 
@@ -63,10 +70,12 @@ class ThreePaneScaffoldValueTest {
         val scaffoldState = calculateThreePaneScaffoldValue(
             maxHorizontalPartitions = 2,
             adaptStrategies = MockAdaptStrategies,
-            currentFocus = ThreePaneScaffoldRole.Tertiary
+            currentDestination = ThreePaneScaffoldRole.Tertiary
         )
         scaffoldState.assertState(ThreePaneScaffoldRole.Primary, PaneAdaptedValue.Expanded)
-        scaffoldState.assertState(ThreePaneScaffoldRole.Secondary, SecondaryPaneAdaptedState)
+        scaffoldState.assertState(
+            ThreePaneScaffoldRole.Secondary, SecondaryPaneAdaptedState
+        )
         scaffoldState.assertState(ThreePaneScaffoldRole.Tertiary, PaneAdaptedValue.Expanded)
     }
 

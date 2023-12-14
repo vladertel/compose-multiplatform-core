@@ -22,9 +22,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraFilter;
 import androidx.camera.core.CameraInfo;
+import androidx.camera.core.impl.CameraInfoInternal;
 import androidx.camera.core.impl.Identifier;
-import androidx.camera.extensions.internal.Camera2CameraInfoWrapper;
+import androidx.camera.extensions.internal.ExtensionsUtils;
 import androidx.camera.extensions.internal.VendorExtender;
+import androidx.core.util.Preconditions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,11 +57,12 @@ final class ExtensionCameraFilter implements CameraFilter {
     public List<CameraInfo> filter(@NonNull List<CameraInfo> cameraInfos) {
         List<CameraInfo> result = new ArrayList<>();
         for (CameraInfo cameraInfo : cameraInfos) {
-            String cameraId = Camera2CameraInfoWrapper.from(cameraInfo).getCameraId();
-
+            Preconditions.checkArgument(cameraInfo instanceof CameraInfoInternal,
+                    "The camera info doesn't contain internal implementation.");
+            CameraInfoInternal cameraInfoInternal = (CameraInfoInternal) cameraInfo;
+            String cameraId = cameraInfoInternal.getCameraId();
             Map<String, CameraCharacteristics> cameraCharacteristicsMap =
-                    Camera2CameraInfoWrapper.from(cameraInfo).getCameraCharacteristicsMap();
-
+                    ExtensionsUtils.getCameraCharacteristicsMap(cameraInfoInternal);
             if (mVendorExtender
                     .isExtensionAvailable(cameraId, cameraCharacteristicsMap)) {
                 result.add(cameraInfo);

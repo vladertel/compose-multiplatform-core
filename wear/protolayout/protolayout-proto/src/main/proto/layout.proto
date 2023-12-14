@@ -151,6 +151,7 @@ enum TextOverflow {
 
   // Truncate the text to fit in the Text element's bounds, but add an ellipsis
   // (i.e. ...) to the end of the text if it has been truncated.
+  // @deprecated Use TEXT_OVERFLOW_ELLIPSIZE instead.
   TEXT_OVERFLOW_ELLIPSIZE_END = 2;
 
   // Enable marquee animation for texts that don't fit inside the Text element.
@@ -167,6 +168,8 @@ enum TextOverflow {
   // Note that, when this is used, the parent of the Text element this
   // corresponds to shouldn't have its width and height set to wrapped, as it
   // can lead to unexpected results.
+  // <p>Note that, on SpanText, this will behave exactly the same way as
+  // TEXT_OVERFLOW_ELLIPSIZE_END.
   TEXT_OVERFLOW_ELLIPSIZE = 4;
 }
 
@@ -585,6 +588,10 @@ message Arc {
   // target may not be achievable if other non-expandable elements bring us past
   // this value.
   DegreesProp max_angle = 6;
+
+  // The direction in which child elements are laid out. If not set, defaults to
+  // ARC_DIRECTION_NORMAL.
+  ArcDirectionProp arc_direction = 7;
 }
 
 // A text element that can be used in an Arc.
@@ -598,6 +605,9 @@ message ArcText {
 
   // Modifiers for this element.
   ArcModifiers modifiers = 3;
+
+  // The direction in which this text is drawn. If not set, defaults to ARC_DIRECTION_CLOCKWISE.
+  ArcDirectionProp arc_direction = 4;
 }
 
 // A line that can be used in an Arc and renders as a round progress bar.
@@ -638,6 +648,9 @@ message ArcLine {
 
   // The line stroke cap. If not defined, defaults to STROKE_CAP_ROUND.
   StrokeCapProp stroke_cap = 6;
+
+  // The direction in which this line is drawn. If not set, defaults to ARC_DIRECTION_CLOCKWISE.
+  ArcDirectionProp arc_direction = 8;
 }
 
 // Styles to use for path endings
@@ -663,7 +676,11 @@ message StrokeCapProp {
   StrokeCap value = 1;
 
   // The stroke cap's shadow. When set, the stroke cap will be drawn with a
-  // shadow, which allows it to be visible on top of other similarly colored elements.
+  // shadow, which allows it to be visible on top of other similarly colored
+  // elements.
+  //
+  // Only opaque colors are supported in ArcLine if a shadow is set. Any
+  // transparent colors will have their alpha component set to 0xFF (opaque).
   Shadow shadow = 2;
 }
 
@@ -695,6 +712,26 @@ message ArcAdapter {
   // will be placed at the 3 o clock position, but itself will not be rotated.
   // If not defined, defaults to false.
   BoolProp rotate_contents = 2;
+}
+
+// Direction of drawing for any curved element.
+enum ArcDirection {
+  // Draws an element in Clockwise direction for LTR layout direction and
+  // Counter Clockwise for RTL.
+  ARC_DIRECTION_NORMAL = 0;
+
+  // Draws an element in Clockwise direction, independently of layout direction.
+  ARC_DIRECTION_CLOCKWISE = 1;
+
+  // Draws an element in Counter Clockwise direction, independently of layout
+  // direction.
+  ARC_DIRECTION_COUNTER_CLOCKWISE = 2;
+}
+
+// An extensible StrokeCap property.
+message ArcDirectionProp {
+  // The value.
+  ArcDirection value = 1;
 }
 
 // A layout element which can be defined by a renderer extension. The

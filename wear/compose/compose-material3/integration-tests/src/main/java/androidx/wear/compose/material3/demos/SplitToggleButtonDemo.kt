@@ -18,27 +18,26 @@ package androidx.wear.compose.material3.demos
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material3.Checkbox
 import androidx.wear.compose.material3.ListHeader
-import androidx.wear.compose.material3.RadioButton
 import androidx.wear.compose.material3.SplitToggleButton
 import androidx.wear.compose.material3.Switch
 import androidx.wear.compose.material3.Text
 
 @Composable
 fun SplitToggleButtonDemo() {
-    var selectedRadioIndex by remember { mutableIntStateOf(0) }
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -80,30 +79,6 @@ fun SplitToggleButtonDemo() {
             DemoSplitToggleSwitch(enabled = false, initiallyChecked = false)
         }
         item {
-            ListHeader { Text("Radio Button") }
-        }
-        item {
-            DemoSplitToggleRadioButton(
-                enabled = true,
-                (selectedRadioIndex == 0)
-            ) { selectedRadioIndex = 0 }
-        }
-        item {
-            DemoSplitToggleRadioButton(
-                enabled = true,
-                (selectedRadioIndex == 1)
-            ) { selectedRadioIndex = 1 }
-        }
-        item {
-            ListHeader { Text("Disabled Radio Button") }
-        }
-        item {
-            DemoSplitToggleRadioButton(enabled = false, selected = true)
-        }
-        item {
-            DemoSplitToggleRadioButton(enabled = false, selected = false)
-        }
-        item {
             ListHeader { Text("Multi-line") }
         }
         item {
@@ -143,15 +118,16 @@ private fun DemoSplitToggleCheckbox(
     val context = LocalContext.current
     SplitToggleButton(
         label = {
-            Text(primary, maxLines = 3, overflow = TextOverflow.Ellipsis)
-        },
-        checked = checked,
-        selectionControl = {
-            Checkbox(
-                checked = checked,
-                enabled = enabled,
+            Text(
+                primary,
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 3,
+                textAlign = TextAlign.Start,
+                overflow = TextOverflow.Ellipsis
             )
         },
+        checked = checked,
+        toggleControl = { Checkbox() },
         onCheckedChange = { checked = it },
         onClick = {
             Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
@@ -159,7 +135,13 @@ private fun DemoSplitToggleCheckbox(
         enabled = enabled,
         secondaryLabel = {
             if (secondary.isNotEmpty()) {
-                Text(secondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    secondary,
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 2,
+                    textAlign = TextAlign.Start,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     )
@@ -171,42 +153,17 @@ private fun DemoSplitToggleSwitch(enabled: Boolean, initiallyChecked: Boolean) {
     val context = LocalContext.current
     SplitToggleButton(
         label = {
-            Text("Primary label", maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                "Primary label",
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 3,
+                textAlign = TextAlign.Center,
+                overflow = TextOverflow.Ellipsis
+            )
         },
         checked = checked,
-        selectionControl = {
-            Switch(
-                checked = checked,
-                enabled = enabled,
-            )
-        },
+        toggleControl = { Switch() },
         onCheckedChange = { checked = it },
-        onClick = {
-            Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
-        },
-        enabled = enabled,
-    )
-}
-
-@Composable
-private fun DemoSplitToggleRadioButton(
-    enabled: Boolean,
-    selected: Boolean,
-    onSelectedChanged: (Boolean) -> Unit = {}
-) {
-    val context = LocalContext.current
-    SplitToggleButton(
-        label = {
-            Text("Primary label", maxLines = 2, overflow = TextOverflow.Ellipsis)
-        },
-        checked = selected,
-        selectionControl = {
-            RadioButton(
-                selected = selected,
-                enabled = enabled,
-            )
-        },
-        onCheckedChange = onSelectedChanged,
         onClick = {
             Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
         },

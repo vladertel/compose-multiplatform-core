@@ -607,11 +607,7 @@ public class AppCompatSpinner extends Spinner implements TintableBackgroundView 
     }
 
     void showPopup() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            mPopup.show(Api17Impl.getTextDirection(this), Api17Impl.getTextAlignment(this));
-        } else {
-            mPopup.show(-1, -1);
-        }
+        mPopup.show(getTextDirection(), getTextAlignment());
     }
 
 
@@ -640,11 +636,7 @@ public class AppCompatSpinner extends Spinner implements TintableBackgroundView 
                         }
                         final ViewTreeObserver vto = getViewTreeObserver();
                         if (vto != null) {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                                Api16Impl.removeOnGlobalLayoutListener(vto, this);
-                            } else {
-                                vto.removeGlobalOnLayoutListener(this);
-                            }
+                            vto.removeOnGlobalLayoutListener(this);
                         }
                     }
                 };
@@ -902,10 +894,8 @@ public class AppCompatSpinner extends Spinner implements TintableBackgroundView 
             mPopup = builder.setSingleChoiceItems(mListAdapter,
                     getSelectedItemPosition(), this).create();
             final ListView listView = mPopup.getListView();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                Api17Impl.setTextDirection(listView, textDirection);
-                Api17Impl.setTextAlignment(listView, textAlignment);
-            }
+            listView.setTextDirection(textDirection);
+            listView.setTextAlignment(textAlignment);
             mPopup.show();
         }
 
@@ -1051,10 +1041,8 @@ public class AppCompatSpinner extends Spinner implements TintableBackgroundView 
             super.show();
             final ListView listView = getListView();
             listView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                Api17Impl.setTextDirection(listView, textDirection);
-                Api17Impl.setTextAlignment(listView, textAlignment);
-            }
+            listView.setTextDirection(textDirection);
+            listView.setTextAlignment(textAlignment);
             setSelection(AppCompatSpinner.this.getSelectedItemPosition());
 
             if (wasShowing) {
@@ -1128,48 +1116,6 @@ public class AppCompatSpinner extends Spinner implements TintableBackgroundView 
             if (!ObjectsCompat.equals(themedSpinnerAdapter.getDropDownViewTheme(), theme)) {
                 themedSpinnerAdapter.setDropDownViewTheme(theme);
             }
-        }
-    }
-
-    @RequiresApi(17)
-    private static final class Api17Impl {
-        private Api17Impl() {
-            // This class is not instantiable.
-        }
-
-        @DoNotInline
-        static int getTextAlignment(@NonNull View view) {
-            return view.getTextAlignment();
-        }
-
-        @DoNotInline
-        static void setTextAlignment(@NonNull View view, int textAlignment) {
-            view.setTextAlignment(textAlignment);
-        }
-
-        @DoNotInline
-        static int getTextDirection(@NonNull View view) {
-            return view.getTextDirection();
-        }
-
-        @DoNotInline
-        static void setTextDirection(@NonNull View view, int textDirection) {
-            view.setTextDirection(textDirection);
-        }
-    }
-
-    @RequiresApi(16)
-    private static final class Api16Impl {
-        private Api16Impl() {
-            // This class is not instantiable.
-        }
-
-        @DoNotInline
-        static void removeOnGlobalLayoutListener(
-                @NonNull ViewTreeObserver viewTreeObserver,
-                @Nullable OnGlobalLayoutListener victim
-        ) {
-            viewTreeObserver.removeOnGlobalLayoutListener(victim);
         }
     }
 }
