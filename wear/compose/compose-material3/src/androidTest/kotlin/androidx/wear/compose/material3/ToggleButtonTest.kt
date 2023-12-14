@@ -49,10 +49,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.samples.SplitToggleButtonWithCheckbox
-import androidx.wear.compose.material3.samples.SplitToggleButtonWithRadioButton
 import androidx.wear.compose.material3.samples.SplitToggleButtonWithSwitch
 import androidx.wear.compose.material3.samples.ToggleButtonWithCheckbox
-import androidx.wear.compose.material3.samples.ToggleButtonWithRadioButton
 import androidx.wear.compose.material3.samples.ToggleButtonWithSwitch
 import org.junit.Rule
 import org.junit.Test
@@ -87,7 +85,6 @@ class ToggleButtonTest {
     fun toggle_button_samples_build() {
         rule.setContentWithTheme {
             ToggleButtonWithCheckbox()
-            ToggleButtonWithRadioButton()
             ToggleButtonWithSwitch()
         }
     }
@@ -97,7 +94,6 @@ class ToggleButtonTest {
         rule.setContentWithTheme {
             SplitToggleButtonWithCheckbox()
             SplitToggleButtonWithSwitch()
-            SplitToggleButtonWithRadioButton()
         }
     }
 
@@ -495,7 +491,7 @@ class ToggleButtonTest {
         val minHeight: Dp = 53.dp
 
         rule.setContentWithThemeForSizeAssertions {
-            ToggleButtonWithDefaults(
+            SplitToggleButtonWithDefaults(
                 label = {
                     Text(
                         text = "Primary label with 3 lines of text."
@@ -623,7 +619,7 @@ private fun ToggleButtonWithDefaults(
     },
     secondaryLabel: @Composable (RowScope.() -> Unit)? = null,
     icon: @Composable (BoxScope.() -> Unit)? = null,
-    selectionControl: @Composable () -> Unit = {}
+    toggleControl: @Composable ToggleControlScope.() -> Unit = { Checkbox() }
 ) =
     ToggleButton(
         modifier = modifier,
@@ -634,7 +630,7 @@ private fun ToggleButtonWithDefaults(
         label = label,
         secondaryLabel = secondaryLabel,
         icon = icon,
-        selectionControl = selectionControl
+        toggleControl = toggleControl
     )
 
 @Composable
@@ -649,7 +645,7 @@ private fun SplitToggleButtonWithDefaults(
         Text("Primary")
     },
     secondaryLabel: @Composable (RowScope.() -> Unit)? = null,
-    selectionControl: @Composable BoxScope.() -> Unit = {}
+    toggleControl: @Composable ToggleControlScope.() -> Unit = { Checkbox() }
 ) = SplitToggleButton(
     modifier = modifier,
     colors = colors,
@@ -659,7 +655,7 @@ private fun SplitToggleButtonWithDefaults(
     label = label,
     secondaryLabel = secondaryLabel,
     onClick = onClick,
-    selectionControl = selectionControl,
+    toggleControl = toggleControl,
 )
 
 private val CHECKED_COLOR = Color(0xFFA020F0)

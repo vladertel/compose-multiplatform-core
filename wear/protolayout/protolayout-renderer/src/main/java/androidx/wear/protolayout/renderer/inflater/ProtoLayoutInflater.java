@@ -69,6 +69,7 @@ import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.view.ViewOutlineProvider;
 import android.view.ViewParent;
+import android.view.ViewTreeObserver.OnPreDrawListener;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.AnimationSet;
 import android.view.animation.TranslateAnimation;
@@ -1873,13 +1874,12 @@ public final class ProtoLayoutInflater {
                 // A null TruncateAt disables adding an ellipsis.
                 return null;
             case TEXT_OVERFLOW_ELLIPSIZE_END:
+            case TEXT_OVERFLOW_ELLIPSIZE:
                 return TruncateAt.END;
             case TEXT_OVERFLOW_MARQUEE:
                 return TruncateAt.MARQUEE;
             case TEXT_OVERFLOW_UNDEFINED:
             case UNRECOGNIZED:
-                // TODO(b/302531877): Implement ellipsize.
-            case TEXT_OVERFLOW_ELLIPSIZE:
                 return TEXT_OVERFLOW_DEFAULT;
         }
 
@@ -2294,6 +2294,16 @@ public final class ProtoLayoutInflater {
         // Modifiers cannot be applied to android's Space, so use a plain View if this Spacer has
         // modifiers.
         View view;
+
+        // Init the layout params to 0 in case of linear dimension (so we don't get strange
+        // behaviour before the first data pipeline update).
+        if (spacer.getWidth().hasLinearDimension()) {
+            layoutParams.width = 0;
+        }
+        if (spacer.getHeight().hasLinearDimension()) {
+            layoutParams.height = 0;
+        }
+
         if (spacer.hasModifiers()) {
             view =
                     applyModifiers(
@@ -2311,9 +2321,6 @@ public final class ProtoLayoutInflater {
             parentViewWrapper.maybeAddView(view, layoutParams);
 
             if (spacer.getWidth().hasLinearDimension()) {
-                // Init the layout params' width to 0 (so we don't get strange behaviour before the
-                // first data pipeline update).
-                layoutParams.width = 0;
                 handleProp(
                         spacer.getWidth().getLinearDimension(),
                         width -> {
@@ -2331,9 +2338,6 @@ public final class ProtoLayoutInflater {
             }
 
             if (spacer.getHeight().hasLinearDimension()) {
-                // Init the layout params' width to 0 (so we don't get strange behaviour before the
-                // first data pipeline update).
-                layoutParams.height = 0;
                 handleProp(
                         spacer.getHeight().getLinearDimension(),
                         height -> {
@@ -2356,6 +2360,11 @@ public final class ProtoLayoutInflater {
                 handleProp(
                         spacer.getWidth().getLinearDimension(),
                         width -> {
+                            // Update minimum width first, because LayoutParams could be null.
+                            // This calls requestLayout.
+                            int widthPx = safeDpToPx(width);
+                            view.setMinimumWidth(widthPx);
+
                             // We still need to update layout params in case other dimension is
                             // expand, so 0 could
                             // be miss interpreted.
@@ -2365,9 +2374,7 @@ public final class ProtoLayoutInflater {
                                 return;
                             }
 
-                            lp.width = safeDpToPx(width);
-                            // This calls requestLayout.
-                            view.setMinimumWidth(safeDpToPx(width));
+                            lp.width = widthPx;
                         },
                         posId,
                         pipelineMaker);
@@ -2376,6 +2383,11 @@ public final class ProtoLayoutInflater {
                 handleProp(
                         spacer.getHeight().getLinearDimension(),
                         height -> {
+                            // Update minimum height first, because LayoutParams could be null.
+                            // This calls requestLayout.
+                            int heightPx = safeDpToPx(height);
+                            view.setMinimumHeight(heightPx);
+
                             // We still need to update layout params in case other dimension is
                             // expand, so 0 could be miss interpreted.
                             LayoutParams lp = view.getLayoutParams();
@@ -2384,9 +2396,7 @@ public final class ProtoLayoutInflater {
                                 return;
                             }
 
-                            lp.height = safeDpToPx(height);
-                            // This calls requestLayout.
-                            view.setMinimumHeight(safeDpToPx(height));
+                            lp.height = heightPx;
                         },
                         posId,
                         pipelineMaker);
@@ -2540,7 +2550,14 @@ public final class ProtoLayoutInflater {
         } else {
             textView.setMaxLines(TEXT_MAX_LINES_DEFAULT);
         }
-        applyTextOverflow(textView, text.getOverflow(), text.getMarqueeParameters());
+
+        TextOverflowProp overflow = text.getOverflow();
+        applyTextOverflow(textView, overflow, text.getMarqueeParameters());
+
+        if (overflow.getValue() == TextOverflow.TEXT_OVERFLOW_ELLIPSIZE
+                && !text.getText().hasDynamicValue()) {
+            adjustMaxLinesForEllipsize(textView);
+        }
 
         // Text auto size is not supported for dynamic text.
         boolean isAutoSizeAllowed = !(text.hasText() && text.getText().hasDynamicValue());
@@ -2629,6 +2646,52 @@ public final class ProtoLayoutInflater {
                             .getParentProperties()
                             .applyPendingChildLayoutParams(layoutParams));
         }
+    }
+
+    /**
+     * Sorts out what maxLines should be if the text could possibly be truncated before maxLines is
+     * reached.
+     *
+     * <p>Should be only called for the {@link TextOverflow#TEXT_OVERFLOW_ELLIPSIZE} option which
+     * ellipsizes the text even before the last line, if there's no space for all lines. This is
+     * different than what TEXT_OVERFLOW_ELLIPSIZE_END does, as that option just ellipsizes the last
+     * line of text.
+     */
+    private void adjustMaxLinesForEllipsize(@NonNull TextView textView) {
+        textView
+                .getViewTreeObserver()
+                .addOnPreDrawListener(
+                        new OnPreDrawListener() {
+                            @Override
+                            public boolean onPreDraw() {
+                                ViewParent maybeParent = textView.getParent();
+                                if (!(maybeParent instanceof View)) {
+                                    Log.d(
+                                            TAG,
+                                            "Couldn't adjust max lines for ellipsizing as"
+                                                    + "there's no View/ViewGroup parent.");
+                                    return false;
+                                }
+
+                                textView.getViewTreeObserver().removeOnPreDrawListener(this);
+
+                                View parent = (View) maybeParent;
+                                int availableHeight = parent.getHeight();
+                                int oneLineHeight = textView.getLineHeight();
+                                // This is what was set in proto, we shouldn't exceed it.
+                                int maxMaxLines = textView.getMaxLines();
+                                // Avoid having maxLines as 0 in case the space is really tight.
+                                int availableLines = max(availableHeight / oneLineHeight, 1);
+
+                                // Update only if changed.
+                                if (availableLines < maxMaxLines) {
+                                    textView.setMaxLines(availableLines);
+                                }
+
+                                // Cancel the current drawing pass.
+                                return false;
+                            }
+                        });
     }
 
     /**

@@ -40,6 +40,7 @@ import androidx.camera.camera2.pipe.integration.impl.CameraCallbackMap
 import androidx.camera.camera2.pipe.integration.impl.CameraProperties
 import androidx.camera.camera2.pipe.integration.impl.DeviceInfoLogger
 import androidx.camera.camera2.pipe.integration.impl.FocusMeteringControl
+import androidx.camera.camera2.pipe.integration.internal.CameraFovInfo
 import androidx.camera.camera2.pipe.integration.interop.Camera2CameraInfo
 import androidx.camera.camera2.pipe.integration.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraInfo
@@ -83,6 +84,7 @@ class CameraInfoAdapter @Inject constructor(
     private val cameraQuirks: CameraQuirks,
     private val encoderProfilesProviderAdapter: EncoderProfilesProviderAdapter,
     private val streamConfigurationMapCompat: StreamConfigurationMapCompat,
+    private val cameraFovInfo: CameraFovInfo,
 ) : CameraInfoInternal {
     init { DeviceInfoLogger.logDeviceInfo(cameraProperties) }
 
@@ -100,6 +102,14 @@ class CameraInfoAdapter @Inject constructor(
     override fun getCameraId(): String = cameraConfig.cameraId.value
     override fun getLensFacing(): Int =
         getCameraSelectorLensFacing(cameraProperties.metadata[CameraCharacteristics.LENS_FACING]!!)
+
+    override fun getCameraCharacteristics(): Any {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPhysicalCameraCharacteristics(physicalCameraId: String): Any? {
+        TODO("Not yet implemented")
+    }
 
     @CameraSelector.LensFacing
     private fun getCameraSelectorLensFacing(lensFacingInt: Int): Int {
@@ -226,6 +236,19 @@ class CameraInfoAdapter @Inject constructor(
         return availableVideoStabilizationModes != null &&
             availableVideoStabilizationModes.contains(
             CONTROL_VIDEO_STABILIZATION_MODE_ON)
+    }
+
+    override fun getIntrinsicZoomRatio(): Float {
+        var intrinsicZoomRatio = CameraInfo.INTRINSIC_ZOOM_RATIO_UNKNOWN
+        try {
+            intrinsicZoomRatio =
+                cameraFovInfo.getDefaultCameraDefaultViewAngleDegrees().toFloat() /
+                    cameraFovInfo.getDefaultViewAngleDegrees().toFloat()
+        } catch (e: Exception) {
+            Log.error(e) { "Failed to get the intrinsic zoom ratio" }
+        }
+
+        return intrinsicZoomRatio
     }
 
     private fun profileSetToDynamicRangeSet(profileSet: Set<Long>): Set<DynamicRange> {

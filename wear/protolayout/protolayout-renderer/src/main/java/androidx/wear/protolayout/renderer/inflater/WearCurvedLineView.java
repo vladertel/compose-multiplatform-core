@@ -73,6 +73,7 @@ public class WearCurvedLineView extends View implements ArcLayout.Widget {
     private static final float DEFAULT_LINE_SWEEP_ANGLE_DEGREES = 0;
     private static final int DEFAULT_LINE_STROKE_CAP = Cap.ROUND.ordinal();
     @ColorInt private static final int DEFAULT_COLOR = 0xFFFFFFFF;
+    private static final int FULLY_OPAQUE_COLOR_MASK = 0xFF000000;
 
     /**
      * The base angle for drawings. The zero angle in Android corresponds to the "3 o clock"
@@ -257,6 +258,10 @@ public class WearCurvedLineView extends View implements ArcLayout.Widget {
 
     /** Sets the color of this arc, in ARGB format. */
     public void setColor(@ColorInt int color) {
+        // Force color to be fully opaque if stroke cap shadow is used.
+        if (mCapShadow != null) {
+            color = makeOpaque(color);
+        }
         this.mColor = color;
         updateArcDrawable();
         invalidate();
@@ -290,6 +295,8 @@ public class WearCurvedLineView extends View implements ArcLayout.Widget {
     /** Sets the parameters for the stroke cap shadow. */
     public void setStrokeCapShadow(float blurRadius, int color) {
         this.mCapShadow = new StrokeCapShadow(blurRadius, color);
+        // Re-set color.
+        this.setColor(mColor);
     }
 
     /** Clears the stroke cap shadow. */
@@ -352,6 +359,7 @@ public class WearCurvedLineView extends View implements ArcLayout.Widget {
 
         @NonNull private final List<AngularColorStop> colorStops;
 
+        /** Constructor. All colors will have their alpha channel set to 0xFF (opaque). */
         SweepGradientHelper(@NonNull ColorProto.SweepGradient sweepGradProto) {
             int numColors = sweepGradProto.getColorStopsCount();
             if (numColors < MIN_COLOR_STOPS || numColors > MAX_COLOR_STOPS) {
@@ -383,7 +391,8 @@ public class WearCurvedLineView extends View implements ArcLayout.Widget {
                                 ? stop.getOffset().getValue()
                                 : (float) i / (numColors - 1);
                 float gradAngle = gradStartAngle + offset * (gradEndAngle - gradStartAngle);
-                colorStops.add(new AngularColorStop(gradAngle, stop.getColor().getArgb()));
+                colorStops.add(
+                        new AngularColorStop(gradAngle, makeOpaque(stop.getColor().getArgb())));
             }
 
             if (offsetsRequired) {
@@ -566,13 +575,6 @@ public class WearCurvedLineView extends View implements ArcLayout.Widget {
         /** A region to be clipped in when drawing, in order to only include this region. */
         @Nullable private Path mMaskRegion = null;
 
-        /** Creates a line segment that forms a full circle. */
-        static ArcSegment circle(@NonNull RectF bounds, @NonNull Paint paint) {
-            Path circlePath = new Path();
-            circlePath.addOval(bounds, Direction.CW);
-            return new ArcSegment(circlePath, paint);
-        }
-
         /**
          * Creates a segment that draws perpendicular to the arc, covering a length equivalent to
          * the arc thickness. It can be used to ensure a region in the arc has a desired color.
@@ -707,20 +709,13 @@ public class WearCurvedLineView extends View implements ArcLayout.Widget {
     }
 
     /**
-     * ArcDrawable that breaks down the arc line into multiple segments for drawing.
+     * ArcDrawable that breaks down the arc line into two main segments for drawing.
      *
      * <p>The line wraps on top of itself when the length is over 360 degrees, creating multiple
-     * layers. At any time, only the 2 top most layers are visible on the screen.
+     * layers. At any time, we only draw the top most layer (last 360 of the line's length)
      *
-     * <ul>
-     *   <li>If abs(length) <= 360 degrees, 2 segments are created: tail and head, each spanning
-     *       half of the length. Those 2 segments make up the top layer.
-     *   <li>If abs(length) > 360 degrees, one extra circle is also added, representing the lower
-     *       visible layer of the line. The top layer is then drawn as explained above.
-     * </ul>
-     *
-     * <p>The order or drawing follows the order they appear visually on screen (lower layer
-     * elements are drawn first).
+     * <p>The order or drawing follows the order they appear visually on screen (Head segment on top
+     * the tail segment.
      *
      * <p>All other lower layers of the line are not visible so they are not drawn.
      */
@@ -736,41 +731,27 @@ public class WearCurvedLineView extends View implements ArcLayout.Widget {
                 @NonNull Paint basePaint,
                 @Nullable SweepGradientHelper sweepGradHelper,
                 @Nullable StrokeCapShadow strokeCapShadow) {
-            if (Math.abs(sweepAngle) == 0f) {
+            if (sweepAngle == 0f) {
                 return;
             }
+
+            float sweepDirection = Math.signum(sweepAngle);
+            float absSweepAngle = Math.abs(sweepAngle);
+
             float drawStartAngle = BASE_DRAW_ANGLE_SHIFT - sweepAngle / 2f;
             ArcSegment.CapPosition tailCapPosition = ArcSegment.CapPosition.START;
             // The start of the top layer, relative to the Arc Line's full length.
             float topLayerStartCursor = 0f;
             float topLayerLength = sweepAngle;
 
-            // Base Circle Segment, if needed (when line spans more than one full circle).
-            if (Math.abs(sweepAngle) > 360f) {
+            // If absolute length >= 360, we only draw the last 360 degrees of the line's length.
+            if (absSweepAngle >= 360f) {
+                // When drawing the last 360 degrees of the line, the start and end of the drawing
+                // are at the same angle.
+                drawStartAngle = (drawStartAngle + sweepAngle) % 360f;
                 tailCapPosition = ArcSegment.CapPosition.NONE;
-                topLayerLength = sweepAngle % 360f;
-                topLayerStartCursor = sweepAngle - topLayerLength;
-                float direction = Math.signum(sweepAngle);
-
-                // For multiples of 360f, we want to draw it as Tail + Head to make sure the Cap is
-                // visible.
-                if (topLayerLength == 0f) {
-                    topLayerLength += direction * 360f;
-                    topLayerStartCursor -= direction * 360f;
-                } else {
-                    Paint circlePaint = new Paint(basePaint);
-                    if (sweepGradHelper != null) {
-                        Shader shader =
-                                sweepGradHelper.getShader(
-                                        bounds,
-                                        topLayerStartCursor - direction * 360f,
-                                        topLayerStartCursor,
-                                        drawStartAngle,
-                                        CapPosition.NONE);
-                        circlePaint.setShader(shader);
-                    }
-                    mSegments.add(ArcSegment.circle(bounds, circlePaint));
-                }
+                topLayerStartCursor = sweepAngle - sweepDirection * 360f;
+                topLayerLength = sweepDirection * 360f;
             }
 
             float segmentSweep = topLayerLength / 2f;
@@ -908,5 +889,10 @@ public class WearCurvedLineView extends View implements ArcLayout.Widget {
             this.mBlurRadius = blurRadius;
             this.mColor = color;
         }
+    }
+
+    /** Changes the alpha channel of the color to 0xFF (fully opaque). */
+    private static int makeOpaque(int color) {
+        return color | FULLY_OPAQUE_COLOR_MASK;
     }
 }

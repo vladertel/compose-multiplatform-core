@@ -33,6 +33,7 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts.GetMultipleContents.Companion.getClipDataUris
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.Companion.ACTION_SYSTEM_FALLBACK_PICK_IMAGES
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.Companion.EXTRA_SYSTEM_FALLBACK_PICK_IMAGES_MAX
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.Companion.GMS_ACTION_PICK_IMAGES
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.Companion.GMS_EXTRA_PICK_IMAGES_MAX
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.Companion.getGmsPicker
@@ -421,7 +422,6 @@ class ActivityResultContracts private constructor() {
      * This can be extended to override [createIntent] if you wish to pass additional
      * extras to the Intent created by `super.createIntent()`.
      */
-    @RequiresApi(18)
     open class GetMultipleContents :
         ActivityResultContract<String, List<@JvmSuppressWildcards Uri>>() {
         @CallSuper
@@ -443,7 +443,6 @@ class ActivityResultContracts private constructor() {
             }?.getClipDataUris() ?: emptyList()
         }
 
-        @RequiresApi(18)
         internal companion object {
             internal fun Intent.getClipDataUris(): List<Uri> {
                 // Use a LinkedHashSet to maintain any ordering that may be
@@ -899,7 +898,7 @@ class ActivityResultContracts private constructor() {
                 Intent(ACTION_SYSTEM_FALLBACK_PICK_IMAGES).apply {
                     setClassName(fallbackPicker.applicationInfo.packageName, fallbackPicker.name)
                     type = PickVisualMedia.getVisualMimeType(input.mediaType)
-                    putExtra(GMS_EXTRA_PICK_IMAGES_MAX, maxItems)
+                    putExtra(EXTRA_SYSTEM_FALLBACK_PICK_IMAGES_MAX, maxItems)
                 }
             } else if (PickVisualMedia.isGmsPickerAvailable(context)) {
                 val gmsPicker = checkNotNull(getGmsPicker(context)).activityInfo

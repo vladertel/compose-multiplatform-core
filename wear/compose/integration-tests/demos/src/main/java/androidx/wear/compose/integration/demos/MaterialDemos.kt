@@ -95,6 +95,30 @@ val WearMaterialDemos = DemoCategory(
     "Material",
     listOf(
         DemoCategory(
+            "Page Indicator",
+            listOf(
+                DemoCategory(
+                    "Samples",
+                    listOf(
+                        ComposableDemo("Sample with InlineSlider") {
+                            Centralize { HorizontalPageIndicatorSample() }
+                        },
+                    )
+                ),
+                DemoCategory(
+                    "Demos",
+                    listOf(
+                        ComposableDemo("Customized PageIndicator") {
+                            CustomizedHorizontalPageIndicator()
+                        },
+                        ComposableDemo("Pager with Indicator") { params ->
+                            PagerWithIndicator(params.swipeToDismissBoxState)
+                        }
+                    )
+                )
+            )
+        ),
+        DemoCategory(
             "ScrollAway",
             listOf(
                 ComposableDemo("Column") { ScrollAwayColumnDemo() },
@@ -505,27 +529,6 @@ val WearMaterialDemos = DemoCategory(
             )
         ),
         DemoCategory(
-            "Page Indicator",
-            listOf(
-                DemoCategory(
-                    "Samples",
-                    listOf(
-                        ComposableDemo("Sample with InlineSlider") {
-                            Centralize { HorizontalPageIndicatorSample() }
-                        },
-                    )
-                ),
-                DemoCategory(
-                    "Demos",
-                    listOf(
-                        ComposableDemo("Customized PageIndicator") {
-                            CustomizedHorizontalPageIndicator()
-                        },
-                    )
-                )
-            )
-        ),
-        DemoCategory(
             "Progress Indicator",
             listOf(
                 DemoCategory(
@@ -668,5 +671,6 @@ val WearMaterialDemos = DemoCategory(
                 ComposableDemo("Colors") { ThemeColors() },
             )
         ),
+        ComposableDemo("Settings Demo") { SettingsDemo() },
     ),
 )

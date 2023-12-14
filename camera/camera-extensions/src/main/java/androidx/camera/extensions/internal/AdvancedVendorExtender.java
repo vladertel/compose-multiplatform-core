@@ -30,6 +30,7 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.Logger;
+import androidx.camera.core.impl.CameraInfoInternal;
 import androidx.camera.core.impl.SessionProcessor;
 import androidx.camera.extensions.ExtensionMode;
 import androidx.camera.extensions.impl.advanced.AdvancedExtenderImpl;
@@ -96,10 +97,11 @@ public class AdvancedVendorExtender implements VendorExtender {
 
     @Override
     public void init(@NonNull CameraInfo cameraInfo) {
-        mCameraId = Camera2CameraInfoWrapper.from(cameraInfo).getCameraId();
+        CameraInfoInternal cameraInfoInternal = (CameraInfoInternal) cameraInfo;
+        mCameraId = cameraInfoInternal.getCameraId();
 
         Map<String, CameraCharacteristics> cameraCharacteristicsMap =
-                Camera2CameraInfoWrapper.from(cameraInfo).getCameraCharacteristicsMap();
+                ExtensionsUtils.getCameraCharacteristicsMap(cameraInfoInternal);
 
         mAdvancedExtenderImpl.init(mCameraId, cameraCharacteristicsMap);
     }

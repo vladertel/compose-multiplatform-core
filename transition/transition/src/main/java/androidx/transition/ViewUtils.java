@@ -31,7 +31,7 @@ import androidx.core.view.ViewCompat;
  */
 class ViewUtils {
 
-    private static final ViewUtilsBase IMPL;
+    private static final ViewUtilsApi19 IMPL;
     private static final String TAG = "ViewUtils";
 
     static {
@@ -43,10 +43,8 @@ class ViewUtils {
             IMPL = new ViewUtilsApi22();
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             IMPL = new ViewUtilsApi21();
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            IMPL = new ViewUtilsApi19();
         } else {
-            IMPL = new ViewUtilsBase();
+            IMPL = new ViewUtilsApi19();
         }
     }
 
@@ -82,20 +80,6 @@ class ViewUtils {
                 }
 
             };
-
-    /**
-     * Backward-compatible {@link View#getOverlay()}.
-     */
-    static ViewOverlayImpl getOverlay(@NonNull View view) {
-        return new ViewOverlayApi18(view);
-    }
-
-    /**
-     * Backward-compatible {@link View#getWindowId()}.
-     */
-    static @NonNull WindowIdImpl getWindowId(@NonNull View view) {
-        return new WindowIdApi18(view);
-    }
 
     static void setTransitionAlpha(@NonNull View view, float alpha) {
         IMPL.setTransitionAlpha(view, alpha);

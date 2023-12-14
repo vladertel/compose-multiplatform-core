@@ -25,11 +25,17 @@ import androidx.annotation.RestrictTo;
  */
 @RestrictTo(LIBRARY)
 public class Configuration {
+    public static final int STRATEGY_BALANCED = 0;
+    public static final int STRATEGY_SAFE = 1;
+    public static final int STRATEGY_AGGRESSIVE = 2;
+
     private static volatile Configuration sInstance = null;
     private static final Object sLock = new Object();
 
-    private boolean mPreferSystemPrediction;
-    private int mPredictionOffset;
+    private final boolean mPredictLift;
+    private final boolean mPreferSystemPrediction;
+    private final int mPredictionOffset;
+    private final int mPredictionStrategy;
 
     /**
      * Returns the configuration for prediction in this system.
@@ -52,6 +58,8 @@ public class Configuration {
         mPreferSystemPrediction = SystemProperty
                 .getBoolean("debug.input.androidx_prefer_system_prediction");
         mPredictionOffset = SystemProperty.getInt("debug.input.androidx_prediction_offset");
+        mPredictLift = SystemProperty.getBoolean("debug.input.androidx_predict_lift");
+        mPredictionStrategy = SystemProperty.getInt("debug.input.androidx_prediction_strategy");
     }
 
     /**
@@ -70,5 +78,23 @@ public class Configuration {
      */
     public int predictionOffset() {
         return mPredictionOffset;
+    }
+
+    /**
+     * Returns whether or not the pressure should be used to adjust the distance of the prediction
+     *
+     * @return true if the pressure should be used to determine the prediction length
+     */
+    public boolean predictLift() {
+        return mPredictLift;
+    }
+
+    /**
+     * Returns the default prediction strategy
+     *
+     * @return the strategy to use as default; 0 is balanced
+     */
+    public int predictionStrategy() {
+        return mPredictionStrategy;
     }
 }

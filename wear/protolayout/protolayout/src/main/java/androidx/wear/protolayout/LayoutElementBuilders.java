@@ -20,6 +20,8 @@ import static androidx.wear.protolayout.DimensionBuilders.sp;
 import static androidx.wear.protolayout.expression.Preconditions.checkNotNull;
 
 import android.annotation.SuppressLint;
+import android.graphics.Color;
+import android.util.Log;
 
 import androidx.annotation.Dimension;
 import androidx.annotation.IntDef;
@@ -57,6 +59,7 @@ import androidx.wear.protolayout.expression.Fingerprint;
 import androidx.wear.protolayout.expression.ProtoLayoutExperimental;
 import androidx.wear.protolayout.expression.RequiresSchemaVersion;
 import androidx.wear.protolayout.proto.AlignmentProto;
+import androidx.wear.protolayout.proto.ColorProto;
 import androidx.wear.protolayout.proto.DimensionProto;
 import androidx.wear.protolayout.proto.FingerprintProto;
 import androidx.wear.protolayout.proto.FingerprintProto.TreeFingerprint;
@@ -199,7 +202,10 @@ public final class LayoutElementBuilders {
      * Truncate the text at the last line defined by {@code setMaxLines} in {@link Text} to fit in
      * the {@link Text} element's bounds, but add an ellipsis (i.e. ...) to the end of the text if
      * it has been truncated.
+     *
+     * @deprecated Use {@link #TEXT_OVERFLOW_ELLIPSIZE} instead.
      */
+    @Deprecated
     @RequiresSchemaVersion(major = 1, minor = 0)
     public static final int TEXT_OVERFLOW_ELLIPSIZE_END = 2;
 
@@ -219,6 +225,9 @@ public final class LayoutElementBuilders {
      * parent container. Note that, when this is used, the parent of the {@link Text} element this
      * corresponds to shouldn't have its width and height set to wrapped, as it can lead to
      * unexpected results.
+     *
+     * <p>Note that, on {@link SpanText}, this will behave exactly the same way as
+     * TEXT_OVERFLOW_ELLIPSIZE_END.
      */
     @RequiresSchemaVersion(major = 1, minor = 300)
     public static final int TEXT_OVERFLOW_ELLIPSIZE = 4;
@@ -295,6 +304,31 @@ public final class LayoutElementBuilders {
      */
     @RequiresSchemaVersion(major = 1, minor = 200)
     public static final int STROKE_CAP_SQUARE = 3;
+
+    /** Direction of drawing for any curved element. */
+    @RequiresSchemaVersion(major = 1, minor = 300)
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @IntDef({ARC_DIRECTION_NORMAL, ARC_DIRECTION_CLOCKWISE, ARC_DIRECTION_COUNTER_CLOCKWISE})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface ArcDirection {}
+
+    /**
+     * Draws an element in Clockwise direction for LTR layout direction and Counter Clockwise for
+     * RTL.
+     */
+    @RequiresSchemaVersion(major = 1, minor = 300)
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static final int ARC_DIRECTION_NORMAL = 0;
+
+    /** Draws an element in Clockwise direction, independently of layout direction. */
+    @RequiresSchemaVersion(major = 1, minor = 300)
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static final int ARC_DIRECTION_CLOCKWISE = 1;
+
+    /** Draws an element in Counter Clockwise direction, independently of layout direction. */
+    @RequiresSchemaVersion(major = 1, minor = 300)
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static final int ARC_DIRECTION_COUNTER_CLOCKWISE = 2;
 
     /** An extensible {@code FontWeight} property. */
     @RequiresSchemaVersion(major = 1, minor = 0)
@@ -1097,6 +1131,7 @@ public final class LayoutElementBuilders {
      */
     @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
+    @RestrictTo(Scope.LIBRARY_GROUP)
     public static final class AndroidTextStyle {
         private final LayoutElementProto.AndroidTextStyle mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -1156,7 +1191,11 @@ public final class LayoutElementBuilders {
             private final Fingerprint mFingerprint = new Fingerprint(408674745);
 
             /** Creates an instance of {@link Builder}. */
-            public Builder() {}
+            public Builder() {
+                // Setting this to true before setter is called, so that default behaviour is to
+                // exclude padding.
+                mImpl.setExcludeFontPadding(true);
+            }
 
             /**
              * Sets whether the {@link Text} excludes padding specified by the font, i.e. extra top
@@ -1288,20 +1327,6 @@ public final class LayoutElementBuilders {
         }
 
         /**
-         * Gets an Android platform specific text style configuration options for styling and
-         * compatibility.
-         */
-        @ProtoLayoutExperimental
-        @Nullable
-        public AndroidTextStyle getAndroidTextStyle() {
-            if (mImpl.hasAndroidTextStyle()) {
-                return AndroidTextStyle.fromProto(mImpl.getAndroidTextStyle());
-            } else {
-                return null;
-            }
-        }
-
-        /**
          * Gets the number of times to repeat the Marquee animation. Only applies when overflow is
          * TEXT_OVERFLOW_MARQUEE. Set to -1 to repeat indefinitely. Defaults to repeat indefinitely.
          */
@@ -1377,8 +1402,6 @@ public final class LayoutElementBuilders {
                     + getOverflow()
                     + ", lineHeight="
                     + getLineHeight()
-                    + ", androidTextStyle="
-                    + getAndroidTextStyle()
                     + "}";
         }
 
@@ -1389,7 +1412,11 @@ public final class LayoutElementBuilders {
             private final Fingerprint mFingerprint = new Fingerprint(814133697);
 
             /** Creates an instance of {@link Builder}. */
-            public Builder() {}
+            public Builder() {
+                mImpl.setAndroidTextStyle(
+                        LayoutElementProto.AndroidTextStyle.newBuilder()
+                                .setExcludeFontPadding(true));
+            }
 
             /**
              * Sets the text to render.
@@ -1528,20 +1555,6 @@ public final class LayoutElementBuilders {
                 mImpl.setLineHeight(lineHeight.toProto());
                 mFingerprint.recordPropertyUpdate(
                         7, checkNotNull(lineHeight.getFingerprint()).aggregateValueAsInt());
-                return this;
-            }
-
-            /**
-             * Sets an Android platform specific text style configuration options for styling and
-             * compatibility.
-             */
-            @RequiresSchemaVersion(major = 1, minor = 200)
-            @ProtoLayoutExperimental
-            @NonNull
-            public Builder setAndroidTextStyle(@NonNull AndroidTextStyle androidTextStyle) {
-                mImpl.setAndroidTextStyle(androidTextStyle.toProto());
-                mFingerprint.recordPropertyUpdate(
-                        8, checkNotNull(androidTextStyle.getFingerprint()).aggregateValueAsInt());
                 return this;
             }
 
@@ -2587,20 +2600,6 @@ public final class LayoutElementBuilders {
             }
         }
 
-        /**
-         * Gets an Android platform specific text style configuration options for styling and
-         * compatibility.
-         */
-        @ProtoLayoutExperimental
-        @Nullable
-        public AndroidTextStyle getAndroidTextStyle() {
-            if (mImpl.hasAndroidTextStyle()) {
-                return AndroidTextStyle.fromProto(mImpl.getAndroidTextStyle());
-            } else {
-                return null;
-            }
-        }
-
         @Override
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Nullable
@@ -2646,8 +2645,6 @@ public final class LayoutElementBuilders {
                     + getFontStyle()
                     + ", modifiers="
                     + getModifiers()
-                    + ", androidTextStyle="
-                    + getAndroidTextStyle()
                     + "}";
         }
 
@@ -2658,7 +2655,11 @@ public final class LayoutElementBuilders {
             private final Fingerprint mFingerprint = new Fingerprint(266451531);
 
             /** Creates an instance of {@link Builder}. */
-            public Builder() {}
+            public Builder() {
+                mImpl.setAndroidTextStyle(
+                        LayoutElementProto.AndroidTextStyle.newBuilder()
+                                .setExcludeFontPadding(true));
+            }
 
             /**
              * Sets the text to render.
@@ -2712,20 +2713,6 @@ public final class LayoutElementBuilders {
                 mImpl.setModifiers(modifiers.toProto());
                 mFingerprint.recordPropertyUpdate(
                         3, checkNotNull(modifiers.getFingerprint()).aggregateValueAsInt());
-                return this;
-            }
-
-            /**
-             * Sets an Android platform specific text style configuration options for styling and
-             * compatibility.
-             */
-            @RequiresSchemaVersion(major = 1, minor = 200)
-            @ProtoLayoutExperimental
-            @NonNull
-            public Builder setAndroidTextStyle(@NonNull AndroidTextStyle androidTextStyle) {
-                mImpl.setAndroidTextStyle(androidTextStyle.toProto());
-                mFingerprint.recordPropertyUpdate(
-                        4, checkNotNull(androidTextStyle.getFingerprint()).aggregateValueAsInt());
                 return this;
             }
 
@@ -3860,6 +3847,20 @@ public final class LayoutElementBuilders {
             }
         }
 
+        /**
+         * Gets defines the direction in which child elements are laid out. If not set, defaults to
+         * ARC_DIRECTION_NORMAL.
+         */
+        @Nullable
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public ArcDirectionProp getArcDirection() {
+            if (mImpl.hasArcDirection()) {
+                return ArcDirectionProp.fromProto(mImpl.getArcDirection());
+            } else {
+                return null;
+            }
+        }
+
         @Override
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Nullable
@@ -3908,6 +3909,8 @@ public final class LayoutElementBuilders {
                     + getVerticalAlign()
                     + ", modifiers="
                     + getModifiers()
+                    + ", arcDirection="
+                    + getArcDirection()
                     + "}";
         }
 
@@ -4013,6 +4016,32 @@ public final class LayoutElementBuilders {
                 return this;
             }
 
+            /**
+             * Sets the direction in which child elements are laid out. If not set, defaults to
+             * ARC_DIRECTION_NORMAL.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @NonNull
+            @RestrictTo(Scope.LIBRARY_GROUP)
+            public Builder setArcDirection(@NonNull ArcDirectionProp arcDirection) {
+                mImpl.setArcDirection(arcDirection.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        7, checkNotNull(arcDirection.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the direction in which child elements are laid out. If not set, defaults to
+             * ARC_DIRECTION_NORMAL.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @NonNull
+            @RestrictTo(Scope.LIBRARY_GROUP)
+            public Builder setArcDirection(@ArcDirection int arcDirection) {
+                return setArcDirection(
+                        new ArcDirectionProp.Builder().setValue(arcDirection).build());
+            }
+
             /** Builds an instance from accumulated values. */
             @Override
             @NonNull
@@ -4066,6 +4095,20 @@ public final class LayoutElementBuilders {
             }
         }
 
+        /**
+         * Gets defines the direction in which text is drawn. If not set, defaults to
+         * ARC_DIRECTION_CLOCKWISE.
+         */
+        @Nullable
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public ArcDirectionProp getArcDirection() {
+            if (mImpl.hasArcDirection()) {
+                return ArcDirectionProp.fromProto(mImpl.getArcDirection());
+            } else {
+                return null;
+            }
+        }
+
         @Override
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Nullable
@@ -4110,6 +4153,8 @@ public final class LayoutElementBuilders {
                     + getFontStyle()
                     + ", modifiers="
                     + getModifiers()
+                    + ", arcDirection="
+                    + getArcDirection()
                     + "}";
         }
 
@@ -4169,6 +4214,32 @@ public final class LayoutElementBuilders {
                 mFingerprint.recordPropertyUpdate(
                         3, checkNotNull(modifiers.getFingerprint()).aggregateValueAsInt());
                 return this;
+            }
+
+            /**
+             * Sets the direction in which this text is drawn. If not set, defaults to
+             * ARC_DIRECTION_CLOCKWISE.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @NonNull
+            @RestrictTo(Scope.LIBRARY_GROUP)
+            public Builder setArcDirection(@NonNull ArcDirectionProp arcDirection) {
+                mImpl.setArcDirection(arcDirection.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        4, checkNotNull(arcDirection.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the direction in which this text is drawn. If not set, defaults to
+             * ARC_DIRECTION_CLOCKWISE.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @NonNull
+            @RestrictTo(Scope.LIBRARY_GROUP)
+            public Builder setArcDirection(@ArcDirection int arcDirection) {
+                return setArcDirection(
+                        new ArcDirectionProp.Builder().setValue(arcDirection).build());
             }
 
             /** Builds an instance from accumulated values. */
@@ -4267,6 +4338,20 @@ public final class LayoutElementBuilders {
         }
 
         /**
+         * Gets defines the direction in which line drawn. If not set, defaults to
+         * ARC_DIRECTION_CLOCKWISE.
+         */
+        @Nullable
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public ArcDirectionProp getArcDirection() {
+            if (mImpl.hasArcDirection()) {
+                return ArcDirectionProp.fromProto(mImpl.getArcDirection());
+            } else {
+                return null;
+            }
+        }
+
+        /**
          * Gets the bounding constraints for the layout affected by the dynamic value from {@link
          * #getLength()}.
          */
@@ -4329,6 +4414,8 @@ public final class LayoutElementBuilders {
                     + getModifiers()
                     + ", strokeCap="
                     + getStrokeCap()
+                    + ", arcDirection="
+                    + getArcDirection()
                     + "}";
         }
 
@@ -4447,6 +4534,31 @@ public final class LayoutElementBuilders {
                 return this;
             }
 
+            /**
+             * Sets the direction in which this line is drawn. If not set, defaults to
+             * ARC_DIRECTION_CLOCKWISE.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @NonNull
+            @RestrictTo(Scope.LIBRARY_GROUP)
+            public Builder setArcDirection(@NonNull ArcDirectionProp arcDirection) {
+                mImpl.setArcDirection(arcDirection.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        8, checkNotNull(arcDirection.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+            /**
+             * Sets the direction in which this line is drawn. If not set, defaults to
+             * ARC_DIRECTION_CLOCKWISE.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @NonNull
+            @RestrictTo(Scope.LIBRARY_GROUP)
+            public Builder setArcDirection(@ArcDirection int arcDirection) {
+                return setArcDirection(
+                        new ArcDirectionProp.Builder().setValue(arcDirection).build());
+            }
+
             /** Sets the line stroke cap. If not defined, defaults to STROKE_CAP_ROUND. */
             @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
@@ -4462,6 +4574,24 @@ public final class LayoutElementBuilders {
                     throw new IllegalStateException(
                             "length with dynamic value requires "
                                     + "layoutConstraintsForDynamicLength to be present.");
+                }
+
+                String onlyOpaqueMsg = "Only opaque colors are supported";
+                String alphaChangeMsg =
+                        "Any transparent colors will have their alpha component set to 0xFF"
+                            + " (opaque).";
+                for (ColorProto.ColorStop colorStop :
+                        mImpl.getBrush().getSweepGradient().getColorStopsList()) {
+                    if (Color.alpha(colorStop.getColor().getArgb()) < 0xFF) {
+                        Log.w("ArcLine", onlyOpaqueMsg + " for SweepGradient. " + alphaChangeMsg);
+                        break;
+                    }
+                }
+                if (mImpl.getStrokeCap().hasShadow()
+                        && Color.alpha(mImpl.getColor().getArgb()) < 0xFF) {
+                    Log.w(
+                            "ArcLine",
+                            onlyOpaqueMsg + " when using StrokeCap Shadow. " + alphaChangeMsg);
                 }
                 return new ArcLine(mImpl.build(), mFingerprint);
             }
@@ -4488,6 +4618,9 @@ public final class LayoutElementBuilders {
         /**
          * Gets the stroke cap's shadow. When set, the stroke cap will be drawn with a shadow, which
          * allows it to be visible on top of other similarly colored elements.
+         *
+         * <p>Only opaque colors are supported in {@link ArcLine} if a shadow is set. Any
+         * transparent colors will have their alpha component set to 0xFF (opaque).
          */
         @Nullable
         public Shadow getShadow() {
@@ -4553,6 +4686,9 @@ public final class LayoutElementBuilders {
             /**
              * Sets the stroke cap's shadow. When set, the stroke cap will be drawn with a shadow,
              * which allows it to be visible on top of other similarly colored elements.
+             *
+             * <p>Only opaque colors are supported in {@link ArcLine} if a shadow is set. Any
+             * transparent colors will have their alpha component set to 0xFF (opaque).
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
@@ -4868,6 +5004,86 @@ public final class LayoutElementBuilders {
             @NonNull
             public ArcAdapter build() {
                 return new ArcAdapter(mImpl.build(), mFingerprint);
+            }
+        }
+    }
+
+    /** An extensible {@code StrokeCap} property. */
+    @RequiresSchemaVersion(major = 1, minor = 300)
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static final class ArcDirectionProp {
+        private final LayoutElementProto.ArcDirectionProp mImpl;
+        @Nullable private final Fingerprint mFingerprint;
+
+        ArcDirectionProp(
+                LayoutElementProto.ArcDirectionProp impl,
+                @Nullable Fingerprint fingerprint) {
+            this.mImpl = impl;
+            this.mFingerprint = fingerprint;
+        }
+
+        /** Gets the value. */
+        @ArcDirection
+        public int getValue() {
+            return mImpl.getValue().getNumber();
+        }
+
+        /** Get the fingerprint for this object, or null if unknown. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Nullable
+        public Fingerprint getFingerprint() {
+            return mFingerprint;
+        }
+
+        /** Creates a new wrapper instance from the proto. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public static ArcDirectionProp fromProto(
+                @NonNull LayoutElementProto.ArcDirectionProp proto,
+                @Nullable Fingerprint fingerprint) {
+            return new ArcDirectionProp(proto, fingerprint);
+        }
+
+        @NonNull
+        static ArcDirectionProp fromProto(@NonNull LayoutElementProto.ArcDirectionProp proto) {
+            return fromProto(proto, null);
+        }
+
+        /** Returns the internal proto instance. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public LayoutElementProto.ArcDirectionProp toProto() {
+            return mImpl;
+        }
+
+        @Override
+        @NonNull
+        public String toString() {
+            return "ArcDirectionProp{" + "value=" + getValue() + "}";
+        }
+
+        /** Builder for {@link ArcDirectionProp} */
+        public static final class Builder {
+            private final LayoutElementProto.ArcDirectionProp.Builder mImpl =
+                    LayoutElementProto.ArcDirectionProp.newBuilder();
+            private final Fingerprint mFingerprint = new Fingerprint(-855955608);
+
+            /** Creates an instance of {@link Builder}. */
+            public Builder() {}
+
+            /** Sets the value. */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @NonNull
+            public Builder setValue(@ArcDirection int value) {
+                mImpl.setValue(LayoutElementProto.ArcDirection.forNumber(value));
+                mFingerprint.recordPropertyUpdate(1, value);
+                return this;
+            }
+
+            /** Builds an instance from accumulated values. */
+            @NonNull
+            public ArcDirectionProp build() {
+                return new ArcDirectionProp(mImpl.build(), mFingerprint);
             }
         }
     }

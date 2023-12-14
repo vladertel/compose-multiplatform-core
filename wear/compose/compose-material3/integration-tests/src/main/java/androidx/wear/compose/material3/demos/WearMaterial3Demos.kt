@@ -46,6 +46,9 @@ val WearMaterial3Demos = DemoCategory(
                 ComposableDemo("Child Button") {
                     ChildButtonDemo()
                 },
+                ComposableDemo("Compact Button") {
+                    CompactButtonDemo()
+                },
                 ComposableDemo("Multiline Button") {
                     MultilineButtonDemo()
                 },
@@ -80,8 +83,14 @@ val WearMaterial3Demos = DemoCategory(
         ComposableDemo("Switch") {
             SwitchDemos()
         },
+        ComposableDemo("Radio") {
+            RadioDemos()
+        },
         ComposableDemo("Radio Button") {
-            RadioButtonDemos()
+            RadioButtonDemo()
+        },
+        ComposableDemo("Split Radio Button") {
+            SplitRadioButtonDemo()
         },
         ComposableDemo("Toggle Button") {
             ToggleButtonDemo()
@@ -128,5 +137,6 @@ val WearMaterial3Demos = DemoCategory(
         ComposableDemo("HorizontalPageIndicator") {
             Centralize { HorizontalPageIndicatorSample() }
         },
+        ComposableDemo("Settings Demo") { SettingsDemo() }
     )
 )
