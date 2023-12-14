@@ -24,19 +24,19 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.scene.skia.SkiaLayerAdapter
 import androidx.compose.ui.scene.skia.SkiaLayerComponent
-import androidx.compose.ui.scene.skia.SwingSkiaLayerAdapter
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.layoutDirectionFor
 import androidx.compose.ui.window.scaledSize
-import java.awt.Dialog
+import java.awt.Component
+import java.awt.Point
 import java.awt.Rectangle
 import javax.swing.JDialog
 import javax.swing.JLayeredPane
+import javax.swing.RootPaneContainer
 import kotlin.math.ceil
 import kotlin.math.floor
 import org.jetbrains.skiko.SkiaLayerAnalytics
@@ -53,6 +53,15 @@ internal class WindowComposeSceneLayer(
         it.isWindowTransparent = true
     }
     private val window get() = requireNotNull(composeContainer.window)
+    private val windowContent: Component
+        get() {
+            var content: Component = window
+            if (content is RootPaneContainer) {
+                content = content.contentPane
+            }
+            return content
+        }
+
     private val dialog = JDialog(
         window,
     ).also {
@@ -95,12 +104,9 @@ internal class WindowComposeSceneLayer(
     override var bounds: IntRect = IntRect.Zero
         set(value) {
             field = value
-            println("bounds = $value")
 
-            val density = container.density
             val scaledRectangle = value.toAwtRectangle(density)
-            val windowLocation = window.location
-            dialog.setLocation(windowLocation.x + scaledRectangle.x, windowLocation.y + scaledRectangle.y)
+            dialog.location = getDialogLocation(scaledRectangle.x, scaledRectangle.y)
             dialog.setSize(scaledRectangle.width, scaledRectangle.height)
             _mediator?.contentOffset = bounds.topLeft.toOffset()
             _mediator?.contentBounds = Rectangle(0, 0, scaledRectangle.width, scaledRectangle.height)
@@ -124,9 +130,10 @@ internal class WindowComposeSceneLayer(
             composeSceneFactory = ::createComposeScene,
         ).also {
             it.transparency = true
-            it.containerSize = window.scaledSize
+            it.containerSize = windowContent.scaledSize
         }
-        dialog.bounds = window.bounds
+        dialog.location = getDialogLocation(0, 0)
+        dialog.size = windowContent.size
         dialog.isVisible = true
         composeContainer.attachLayer(this)
     }
@@ -157,9 +164,10 @@ internal class WindowComposeSceneLayer(
 
     override fun onChangeWindowBounds() {
         val scaledRectangle = bounds.toAwtRectangle(density)
-        val windowLocation = window.location
-        dialog.setLocation(windowLocation.x + scaledRectangle.x, windowLocation.y + scaledRectangle.y)
-        _mediator?.containerSize = window.scaledSize
+        dialog.location = getDialogLocation(scaledRectangle.x, scaledRectangle.y)
+
+        // Update compose constrains based on main window size
+        _mediator?.containerSize = windowContent.scaledSize
     }
 
     private fun createSkiaLayerComponent(mediator: ComposeSceneMediator): SkiaLayerComponent {
@@ -177,6 +185,14 @@ internal class WindowComposeSceneLayer(
             composeSceneContext = composeContainer.createComposeSceneContext(
                 platformContext = mediator.platformContext
             ),
+        )
+    }
+
+    private fun getDialogLocation(x: Int, y: Int): Point {
+        val locationOnScreen = windowContent.locationOnScreen
+        return Point(
+            locationOnScreen.x + x,
+            locationOnScreen.y + y
         )
     }
 }

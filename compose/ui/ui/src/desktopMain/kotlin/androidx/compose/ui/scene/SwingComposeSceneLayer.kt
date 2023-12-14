@@ -28,13 +28,11 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.density
-import androidx.compose.ui.window.layoutDirectionFor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Rectangle
 import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
-import javax.swing.JFrame
 import javax.swing.JLayeredPane
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -48,7 +46,6 @@ internal class SwingComposeSceneLayer(
     focusable: Boolean,
     compositionContext: CompositionContext
 ) : DesktopComposeSceneLayer(), MouseListener {
-    private val window get() = requireNotNull(composeContainer.window)
     private val layersContainer get() = requireNotNull(composeContainer.layersContainer)
 
     private val container = object : JLayeredPane() {
@@ -69,7 +66,7 @@ internal class SwingComposeSceneLayer(
         it.layout = null
         it.isOpaque = false
         it.background = Color.Transparent.toAwtColor()
-        it.size = Dimension(window.width, window.height)
+        it.size = Dimension(layersContainer.width, layersContainer.height)
         it.addMouseListener(this)
 
         // TODO: Currently it works only with offscreen rendering
@@ -119,7 +116,7 @@ internal class SwingComposeSceneLayer(
         }
 
     init {
-        bounds = IntRect(0, 0, window.width, window.height)
+        bounds = IntRect(0, 0, layersContainer.width, layersContainer.height)
         _mediator = ComposeSceneMediator(
             container = container,
             windowContext = composeContainer.windowContext,
@@ -140,7 +137,10 @@ internal class SwingComposeSceneLayer(
         composeContainer.detachLayer(this)
         _mediator?.dispose()
         _mediator = null
-        window.remove(container)
+
+        layersContainer.remove(container)
+        layersContainer.invalidate()
+        layersContainer.repaint()
     }
 
     override fun setContent(content: @Composable () -> Unit) {
@@ -181,7 +181,7 @@ internal class SwingComposeSceneLayer(
     }
 
     override fun onChangeWindowBounds() {
-        containerSize = IntSize(window.width, window.height)
+        containerSize = IntSize(layersContainer.width, layersContainer.height)
     }
 
     // region MouseListener
