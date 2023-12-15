@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.awt
+package androidx.compose.ui.scene.skia
 
-import androidx.compose.ui.unit.LayoutDirection
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
@@ -26,58 +25,55 @@ import javax.swing.SwingUtilities
 import org.jetbrains.skiko.ClipRectangle
 import org.jetbrains.skiko.ExperimentalSkikoApi
 import org.jetbrains.skiko.GraphicsApi
-import org.jetbrains.skiko.SkiaLayerAnalytics
 import org.jetbrains.skiko.swing.SkiaSwingLayer
 
 /**
- * Provides [component] that can be used as a Swing component.
- * Content set in [setContent] will be drawn on this [component].
+ * Provides a lightweight Swing [component] used to render content (provided by client.skikoView) on-screen with Skia.
  *
- * [SwingComposeBridge] provides smooth integration with Swing, so z-ordering, double-buffering etc. from Swing will be taken into account.
+ * [SwingSkiaLayerComponent] provides smooth integration with Swing, so z-ordering, double-buffering etc. from Swing will be taken into account.
  *
- * However, if smooth interop with Swing is not needed, consider using [androidx.compose.ui.awt.WindowComposeBridge]
+ * However, if smooth interop with Swing is not needed, consider using [WindowSkiaLayerComponent]
  */
 @OptIn(ExperimentalSkikoApi::class)
-internal class SwingComposeBridge(
-    private val skiaLayerAnalytics: SkiaLayerAnalytics,
-    layoutDirection: LayoutDirection
-) : ComposeBridge(layoutDirection) {
+internal class SwingSkiaLayerComponent(
+    private val client: SkiaLayerComponent.Client
+) : SkiaLayerComponent {
     /**
-     * See also backendLayer for standalone Compose in [androidx.compose.ui.awt.WindowComposeBridge]
+     * See also backendLayer for standalone Compose in [WindowSkiaLayerComponent]
      */
     override val component: SkiaSwingLayer =
-        object : SkiaSwingLayer(skikoView = skikoView, analytics = skiaLayerAnalytics) {
+        object : SkiaSwingLayer(skikoView = client.skikoView, analytics = client.skiaLayerAnalytics) {
             override fun addNotify() {
                 super.addNotify()
-                resetSceneDensity()
-                initContent()
-                updateSceneSize()
-                setParentWindow(SwingUtilities.getWindowAncestor(this))
+                client.resetSceneDensity()
+                client.initContent()
+                client.updateSceneSize()
+                client.setParentWindow(SwingUtilities.getWindowAncestor(this))
             }
 
             override fun removeNotify() {
-                setParentWindow(window = null)
+                client.setParentWindow(window = null)
                 super.removeNotify()
             }
 
             override fun paint(g: Graphics) {
-                resetSceneDensity()
+                client.resetSceneDensity()
                 super.paint(g)
             }
 
-            override fun getInputMethodRequests() = currentInputMethodRequests
+            override fun getInputMethodRequests() = client.inputMethodRequests
 
             override fun doLayout() {
                 super.doLayout()
-                updateSceneSize()
+                client.updateSceneSize()
             }
 
             override fun getPreferredSize(): Dimension {
-                return if (isPreferredSizeSet) super.getPreferredSize() else scenePreferredSize
+                return if (isPreferredSizeSet) super.getPreferredSize() else client.scenePreferredSize
             }
 
             override fun getAccessibleContext(): AccessibleContext? {
-                return sceneAccessible.accessibleContext
+                return client.sceneAccessible.accessibleContext
             }
         }
 
@@ -93,6 +89,16 @@ internal class SwingComposeBridge(
     override val focusComponentDelegate: Component
         get() = component
 
+    override var transparency: Boolean
+        get() = true
+        set(_) {}
+
+    override var fullscreen: Boolean
+        get() = false
+        set(_) {}
+
+    override val windowHandle get() = 0L
+
     override fun requestNativeFocusOnAccessible(accessible: Accessible) {
         component.requestNativeFocusOnAccessible(accessible)
     }
@@ -101,11 +107,9 @@ internal class SwingComposeBridge(
         component.repaint()
     }
 
-    init {
-        attachComposeToComponent()
-    }
+    override fun onRenderApiChanged(action: () -> Unit) = Unit
 
-    override fun disposeComponentLayer() {
+    override fun dispose() {
         component.dispose()
     }
 }

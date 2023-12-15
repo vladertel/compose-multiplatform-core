@@ -20,6 +20,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ComposeFeatureFlags
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.scene.skia.SwingSkiaLayerComponent
+import androidx.compose.ui.scene.skia.WindowSkiaLayerComponent
 import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.layoutDirectionFor
 import java.awt.Color
@@ -33,11 +35,8 @@ import java.awt.event.FocusListener
 import java.util.Locale
 import javax.swing.JLayeredPane
 import javax.swing.SwingUtilities.isEventDispatchThread
-import org.jetbrains.skiko.ClipComponent
 import org.jetbrains.skiko.GraphicsApi
-import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.SkiaLayerAnalytics
-import org.jetbrains.skiko.hostOs
 
 /**
  * ComposePanel is a panel for building UI using Compose for Desktop.
@@ -186,7 +185,7 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     private fun addToLayer(component: Component, layer: Int) {
-        if (renderApi == GraphicsApi.METAL && bridge !is SwingComposeBridge) {
+        if (renderApi == GraphicsApi.METAL && ComposeFeatureFlags.useSwingGraphics) {
             // Applying layer on macOS makes our bridge non-transparent
             // But it draws always on top, so we can just add it as-is
             // TODO: Figure out why it makes difference in transparency
@@ -203,7 +202,8 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
 
     private val interopBlending: Boolean
         get() = ComposeFeatureFlags.useInteropBlending &&
-            (ComposeFeatureFlags.useSwingGraphics || requireNotNull(bridge).interopBlendingSupported)
+            (ComposeFeatureFlags.useSwingGraphics ||
+                requireNotNull(bridge).skiaLayerComponent.interopBlendingSupported)
 
     override fun addNotify() {
         super.addNotify()
@@ -220,11 +220,15 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     }
 
     private fun createComposeBridge(): ComposeBridge {
-        val bridge: ComposeBridge = if (ComposeFeatureFlags.useSwingGraphics) {
-            SwingComposeBridge(skiaLayerAnalytics, layoutDirectionFor(this))
-        } else {
-            WindowComposeBridge(skiaLayerAnalytics, layoutDirectionFor(this))
-        }
+        val bridge = ComposeBridge(
+            skiaLayerAnalytics,
+            layoutDirectionFor(this),
+            if (ComposeFeatureFlags.useSwingGraphics) {
+                ::SwingSkiaLayerComponent
+            } else {
+                ::WindowSkiaLayerComponent
+            }
+        )
         return bridge.apply {
             scene.focusManager.releaseFocus()
             component.setSize(width, height)
@@ -346,5 +350,5 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
      * environment variable.
      */
     val renderApi: GraphicsApi
-        get() = bridge?.renderApi ?: GraphicsApi.UNKNOWN
+        get() = bridge?.skiaLayerComponent?.renderApi ?: GraphicsApi.UNKNOWN
 }

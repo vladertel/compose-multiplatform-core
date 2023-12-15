@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.awt
+package androidx.compose.ui.scene.skia
 
-import androidx.compose.ui.unit.LayoutDirection
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
@@ -25,51 +24,49 @@ import javax.swing.SwingUtilities
 import org.jetbrains.skiko.ClipRectangle
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayer
-import org.jetbrains.skiko.SkiaLayerAnalytics
 
 /**
- * Provides a heavyweight AWT [component] used to render content (from [setContent]) on-screen with Skia.
+ * Provides a heavyweight AWT [component] used to render content (provided by client.skikoView) on-screen with Skia.
  *
- * If smooth interop with Swing is needed, consider using [androidx.compose.ui.awt.SwingComposeBridge]
+ * If smooth interop with Swing is needed, consider using [SwingSkiaLayerComponent]
  */
-internal class WindowComposeBridge(
-    private val skiaLayerAnalytics: SkiaLayerAnalytics,
-    layoutDirection: LayoutDirection
-) : ComposeBridge(layoutDirection) {
+internal class WindowSkiaLayerComponent(
+    private val client: SkiaLayerComponent.Client
+) : SkiaLayerComponent {
     /**
-     * See also backend layer for swing interop in [androidx.compose.ui.awt.SwingComposeBridge]
+     * See also backend layer for swing interop in [SwingSkiaLayerComponent]
      */
     override val component: SkiaLayer = object : SkiaLayer(
-        externalAccessibleFactory = { sceneAccessible },
-        analytics = skiaLayerAnalytics
+        externalAccessibleFactory = { client.sceneAccessible },
+        analytics = client.skiaLayerAnalytics
     ), Accessible {
         override fun addNotify() {
             super.addNotify()
-            resetSceneDensity()
-            initContent()
-            updateSceneSize()
-            setParentWindow(SwingUtilities.getWindowAncestor(this))
+            client.resetSceneDensity()
+            client.initContent()
+            client.updateSceneSize()
+            client.setParentWindow(SwingUtilities.getWindowAncestor(this))
         }
 
         override fun removeNotify() {
-            setParentWindow(null)
+            client.setParentWindow(null)
             super.removeNotify()
         }
 
         override fun paint(g: Graphics) {
-            resetSceneDensity()
+            client.resetSceneDensity()
             super.paint(g)
         }
 
-        override fun getInputMethodRequests() = currentInputMethodRequests
+        override fun getInputMethodRequests() = client.inputMethodRequests
 
         override fun doLayout() {
             super.doLayout()
-            updateSceneSize()
+            client.updateSceneSize()
         }
 
         override fun getPreferredSize(): Dimension {
-            return if (isPreferredSizeSet) super.getPreferredSize() else scenePreferredSize
+            return if (isPreferredSizeSet) super.getPreferredSize() else client.scenePreferredSize
         }
     }
 
@@ -88,11 +85,11 @@ internal class WindowComposeBridge(
     override val focusComponentDelegate: Component
         get() = component.canvas
 
-    var transparency: Boolean
+    override var transparency: Boolean
         get() = component.transparency
         set(value) {
             component.transparency = value
-            if (value && !isWindowTransparent && renderApi == GraphicsApi.METAL) {
+            if (value && !client.isWindowTransparent && renderApi == GraphicsApi.METAL) {
                 /*
                  * SkiaLayer sets background inside transparency setter, that is required for
                  * cases like software rendering.
@@ -105,20 +102,30 @@ internal class WindowComposeBridge(
             }
         }
 
+    override var fullscreen: Boolean
+        get() = component.fullscreen
+        set(value) {
+            component.fullscreen = value
+        }
+
+    override val windowHandle: Long get() = component.windowHandle
+
     init {
-        component.skikoView = skikoView
-        attachComposeToComponent()
+        component.skikoView = client.skikoView
     }
 
-    override fun requestNativeFocusOnAccessible(accessible: Accessible) {
+    override fun requestNativeFocusOnAccessible(accessible: Accessible) =
         component.requestNativeFocusOnAccessible(accessible)
-    }
 
     override fun onComposeInvalidation() {
         component.needRedraw()
     }
 
-    override fun disposeComponentLayer() {
+    override fun onRenderApiChanged(action: () -> Unit) {
+        component.onStateChanged(SkiaLayer.PropertyKind.Renderer) { action() }
+    }
+
+    override fun dispose() {
         component.dispose()
     }
 }

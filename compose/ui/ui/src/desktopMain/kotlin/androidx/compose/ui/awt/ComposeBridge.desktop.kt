@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.*
 import androidx.compose.ui.scene.MultiLayerComposeScene
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeSceneContext
+import androidx.compose.ui.scene.skia.SkiaLayerComponent
 import androidx.compose.ui.scene.toPointerKeyboardModifiers
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.input.PlatformTextInputService
@@ -42,8 +43,6 @@ import java.awt.Cursor
 import java.awt.event.*
 import java.awt.event.KeyEvent
 import java.awt.im.InputMethodRequests
-import javax.accessibility.Accessible
-import javax.swing.JComponent
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -58,28 +57,21 @@ import org.jetbrains.skiko.*
  * [component] the main visible Swing component, on which Compose will be shown
  * [invisibleComponent] service component used to bypass Swing issues:
  * - for forcing refocus on input methods change
- *
- * Inheritors should call [attachComposeToComponent], so events that came to [component] will be transferred to [ComposeScene]
  */
-internal abstract class ComposeBridge(
-    layoutDirection: LayoutDirection
+internal class ComposeBridge(
+    private val skiaLayerAnalytics: SkiaLayerAnalytics,
+    layoutDirection: LayoutDirection,
+    createSkiaLayerComponent: (SkiaLayerComponent.Client) -> SkiaLayerComponent,
 ) {
     private var isDisposed = false
 
+    lateinit var skiaLayerComponent: SkiaLayerComponent
+        private set
     private val _invisibleComponent = InvisibleComponent()
     val invisibleComponent: Component get() = _invisibleComponent
+    val component get() = skiaLayerComponent.component
 
-    abstract val component: JComponent
-    abstract val renderApi: GraphicsApi
-
-    abstract val interopBlendingSupported: Boolean
-    abstract val clipComponents: MutableList<ClipRectangle>
     private val clipMap = mutableMapOf<Component, ClipComponent>()
-
-    // Needed for case when componentLayer is a wrapper for another Component that need to acquire focus events
-    // e.g. canvas in case of ComposeWindowLayer
-    // TODO: can we use [componentLayer] here?
-    protected abstract val focusComponentDelegate: Component
 
     protected var currentInputMethodRequests: InputMethodRequests? = null
 
@@ -123,12 +115,6 @@ internal abstract class ComposeBridge(
             get() = component.density
     }
 
-    protected abstract fun requestNativeFocusOnAccessible(accessible: Accessible)
-
-    protected abstract fun onComposeInvalidation()
-
-    protected abstract fun disposeComponentLayer()
-
     private val coroutineExceptionHandler = object :
         AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
         override fun handleException(context: CoroutineContext, exception: Throwable) {
@@ -166,7 +152,7 @@ internal abstract class ComposeBridge(
         density = Density(1f),
         layoutDirection = layoutDirection,
         invalidate = {
-            onComposeInvalidation()
+            skiaLayerComponent.onComposeInvalidation()
         },
     )
 
@@ -220,7 +206,27 @@ internal abstract class ComposeBridge(
      */
     private var keyboardModifiersRequireUpdate = false
 
-    protected fun attachComposeToComponent() {
+    init {
+        skiaLayerComponent = createSkiaLayerComponent(object : SkiaLayerComponent.Client {
+            override val inputMethodRequests get() = this@ComposeBridge.currentInputMethodRequests
+            override val sceneAccessible get() = this@ComposeBridge.sceneAccessible
+            override val skiaLayerAnalytics get() = this@ComposeBridge.skiaLayerAnalytics
+            override val scenePreferredSize get() = this@ComposeBridge.scenePreferredSize
+            override val skikoView get() = this@ComposeBridge.skikoView
+            override val isWindowTransparent get() = this@ComposeBridge.isWindowTransparent
+
+            override fun resetSceneDensity() =
+                this@ComposeBridge.resetSceneDensity()
+
+            override fun initContent() =
+                this@ComposeBridge.initContent()
+
+            override fun updateSceneSize() =
+                this@ComposeBridge.updateSceneSize()
+
+            override fun setParentWindow(window: Window?) =
+                this@ComposeBridge.setParentWindow(window)
+        })
         component.enableInputMethods(false)
         component.addInputMethodListener(object : InputMethodListener {
             override fun caretPositionChanged(event: InputMethodEvent?) {
@@ -311,7 +317,7 @@ internal abstract class ComposeBridge(
     fun dispose() {
         check(!isDisposed)
         scene.close()
-        disposeComponentLayer()
+        skiaLayerComponent.dispose()
         _initContent = null
         isDisposed = true
     }
@@ -342,12 +348,12 @@ internal abstract class ComposeBridge(
     fun addClipComponent(component: Component) {
         val clipComponent = ClipComponent(component)
         clipMap[component] = clipComponent
-        clipComponents.add(clipComponent)
+        skiaLayerComponent.clipComponents.add(clipComponent)
     }
 
     fun removeClipComponent(component: Component) {
         clipMap.remove(component)?.let {
-            clipComponents.remove(it)
+            skiaLayerComponent.clipComponents.remove(it)
         }
     }
 
@@ -447,7 +453,7 @@ internal abstract class ComposeBridge(
                 desktopComponent = platformComponent,
                 coroutineContext = sceneCoroutineContext,
                 onFocusReceived = {
-                    requestNativeFocusOnAccessible(it)
+                    skiaLayerComponent.requestNativeFocusOnAccessible(it)
                 }
             ).also {
                 it.syncLoop()
