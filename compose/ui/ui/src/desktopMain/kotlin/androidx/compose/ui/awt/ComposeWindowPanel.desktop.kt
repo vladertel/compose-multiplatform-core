@@ -33,6 +33,7 @@ import androidx.compose.ui.window.LocalWindow
 import androidx.compose.ui.window.UndecoratedWindowResizer
 import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
+import androidx.compose.ui.window.layoutDirectionFor
 import java.awt.*
 import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
@@ -48,7 +49,6 @@ internal class ComposeWindowPanel(
     private val window: Window,
     private val isUndecorated: () -> Boolean,
     skiaLayerAnalytics: SkiaLayerAnalytics,
-    layoutDirection: LayoutDirection
 ) : JLayeredPane() {
     private var isDisposed = false
 
@@ -57,7 +57,7 @@ internal class ComposeWindowPanel(
     // so we nullify bridge on dispose, to prevent keeping
     // big objects in memory (like the whole LayoutNode tree of the window)
     private var _bridge: WindowComposeBridge? =
-        WindowComposeBridge(skiaLayerAnalytics, layoutDirection)
+        WindowComposeBridge(skiaLayerAnalytics, layoutDirectionFor(window))
     private val bridge
         get() = requireNotNull(_bridge) {
             "ComposeBridge is disposed"
@@ -240,6 +240,10 @@ internal class ComposeWindowPanel(
             _bridge = null
             isDisposed = true
         }
+    }
+
+    fun onChangeLayoutDirection(component: Component) {
+        bridge.scene.layoutDirection = layoutDirectionFor(component)
     }
 
     fun onRenderApiChanged(action: () -> Unit) {
