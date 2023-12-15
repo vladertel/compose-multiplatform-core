@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.scene.skia
 
+import androidx.compose.ui.ComposeFeatureFlags
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
@@ -81,7 +82,7 @@ internal class SwingSkiaLayerComponent(
         get() = component.renderApi
 
     override val interopBlendingSupported: Boolean
-        get() = true
+        get() = ComposeFeatureFlags.useSwingGraphics
 
     override val clipComponents: MutableList<ClipRectangle>
         get() = component.clipComponents

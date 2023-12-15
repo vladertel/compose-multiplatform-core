@@ -80,6 +80,8 @@ internal class ComposeBridge(
         override fun windowLostFocus(e: WindowEvent) = refreshWindowFocus()
     }
 
+    val focusManager get() = scene.focusManager
+
     private var window: Window? = null
 
     private fun refocus() {
