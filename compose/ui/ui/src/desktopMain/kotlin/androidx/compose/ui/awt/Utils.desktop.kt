@@ -16,7 +16,16 @@
 
 package androidx.compose.ui.awt
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.window.density
 import java.awt.Component
+import java.awt.Rectangle
+import kotlin.math.ceil
+import kotlin.math.floor
 
 internal fun Component.isParentOf(component: Component?): Boolean {
     var parent = component?.parent
@@ -28,3 +37,35 @@ internal fun Component.isParentOf(component: Component?): Boolean {
     }
     return false
 }
+
+internal fun Color.toAwtColor() = java.awt.Color(red, green, blue, alpha)
+
+internal fun IntRect.toAwtRectangle(density: Density): Rectangle {
+    val left = floor(left / density.density).toInt()
+    val top = floor(top / density.density).toInt()
+    val right = ceil(right / density.density).toInt()
+    val bottom = ceil(bottom / density.density).toInt()
+    val width = right - left
+    val height = bottom - top
+    return Rectangle(
+        left, top, width, height
+    )
+}
+
+internal val Component.scaledOffset: Offset
+    get() {
+        val scale = density.density
+        return Offset(
+            x = x * scale,
+            y = y * scale
+        )
+    }
+
+internal val Component.scaledSize: Size
+    get() {
+        val scale = density.density
+        return Size(
+            width = width * scale,
+            height = height * scale
+        )
+    }

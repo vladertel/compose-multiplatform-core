@@ -25,9 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.platform.*
-import androidx.compose.ui.scene.MultiLayerComposeScene
 import androidx.compose.ui.scene.ComposeScene
-import androidx.compose.ui.scene.ComposeSceneContext
 import androidx.compose.ui.scene.skia.SkiaLayerComponent
 import androidx.compose.ui.scene.toPointerKeyboardModifiers
 import androidx.compose.ui.semantics.SemanticsOwner
@@ -60,12 +58,16 @@ import org.jetbrains.skiko.*
  */
 internal class ComposeBridge(
     private val skiaLayerAnalytics: SkiaLayerAnalytics,
-    layoutDirection: LayoutDirection,
     createSkiaLayerComponent: (SkiaLayerComponent.Client) -> SkiaLayerComponent,
+    createComposeScene: (
+        invalidate: () -> Unit,
+        platformContext: PlatformContext,
+        coroutineContext: CoroutineContext,
+    ) -> ComposeScene,
 ) {
     private var isDisposed = false
 
-    lateinit var skiaLayerComponent: SkiaLayerComponent
+    var skiaLayerComponent: SkiaLayerComponent
         private set
     private val _invisibleComponent = InvisibleComponent()
     val invisibleComponent: Component get() = _invisibleComponent
@@ -136,7 +138,7 @@ internal class ComposeBridge(
 
     val windowContext = PlatformWindowContext()
     private val desktopTextInputService = DesktopTextInputService(platformComponent)
-    protected val platformContext = DesktopPlatformContext()
+    private val platformContext = DesktopPlatformContext()
     internal var rootForTestListener: PlatformContext.RootForTestListener? by DelegateRootForTestListener()
     internal var isWindowTransparent by windowContext::isWindowTransparent
 
@@ -146,17 +148,13 @@ internal class ComposeBridge(
     }
 
     private val sceneCoroutineContext = MainUIDispatcher + coroutineExceptionHandler
-    internal val scene = MultiLayerComposeScene(
-        coroutineContext = sceneCoroutineContext,
-        composeSceneContext = object : ComposeSceneContext {
-            override val platformContext get() = this@ComposeBridge.platformContext
-        },
-        density = Density(1f),
-        layoutDirection = layoutDirection,
-        invalidate = {
-            skiaLayerComponent.onComposeInvalidation()
-        },
-    )
+    private lateinit var scene: ComposeScene
+
+    var layoutDirection: LayoutDirection
+        get() = scene.layoutDirection
+        set(value) {
+            scene.layoutDirection = value
+        }
 
     var compositionLocalContext: CompositionLocalContext? by scene::compositionLocalContext
 
@@ -285,6 +283,11 @@ internal class ComposeBridge(
             override fun keyReleased(event: KeyEvent) = onKeyEvent(event)
             override fun keyTyped(event: KeyEvent) = onKeyEvent(event)
         })
+        scene = createComposeScene(
+            skiaLayerComponent::onComposeInvalidation,
+            platformContext,
+            sceneCoroutineContext
+        )
     }
 
     private fun onMouseEvent(event: MouseEvent): Unit = catchExceptions {

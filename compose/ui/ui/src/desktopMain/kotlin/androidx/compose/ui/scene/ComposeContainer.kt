@@ -17,14 +17,23 @@
 package androidx.compose.ui.scene
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ComposeFeatureFlags
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.awt.ComposeBridge
 import androidx.compose.ui.awt.LocalLayerContainer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.scene.skia.SkiaLayerComponent
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.density
 import androidx.compose.ui.window.layoutDirectionFor
 import java.awt.Component
 import java.awt.Dimension
@@ -32,6 +41,7 @@ import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.event.MouseWheelListener
 import javax.swing.JLayeredPane
+import kotlin.coroutines.CoroutineContext
 import org.jetbrains.skiko.GraphicsApi
 import org.jetbrains.skiko.SkiaLayerAnalytics
 
@@ -44,14 +54,20 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
 internal class ComposeContainer(
     private val container: JLayeredPane,
     skiaLayerAnalytics: SkiaLayerAnalytics,
-    layoutDirection: LayoutDirection,
+    private var layoutDirection: LayoutDirection,
     createSkiaLayerComponent: (SkiaLayerComponent.Client) -> SkiaLayerComponent,
 ) {
     private val bridge = ComposeBridge(
         skiaLayerAnalytics,
-        layoutDirection,
         createSkiaLayerComponent,
+        ::createComposeScene
     )
+
+    /**
+     * A list of additional layers. Layers are used to render [Popup]s and [Dialog]s.
+     */
+    private val layers = mutableListOf<DesktopComposeSceneLayer>()
+    private val layersContainer get() = container
 
     val accessible get() = bridge.sceneAccessible
     val windowContext get() = bridge.windowContext
@@ -81,6 +97,7 @@ internal class ComposeContainer(
         bridge.dispose()
         container.remove(bridge.component)
         container.remove(bridge.invisibleComponent)
+        layers.fastForEach(DesktopComposeSceneLayer::close)
     }
 
     fun onChangeWindowTransparency(value: Boolean) {
@@ -89,7 +106,8 @@ internal class ComposeContainer(
     }
 
     fun onChangeLayoutDirection(component: Component) {
-        bridge.scene.layoutDirection = layoutDirectionFor(component)
+        layoutDirection = layoutDirectionFor(component)
+        bridge.layoutDirection = layoutDirection
     }
 
     fun onRenderApiChanged(action: () -> Unit) {
@@ -163,4 +181,123 @@ internal class ComposeContainer(
 
     fun removeMouseWheelListener(listener: MouseWheelListener) =
         bridge.component.removeMouseWheelListener(listener)
+
+    private fun createComposeScene(
+        invalidate: () -> Unit,
+        platformContext: PlatformContext,
+        coroutineContext: CoroutineContext,
+    ): ComposeScene = if (ComposeFeatureFlags.usePlatformLayers) {
+        SingleLayerComposeScene(
+            coroutineContext = coroutineContext,
+            density = container.density,
+            invalidate = invalidate,
+            layoutDirection = layoutDirection,
+            composeSceneContext = ComposeSceneContextImpl(platformContext),
+        )
+    } else {
+        MultiLayerComposeScene(
+            coroutineContext = coroutineContext,
+            density = container.density,
+            invalidate = invalidate,
+            layoutDirection = layoutDirection,
+            composeSceneContext = ComposeSceneContextImpl(platformContext),
+        )
+    }
+
+    private inner class ComposeSceneContextImpl(
+        override val platformContext: PlatformContext,
+    ) : ComposeSceneContext {
+        override fun createPlatformLayer(
+            density: Density,
+            layoutDirection: LayoutDirection,
+            focusable: Boolean,
+            compositionContext: CompositionContext
+        ): ComposeSceneLayer = if (ComposeFeatureFlags.useWindowLayers) {
+            WindowComposeSceneLayer(
+                density = density,
+                layoutDirection = layoutDirection,
+                focusable = focusable,
+                scrimColor = null,
+                bounds = IntRect.Zero,
+                compositionContext = compositionContext,
+            )
+        } else {
+            SwingComposeSceneLayer(
+                density = density,
+                layoutDirection = layoutDirection,
+                focusable = focusable,
+                bounds = IntRect.Zero,
+                scrimColor = null,
+                compositionContext = compositionContext,
+            )
+        }
+    }
+
+    internal abstract class DesktopComposeSceneLayer : ComposeSceneLayer {
+        open fun onChangeWindowFocus() = Unit
+        open fun onChangeWindowBounds() = Unit
+    }
+
+    private inner class SwingComposeSceneLayer(
+        override var density: Density,
+        override var layoutDirection: LayoutDirection,
+        override var focusable: Boolean,
+        override var bounds: IntRect,
+        override var scrimColor: Color?,
+        compositionContext: CompositionContext,
+    ) : DesktopComposeSceneLayer() {
+        init {
+            layers.add(this)
+        }
+
+        override fun close() {
+            layers.remove(this)
+        }
+
+        override fun setContent(content: @Composable () -> Unit) {
+        }
+
+        override fun setKeyEventListener(
+            onPreviewKeyEvent: ((KeyEvent) -> Boolean)?,
+            onKeyEvent: ((KeyEvent) -> Boolean)?
+        ) {
+        }
+
+        override fun setOutsidePointerEventListener(
+            onOutsidePointerEvent: ((dismissRequest: Boolean) -> Unit)?
+        ) {
+        }
+    }
+
+    private inner class WindowComposeSceneLayer(
+        override var density: Density,
+        override var layoutDirection: LayoutDirection,
+        override var focusable: Boolean,
+        override var bounds: IntRect,
+        override var scrimColor: Color?,
+        compositionContext: CompositionContext,
+    ) : DesktopComposeSceneLayer() {
+        init {
+            layers.add(this)
+        }
+
+        override fun close() {
+            layers.remove(this)
+        }
+
+        override fun setContent(content: @Composable () -> Unit) {
+        }
+
+        override fun setKeyEventListener(
+            onPreviewKeyEvent: ((KeyEvent) -> Boolean)?,
+            onKeyEvent: ((KeyEvent) -> Boolean)?
+        ) {
+        }
+
+        override fun setOutsidePointerEventListener(onOutsidePointerEvent: ((dismissRequest: Boolean) -> Unit)?) {
+        }
+
+        override fun onChangeWindowBounds() {
+        }
+    }
 }
