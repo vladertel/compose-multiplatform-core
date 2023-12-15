@@ -16,13 +16,17 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import java.awt.Component
 import java.awt.ComponentOrientation
 import java.awt.GraphicsConfiguration
 import java.awt.GraphicsEnvironment
-import java.util.Locale
+import java.util.*
 
 // TODO(demin): detect OS fontScale
 //  font size can be changed on Windows 10 in Settings - Ease of Access,
@@ -39,6 +43,24 @@ internal val GlobalDensity get() = GraphicsEnvironment.getLocalGraphicsEnvironme
     .density
 
 internal val Component.density: Density get() = graphicsConfiguration.density
+
+internal val Component.scaledOffset: Offset
+    get() {
+        val scale = density.density
+        return Offset(
+            x = x * scale,
+            y = y * scale
+        )
+    }
+
+internal val Component.scaledSize: Size
+    get() {
+        val scale = density.density
+        return Size(
+            width = width * scale,
+            height = height * scale
+        )
+    }
 
 private val GraphicsConfiguration.density: Density get() = Density(
     defaultTransform.scaleX.toFloat(),
