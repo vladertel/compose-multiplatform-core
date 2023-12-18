@@ -125,6 +125,6 @@ class AddHiddenFromObjCLowering(
             type = hiddenFromObjCAnnotation.defaultType,
             constructorSymbol = hiddenFromObjCAnnotation.constructors.first()
         )
-        pluginContext.annotationsRegistrar.addMetadataVisibleAnnotationsToElement(this, annotation)
+        pluginContext.metadataDeclarationRegistrar.addMetadataVisibleAnnotationsToElement(this, annotation)
     }
 }
