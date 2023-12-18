@@ -10,12 +10,13 @@ import bugs.IosBugs
 import bugs.StartRecompositionCheck
 import platform.UIKit.UIViewController
 
-
-fun main(vararg args: String) {
-    val arg = args.firstOrNull() ?: ""
-    defaultUIKitMain("ComposeDemo", ComposeUIViewController {
-        IosDemo(arg)
-    })
+@OptIn(ExperimentalComposeApi::class)
+fun MainViewController() = ComposeUIViewController(
+    configure = {
+        platformLayers = true
+    }
+) {
+    IosDemo("")
 }
 
 @Composable

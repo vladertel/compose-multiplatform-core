@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2023 The Android Open Souextractedct
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 
 import androidx.build.AndroidXComposePlugin
-import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTargetWithSimulatorTests
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
@@ -100,10 +100,11 @@ kotlin {
             }
         }
     }
-    iosX64("uikitX64") {
+
+    fun KotlinNativeTarget.configureIOS() {
         binaries {
-            executable() {
-                entryPoint = "androidx.compose.mpp.demo.main"
+            framework {
+                baseName = "shared"
                 freeCompilerArgs += listOf(
                     "-linker-option", "-framework", "-linker-option", "Metal",
                     "-linker-option", "-framework", "-linker-option", "CoreText",
@@ -113,34 +114,16 @@ kotlin {
                 freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
             }
         }
+    }
+
+    iosX64("uikitX64") {
+        configureIOS()
     }
     iosArm64("uikitArm64") {
-        binaries {
-            executable() {
-                entryPoint = "androidx.compose.mpp.demo.main"
-                freeCompilerArgs += listOf(
-                    "-linker-option", "-framework", "-linker-option", "Metal",
-                    "-linker-option", "-framework", "-linker-option", "CoreText",
-                    "-linker-option", "-framework", "-linker-option", "CoreGraphics"
-                )
-                // TODO: the current compose binary surprises LLVM, so disable checks for now.
-                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
-            }
-        }
+        configureIOS()
     }
     iosSimulatorArm64("uikitSimArm64") {
-        binaries {
-            executable() {
-                entryPoint = "androidx.compose.mpp.demo.main"
-                freeCompilerArgs += listOf(
-                    "-linker-option", "-framework", "-linker-option", "Metal",
-                    "-linker-option", "-framework", "-linker-option", "CoreText",
-                    "-linker-option", "-framework", "-linker-option", "CoreGraphics"
-                )
-                // TODO: the current compose binary surprises LLVM, so disable checks for now.
-                freeCompilerArgs += "-Xdisable-phases=VerifyBitcode"
-            }
-        }
+        configureIOS()
     }
     sourceSets {
         val commonMain by getting {
@@ -205,7 +188,7 @@ enum class Target(val simulator: Boolean, val key: String) {
     UIKIT_X64(true, "uikitX64"), UIKIT_ARM64(false, "uikitArm64"), UIKIT_SIM_ARM64(true, "uikitSimArm64"),
 }
 
-if (System.getProperty("os.name") == "Mac OS X") {
+if (false && System.getProperty("os.name") == "Mac OS X") {//todo check MacOS Native and delete
 // Create Xcode integration tasks.
     val sdkName: String? = System.getenv("SDK_NAME")
 
