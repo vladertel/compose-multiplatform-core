@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import androidx.build.KmpPlatformsKt
 import androidx.build.LibraryType
+import androidx.build.PlatformIdentifier
 import androidx.build.RunApiTasks
 import androidx.compose.material.icons.generator.tasks.IconGenerationTask
 
@@ -25,18 +25,16 @@ plugins {
     id("AndroidXComposePlugin")
 }
 
-def desktopEnabled = KmpPlatformsKt.enableDesktop(project)
-
 IconGenerationTask.registerExtendedIconMainProject(
         project,
         android
 )
 
-apply from: "shared-dependencies.gradle"
-
 androidXMultiplatform {
     android()
-    if (desktopEnabled) desktop()
+    desktop()
+
+    defaultPlatform(PlatformIdentifier.ANDROID)
 
     sourceSets {
         commonMain {
@@ -58,11 +56,9 @@ androidXMultiplatform {
             }
         }
 
-        if (desktopEnabled) {
-            skikoMain {
-                dependsOn(commonMain)
-                dependencies {
-                }
+        skikoMain {
+            dependsOn(commonMain)
+            dependencies {
             }
         }
 
@@ -72,12 +68,10 @@ androidXMultiplatform {
             }
         }
 
-        if (desktopEnabled) {
-            desktopMain {
-                dependsOn(skikoMain)
-                dependsOn(jvmMain)
-                dependencies {
-                }
+        desktopMain {
+            dependsOn(skikoMain)
+            dependsOn(jvmMain)
+            dependencies {
             }
         }
 
@@ -87,7 +81,7 @@ androidXMultiplatform {
             }
         }
 
-        androidAndroidTest {
+        androidInstrumentedTest {
             dependsOn(jvmTest)
             dependencies {
                 implementation(project(":compose:foundation:foundation"))
@@ -107,37 +101,18 @@ androidXMultiplatform {
             }
         }
 
-        androidTest {
+        androidUnitTest {
             dependsOn(jvmTest)
             dependencies {
             }
         }
 
-        if (desktopEnabled) {
-            desktopTest {
-                dependsOn(jvmTest)
-                dependsOn(desktopMain)
-                dependencies {
-                }
+        desktopTest {
+            dependsOn(jvmTest)
+            dependencies {
             }
         }
     }
-}
-
-configurations {
-    embedThemesDebug {
-        attributes {
-            attribute(iconExportAttr, "true")
-            attribute(iconBuildTypeAttr, "debug")
-        }
-    }
-    embedThemesRelease {
-        attributes {
-            attribute(iconExportAttr, "true")
-            attribute(iconBuildTypeAttr, "release")
-        }
-    }
-
 }
 
 IconGenerationTask.registerExtendedIconThemeProject(project, android)

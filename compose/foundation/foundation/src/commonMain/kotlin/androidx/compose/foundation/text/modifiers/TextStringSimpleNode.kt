@@ -17,6 +17,9 @@
 package androidx.compose.foundation.text.modifiers
 
 import androidx.compose.foundation.text.DefaultMinLines
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -44,7 +47,12 @@ import androidx.compose.ui.node.invalidateLayer
 import androidx.compose.ui.node.invalidateMeasurement
 import androidx.compose.ui.node.invalidateSemantics
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.clearTextSubstitution
 import androidx.compose.ui.semantics.getTextLayoutResult
+import androidx.compose.ui.semantics.isShowingTextSubstitution
+import androidx.compose.ui.semantics.originalText
+import androidx.compose.ui.semantics.setTextSubstitution
+import androidx.compose.ui.semantics.showTextSubstitution
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
@@ -93,6 +101,13 @@ internal class TextStringSimpleNode(
         }
 
     private fun getLayoutCache(density: Density): ParagraphLayoutCache {
+        textSubstitution?.let { textSubstitutionValue ->
+            if (textSubstitutionValue.isShowingSubstitution) {
+                textSubstitutionValue.layoutCache?.let { cache ->
+                    return cache.also { it.density = density }
+                }
+            }
+        }
         return layoutCache.also { it.density = density }
     }
 
@@ -112,6 +127,7 @@ internal class TextStringSimpleNode(
     fun updateText(text: String): Boolean {
         if (this.text == text) return false
         this.text = text
+        clearSubstitution()
         return true
     }
 
@@ -167,7 +183,11 @@ internal class TextStringSimpleNode(
         textChanged: Boolean,
         layoutChanged: Boolean
     ) {
-        if (textChanged) {
+        if (!isAttached) {
+            // no-up for !isAttached. The node will invalidate when attaching again.
+            return
+        }
+        if (textChanged || (drawChanged && semanticsTextLayoutResult != null)) {
             invalidateSemantics()
         }
 
@@ -191,19 +211,110 @@ internal class TextStringSimpleNode(
 
     private var semanticsTextLayoutResult: ((MutableList<TextLayoutResult>) -> Boolean)? = null
 
+    data class TextSubstitutionValue(
+        val original: String,
+        var substitution: String,
+        var isShowingSubstitution: Boolean = false,
+        var layoutCache: ParagraphLayoutCache? = null,
+        // TODO(klikli): add animation
+    )
+
+    private var textSubstitution: TextSubstitutionValue? by mutableStateOf(null)
+
+    private fun setSubstitution(updatedText: String): Boolean {
+        val currentTextSubstitution = textSubstitution
+        if (currentTextSubstitution != null) {
+            if (updatedText == currentTextSubstitution.substitution) {
+                return false
+            }
+            currentTextSubstitution.substitution = updatedText
+            currentTextSubstitution.layoutCache?.update(
+                updatedText,
+                style,
+                fontFamilyResolver,
+                overflow,
+                softWrap,
+                maxLines,
+                minLines,
+            ) ?: return false
+        } else {
+            val newTextSubstitution = TextSubstitutionValue(text, updatedText)
+            val substitutionLayoutCache = ParagraphLayoutCache(
+                updatedText,
+                style,
+                fontFamilyResolver,
+                overflow,
+                softWrap,
+                maxLines,
+                minLines,
+            )
+            substitutionLayoutCache.density = layoutCache.density
+            newTextSubstitution.layoutCache = substitutionLayoutCache
+            textSubstitution = newTextSubstitution
+        }
+        return true
+    }
+
+    private fun clearSubstitution() {
+        textSubstitution = null
+    }
+
     override fun SemanticsPropertyReceiver.applySemantics() {
         var localSemanticsTextLayoutResult = semanticsTextLayoutResult
         if (localSemanticsTextLayoutResult == null) {
             localSemanticsTextLayoutResult = { textLayoutResult ->
-                val layout = layoutCache.slowCreateTextLayoutResultOrNull()?.also {
+                val layout = layoutCache.slowCreateTextLayoutResultOrNull(
+                    style = style.merge(
+                        color = overrideColor?.invoke() ?: Color.Unspecified
+                    )
+                )?.also {
                     textLayoutResult.add(it)
                 }
                 layout != null
-                false
             }
             semanticsTextLayoutResult = localSemanticsTextLayoutResult
         }
-        this.text = AnnotatedString(this@TextStringSimpleNode.text)
+
+        val currentTextSubstitution = textSubstitution
+        if (currentTextSubstitution == null) {
+            text = AnnotatedString(this@TextStringSimpleNode.text)
+        } else {
+            isShowingTextSubstitution = currentTextSubstitution.isShowingSubstitution
+            if (currentTextSubstitution.isShowingSubstitution) {
+                text = AnnotatedString(currentTextSubstitution.substitution)
+                originalText = AnnotatedString(currentTextSubstitution.original)
+            } else {
+                text = AnnotatedString(currentTextSubstitution.original)
+            }
+        }
+
+        setTextSubstitution { updatedText ->
+            setSubstitution(updatedText.text)
+
+            true
+        }
+        showTextSubstitution {
+            if (textSubstitution == null) {
+                return@showTextSubstitution false
+            }
+
+            textSubstitution?.isShowingSubstitution = it
+
+            invalidateSemantics()
+            invalidateMeasurement()
+            invalidateDraw()
+
+            true
+        }
+        clearTextSubstitution {
+            clearSubstitution()
+
+            invalidateSemantics()
+            invalidateMeasurement()
+            invalidateDraw()
+
+            true
+        }
         getTextLayoutResult(action = localSemanticsTextLayoutResult)
     }
 
@@ -277,7 +388,11 @@ internal class TextStringSimpleNode(
      * Optimized Text draw.
      */
     override fun ContentDrawScope.draw() {
-        val localParagraph = requireNotNull(layoutCache.paragraph)
+        if (!isAttached) {
+            // no-up for !isAttached. The node will invalidate when attaching again.
+            return
+        }
+        val localParagraph = requireNotNull(layoutCache.paragraph) { "no paragraph" }
         drawIntoCanvas { canvas ->
             val willClip = layoutCache.didOverflow
             if (willClip) {

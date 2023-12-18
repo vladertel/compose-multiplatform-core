@@ -18,6 +18,7 @@ package androidx.compose.compiler.plugins.kotlin.analysis
 
 import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
 import androidx.compose.compiler.plugins.kotlin.lower.annotationClass
+import androidx.compose.compiler.plugins.kotlin.lower.isSyntheticComposableFunction
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
 import org.jetbrains.kotlin.ir.declarations.IrAnnotationContainer
 import org.jetbrains.kotlin.ir.declarations.IrClass
@@ -179,7 +180,7 @@ fun Stability.normalize(): Stability {
             }
 
             is Stability.Parameter -> {
-                if (parameters.contains(stability.parameter.symbol)) {
+                if (stability.parameter.symbol !in parameters) {
                     parameters.add(stability.parameter.symbol)
                     parts.add(stability)
                 }
@@ -346,6 +347,7 @@ private fun stabilityOf(
         type.isUnit() ||
             type.isPrimitiveType() ||
             type.isFunctionOrKFunction() ||
+            type.isSyntheticComposableFunction() ||
             type.isString() -> Stability.Stable
 
         type.isTypeParameter() -> {

@@ -26,18 +26,9 @@ ORG_GRADLE_JVMARGS="$(cd $SCRIPT_PATH && grep org.gradle.jvmargs gradle.properti
 if [ -n "$DIST_DIR" ]; then
     mkdir -p "$DIST_DIR"
     DIST_DIR="$(cd $DIST_DIR && pwd -P)"
-    export LINT_PRINT_STACKTRACE=true
-
-    #Set the initial heap size to match the max heap size,
-    #by replacing a string like "-Xmx1g" with one like "-Xms1g -Xmx1g"
-    MAX_MEM=24g
-    ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s/-Xmx\([^ ]*\)/-Xms$MAX_MEM -Xmx$MAX_MEM/")"
 
     # tell Gradle where to put a heap dump on failure
     ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s|$| -XX:HeapDumpPath=$DIST_DIR|")"
-
-    # Increase the compiler cache size: b/260643754 . Remove when updating to JDK 20 ( https://bugs.openjdk.org/browse/JDK-8295724 )
-    ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s|$| -XX:ReservedCodeCacheSize=576M|")"
 
     # We don't set a default DIST_DIR in an else clause here because Studio doesn't use gradlew
     # and doesn't set DIST_DIR and we want gradlew and Studio to match
@@ -273,7 +264,8 @@ for compact in "--ci" "--strict" "--clean" "--no-ci"; do
        --stacktrace\
        -Pandroidx.summarizeStderr\
        -Pandroidx.enableAffectedModuleDetection\
-       --no-watch-fs"
+       --no-watch-fs\
+       -Pandroidx.highMemory"
     fi
   fi
   if [ "$compact" == "--strict" ]; then
@@ -316,6 +308,16 @@ for compact in "--ci" "--strict" "--clean" "--no-ci"; do
     done
   fi
 done
+
+if [[ " ${@} " =~ " -Pandroidx.highMemory " ]]; then
+    #Set the initial heap size to match the max heap size,
+    #by replacing a string like "-Xmx1g" with one like "-Xms1g -Xmx1g"
+    MAX_MEM=32g
+    ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s/-Xmx\([^ ]*\)/-Xms$MAX_MEM -Xmx$MAX_MEM/")"
+
+    # Increase the compiler cache size: b/260643754 . Remove when updating to JDK 20 ( https://bugs.openjdk.org/browse/JDK-8295724 )
+    ORG_GRADLE_JVMARGS="$(echo $ORG_GRADLE_JVMARGS | sed "s|$| -XX:ReservedCodeCacheSize=576M|")"
+fi
 
 # check whether the user has requested profiling via yourkit
 yourkitArgPrefix="androidx.profile.yourkitAgentPath"
@@ -383,6 +385,18 @@ function removeCaches() {
   rm -rf $OUT_DIR
 }
 
+# Move any preexisting build scan to make room for a new one
+# After moving a build scan several times it eventually gets deleted
+function rotateBuildScans() {
+  filePrefix="$1"
+  iPlus1="10"
+  for i in $(seq 9 -1 1); do
+    mv "${filePrefix}.${i}.zip" "${filePrefix}.${iPlus1}.zip" 2>/dev/null || true
+    iPlus1=$i
+  done
+  mv ${filePrefix}.zip "${filePrefix}.1.zip" 2>/dev/null || true
+}
+
 function runGradle() {
   processOutput=false
   if [[ " ${@} " =~ " -Pandroidx.validateNoUnrecognizedMessages " ]]; then
@@ -398,14 +412,14 @@ function runGradle() {
   fi
 
   RETURN_VALUE=0
-  PROJECT_CACHE_DIR_ARGUMENT="--project-cache-dir $OUT_DIR/gradle-project-cache"
+  set -- "$@" -Dorg.gradle.projectcachedir="$OUT_DIR/gradle-project-cache"
   # Disabled in Studio until these errors become shown (b/268380971) or computed more quickly (https://github.com/gradle/gradle/issues/23272)
   if [[ " ${@} " =~ " --dependency-verification=" ]]; then
     VERIFICATION_ARGUMENT="" # already specified by caller
   else
     VERIFICATION_ARGUMENT=--dependency-verification=strict
   fi
-  if $wrapper "$JAVACMD" "${JVM_OPTS[@]}" $TMPDIR_ARG -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain $HOME_SYSTEM_PROPERTY_ARGUMENT $TMPDIR_ARG $PROJECT_CACHE_DIR_ARGUMENT $VERIFICATION_ARGUMENT "$ORG_GRADLE_JVMARGS" "$@"; then
+  if $wrapper "$JAVACMD" "${JVM_OPTS[@]}" $TMPDIR_ARG -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain $HOME_SYSTEM_PROPERTY_ARGUMENT $TMPDIR_ARG $VERIFICATION_ARGUMENT "$ORG_GRADLE_JVMARGS" "$@"; then
     RETURN_VALUE=0
   else
     # Print AndroidX-specific help message if build fails
@@ -423,11 +437,12 @@ function runGradle() {
       scanDir="$GRADLE_USER_HOME/build-scan-data"
       if [ -e "$scanDir" ]; then
         if [[ "$DISALLOW_TASK_EXECUTION" != "" ]]; then
-          zipPath="$DIST_DIR/scan-up-to-date.zip"
+          zipPrefix="$DIST_DIR/scan-up-to-date"
         else
-          zipPath="$DIST_DIR/scan.zip"
+          zipPrefix="$DIST_DIR/scan"
         fi
-        rm -f "$zipPath"
+        rotateBuildScans "$zipPrefix"
+        zipPath="${zipPrefix}.zip"
         cd "$GRADLE_USER_HOME/build-scan-data"
         zip -q -r "$zipPath" .
         cd -
