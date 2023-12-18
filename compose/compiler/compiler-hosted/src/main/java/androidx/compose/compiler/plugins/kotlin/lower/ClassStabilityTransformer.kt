@@ -183,7 +183,7 @@ class ClassStabilityTransformer(
         }
 
         if (useK2) {
-            context.annotationsRegistrar.addMetadataVisibleAnnotationsToElement(cls, annotation)
+            context.metadataDeclarationRegistrar.addMetadataVisibleAnnotationsToElement(cls, annotation)
         } else {
             cls.annotations += annotation
             classStabilityInferredCollection?.addClass(cls, parameterMask)
