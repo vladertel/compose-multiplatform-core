@@ -23,6 +23,7 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.BringIntoViewRequesterNode
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.identityHashCode
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusProperties
@@ -103,7 +104,7 @@ fun Modifier.focusable(
  *
  * @sample androidx.compose.foundation.samples.FocusableFocusGroupSample
  */
-@ExperimentalFoundationApi
+@Stable
 fun Modifier.focusGroup(): Modifier {
     return this
         .then(focusGroupInspectorInfo)

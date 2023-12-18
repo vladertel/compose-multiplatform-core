@@ -16,9 +16,9 @@
 
 package androidx.build.importMaven
 
-import okio.FileSystem
 import okio.Path
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.internal.artifacts.ImmutableVersionConstraint
 import org.gradle.api.internal.catalog.parser.TomlCatalogFileParser
 import org.gradle.api.plugins.catalog.VersionCatalogPlugin.GRADLE_PLATFORM_DEPENDENCIES
 import org.gradle.api.plugins.catalog.internal.DependenciesAwareVersionCatalogBuilder
@@ -32,7 +32,7 @@ object ImportVersionCatalog {
     /**
      * Loads a gradle version file and returns all artifacts declared in it.
      */
-    fun load(fileSystem: FileSystem, file: Path): List<String> {
+    fun load(file: Path): List<String> {
         val project = ProjectService.createProject()
         val configurations = project.configurations.create(
             GRADLE_PLATFORM_DEPENDENCIES
@@ -41,20 +41,20 @@ object ImportVersionCatalog {
             cnf.isCanBeConsumed = false
             cnf.isCanBeResolved = false
         }
-        val catalogBuilder = DependenciesAwareVersionCatalogBuilder(
+
+        val catalogBuilder = project.objects.newInstance(
+            DependenciesAwareVersionCatalogBuilder::class.java,
             "loader",
-            Interners.newStrongInterner(),
-            Interners.newStrongInterner(),
+            Interners.newStrongInterner<String>(),
+            Interners.newStrongInterner< ImmutableVersionConstraint>(),
             project.objects,
             { error("Not supported") },
             configurations
         )
-        fileSystem.read(file) {
-            TomlCatalogFileParser.parse(
-                this.inputStream(),
-                catalogBuilder
-            )
-        }
+        TomlCatalogFileParser.parse(
+            file.toNioPath(),
+            catalogBuilder
+        ) { error("Not supported") }
         val built = catalogBuilder.build()
         return built.libraryAliases.map { alias ->
             val dep = built.getDependencyData(alias)

@@ -79,7 +79,12 @@ internal actual fun SelectionHandle(
                             } else {
                                 Handle.SelectionEnd
                             },
-                            position = position
+                            position = position,
+                            anchor = if (isLeft) {
+                                SelectionHandleAnchor.Left
+                            } else {
+                                SelectionHandleAnchor.Right
+                            }
                         )
                     },
                 isStartHandle = isStartHandle,
@@ -298,7 +303,7 @@ internal class HandlePositionProvider(
 /**
  * Computes whether the handle's appearance should be left-pointing or right-pointing.
  */
-private fun isLeft(
+internal fun isLeft(
     isStartHandle: Boolean,
     direction: ResolvedTextDirection,
     handlesCrossed: Boolean

@@ -735,6 +735,13 @@ internal class LayoutNode(
         get() = measurePassDelegate.isPlaced
 
     /**
+     * Whether or not this [LayoutNode] was placed by its parent. The node can still be considered
+     * not placed if some of the modifiers on it not placed the placeable.
+     */
+    val isPlacedByParent: Boolean
+        get() = measurePassDelegate.isPlacedByParent
+
+    /**
      * The order in which this node was placed by its parent during the previous `layoutChildren`.
      * Before the placement the order is set to [NotPlacedPlaceOrder] to all the children. Then
      * every placed node assigns this variable to [parent]s MeasurePassDelegate's
@@ -812,7 +819,7 @@ internal class LayoutNode(
             }
             val layerCoordinator = _innerLayerCoordinator
             if (layerCoordinator != null) {
-                requireNotNull(layerCoordinator.layer)
+                checkNotNull(layerCoordinator.layer) { "layer was not set" }
             }
             return layerCoordinator
         }
@@ -839,6 +846,9 @@ internal class LayoutNode(
         set(value) {
             require(!isVirtual || modifier === Modifier) {
                 "Modifiers are not supported on virtual LayoutNodes"
+            }
+            require(!deactivated) {
+                "modifier is updated when deactivated"
             }
             field = value
             nodes.updateFrom(value)
@@ -887,14 +897,8 @@ internal class LayoutNode(
             // clear the intrinsics usage for everything that was requested previously.
             clearSubtreePlacementIntrinsicsUsage()
         }
-        with(measurePassDelegate) {
-            Placeable.PlacementScope.executeWithRtlMirroringValues(
-                measuredWidth,
-                layoutDirection,
-                parent?.innerCoordinator
-            ) {
-                placeRelative(x, y)
-            }
+        with(parent?.innerCoordinator?.placementScope ?: requireOwner().placementScope) {
+            measurePassDelegate.placeRelative(x, y)
         }
     }
 
@@ -1018,7 +1022,7 @@ internal class LayoutNode(
     ) {
         check(lookaheadRoot != null) {
             "Lookahead measure cannot be requested on a node that is not a part of the" +
-                "LookaheadLayout"
+                "LookaheadScope"
         }
         val owner = owner ?: return
         if (!ignoreRemeasureRequests && !isVirtual) {
@@ -1033,7 +1037,7 @@ internal class LayoutNode(
     }
 
     /**
-     * This gets called when both lookahead measurement (if in a LookaheadLayout) and actual
+     * This gets called when both lookahead measurement (if in a LookaheadScope) and actual
      * measurement need to be re-done. Such events include modifier change, attach/detach, etc.
      */
     internal fun invalidateMeasurements() {
@@ -1325,6 +1329,7 @@ internal class LayoutNode(
     override fun onReuse() {
         require(isAttached) { "onReuse is only expected on attached node" }
         interopViewFactoryHolder?.onReuse()
+        subcompositionsState?.onReuse()
         if (deactivated) {
             deactivated = false
             // we don't need to reset state as it was done when deactivated
@@ -1339,12 +1344,14 @@ internal class LayoutNode(
 
     override fun onDeactivate() {
         interopViewFactoryHolder?.onDeactivate()
+        subcompositionsState?.onDeactivate()
         deactivated = true
         resetModifierState()
     }
 
     override fun onRelease() {
         interopViewFactoryHolder?.onRelease()
+        subcompositionsState?.onRelease()
         forEachCoordinatorIncludingInner { it.onRelease() }
     }
 
@@ -1402,7 +1409,7 @@ internal class LayoutNode(
     /**
      * Describes the current state the [LayoutNode] is in. A [LayoutNode] is expected to be in
      * [LookaheadMeasuring] first, followed by [LookaheadLayingOut] if it is in a
-     * LookaheadLayout. After the lookahead is finished, [Measuring] and then [LayingOut] will
+     * LookaheadScope. After the lookahead is finished, [Measuring] and then [LayingOut] will
      * happen as needed.
      */
     internal enum class LayoutState {

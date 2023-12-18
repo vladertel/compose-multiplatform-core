@@ -90,3 +90,7 @@ internal actual abstract class PlatformOptimizedCancellationException actual con
     }
 
 }
+
+internal actual fun currentThreadId(): Long = Thread.currentThread().id
+
+internal actual fun currentThreadName(): String = Thread.currentThread().name

@@ -29,6 +29,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.camera.core.DynamicRange;
 import androidx.camera.core.Logger;
+import androidx.camera.core.impl.stabilization.StabilizationMode;
 import androidx.camera.core.internal.compat.workaround.SurfaceSorter;
 
 import com.google.auto.value.AutoValue;
@@ -113,7 +114,7 @@ public final class SessionConfig {
         /**
          * Returns the dynamic range for this output configuration.
          *
-         * <p>The dynamic range will determine the dynamic range format and profile of pixels in
+         * <p>The dynamic range will determine the dynamic range encoding and profile for pixels in
          * the surfaces associated with this output configuration.
          *
          * <p>If not set, this defaults to {@link DynamicRange#SDR}.
@@ -172,8 +173,8 @@ public final class SessionConfig {
             /**
              * Returns the dynamic range for this output configuration.
              *
-             * <p>The dynamic range will determine the dynamic range format and profile of pixels in
-             * the surfaces associated with this output configuration.
+             * <p>The dynamic range will determine the dynamic range encoding and profile for
+             * pixels in the surfaces associated with this output configuration.
              */
             @NonNull
             public abstract Builder setDynamicRange(@NonNull DynamicRange dynamicRange);
@@ -427,6 +428,30 @@ public final class SessionConfig {
         @NonNull
         public Builder setExpectedFrameRateRange(@NonNull Range<Integer> expectedFrameRateRange) {
             mCaptureConfigBuilder.setExpectedFrameRateRange(expectedFrameRateRange);
+            return this;
+        }
+
+        /**
+         * Set the preview stabilization mode of the SessionConfig.
+         * @param mode {@link StabilizationMode}
+         */
+        @NonNull
+        public Builder setPreviewStabilization(@StabilizationMode.Mode int mode) {
+            if (mode != StabilizationMode.UNSPECIFIED) {
+                mCaptureConfigBuilder.setPreviewStabilization(mode);
+            }
+            return this;
+        }
+
+        /**
+         * Set the video stabilization mode of the SessionConfig.
+         * @param mode {@link StabilizationMode}
+         */
+        @NonNull
+        public Builder setVideoStabilization(@StabilizationMode.Mode int mode) {
+            if (mode != StabilizationMode.UNSPECIFIED) {
+                mCaptureConfigBuilder.setVideoStabilization(mode);
+            }
             return this;
         }
 
@@ -748,6 +773,8 @@ public final class SessionConfig {
             }
 
             setOrVerifyExpectFrameRateRange(captureConfig.getExpectedFrameRateRange());
+            setPreviewStabilizationMode(captureConfig.getPreviewStabilizationMode());
+            setVideoStabilizationMode(captureConfig.getVideoStabilizationMode());
 
             TagBundle tagBundle = sessionConfig.getRepeatingCaptureConfig().getTagBundle();
             mCaptureConfigBuilder.addAllTags(tagBundle);
@@ -807,6 +834,18 @@ public final class SessionConfig {
             if (!mCaptureConfigBuilder.getExpectedFrameRateRange().equals(expectedFrameRateRange)) {
                 mValid = false;
                 Logger.d(TAG, "Different ExpectedFrameRateRange values");
+            }
+        }
+
+        private void setPreviewStabilizationMode(@StabilizationMode.Mode int mode) {
+            if (mode != StabilizationMode.UNSPECIFIED) {
+                mCaptureConfigBuilder.setPreviewStabilization(mode);
+            }
+        }
+
+        private void setVideoStabilizationMode(@StabilizationMode.Mode int mode) {
+            if (mode != StabilizationMode.UNSPECIFIED) {
+                mCaptureConfigBuilder.setVideoStabilization(mode);
             }
         }
 

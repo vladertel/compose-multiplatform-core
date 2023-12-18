@@ -17,8 +17,6 @@
 package androidx.compose.foundation.lazy.staggeredgrid
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.fastMaxOfOrNull
-import androidx.compose.foundation.lazy.layout.LazyLayoutAnimateItemModifierNode
 import androidx.compose.foundation.lazy.layout.LazyLayoutKeyIndexMap
 import androidx.compose.foundation.lazy.layout.LazyLayoutMeasureScope
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridLaneInfo.Companion.FullSpan
@@ -32,6 +30,8 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
+import androidx.compose.ui.util.fastForEachReversed
+import androidx.compose.ui.util.fastMaxOfOrNull
 import androidx.compose.ui.util.packInts
 import androidx.compose.ui.util.unpackInt1
 import androidx.compose.ui.util.unpackInt2
@@ -40,6 +40,7 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sign
+import kotlinx.coroutines.CoroutineScope
 
 private const val DebugLoggingEnabled = false
 
@@ -89,6 +90,7 @@ internal fun LazyLayoutMeasureScope.measureStaggeredGrid(
     mainAxisSpacing: Int,
     beforeContentPadding: Int,
     afterContentPadding: Int,
+    coroutineScope: CoroutineScope,
 ): LazyStaggeredGridMeasureResult {
     val context = LazyStaggeredGridMeasureContext(
         state = state,
@@ -104,6 +106,7 @@ internal fun LazyLayoutMeasureScope.measureStaggeredGrid(
         reverseLayout = reverseLayout,
         mainAxisSpacing = mainAxisSpacing,
         measureScope = this,
+        coroutineScope = coroutineScope
     )
 
     val initialItemIndices: IntArray
@@ -186,6 +189,7 @@ internal class LazyStaggeredGridMeasureContext(
     val afterContentPadding: Int,
     val reverseLayout: Boolean,
     val mainAxisSpacing: Int,
+    val coroutineScope: CoroutineScope
 ) {
     val measuredItemProvider = object : LazyStaggeredGridMeasureProvider(
         isVertical = isVertical,
@@ -210,7 +214,8 @@ internal class LazyStaggeredGridMeasureContext(
             span = span,
             beforeContentPadding = beforeContentPadding,
             afterContentPadding = afterContentPadding,
-            contentType = contentType
+            contentType = contentType,
+            animator = state.placementAnimator
         )
     }
 
@@ -752,7 +757,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
                         firstItemIndices[lane] > itemIndex
                     }
                 }
-            }
+            },
+            beforeVisibleBounds = true
         )
 
         val visibleItems = calculateVisibleItems(
@@ -784,7 +790,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
                         currentItemIndices[lane] < itemIndex
                     }
                 }
-            }
+            },
+            beforeVisibleBounds = false
         )
 
         val positionedItems = mutableListOf<LazyStaggeredGridMeasuredItem>()
@@ -803,7 +810,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
             positionedItems = positionedItems,
             itemProvider = measuredItemProvider,
             isVertical = isVertical,
-            laneCount = laneCount
+            laneCount = laneCount,
+            coroutineScope = coroutineScope
         )
 
         // end placement
@@ -881,11 +889,12 @@ private fun LazyStaggeredGridMeasureContext.calculateVisibleItems(
 @ExperimentalFoundationApi
 private inline fun LazyStaggeredGridMeasureContext.calculateExtraItems(
     position: (LazyStaggeredGridMeasuredItem) -> Unit,
-    filter: (itemIndex: Int) -> Boolean
+    filter: (itemIndex: Int) -> Boolean,
+    beforeVisibleBounds: Boolean
 ): List<LazyStaggeredGridMeasuredItem> {
     var result: MutableList<LazyStaggeredGridMeasuredItem>? = null
 
-    pinnedItems.fastForEach { index ->
+    pinnedItems.fastForEach(beforeVisibleBounds) { index ->
         if (filter(index)) {
             val spanRange = itemProvider.getSpanRange(index, 0)
             if (result == null) {
@@ -898,6 +907,10 @@ private inline fun LazyStaggeredGridMeasureContext.calculateExtraItems(
     }
 
     return result ?: emptyList()
+}
+
+private inline fun <T> List<T>.fastForEach(reverse: Boolean = false, action: (T) -> Unit) {
+    if (reverse) fastForEachReversed(action) else fastForEach(action)
 }
 
 @JvmInline
@@ -1063,7 +1076,8 @@ internal class LazyStaggeredGridMeasuredItem(
     val span: Int,
     private val beforeContentPadding: Int,
     private val afterContentPadding: Int,
-    override val contentType: Any?
+    override val contentType: Any?,
+    private val animator: LazyStaggeredGridItemPlacementAnimator
 ) : LazyStaggeredGridItemInfo {
     var isVisible = true
 
@@ -1121,14 +1135,14 @@ internal class LazyStaggeredGridMeasuredItem(
                 val maxOffset = maxMainAxisOffset
 
                 var offset = offset
-                val animateNode = getParentData(index) as? LazyLayoutAnimateItemModifierNode
-                if (animateNode != null) {
-                    val animatedOffset = offset + animateNode.placementDelta
+                val animation = animator.getAnimation(key, index)
+                if (animation != null) {
+                    val animatedOffset = offset + animation.placementDelta
                     // cancel the animation if current and target offsets are both out of the bounds.
                     if ((offset.mainAxis <= minOffset && animatedOffset.mainAxis <= minOffset) ||
                         (offset.mainAxis >= maxOffset && animatedOffset.mainAxis >= maxOffset)
                     ) {
-                        animateNode.cancelAnimation()
+                        animation.cancelPlacementAnimation()
                     }
                     offset = animatedOffset
                 }

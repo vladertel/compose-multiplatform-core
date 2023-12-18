@@ -17,8 +17,10 @@
 package androidx.compose.foundation.lazy
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.lazy.layout.LazyLayoutAnimateItemModifierNode
+import androidx.compose.foundation.lazy.layout.DefaultLayerBlock
+import androidx.compose.foundation.lazy.layout.LazyLayoutAnimation.Companion.NotInitialized
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -50,7 +52,8 @@ internal class LazyListMeasuredItem @ExperimentalFoundationApi constructor(
      */
     private val visualOffset: IntOffset,
     override val key: Any,
-    override val contentType: Any?
+    override val contentType: Any?,
+    private val animator: LazyListItemAnimator
 ) : LazyListItemInfo {
     override var offset: Int = 0
         private set
@@ -110,14 +113,18 @@ internal class LazyListMeasuredItem @ExperimentalFoundationApi constructor(
         placeables.fastForEachIndexed { index, placeable ->
             val indexInArray = index * 2
             if (isVertical) {
-                placeableOffsets[indexInArray] = requireNotNull(horizontalAlignment)
-                    .align(placeable.width, layoutWidth, layoutDirection)
+                placeableOffsets[indexInArray] =
+                    requireNotNull(horizontalAlignment) {
+                        "null horizontalAlignment when isVertical == true"
+                    }.align(placeable.width, layoutWidth, layoutDirection)
                 placeableOffsets[indexInArray + 1] = mainAxisOffset
                 mainAxisOffset += placeable.height
             } else {
                 placeableOffsets[indexInArray] = mainAxisOffset
-                placeableOffsets[indexInArray + 1] = requireNotNull(verticalAlignment)
-                    .align(placeable.height, layoutHeight)
+                placeableOffsets[indexInArray + 1] =
+                    requireNotNull(verticalAlignment) {
+                        "null verticalAlignment when isVertical == false"
+                    }.align(placeable.height, layoutHeight)
                 mainAxisOffset += placeable.width
             }
         }
@@ -130,6 +137,7 @@ internal class LazyListMeasuredItem @ExperimentalFoundationApi constructor(
 
     fun place(
         scope: Placeable.PlacementScope,
+        isLookingAhead: Boolean
     ) = with(scope) {
         require(mainAxisLayoutSize != Unset) { "position() should be called first" }
         repeat(placeablesCount) { index ->
@@ -137,16 +145,32 @@ internal class LazyListMeasuredItem @ExperimentalFoundationApi constructor(
             val minOffset = minMainAxisOffset - placeable.mainAxisSize
             val maxOffset = maxMainAxisOffset
             var offset = getOffset(index)
-            val animateNode = getParentData(index) as? LazyLayoutAnimateItemModifierNode
-            if (animateNode != null) {
-                val animatedOffset = offset + animateNode.placementDelta
-                // cancel the animation if current and target offsets are both out of the bounds.
-                if ((offset.mainAxis <= minOffset && animatedOffset.mainAxis <= minOffset) ||
-                    (offset.mainAxis >= maxOffset && animatedOffset.mainAxis >= maxOffset)
-                ) {
-                    animateNode.cancelAnimation()
+            val animation = animator.getAnimation(key, index)
+            val layerBlock: GraphicsLayerScope.() -> Unit
+            if (animation != null) {
+                if (isLookingAhead) {
+                    // Skip animation in lookahead pass
+                    animation.lookaheadOffset = offset
+                } else {
+                    val targetOffset = if (animation.lookaheadOffset != NotInitialized) {
+                        animation.lookaheadOffset
+                    } else {
+                        offset
+                    }
+                    val animatedOffset = targetOffset + animation.placementDelta
+                    // cancel the animation if current and target offsets are both out of the bounds
+                    if ((targetOffset.mainAxis <= minOffset &&
+                            animatedOffset.mainAxis <= minOffset) ||
+                        (targetOffset.mainAxis >= maxOffset &&
+                            animatedOffset.mainAxis >= maxOffset)
+                    ) {
+                        animation.cancelPlacementAnimation()
+                    }
+                    offset = animatedOffset
                 }
-                offset = animatedOffset
+                layerBlock = animation.layerBlock
+            } else {
+                layerBlock = DefaultLayerBlock
             }
             if (reverseLayout) {
                 offset = offset.copy { mainAxisOffset ->
@@ -155,9 +179,9 @@ internal class LazyListMeasuredItem @ExperimentalFoundationApi constructor(
             }
             offset += visualOffset
             if (isVertical) {
-                placeable.placeWithLayer(offset)
+                placeable.placeWithLayer(offset, layerBlock = layerBlock)
             } else {
-                placeable.placeRelativeWithLayer(offset)
+                placeable.placeRelativeWithLayer(offset, layerBlock = layerBlock)
             }
         }
     }
