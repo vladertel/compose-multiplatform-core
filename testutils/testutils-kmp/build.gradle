@@ -80,3 +80,7 @@ androidx {
 androidxCompose {
     composeCompilerPluginEnabled = false
 }
+
+tasks.withType(AbstractArchiveTask) {
+    destinationDirectory.set(new File(buildDir, "repackaged"))
+}

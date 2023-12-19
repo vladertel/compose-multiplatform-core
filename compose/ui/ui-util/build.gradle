@@ -20,7 +20,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("AndroidXPlugin")
-    id("com.android.library")
+//    id("com.android.library")
     id("AndroidXComposePlugin")
 }
 
@@ -43,7 +43,7 @@ if(!AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
 if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
-        android()
+//        android()
         desktop()
         darwin()
         js()
@@ -64,9 +64,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.kotlinStdlib)
             }
 
-            androidMain.dependencies {
-                implementation(libs.kotlinStdlib)
-            }
+//            androidMain.dependencies {
+//                implementation(libs.kotlinStdlib)
+//            }
 
             if (project.kotlinWasmEnabled.toBoolean()) {
                 wasmJsMain {
@@ -84,9 +84,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             //  need to add Robolectric (which must be kept out of androidAndroidTest), use a top
             //  level dependencies block instead:
             //  `dependencies { testImplementation(libs.robolectric) }`
-            androidTest.dependencies {
-                implementation(libs.truth)
-            }
+//            androidTest.dependencies {
+//                implementation(libs.truth)
+//            }
 
             desktopTest {
                 dependencies {
@@ -108,10 +108,49 @@ androidx {
     legacyDisableKotlinStrictApiMode = true
 }
 
-androidxCompose {
-    composeCompilerPluginEnabled = false
+//androidxCompose {
+//    composeCompilerPluginEnabled = false
+//}
+//
+//android {
+//    namespace "androidx.compose.ui.util"
+//}
+
+project.tasks.configureEach {
+    if (name == "compileJsWasmMainKotlinMetadata") {
+        enabled = false
+    }
 }
 
-android {
-    namespace "androidx.compose.ui.util"
+tasks.withType(AbstractArchiveTask) {
+    println("AbstractArchiveTask it.name: ${it.name}")
+    destinationDirectory.set(new File(buildDir, "repackaged"))
 }
+
+//[
+//        "allMetadataJar",
+//        "desktopJar",
+//        "desktopSourcesJar",
+//        "jsJar",
+//        "jsSourcesJar",
+//        "macosArm64SourcesJar",
+//        "macosX64SourcesJar",
+//        "metadataSourcesJar",
+//        "multiplatformSourceJar",
+//        "sourcesJar",
+//        "uikitArm64SourcesJar",
+//        "uikitSimArm64SourcesJar",
+//        "uikitX64SourcesJar",
+//        "wasmJsJar",
+//        "wasmJsSourcesJar",
+////        "createProjectZip",
+////        "macosX64MetadataJar",
+////        "macosArm64MetadataJar",
+////        "uikitX64MetadataJar",
+////        "uikitArm64MetadataJar",
+////        "uikitSimArm64MetadataJar",
+//].forEach {
+//    tasks.getByName(it) {
+//        destinationDirectory.set(new File(buildDir, "repackaged"))
+//    }
+//}

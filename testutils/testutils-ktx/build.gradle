@@ -49,3 +49,7 @@ androidXMultiplatform {
 androidx {
     type = LibraryType.INTERNAL_TEST_LIBRARY
 }
+
+tasks.withType(AbstractArchiveTask) {
+    destinationDirectory.set(new File(buildDir, "repackaged"))
+}

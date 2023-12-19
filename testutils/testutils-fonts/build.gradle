@@ -28,23 +28,9 @@ AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
 if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
     androidXComposeMultiplatform {
-        android()
         desktop()
     }
 
-    android {
-        dependencies {
-            implementation(libs.kotlinStdlib)
-        }
-        sourceSets {
-            main {
-                res.srcDirs += "src/commonMain/resources"
-                res.srcDirs += "src/androidMain/res"
-                java.srcDirs += "src/commonMain/java"
-                assets.srcDirs += "src/androidMain/assets"
-            }
-        }
-    }
 } else {
     dependencies {
         implementation(libs.kotlinStdlib)
@@ -68,4 +54,8 @@ androidx {
 
 android {
     namespace "androidx.testutils.fonts"
+}
+
+tasks.withType(AbstractArchiveTask) {
+    destinationDirectory.set(new File(buildDir, "repackaged"))
 }
