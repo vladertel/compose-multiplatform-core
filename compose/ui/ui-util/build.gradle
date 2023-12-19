@@ -122,35 +122,35 @@ project.tasks.configureEach {
     }
 }
 
-tasks.withType(AbstractArchiveTask) {
-    println("AbstractArchiveTask it.name: ${it.name}")
-    destinationDirectory.set(new File(buildDir, "repackaged"))
-}
-
-//[
-//        "allMetadataJar",
-//        "desktopJar",
-//        "desktopSourcesJar",
-//        "jsJar",
-//        "jsSourcesJar",
-//        "macosArm64SourcesJar",
-//        "macosX64SourcesJar",
-//        "metadataSourcesJar",
-//        "multiplatformSourceJar",
-//        "sourcesJar",
-//        "uikitArm64SourcesJar",
-//        "uikitSimArm64SourcesJar",
-//        "uikitX64SourcesJar",
-//        "wasmJsJar",
-//        "wasmJsSourcesJar",
-////        "createProjectZip",
-////        "macosX64MetadataJar",
-////        "macosArm64MetadataJar",
-////        "uikitX64MetadataJar",
-////        "uikitArm64MetadataJar",
-////        "uikitSimArm64MetadataJar",
-//].forEach {
-//    tasks.getByName(it) {
-//        destinationDirectory.set(new File(buildDir, "repackaged"))
-//    }
+//tasks.withType(AbstractArchiveTask) {
+//    println("AbstractArchiveTask it.name: ${it.name}")
+//    destinationDirectory.set(new File(buildDir, "repackaged"))
 //}
+
+[
+        "allMetadataJar",
+        "desktopJar",
+        "desktopSourcesJar",
+        "jsJar",
+        "jsSourcesJar",
+        "macosArm64SourcesJar",
+        "macosX64SourcesJar",
+        "metadataSourcesJar",
+        "multiplatformSourceJar",
+        "sourcesJar",
+        "uikitArm64SourcesJar",
+        "uikitSimArm64SourcesJar",
+        "uikitX64SourcesJar",
+        "wasmJsJar",
+        "wasmJsSourcesJar",
+//        "createProjectZip",
+//        "macosX64MetadataJar",
+//        "macosArm64MetadataJar",
+//        "uikitX64MetadataJar",
+//        "uikitArm64MetadataJar",
+//        "uikitSimArm64MetadataJar",
+].forEach {
+    tasks.getByName(it) {
+        destinationDirectory.set(new File(buildDir, "repackaged"))
+    }
+}
