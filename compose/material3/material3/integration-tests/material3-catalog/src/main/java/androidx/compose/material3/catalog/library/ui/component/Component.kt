@@ -18,16 +18,14 @@ package androidx.compose.material3.catalog.library.ui.component
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -44,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -54,8 +53,11 @@ fun Component(
     theme: Theme,
     onThemeChange: (theme: Theme) -> Unit,
     onExampleClick: (example: Example) -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    favorite: Boolean = false,
+    onFavoriteClick: () -> Unit,
 ) {
+    val ltr = LocalLayoutDirection.current
     CatalogScaffold(
         topBarTitle = component.name,
         showBackNavigationIcon = true,
@@ -64,19 +66,18 @@ fun Component(
         docsUrl = component.docsUrl,
         sourceUrl = component.sourceUrl,
         onThemeChange = onThemeChange,
-        onBackClick = onBackClick
+        onBackClick = onBackClick,
+        favorite = favorite,
+        onFavoriteClick = onFavoriteClick
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier.padding(paddingValues),
-            contentPadding = WindowInsets.safeDrawing
-                .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
-                .add(
-                    WindowInsets(
-                        left = ComponentPadding,
-                        right = ComponentPadding
-                    )
-                )
-                .asPaddingValues()
+            modifier = Modifier.consumeWindowInsets(paddingValues),
+            contentPadding = PaddingValues(
+                start = paddingValues.calculateStartPadding(ltr) + ComponentPadding,
+                top = paddingValues.calculateTopPadding() + ComponentPadding,
+                end = paddingValues.calculateEndPadding(ltr) + ComponentPadding,
+                bottom = paddingValues.calculateBottomPadding() + ComponentPadding
+            )
         ) {
             item {
                 Box(

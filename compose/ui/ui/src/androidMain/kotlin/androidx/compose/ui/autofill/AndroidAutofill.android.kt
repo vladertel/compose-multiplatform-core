@@ -27,8 +27,8 @@ import android.view.autofill.AutofillValue
 import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.graphics.toAndroidRect
 import androidx.compose.ui.util.fastMap
+import androidx.compose.ui.util.fastRoundToInt
 
 /**
  * Autofill implementation for Android.
@@ -46,13 +46,20 @@ internal class AndroidAutofill(val view: View, val autofillTree: AutofillTree) :
     init { view.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_YES }
 
     override fun requestAutofillForNode(autofillNode: AutofillNode) {
+        val boundingBox = autofillNode.boundingBox
+            ?: error("requestAutofill called before onChildPositioned()")
+
         // TODO(b/138731416): Find out what happens when notifyViewEntered() is called multiple times
         // before calling notifyViewExited().
         autofillManager.notifyViewEntered(
             view,
             autofillNode.id,
-            autofillNode.boundingBox?.toAndroidRect()
-                ?: error("requestAutofill called before onChildPositioned()")
+            android.graphics.Rect(
+                boundingBox.left.fastRoundToInt(),
+                boundingBox.top.fastRoundToInt(),
+                boundingBox.right.fastRoundToInt(),
+                boundingBox.bottom.fastRoundToInt()
+            )
         )
     }
 
@@ -89,7 +96,8 @@ internal fun AndroidAutofill.populateViewStructure(root: ViewStructure) {
                 autofillNode.autofillTypes.fastMap { it.androidType }.toTypedArray()
             )
 
-            if (autofillNode.boundingBox == null) {
+            val boundingBox = autofillNode.boundingBox
+            if (boundingBox == null) {
                 // Do we need an exception here? warning? silently ignore? If the boundingbox is
                 // null, the autofill overlay will not be shown.
                 Log.w(
@@ -97,9 +105,14 @@ internal fun AndroidAutofill.populateViewStructure(root: ViewStructure) {
                     """Bounding box not set.
                         Did you call perform autofillTree before the component was positioned? """
                 )
-            }
-            autofillNode.boundingBox?.toAndroidRect()?.run {
-                AutofillApi23Helper.setDimens(child, left, top, 0, 0, width(), height())
+            } else {
+                val left = boundingBox.left.fastRoundToInt()
+                val top = boundingBox.top.fastRoundToInt()
+                val right = boundingBox.right.fastRoundToInt()
+                val bottom = boundingBox.bottom.fastRoundToInt()
+                val width = right - left
+                val height = bottom - top
+                AutofillApi23Helper.setDimens(child, left, top, 0, 0, width, height)
             }
         }
         index++

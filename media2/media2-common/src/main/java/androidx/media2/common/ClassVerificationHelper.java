@@ -27,7 +27,6 @@ import androidx.annotation.RestrictTo;
 /**
  * Helper classes to avoid ClassVerificationFailure.
  *
- * @hide
  */
 @RestrictTo(LIBRARY_GROUP)
 public final class ClassVerificationHelper {
@@ -50,25 +49,6 @@ public final class ClassVerificationHelper {
         }
 
         private AudioManager() {}
-    }
-
-    /** Helper class for {@link android.os.HandlerThread}. */
-    public static final class HandlerThread {
-
-        /** Helper methods for {@link android.os.HandlerThread} APIs added in API level 18. */
-        @RequiresApi(18)
-        public static final class Api18 {
-
-            /** Helper method to call {@link android.os.HandlerThread#quitSafely()}. */
-            @DoNotInline
-            public static boolean quitSafely(@NonNull android.os.HandlerThread handlerThread) {
-                return handlerThread.quitSafely();
-            }
-
-            private Api18() {}
-        }
-
-        private HandlerThread() {}
     }
 
     /** Helper class for {@link android.app.PendingIntent}. */

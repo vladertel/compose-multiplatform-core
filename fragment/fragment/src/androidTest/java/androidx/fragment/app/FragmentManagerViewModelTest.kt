@@ -20,7 +20,9 @@ import androidx.lifecycle.ViewModelStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
+import leakcanary.DetectLeaksAfterTestSuccess
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
@@ -28,6 +30,9 @@ import org.mockito.Mockito.mock
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 class FragmentManagerViewModelTest {
+
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
 
     private lateinit var viewModel: FragmentManagerViewModel
 
@@ -78,7 +83,7 @@ class FragmentManagerViewModelTest {
         val childNonConfig = viewModel.getChildNonConfig(fragment)
         assertThat(viewModel.getChildNonConfig(fragment)).isSameInstanceAs(childNonConfig)
 
-        viewModel.clearNonConfigState(fragment)
+        viewModel.clearNonConfigState(fragment, false)
         assertThat(viewModel.getChildNonConfig(fragment)).isNotSameInstanceAs(childNonConfig)
     }
 
@@ -88,7 +93,7 @@ class FragmentManagerViewModelTest {
         val viewModelStore = viewModel.getViewModelStore(fragment)
         assertThat(viewModel.getViewModelStore(fragment)).isSameInstanceAs(viewModelStore)
 
-        viewModel.clearNonConfigState(fragment)
+        viewModel.clearNonConfigState(fragment, false)
         assertThat(viewModel.getViewModelStore(fragment)).isNotSameInstanceAs(viewModelStore)
     }
 

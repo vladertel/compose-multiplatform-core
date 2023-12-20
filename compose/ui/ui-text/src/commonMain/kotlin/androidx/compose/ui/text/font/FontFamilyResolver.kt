@@ -17,13 +17,11 @@
 package androidx.compose.ui.text.font
 
 import androidx.compose.runtime.State
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.caches.LruCache
 import androidx.compose.ui.text.platform.createSynchronizedObject
 import androidx.compose.ui.text.platform.synchronized
 import androidx.compose.ui.util.fastMap
 
-@ExperimentalTextApi
 internal class FontFamilyResolverImpl(
     internal val platformFontLoader: PlatformFontLoader /* exposed for desktop ParagraphBuilder */,
     private val platformResolveInterceptor: PlatformResolveInterceptor =
@@ -130,11 +128,15 @@ internal interface PlatformResolveInterceptor {
 }
 
 internal val GlobalTypefaceRequestCache = TypefaceRequestCache()
-@OptIn(ExperimentalTextApi::class)
 internal val GlobalAsyncTypefaceCache = AsyncTypefaceCache()
-
-@ExperimentalTextApi
-internal expect class PlatformFontFamilyTypefaceAdapter() : FontFamilyTypefaceAdapter
+internal expect class PlatformFontFamilyTypefaceAdapter() : FontFamilyTypefaceAdapter {
+    override fun resolve(
+        typefaceRequest: TypefaceRequest,
+        platformFontLoader: PlatformFontLoader,
+        onAsyncCompletion: (TypefaceResult.Immutable) -> Unit,
+        createDefaultTypeface: (TypefaceRequest) -> Any
+    ): TypefaceResult?
+}
 
 internal data class TypefaceRequest(
     val fontFamily: FontFamily?,

@@ -58,7 +58,6 @@ import androidx.core.view.WindowInsetsCompat;
  * Special layout for the containing of an overlay action bar (and its content) to correctly handle
  * fitting system windows when the content has request that its layout ignore them.
  *
- * @hide
  */
 @RestrictTo(LIBRARY_GROUP_PREFIX)
 @SuppressLint("UnknownNullness") // this is not public API
@@ -79,7 +78,6 @@ public class ActionBarOverlayLayout extends ViewGroup implements DecorContentPar
 
     // Content overlay drawable - generally the action bar's shadow
     private Drawable mWindowContentOverlay;
-    private boolean mIgnoreWindowContentOverlay;
 
     private boolean mOverlayMode;
     private boolean mHasNonEmbeddedTabs;
@@ -169,9 +167,6 @@ public class ActionBarOverlayLayout extends ViewGroup implements DecorContentPar
         setWillNotDraw(mWindowContentOverlay == null);
         ta.recycle();
 
-        mIgnoreWindowContentOverlay = context.getApplicationInfo().targetSdkVersion <
-                Build.VERSION_CODES.KITKAT;
-
         mFlingEstimator = new OverScroller(context);
     }
 
@@ -197,14 +192,6 @@ public class ActionBarOverlayLayout extends ViewGroup implements DecorContentPar
 
     public void setOverlayMode(boolean overlayMode) {
         mOverlayMode = overlayMode;
-
-        /*
-         * Drawing the window content overlay was broken before K so starting to draw it
-         * again unexpectedly will cause artifacts in some apps. They should fix it.
-         */
-        mIgnoreWindowContentOverlay = overlayMode &&
-                getContext().getApplicationInfo().targetSdkVersion <
-                        Build.VERSION_CODES.KITKAT;
     }
 
     public boolean isInOverlayMode() {
@@ -250,9 +237,7 @@ public class ActionBarOverlayLayout extends ViewGroup implements DecorContentPar
     @Override
     @SuppressWarnings("deprecation") /* SYSTEM_UI_FLAG_LAYOUT_* */
     public void onWindowSystemUiVisibilityChanged(int visible) {
-        if (Build.VERSION.SDK_INT >= 16) {
-            super.onWindowSystemUiVisibilityChanged(visible);
-        }
+        super.onWindowSystemUiVisibilityChanged(visible);
         pullChildren();
         final int diff = mLastSystemUiVisibility ^ visible;
         mLastSystemUiVisibility = visible;
@@ -539,9 +524,9 @@ public class ActionBarOverlayLayout extends ViewGroup implements DecorContentPar
     }
 
     @Override
-    public void draw(Canvas c) {
+    public void draw(@NonNull Canvas c) {
         super.draw(c);
-        if (mWindowContentOverlay != null && !mIgnoreWindowContentOverlay) {
+        if (mWindowContentOverlay != null) {
             final int top = mActionBarTop.getVisibility() == VISIBLE ?
                     (int) (mActionBarTop.getBottom() + mActionBarTop.getTranslationY() + 0.5f)
                     : 0;

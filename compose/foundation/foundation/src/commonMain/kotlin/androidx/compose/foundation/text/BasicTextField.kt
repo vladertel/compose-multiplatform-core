@@ -42,27 +42,32 @@ import androidx.compose.ui.text.input.VisualTransformation
  * Whenever the user edits the text, [onValueChange] is called with the most up to date state
  * represented by [String] with which developer is expected to update their state.
  *
- * Unlike [TextFieldValue] overload, this composable does not let the developer to control
- * selection, cursor and text composition information. Please check [TextFieldValue] and
- * corresponding [BasicTextField] overload for more information.
+ * Unlike [TextFieldValue] overload, this composable does not let the developer control selection,
+ * cursor and text composition information. Please check [TextFieldValue] and corresponding
+ * [BasicTextField] overload for more information.
  *
- * It is crucial that the value provided in the [onValueChange] is fed back into [BasicTextField] in
- * order to have the final state of the text being displayed.
- *
- * Example usage:
- * @sample androidx.compose.foundation.samples.BasicTextFieldWithStringSample
- *
- * Please keep in mind that [onValueChange] is useful to be informed about the latest state of the
- * text input by users, however it is generally not recommended to modify the value that you get
- * via [onValueChange] callback. Any change to this value may result in a context reset and end
- * up with input session restart. Such a scenario would cause glitches in the UI or text input
- * experience for users.
+ * It is crucial that the value provided to the [onValueChange] is fed back into [BasicTextField] in
+ * order to actually display and continue to edit that text in the field. The value you feed back
+ * into the field may be different than the one provided to the [onValueChange] callback, however
+ * the following caveats apply:
+ * - The new value must be provided to [BasicTextField] immediately (i.e. by the next frame), or
+ *   the text field may appear to glitch, e.g. the cursor may jump around. For more information
+ *   about this requirement, see
+ *   [this article](https://developer.android.com/jetpack/compose/text/user-input#state-practices).
+ * - The value fed back into the field may be different from the one passed to [onValueChange],
+ *   although this may result in the input connection being restarted, which can make the keyboard
+ *   flicker for the user. This is acceptable when you're using the callback to, for example, filter
+ *   out certain types of input, but should probably not be done on every update when entering
+ *   freeform text.
  *
  * This composable provides basic text editing functionality, however does not include any
  * decorations such as borders, hints/placeholder. A design system based implementation such as
  * Material Design Filled text field is typically what is needed to cover most of the needs. This
  * composable is designed to be used when a custom implementation for different design system is
  * needed.
+ *
+ * Example usage:
+ * @sample androidx.compose.foundation.samples.BasicTextFieldWithStringSample
  *
  * For example, if you need to include a placeholder in your TextField, you can write a composable
  * using the decoration box like this:
@@ -76,6 +81,8 @@ import androidx.compose.ui.text.input.VisualTransformation
  * security number, use a [visualTransformation] parameter. Below is the example of the text field
  * for entering a credit card number:
  * @sample androidx.compose.foundation.samples.CreditCardSample
+ *
+ * Note: This overload does not support [KeyboardOptions.shouldShowKeyboardOnFocus].
  *
  * @param value the input [String] text to be shown in the text field
  * @param onValueChange the callback that is triggered when the input service updates the text. An
@@ -94,11 +101,12 @@ import androidx.compose.ui.text.input.VisualTransformation
  * [KeyboardOptions.imeAction].
  * @param singleLine when set to true, this text field becomes a single horizontally scrolling
  * text field instead of wrapping onto multiple lines. The keyboard will be informed to not show
- * the return key as the [ImeAction]. Note that [maxLines] parameter will be ignored as the
- * maxLines attribute will be automatically set to 1.
- * @param maxLines the maximum height in terms of maximum number of visible lines. Should be
- * equal or greater than 1. Note that this parameter will be ignored and instead maxLines will be
- * set to 1 if [singleLine] is set to true.
+ * the return key as the [ImeAction]. [maxLines] and [minLines] are ignored as both are
+ * automatically set to 1.
+ * @param maxLines the maximum height in terms of maximum number of visible lines. It is required
+ * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
+ * @param minLines the minimum height in terms of minimum number of visible lines. It is required
+ * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
  * @param visualTransformation The visual transformation filter for changing the visual
  * representation of the input. By default no visual transformation is applied.
  * @param onTextLayout Callback that is executed when a new text layout is calculated. A
@@ -129,7 +137,8 @@ fun BasicTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     singleLine: Boolean = false,
-    maxLines: Int = Int.MAX_VALUE,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     onTextLayout: (TextLayoutResult) -> Unit = {},
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
@@ -177,6 +186,7 @@ fun BasicTextField(
         imeOptions = keyboardOptions.toImeOptions(singleLine = singleLine),
         keyboardActions = keyboardActions,
         softWrap = !singleLine,
+        minLines = if (singleLine) 1 else minLines,
         maxLines = if (singleLine) 1 else maxLines,
         decorationBox = decorationBox,
         enabled = enabled,
@@ -193,17 +203,19 @@ fun BasicTextField(
  * as selection, cursor and text composition information. Please check [TextFieldValue] for the
  * description of its contents.
  *
- * It is crucial that the value provided in the [onValueChange] is fed back into [BasicTextField] in
- * order to have the final state of the text being displayed.
- *
- * Example usage:
- * @sample androidx.compose.foundation.samples.BasicTextFieldSample
- *
- * Please keep in mind that [onValueChange] is useful to be informed about the latest state of the
- * text input by users, however it is generally not recommended to modify the values in the
- * [TextFieldValue] that you get via [onValueChange] callback. Any change to the values in
- * [TextFieldValue] may result in a context reset and end up with input session restart. Such
- * a scenario would cause glitches in the UI or text input experience for users.
+ * It is crucial that the value provided to the [onValueChange] is fed back into [BasicTextField] in
+ * order to actually display and continue to edit that text in the field. The value you feed back
+ * into the field may be different than the one provided to the [onValueChange] callback, however
+ * the following caveats apply:
+ * - The new value must be provided to [BasicTextField] immediately (i.e. by the next frame), or
+ *   the text field may appear to glitch, e.g. the cursor may jump around. For more information
+ *   about this requirement, see
+ *   [this article](https://developer.android.com/jetpack/compose/text/user-input#state-practices).
+ * - The value fed back into the field may be different from the one passed to [onValueChange],
+ *   although this may result in the input connection being restarted, which can make the keyboard
+ *   flicker for the user. This is acceptable when you're using the callback to, for example, filter
+ *   out certain types of input, but should probably not be done on every update when entering
+ *   freeform text.
  *
  * This composable provides basic text editing functionality, however does not include any
  * decorations such as borders, hints/placeholder. A design system based implementation such as
@@ -211,14 +223,18 @@ fun BasicTextField(
  * composable is designed to be used when a custom implementation for different design system is
  * needed.
  *
+ * Example usage:
+ * @sample androidx.compose.foundation.samples.BasicTextFieldSample
+ *
  * For example, if you need to include a placeholder in your TextField, you can write a composable
  * using the decoration box like this:
  * @sample androidx.compose.foundation.samples.PlaceholderBasicTextFieldSample
  *
- *
  * If you want to add decorations to your text field, such as icon or similar, and increase the
  * hit target area, use the decoration box:
  * @sample androidx.compose.foundation.samples.TextFieldWithIconSample
+ *
+ * Note: This overload does not support [KeyboardOptions.shouldShowKeyboardOnFocus].
  *
  * @param value The [androidx.compose.ui.text.input.TextFieldValue] to be shown in the
  * [BasicTextField].
@@ -237,11 +253,12 @@ fun BasicTextField(
  * [KeyboardOptions.imeAction].
  * @param singleLine when set to true, this text field becomes a single horizontally scrolling
  * text field instead of wrapping onto multiple lines. The keyboard will be informed to not show
- * the return key as the [ImeAction]. Note that [maxLines] parameter will be ignored as the
- * maxLines attribute will be automatically set to 1.
- * @param maxLines the maximum height in terms of maximum number of visible lines. Should be
- * equal or greater than 1. Note that this parameter will be ignored and instead maxLines will be
- * set to 1 if [singleLine] is set to true.
+ * the return key as the [ImeAction]. [maxLines] and [minLines] are ignored as both are
+ * automatically set to 1.
+ * @param maxLines the maximum height in terms of maximum number of visible lines. It is required
+ * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
+ * @param minLines the minimum height in terms of minimum number of visible lines. It is required
+ * that 1 <= [minLines] <= [maxLines]. This parameter is ignored when [singleLine] is true.
  * @param visualTransformation The visual transformation filter for changing the visual
  * representation of the input. By default no visual transformation is applied.
  * @param onTextLayout Callback that is executed when a new text layout is calculated. A
@@ -272,7 +289,8 @@ fun BasicTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     singleLine: Boolean = false,
-    maxLines: Int = Int.MAX_VALUE,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    minLines: Int = 1,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     onTextLayout: (TextLayoutResult) -> Unit = {},
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
@@ -296,9 +314,90 @@ fun BasicTextField(
         imeOptions = keyboardOptions.toImeOptions(singleLine = singleLine),
         keyboardActions = keyboardActions,
         softWrap = !singleLine,
+        minLines = if (singleLine) 1 else minLines,
         maxLines = if (singleLine) 1 else maxLines,
         decorationBox = decorationBox,
         enabled = enabled,
         readOnly = readOnly
+    )
+}
+
+@Deprecated("Maintained for binary compatibility", level = DeprecationLevel.HIDDEN)
+@Composable
+fun BasicTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = TextStyle.Default,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = false,
+    maxLines: Int = Int.MAX_VALUE,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    cursorBrush: Brush = SolidColor(Color.Black),
+    decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
+        @Composable { innerTextField -> innerTextField() }
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        enabled = enabled,
+        readOnly = readOnly,
+        textStyle = textStyle,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+        singleLine = singleLine,
+        minLines = 1,
+        maxLines = maxLines,
+        visualTransformation = visualTransformation,
+        onTextLayout = onTextLayout,
+        interactionSource = interactionSource,
+        cursorBrush = cursorBrush,
+        decorationBox = decorationBox
+    )
+}
+
+@Deprecated("Maintained for binary compatibility", level = DeprecationLevel.HIDDEN)
+@Composable
+fun BasicTextField(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    textStyle: TextStyle = TextStyle.Default,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    singleLine: Boolean = false,
+    maxLines: Int = Int.MAX_VALUE,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    onTextLayout: (TextLayoutResult) -> Unit = {},
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    cursorBrush: Brush = SolidColor(Color.Black),
+    decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
+        @Composable { innerTextField -> innerTextField() }
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        enabled = enabled,
+        readOnly = readOnly,
+        textStyle = textStyle,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+        singleLine = singleLine,
+        minLines = 1,
+        maxLines = maxLines,
+        visualTransformation = visualTransformation,
+        onTextLayout = onTextLayout,
+        interactionSource = interactionSource,
+        cursorBrush = cursorBrush,
+        decorationBox = decorationBox
     )
 }

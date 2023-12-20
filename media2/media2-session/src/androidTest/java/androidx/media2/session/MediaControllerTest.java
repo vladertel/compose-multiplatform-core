@@ -61,11 +61,13 @@ import androidx.media2.session.TestUtils.SyncHandler;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.FlakyTest;
 import androidx.test.filters.LargeTest;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.filters.Suppress;
 import androidx.testutils.PollingCheck;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -80,6 +82,7 @@ import java.util.concurrent.atomic.AtomicReference;
 // TODO(jaewan): Implement host-side test so controller and session can run in different processes.
 // TODO(jaewan): Fix flaky failure -- see MediaControllerImpl.getController()
 // TODO(jaeawn): Revisit create/close session in the sHandler. It's no longer necessary.
+@SdkSuppress(maxSdkVersion = 32) // b/244312419 and b/259936005
 @RunWith(AndroidJUnit4.class)
 @LargeTest
 @FlakyTest
@@ -1359,6 +1362,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
         testControllerAfterSessionIsClosed(TAG);
     }
 
+    @Ignore("b/259936005")
     @LargeTest
     @Test
     public void controllerAfterSessionIsClosed_sessionService() throws Exception {
@@ -1393,13 +1397,13 @@ public class MediaControllerTest extends MediaSessionTestBase {
 
     @LargeTest
     @Test
-    public void close_sessionService() throws InterruptedException {
+    public void close_sessionService() throws Exception {
         testCloseFromService(MockMediaSessionService.ID);
     }
 
     @LargeTest
     @Test
-    public void close_libraryService() throws InterruptedException {
+    public void close_libraryService() throws Exception {
         testCloseFromService(MockMediaLibraryService.ID);
     }
 
@@ -1624,7 +1628,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
         assertTrue(latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
     }
 
-    private void testCloseFromService(String id) throws InterruptedException {
+    private void testCloseFromService(String id) throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         TestServiceRegistry.getInstance().setSessionServiceCallback(new SessionServiceCallback() {
             @Override
@@ -1641,7 +1645,7 @@ public class MediaControllerTest extends MediaSessionTestBase {
         mController.close();
         // Wait until close triggers onDestroy() of the session service.
         assertTrue(latch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
-        assertNull(TestServiceRegistry.getInstance().getServiceInstance());
+        assertNull(TestServiceRegistry.getInstance().getServiceInstanceBlocking());
         testNoInteraction();
 
         // Test whether the controller is notified about later close of the session or

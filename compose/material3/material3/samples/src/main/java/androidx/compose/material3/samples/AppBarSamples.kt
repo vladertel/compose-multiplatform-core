@@ -17,9 +17,9 @@
 package androidx.compose.material3.samples
 
 import androidx.annotation.Sampled
-import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -32,35 +32,38 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallTopAppBar
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 /**
- * A sample for a simple use of [SmallTopAppBar].
+ * A sample for a simple use of small [TopAppBar].
  *
  * The top app bar here does not react to any scroll events in the content under it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Sampled
 @Composable
-fun SimpleSmallTopAppBar() {
+fun SimpleTopAppBar() {
     Scaffold(
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = {
                     Text(
                         "Simple TopAppBar",
@@ -112,6 +115,7 @@ fun SimpleSmallTopAppBar() {
  * The top app bar here does not react to any scroll events in the content under it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Sampled
 @Composable
 fun SimpleCenterAlignedTopAppBar() {
@@ -164,23 +168,24 @@ fun SimpleCenterAlignedTopAppBar() {
 }
 
 /**
- * A sample for a pinned [SmallTopAppBar].
+ * A sample for a pinned small [TopAppBar].
  *
  * The top app bar here is pinned to its location and changes its container color when the content
  * under it is scrolled.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Sampled
 @Composable
-fun PinnedSmallTopAppBar() {
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+fun PinnedTopAppBar() {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = {
                     Text(
-                        "Small TopAppBar",
+                        "TopAppBar",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -232,21 +237,22 @@ fun PinnedSmallTopAppBar() {
 }
 
 /**
- * A sample for a [SmallTopAppBar] that collapses when the content is scrolled up, and
+ * A sample for a small [TopAppBar] that collapses when the content is scrolled up, and
  * appears when the content scrolled down.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Sampled
 @Composable
-fun EnterAlwaysSmallTopAppBar() {
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+fun EnterAlwaysTopAppBar() {
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = {
                     Text(
-                        "Small TopAppBar",
+                        "TopAppBar",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -295,14 +301,11 @@ fun EnterAlwaysSmallTopAppBar() {
  * appears when the content is completely scrolled back down.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Sampled
 @Composable
 fun ExitUntilCollapsedMediumTopAppBar() {
-    val decayAnimationSpec = rememberSplineBasedDecay<Float>()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-        decayAnimationSpec,
-        rememberTopAppBarState()
-    )
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -358,14 +361,11 @@ fun ExitUntilCollapsedMediumTopAppBar() {
  * appears when the content is completely scrolled back down.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Sampled
 @Composable
 fun ExitUntilCollapsedLargeTopAppBar() {
-    val decayAnimationSpec = rememberSplineBasedDecay<Float>()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
-        decayAnimationSpec,
-        rememberTopAppBarState()
-    )
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -416,16 +416,20 @@ fun ExitUntilCollapsedLargeTopAppBar() {
     )
 }
 
+@Preview
 @Sampled
 @Composable
 fun SimpleBottomAppBar() {
-    BottomAppBar {
-        IconButton(onClick = { /* doSomething() */ }) {
-            Icon(Icons.Filled.Menu, contentDescription = "Localized description")
+    BottomAppBar(
+        actions = {
+            IconButton(onClick = { /* doSomething() */ }) {
+                Icon(Icons.Filled.Menu, contentDescription = "Localized description")
+            }
         }
-    }
+    )
 }
 
+@Preview
 @Sampled
 @Composable
 fun BottomAppBarWithFAB() {
@@ -445,9 +449,65 @@ fun BottomAppBarWithFAB() {
             FloatingActionButton(
                 onClick = { /* do something */ },
                 containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
-                elevation = BottomAppBarDefaults.BottomAppBarFabElevation
+                elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
             ) {
                 Icon(Icons.Filled.Add, "Localized description")
+            }
+        }
+    )
+}
+
+/**
+ * A sample for a [BottomAppBar] that collapses when the content is scrolled up, and
+ * appears when the content scrolled down.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Sampled
+@Composable
+fun ExitAlwaysBottomAppBar() {
+    val scrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        bottomBar = {
+            BottomAppBar(
+                actions = {
+                    IconButton(onClick = { /* doSomething() */ }) {
+                        Icon(Icons.Filled.Check, contentDescription = "Localized description")
+                    }
+                    IconButton(onClick = { /* doSomething() */ }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Localized description")
+                    }
+                },
+                scrollBehavior = scrollBehavior
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                modifier = Modifier.offset(y = 4.dp),
+                onClick = { /* do something */ },
+                containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
+                elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+            ) {
+                Icon(Icons.Filled.Add, "Localized description")
+            }
+        },
+        floatingActionButtonPosition = FabPosition.EndOverlay,
+        content = { innerPadding ->
+            LazyColumn(
+                contentPadding = innerPadding,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val list = (0..75).map { it.toString() }
+                items(count = list.size) {
+                    Text(
+                        text = list[it],
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    )
+                }
             }
         }
     )

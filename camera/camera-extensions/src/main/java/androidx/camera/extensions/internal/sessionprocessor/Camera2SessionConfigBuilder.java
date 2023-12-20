@@ -18,6 +18,7 @@ package androidx.camera.extensions.internal.sessionprocessor;
 
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.SessionConfiguration;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -35,6 +36,7 @@ import java.util.Map;
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class Camera2SessionConfigBuilder {
     private int mSessionTemplateId = CameraDevice.TEMPLATE_PREVIEW;
+    private int mSessionType = SessionConfiguration.SESSION_REGULAR;
     private Map<CaptureRequest.Key<?>, Object> mSessionParameters = new HashMap<>();
     private List<Camera2OutputConfig> mCamera2OutputConfigs = new ArrayList<>();
 
@@ -55,8 +57,8 @@ class Camera2SessionConfigBuilder {
      * Sets session parameters.
      */
     @NonNull
-    <T> Camera2SessionConfigBuilder addSessionParameter(
-            @NonNull CaptureRequest.Key<T> key, @Nullable T value) {
+    Camera2SessionConfigBuilder addSessionParameter(
+            @NonNull CaptureRequest.Key key, @Nullable Object value) {
         mSessionParameters.put(key, value);
         return this;
     }
@@ -67,6 +69,15 @@ class Camera2SessionConfigBuilder {
     @NonNull
     Camera2SessionConfigBuilder setSessionTemplateId(int templateId) {
         mSessionTemplateId = templateId;
+        return this;
+    }
+
+    /**
+     * Sets the session type for the session.
+     */
+    @NonNull
+    Camera2SessionConfigBuilder setSessionType(int sessionType) {
+        mSessionType = sessionType;
         return this;
     }
 
@@ -98,18 +109,22 @@ class Camera2SessionConfigBuilder {
      */
     @NonNull
     Camera2SessionConfig build() {
-        return new SessionConfigImpl(mSessionTemplateId, mSessionParameters, mCamera2OutputConfigs);
+        return new SessionConfigImpl(
+                mSessionTemplateId, mSessionType, mSessionParameters, mCamera2OutputConfigs);
     }
 
     private static class SessionConfigImpl implements Camera2SessionConfig {
         private final int mSessionTemplateId;
+        private final int mSessionType;
         private final Map<CaptureRequest.Key<?>, Object> mSessionParameters;
         private final List<Camera2OutputConfig> mCamera2OutputConfigs;
 
         SessionConfigImpl(int sessionTemplateId,
+                int sessionType,
                 Map<CaptureRequest.Key<?>, Object> sessionParameters,
                 List<Camera2OutputConfig> camera2OutputConfigs) {
             mSessionTemplateId = sessionTemplateId;
+            mSessionType = sessionType;
             mSessionParameters = sessionParameters;
             mCamera2OutputConfigs = camera2OutputConfigs;
         }
@@ -129,6 +144,11 @@ class Camera2SessionConfigBuilder {
         @Override
         public int getSessionTemplateId() {
             return mSessionTemplateId;
+        }
+
+        @Override
+        public int getSessionType() {
+            return mSessionType;
         }
     }
 }

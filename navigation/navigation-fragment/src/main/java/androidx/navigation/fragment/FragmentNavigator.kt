@@ -21,17 +21,28 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import androidx.annotation.CallSuper
-import androidx.annotation.IdRes
 import androidx.core.content.res.use
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentManager.OnBackStackChangedListener
+import androidx.fragment.app.FragmentTransaction
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
 import androidx.navigation.NavigatorProvider
+import androidx.navigation.NavigatorState
 import androidx.navigation.fragment.FragmentNavigator.Destination
+import java.lang.ref.WeakReference
 
 /**
  * Navigator that navigates through [fragment transactions][FragmentTransaction]. Every
@@ -45,6 +56,9 @@ import androidx.navigation.fragment.FragmentNavigator.Destination
  * Note that the default implementation does Fragment transactions
  * asynchronously, so the current Fragment will not be available immediately
  * (i.e., in callbacks to [NavController.OnDestinationChangedListener]).
+ *
+ * FragmentNavigator respects [Log.isLoggable] for debug logging, allowing you to
+ * use `adb shell setprop log.tag.FragmentNavigator VERBOSE`.
  */
 @Navigator.Name("fragment")
 public open class FragmentNavigator(
@@ -52,7 +66,217 @@ public open class FragmentNavigator(
     private val fragmentManager: FragmentManager,
     private val containerId: Int
 ) : Navigator<Destination>() {
+    // Logging for FragmentNavigator is automatically enabled along with FragmentManager logging.
+    // see more at [Debug your fragments][https://developer.android.com/guide/fragments/debugging]
+    private fun isLoggingEnabled(level: Int): Boolean {
+        return Log.isLoggable("FragmentManager", level) || Log.isLoggable(TAG, level)
+    }
     private val savedIds = mutableSetOf<String>()
+
+    /**
+     * A list of pending operations within a Transaction expected to be executed by FragmentManager.
+     * Pending ops are added at the start of a transaction, and by the time a transaction completes,
+     * this list is expected to be cleared.
+     *
+     * In general, each entry would be added only once to this list within a single transaction
+     * except in the case of singleTop transactions. Single top transactions involve two
+     * fragment instances with the same entry, so we would get two onBackStackChanged callbacks
+     * on the same entry.
+     *
+     * Each Pair represents the entry.id and whether this entry is getting popped
+     */
+    internal val pendingOps = mutableListOf<Pair<String, Boolean>>()
+
+    /**
+     * Get the back stack from the [state].
+     */
+    internal val backStack get() = state.backStack
+
+    private val fragmentObserver = LifecycleEventObserver { source, event ->
+        if (event == Lifecycle.Event.ON_DESTROY) {
+            val fragment = source as Fragment
+            val entry = state.transitionsInProgress.value.lastOrNull { entry ->
+                entry.id == fragment.tag
+            }
+            if (entry != null) {
+                if (isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(
+                        TAG,
+                        "Marking transition complete for entry $entry " +
+                            "due to fragment $source lifecycle reaching DESTROYED"
+                    )
+                }
+                state.markTransitionComplete(entry)
+            }
+        }
+    }
+
+    private val fragmentViewObserver = { entry: NavBackStackEntry ->
+        LifecycleEventObserver { owner, event ->
+            // Once the lifecycle reaches RESUMED, if the entry is in the back stack we can mark
+            // the transition complete
+            if (event == Lifecycle.Event.ON_RESUME && state.backStack.value.contains(entry)) {
+                if (isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(
+                        TAG,
+                        "Marking transition complete for entry $entry due " +
+                            "to fragment $owner view lifecycle reaching RESUMED"
+                    )
+                }
+                state.markTransitionComplete(entry)
+            }
+            // Once the lifecycle reaches DESTROYED, we can mark the transition complete
+            if (event == Lifecycle.Event.ON_DESTROY) {
+                if (isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(
+                        TAG,
+                        "Marking transition complete for entry $entry due " +
+                            "to fragment $owner view lifecycle reaching DESTROYED"
+                    )
+                }
+                state.markTransitionComplete(entry)
+            }
+        }
+    }
+
+    override fun onAttach(state: NavigatorState) {
+        super.onAttach(state)
+        if (isLoggingEnabled(Log.VERBOSE)) {
+            Log.v(TAG, "onAttach")
+        }
+
+        fragmentManager.addFragmentOnAttachListener { _, fragment ->
+            val entry = state.backStack.value.lastOrNull { it.id == fragment.tag }
+            if (isLoggingEnabled(Log.VERBOSE)) {
+                Log.v(
+                    TAG,
+                    "Attaching fragment $fragment associated with entry " +
+                        "$entry to FragmentManager $fragmentManager"
+                )
+            }
+            if (entry != null) {
+                attachObservers(entry, fragment)
+                // We need to ensure that if the fragment has its state saved and then that state
+                // later cleared without the restoring the fragment that we also clear the state
+                // of the associated entry.
+                attachClearViewModel(fragment, entry, state)
+            }
+        }
+
+        fragmentManager.addOnBackStackChangedListener(object : OnBackStackChangedListener {
+            override fun onBackStackChanged() { }
+
+            override fun onBackStackChangeStarted(fragment: Fragment, pop: Boolean) {
+                // We only care about the pop case here since in the navigate case by the time
+                // we get here the fragment will have already been moved to STARTED.
+                // In the case of a pop, we move the entries to STARTED
+                if (pop) {
+                    val entry = state.backStack.value.lastOrNull { it.id == fragment.tag }
+                    if (isLoggingEnabled(Log.VERBOSE)) {
+                        Log.v(
+                            TAG,
+                            "OnBackStackChangedStarted for fragment " +
+                                "$fragment associated with entry $entry"
+                        )
+                    }
+                    entry?.let { state.prepareForTransition(it) }
+                }
+            }
+
+            override fun onBackStackChangeCommitted(fragment: Fragment, pop: Boolean) {
+                val entry = (state.backStack.value + state.transitionsInProgress.value).lastOrNull {
+                    it.id == fragment.tag
+                }
+
+                // In case of system back, all pending transactions are executed before handling
+                // back press, hence pendingOps will be empty.
+                val isSystemBack = pop && pendingOps.isEmpty() && fragment.isRemoving
+                val op = pendingOps.firstOrNull { it.first == fragment.tag }
+                op?.let { pendingOps.remove(it) }
+
+                if (!isSystemBack && isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(
+                        TAG,
+                        "OnBackStackChangedCommitted for fragment " +
+                            "$fragment associated with entry $entry"
+                    )
+                }
+
+                val popOp = op?.second == true
+                if (!pop && !popOp) {
+                    requireNotNull(entry) {
+                        "The fragment " + fragment + " is unknown to the FragmentNavigator. " +
+                            "Please use the navigate() function to add fragments to the " +
+                            "FragmentNavigator managed FragmentManager."
+                    }
+                }
+                if (entry != null) {
+                    // In case we get a fragment that was never attached to the fragment manager,
+                    // we need to make sure we still return the entries to their proper final state.
+                    attachClearViewModel(fragment, entry, state)
+                    // This is the case of system back where we will need to make the call to
+                    // popBackStack. Otherwise, popBackStack was called directly and we avoid
+                    // popping again.
+                    if (isSystemBack) {
+                        if (isLoggingEnabled(Log.VERBOSE)) {
+                            Log.v(
+                                TAG,
+                                "OnBackStackChangedCommitted for fragment $fragment " +
+                                    "popping associated entry $entry via system back"
+                            )
+                        }
+                        state.popWithTransition(entry, false)
+                    }
+                }
+            }
+        })
+    }
+
+    private fun attachObservers(entry: NavBackStackEntry, fragment: Fragment) {
+        fragment.viewLifecycleOwnerLiveData.observe(fragment) { owner ->
+            // attach observer unless it was already popped at this point
+            // we get onBackStackStackChangedCommitted callback for an executed navigate where we
+            // remove incoming fragment from pendingOps before ATTACH so the listener will still
+            // be added
+            val isPending = pendingOps.any { it.first == fragment.tag }
+            if (owner != null && !isPending) {
+                val viewLifecycle = fragment.viewLifecycleOwner.lifecycle
+                // We only need to add observers while the viewLifecycle has not reached a final
+                // state
+                if (viewLifecycle.currentState.isAtLeast(Lifecycle.State.CREATED)) {
+                    viewLifecycle.addObserver(fragmentViewObserver(entry))
+                }
+            }
+        }
+        fragment.lifecycle.addObserver(fragmentObserver)
+    }
+
+    internal fun attachClearViewModel(
+        fragment: Fragment,
+        entry: NavBackStackEntry,
+        state: NavigatorState
+    ) {
+        val viewModel = ViewModelProvider(
+            fragment.viewModelStore,
+            viewModelFactory { initializer { ClearEntryStateViewModel() } },
+            CreationExtras.Empty
+        )[ClearEntryStateViewModel::class.java]
+        viewModel.completeTransition =
+            WeakReference {
+                entry.let {
+                    state.transitionsInProgress.value.forEach { entry ->
+                        if (isLoggingEnabled(Log.VERBOSE)) {
+                            Log.v(
+                                TAG,
+                                "Marking transition complete for entry " +
+                                    "$entry due to fragment $fragment viewmodel being cleared"
+                            )
+                        }
+                        state.markTransitionComplete(entry)
+                    }
+                }
+            }
+    }
 
     /**
      * {@inheritDoc}
@@ -73,14 +297,15 @@ public open class FragmentNavigator(
             )
             return
         }
+        val beforePopList = state.backStack.value
+        // Get the set of entries that are going to be popped
+        val popUpToIndex = beforePopList.indexOf(popUpTo)
+        val poppedList = beforePopList.subList(
+            popUpToIndex,
+            beforePopList.size
+        )
+        val initialEntry = beforePopList.first()
         if (savedState) {
-            val beforePopList = state.backStack.value
-            val initialEntry = beforePopList.first()
-            // Get the set of entries that are going to be popped
-            val poppedList = beforePopList.subList(
-                beforePopList.indexOf(popUpTo),
-                beforePopList.size
-            )
             // Now go through the list in reversed order (i.e., started from the most added)
             // and save the back stack state of each.
             for (entry in poppedList.reversed()) {
@@ -100,7 +325,31 @@ public open class FragmentNavigator(
                 FragmentManager.POP_BACK_STACK_INCLUSIVE
             )
         }
-        state.pop(popUpTo, savedState)
+        if (isLoggingEnabled(Log.VERBOSE)) {
+            Log.v(
+                TAG,
+                "Calling popWithTransition via popBackStack() on entry " +
+                    "$popUpTo with savedState $savedState"
+            )
+        }
+
+        val incomingEntry = beforePopList.elementAtOrNull(popUpToIndex - 1)
+        if (incomingEntry != null) {
+            addPendingOps(incomingEntry.id)
+        }
+        // add pending ops here before any animation (if present) starts
+        poppedList.filter { entry ->
+            // normally we don't add initialEntry to pending ops because the adding/popping
+            // of an isolated fragment does not trigger onBackStackCommitted. But if initial
+            // entry was already added to pendingOps, it was likely an incomingEntry that now
+            // needs to be popped, so we need to overwrite isPop to true here.
+            pendingOps.asSequence().map { it.first }.contains(entry.id) ||
+                entry.id != initialEntry.id
+        }.forEach { entry ->
+            addPendingOps(entry.id, isPop = true)
+        }
+
+        state.popWithTransition(popUpTo, savedState)
     }
 
     public override fun createDestination(): Destination {
@@ -146,6 +395,8 @@ public open class FragmentNavigator(
      * Note that the default implementation commits the new Fragment
      * asynchronously, so the new Fragment is not instantly available
      * after this call completes.
+     *
+     * This call will be ignored if the FragmentManager state has already been saved.
      */
     override fun navigate(
         entries: List<NavBackStackEntry>,
@@ -168,8 +419,7 @@ public open class FragmentNavigator(
         navOptions: NavOptions?,
         navigatorExtras: Navigator.Extras?
     ) {
-        val backStack = state.backStack.value
-        val initialNavigation = backStack.isEmpty()
+        val initialNavigation = state.backStack.value.isEmpty()
         val restoreState = (
             navOptions != null && !initialNavigation &&
                 navOptions.shouldRestoreState() &&
@@ -178,9 +428,90 @@ public open class FragmentNavigator(
         if (restoreState) {
             // Restore back stack does all the work to restore the entry
             fragmentManager.restoreBackStack(entry.id)
-            state.push(entry)
+            state.pushWithTransition(entry)
             return
         }
+        val ft = createFragmentTransaction(entry, navOptions)
+
+        if (!initialNavigation) {
+            val outgoingEntry = state.backStack.value.lastOrNull()
+            // if outgoing entry is initial entry, FragmentManager still triggers onBackStackChange
+            // callback for it, so we don't filter out initial entry here
+            if (outgoingEntry != null) {
+                addPendingOps(outgoingEntry.id)
+            }
+            // add pending ops here before any animation (if present) starts
+            addPendingOps(entry.id)
+            ft.addToBackStack(entry.id)
+        }
+
+        if (navigatorExtras is Extras) {
+            for ((key, value) in navigatorExtras.sharedElements) {
+                ft.addSharedElement(key, value)
+            }
+        }
+        ft.commit()
+        // The commit succeeded, update our view of the world
+        if (isLoggingEnabled(Log.VERBOSE)) {
+            Log.v(
+                TAG,
+                "Calling pushWithTransition via navigate() on entry $entry"
+            )
+        }
+        state.pushWithTransition(entry)
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * This method should always call
+     * [FragmentTransaction.setPrimaryNavigationFragment]
+     * so that the Fragment associated with the new destination can be retrieved with
+     * [FragmentManager.getPrimaryNavigationFragment].
+     *
+     * Note that the default implementation commits the new Fragment
+     * asynchronously, so the new Fragment is not instantly available
+     * after this call completes.
+     *
+     * This call will be ignored if the FragmentManager state has already been saved.
+     */
+    override fun onLaunchSingleTop(backStackEntry: NavBackStackEntry) {
+        if (fragmentManager.isStateSaved) {
+            Log.i(
+                TAG,
+                "Ignoring onLaunchSingleTop() call: FragmentManager has already saved its state"
+            )
+            return
+        }
+        val ft = createFragmentTransaction(backStackEntry, null)
+        val backstack = state.backStack.value
+        if (backstack.size > 1) {
+            // If the Fragment to be replaced is on the FragmentManager's
+            // back stack, a simple replace() isn't enough so we
+            // remove it from the back stack and put our replacement
+            // on the back stack in its place
+            val incomingEntry = backstack.elementAtOrNull(backstack.lastIndex - 1)
+            if (incomingEntry != null) {
+                addPendingOps(incomingEntry.id)
+            }
+            addPendingOps(backStackEntry.id, isPop = true)
+            fragmentManager.popBackStack(
+                backStackEntry.id,
+                FragmentManager.POP_BACK_STACK_INCLUSIVE
+            )
+
+            addPendingOps(backStackEntry.id, deduplicate = false)
+            ft.addToBackStack(backStackEntry.id)
+        }
+        ft.commit()
+        // The commit succeeded, update our view of the world
+        state.onLaunchSingleTop(backStackEntry)
+    }
+
+    private fun createFragmentTransaction(
+        entry: NavBackStackEntry,
+        navOptions: NavOptions?
+    ): FragmentTransaction {
         val destination = entry.destination as Destination
         val args = entry.arguments
         var className = destination.className
@@ -201,50 +532,10 @@ public open class FragmentNavigator(
             popExitAnim = if (popExitAnim != -1) popExitAnim else 0
             ft.setCustomAnimations(enterAnim, exitAnim, popEnterAnim, popExitAnim)
         }
-        ft.replace(containerId, frag)
+        ft.replace(containerId, frag, entry.id)
         ft.setPrimaryNavigationFragment(frag)
-        @IdRes val destId = destination.id
-        // TODO Build first class singleTop behavior for fragments
-        val isSingleTopReplacement = (
-            navOptions != null && !initialNavigation &&
-                navOptions.shouldLaunchSingleTop() &&
-                backStack.last().destination.id == destId
-            )
-        val isAdded = when {
-            initialNavigation -> {
-                true
-            }
-            isSingleTopReplacement -> {
-                // Single Top means we only want one instance on the back stack
-                if (backStack.size > 1) {
-                    // If the Fragment to be replaced is on the FragmentManager's
-                    // back stack, a simple replace() isn't enough so we
-                    // remove it from the back stack and put our replacement
-                    // on the back stack in its place
-                    fragmentManager.popBackStack(
-                        entry.id,
-                        FragmentManager.POP_BACK_STACK_INCLUSIVE
-                    )
-                    ft.addToBackStack(entry.id)
-                }
-                false
-            }
-            else -> {
-                ft.addToBackStack(entry.id)
-                true
-            }
-        }
-        if (navigatorExtras is Extras) {
-            for ((key, value) in navigatorExtras.sharedElements) {
-                ft.addSharedElement(key, value)
-            }
-        }
         ft.setReorderingAllowed(true)
-        ft.commit()
-        // The commit succeeded, update our view of the world
-        if (isAdded) {
-            state.push(entry)
-        }
+        return ft
     }
 
     public override fun onSaveState(): Bundle? {
@@ -331,6 +622,7 @@ public open class FragmentNavigator(
         }
 
         override fun equals(other: Any?): Boolean {
+            if (this === other) return true
             if (other == null || other !is Destination) return false
             return super.equals(other) && _className == other._className
         }
@@ -411,5 +703,24 @@ public open class FragmentNavigator(
     private companion object {
         private const val TAG = "FragmentNavigator"
         private const val KEY_SAVED_IDS = "androidx-nav-fragment:navigator:savedIds"
+    }
+
+    internal class ClearEntryStateViewModel : ViewModel() {
+        lateinit var completeTransition: WeakReference<() -> Unit>
+        override fun onCleared() {
+            super.onCleared()
+            completeTransition.get()?.invoke()
+        }
+    }
+
+    /**
+     * In general, each entry would only get one callback within a transaction except
+     * for single top transactions, where we would get two callbacks for the same entry.
+     */
+    private fun addPendingOps(id: String, isPop: Boolean = false, deduplicate: Boolean = true) {
+        if (deduplicate) {
+            pendingOps.removeAll { it.first == id }
+        }
+        pendingOps.add(id to isPop)
     }
 }

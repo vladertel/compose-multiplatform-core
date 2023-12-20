@@ -16,36 +16,41 @@
 
 package androidx.graphics.opengl.egl
 
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.SurfaceTexture
 import android.hardware.HardwareBuffer
 import android.hardware.SyncFence
-import android.media.ImageReader
 import android.opengl.EGL14
 import android.opengl.EGLSurface
 import android.opengl.GLES20
 import android.os.Build
 import android.view.Surface
-import androidx.annotation.RequiresApi
+import androidx.hardware.SyncFenceCompat
 import androidx.opengl.EGLBindings
 import androidx.opengl.EGLExt
-import androidx.opengl.EGLExt.Companion.EGL_SYNC_CONDITION_KHR
-import androidx.opengl.EGLExt.Companion.EGL_SYNC_FENCE_KHR
-import androidx.opengl.EGLExt.Companion.EGL_SYNC_NATIVE_FENCE_ANDROID
-import androidx.opengl.EGLExt.Companion.EGL_SYNC_PRIOR_COMMANDS_COMPLETE_KHR
-import androidx.opengl.EGLExt.Companion.EGL_SYNC_TYPE_KHR
+import androidx.opengl.EGLExt.Companion.EGL_ANDROID_CLIENT_BUFFER
 import androidx.opengl.EGLExt.Companion.EGL_ANDROID_IMAGE_NATIVE_BUFFER
 import androidx.opengl.EGLExt.Companion.EGL_ANDROID_NATIVE_FENCE_SYNC
+import androidx.opengl.EGLExt.Companion.EGL_FOREVER_KHR
 import androidx.opengl.EGLExt.Companion.EGL_KHR_FENCE_SYNC
 import androidx.opengl.EGLExt.Companion.EGL_KHR_IMAGE
 import androidx.opengl.EGLExt.Companion.EGL_KHR_IMAGE_BASE
 import androidx.opengl.EGLExt.Companion.EGL_KHR_SURFACELESS_CONTEXT
+import androidx.opengl.EGLExt.Companion.EGL_SYNC_CONDITION_KHR
+import androidx.opengl.EGLExt.Companion.EGL_SYNC_FENCE_KHR
+import androidx.opengl.EGLExt.Companion.EGL_SYNC_FLUSH_COMMANDS_BIT_KHR
+import androidx.opengl.EGLExt.Companion.EGL_SYNC_NATIVE_FENCE_ANDROID
+import androidx.opengl.EGLExt.Companion.EGL_SYNC_PRIOR_COMMANDS_COMPLETE_KHR
+import androidx.opengl.EGLExt.Companion.EGL_SYNC_STATUS_KHR
+import androidx.opengl.EGLExt.Companion.EGL_SYNC_TYPE_KHR
+import androidx.opengl.EGLSyncKHR
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
+import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
-import kotlin.concurrent.thread
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -284,19 +289,16 @@ class EGLManagerTest {
         }
     }
 
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.KITKAT)
     @Test
     fun testSurfaceContentsWithBackBuffer() {
         verifySurfaceContentsWithWindowConfig()
     }
 
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.KITKAT)
     @Test
     fun testSurfaceContentsWithFrontBuffer() {
         verifySurfaceContentsWithWindowConfig(true)
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private fun verifySurfaceContentsWithWindowConfig(
         singleBuffered: Boolean = false
     ) {
@@ -310,57 +312,13 @@ class EGLManagerTest {
 
             val width = 8
             val height = 5
-            val targetColor = Color.RED
-            val imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 1)
-            var canRender = false
-
-            thread {
-                canRender = drawSurface(imageReader.surface, targetColor, singleBuffered)
-            }.join()
-
-            try {
-                if (canRender) {
-                    val image = imageReader.acquireLatestImage()
-                    val plane = image.planes[0]
-                    assertEquals(4, plane.pixelStride)
-
-                    val pixelStride = plane.pixelStride
-                    val rowStride = plane.rowStride
-                    val rowPadding = rowStride - pixelStride * width
-                    var offset = 0
-                    for (y in 0 until height) {
-                        for (x in 0 until width) {
-                            val red = plane.buffer[offset].toInt() and 0xff
-                            val green = plane.buffer[offset + 1].toInt() and 0xff
-                            val blue = plane.buffer[offset + 2].toInt() and 0xff
-                            val alpha = plane.buffer[offset + 3].toInt() and 0xff
-                            val packedColor = Color.argb(alpha, red, green, blue)
-                            assertEquals("Index: " + x + ", " + y, targetColor, packedColor)
-                            offset += pixelStride
-                        }
-                        offset += rowPadding
-                    }
-                }
-            } finally {
-                imageReader.close()
-                release()
+            val texture = IntArray(1)
+            GLES20.glGenTextures(1, texture, 0)
+            val surfaceTexture = SurfaceTexture(texture[0], singleBuffered).apply {
+                setDefaultBufferSize(width, height)
             }
-        }
-    }
 
-    private fun drawSurface(
-        surface: Surface,
-        color: Int,
-        singleBuffered: Boolean
-    ): Boolean {
-        var canRender = false
-        testEGLManager {
-            initialize()
-            val config = loadConfig(EGLConfigAttributes.RGBA_8888)
-            if (config == null) {
-                fail("Config 8888 should be supported")
-            }
-            createContext(config!!)
+            val surface = Surface(surfaceTexture)
             val configAttributes = if (singleBuffered) {
                 EGLConfigAttributes {
                     EGL14.EGL_RENDER_BUFFER to EGL14.EGL_SINGLE_BUFFER
@@ -368,27 +326,54 @@ class EGLManagerTest {
             } else {
                 null
             }
-            val eglSurface = eglSpec.eglCreateWindowSurface(config, surface, configAttributes)
-            // Skip tests of the device does not support EGL_SINGLE_BUFFER
-            canRender = !singleBuffered || eglSpec.isSingleBufferedSurface(eglSurface)
-            if (canRender) {
-                makeCurrent(eglSurface)
-                assertEquals("Make current failed", EGL14.EGL_SUCCESS, eglSpec.eglGetError())
-                GLES20.glClearColor(
-                    Color.red(color) / 255f,
-                    Color.green(color) / 255f,
-                    Color.blue(color) / 255f,
-                    Color.alpha(color) / 255f
-                )
-                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-                swapAndFlushBuffers()
-                assertEquals("Swapbuffers failed", EGL14.EGL_SUCCESS, eglSpec.eglGetError())
-            }
+            val eglSurface = eglSpec.eglCreateWindowSurface(eglConfig!!, surface, configAttributes)
+            try {
+                // Skip tests of the device does not support EGL_SINGLE_BUFFER
+                val canRender = !singleBuffered || eglSpec.isSingleBufferedSurface(eglSurface)
+                if (canRender) {
+                    makeCurrent(eglSurface)
+                    val color = Color.RED
+                    assertEquals("Make current failed", EGL14.EGL_SUCCESS, eglSpec.eglGetError())
+                    GLES20.glClearColor(
+                        Color.red(color) / 255f,
+                        Color.green(color) / 255f,
+                        Color.blue(color) / 255f,
+                        Color.alpha(color) / 255f
+                    )
+                    GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+                    GLES20.glFinish()
+                    swapAndFlushBuffers()
 
-            eglSpec.eglDestroySurface(eglSurface)
-            release()
+                    assertEquals("Swapbuffers failed", EGL14.EGL_SUCCESS, eglSpec.eglGetError())
+
+                    val buf = ByteBuffer.allocateDirect(width * height * 4)
+                    GLES20.glReadPixels(
+                        0,
+                        0,
+                        width,
+                        height,
+                        GLES20.GL_RGBA,
+                        GLES20.GL_UNSIGNED_BYTE,
+                        buf
+                    )
+                    buf.rewind()
+
+                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    bitmap.copyPixelsFromBuffer(buf)
+                    for (i in 0 until bitmap.width) {
+                        for (j in 0 until bitmap.height) {
+                            assertEquals(Color.RED, bitmap.getPixel(i, j))
+                        }
+                    }
+                }
+            } finally {
+                eglSpec.eglDestroySurface(eglSurface)
+                surface.release()
+                surfaceTexture.release()
+                GLES20.glDeleteTextures(1, texture, 0)
+                release()
+            }
         }
-        return canRender
     }
 
     @Test
@@ -399,9 +384,14 @@ class EGLManagerTest {
                 isExtensionSupported(EGL_KHR_IMAGE_BASE)
             val androidImageNativeBufferSupported =
                 isExtensionSupported(EGL_ANDROID_IMAGE_NATIVE_BUFFER)
+            val eglClientBufferSupported =
+                isExtensionSupported(EGL_ANDROID_CLIENT_BUFFER)
             // According to EGL spec both these extensions are required in order to support
             // eglGetNativeClientBufferAndroid
-            if (khrImageBaseSupported && androidImageNativeBufferSupported) {
+            if (khrImageBaseSupported &&
+                androidImageNativeBufferSupported &&
+                eglClientBufferSupported
+            ) {
                 assertTrue(EGLBindings.nSupportsEglGetNativeClientBufferAndroid())
             }
         }
@@ -484,6 +474,74 @@ class EGLManagerTest {
                     eglSpec.eglGetSyncAttribKHR(sync!!, EGL_SYNC_TYPE_KHR, syncAttr, 0))
                 assertEquals(EGL_SYNC_NATIVE_FENCE_ANDROID, syncAttr[0])
                 assertTrue(eglSpec.eglDestroySyncKHR(sync))
+            }
+        }
+    }
+
+    @Test
+    fun testEGLDupNativeFenceFDMethodLinked() {
+        verifyMethodLinked {
+            EGLExt.eglDupNativeFenceFDANDROID(EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY),
+                EGLSyncKHR(0))
+        }
+    }
+
+    @Test
+    fun testEglCreateSyncAndDestroyKHRMethodLinked() {
+        verifyMethodLinked {
+            val display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+            val sync = EGLExt.eglCreateSyncKHR(display, EGL_SYNC_FENCE_KHR, null)
+            if (sync != null) {
+                EGLExt.eglDestroySyncKHR(display, sync)
+            }
+        }
+    }
+
+    @Test
+    fun testEglGetSyncAttribMethodLinked() {
+        verifyMethodLinked {
+            val display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+            val sync = EGLExt.eglCreateSyncKHR(display, EGL_SYNC_FENCE_KHR, null)
+            if (sync != null) {
+                EGLExt.eglGetSyncAttribKHR(
+                    EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY),
+                    sync,
+                    EGL_SYNC_STATUS_KHR,
+                    IntArray(1),
+                    0
+                )
+                EGLExt.eglDestroySyncKHR(display, sync)
+            }
+        }
+    }
+
+    @Test
+    fun testEglClientWaitSyncMethodLinked() {
+        verifyMethodLinked {
+            val display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+            val sync = EGLExt.eglCreateSyncKHR(display, EGL_SYNC_FENCE_KHR, null)
+            if (sync != null) {
+                EGLExt.eglClientWaitSyncKHR(
+                    display,
+                    sync,
+                    EGL_SYNC_FLUSH_COMMANDS_BIT_KHR,
+                    EGL_FOREVER_KHR
+                )
+                EGLExt.eglDestroySyncKHR(display, sync)
+            }
+        }
+    }
+
+    private inline fun verifyMethodLinked(crossinline block: () -> Unit) {
+        testEGLManager {
+            initializeWithDefaultConfig()
+            try {
+                block()
+            } catch (exception: UnsatisfiedLinkError) {
+                fail("Unable to resolve method: " + exception.message)
+            } catch (exception: Exception) {
+                // We only care about unsatisfied link errors. If the device does not support this
+                // exception we do not care in this test case
             }
         }
     }
@@ -597,7 +655,7 @@ class EGLManagerTest {
                 val status = eglSpec.eglClientWaitSyncKHR(
                     sync!!,
                     0,
-                    EGLExt.EGL_FOREVER_KHR
+                    EGL_FOREVER_KHR
                 )
                 assertEquals("eglClientWaitSync failed",
                     EGLExt.EGL_CONDITION_SATISFIED_KHR, status)
@@ -608,7 +666,6 @@ class EGLManagerTest {
         }
     }
 
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.KITKAT)
     @Test
     fun testEglDupNativeFenceFDANDROID() {
         testEGLManager {
@@ -622,7 +679,8 @@ class EGLManagerTest {
                 GLES20.glFlush()
                 assertEquals("glFlush failed", GLES20.GL_NO_ERROR, GLES20.glGetError())
 
-                val syncFence = eglSpec.eglDupNativeFenceFDANDROID(sync!!)
+                val display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+                val syncFence = EGLExt.eglDupNativeFenceFDANDROID(display, sync!!)
                 assertTrue(syncFence.isValid())
                 assertTrue(syncFence.await(TimeUnit.MILLISECONDS.toNanos(3000)))
 
@@ -633,8 +691,7 @@ class EGLManagerTest {
             }
         }
     }
-
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.KITKAT)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Test
     fun testEglDupNativeFenceFDANDROIDawaitForever() {
         testEGLManager {
@@ -648,23 +705,24 @@ class EGLManagerTest {
                 GLES20.glFlush()
                 assertEquals("glFlush failed", GLES20.GL_NO_ERROR, GLES20.glGetError())
 
-                val syncFence = eglSpec.eglDupNativeFenceFDANDROID(sync!!)
+                val display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+                val syncFence = EGLExt.eglDupNativeFenceFDANDROID(display, sync!!)
                 assertTrue(syncFence.isValid())
-                assertNotEquals(SyncFence.SIGNAL_TIME_INVALID, syncFence.getSignalTime())
+                assertNotEquals(SyncFenceCompat.SIGNAL_TIME_INVALID, syncFence.getSignalTimeNanos())
                 assertTrue(syncFence.awaitForever())
 
                 assertTrue(eglSpec.eglDestroySyncKHR(sync))
                 assertEquals("eglDestroySyncKHR failed", EGL14.EGL_SUCCESS, EGL14.eglGetError())
                 syncFence.close()
                 assertFalse(syncFence.isValid())
-                assertEquals(SyncFence.SIGNAL_TIME_INVALID, syncFence.getSignalTime())
+                assertEquals(SyncFence.SIGNAL_TIME_INVALID, syncFence.getSignalTimeNanos())
             }
         }
     }
 
     @Test
     fun testSignedForeverConstantMatchesNDK() {
-        assertTrue(EGLBindings.nEqualToNativeForeverTimeout(EGLExt.EGL_FOREVER_KHR))
+        assertTrue(EGLBindings.nEqualToNativeForeverTimeout(EGL_FOREVER_KHR))
     }
 
     // Helper method used in testing to initialize EGL and default

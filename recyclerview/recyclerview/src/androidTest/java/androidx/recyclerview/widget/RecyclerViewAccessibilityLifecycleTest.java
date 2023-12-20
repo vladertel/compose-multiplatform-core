@@ -20,6 +20,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
@@ -228,6 +229,7 @@ public class RecyclerViewAccessibilityLifecycleTest extends BaseRecyclerViewInst
                     AccessibilityNodeInfo info = recyclerView.getChildAt(i)
                             .createAccessibilityNodeInfo();
                     assertTrue("custom delegate sets isChecked", info.isChecked());
+                    assertNotNull(info.getCollectionItemInfo());
                     children.add(view);
                 }
             }
@@ -250,6 +252,7 @@ public class RecyclerViewAccessibilityLifecycleTest extends BaseRecyclerViewInst
                     assertTrue(children.contains(view));
                     AccessibilityNodeInfo info = view.createAccessibilityNodeInfo();
                     assertTrue("custom delegate sets isChecked", info.isChecked());
+                    assertNotNull(info.getCollectionItemInfo());
                 }
             }
         });
@@ -299,6 +302,8 @@ public class RecyclerViewAccessibilityLifecycleTest extends BaseRecyclerViewInst
                     View view = recyclerView.getChildAt(i);
                     assertEquals(i, recyclerView.getChildAdapterPosition(view));
                     assertTrue(accessibiltyDelegateIsItemDelegate(recyclerView, view));
+                    AccessibilityNodeInfo info = view.createAccessibilityNodeInfo();
+                    assertNotNull(info.getCollectionItemInfo());
                 }
             }
         });
@@ -365,7 +370,6 @@ public class RecyclerViewAccessibilityLifecycleTest extends BaseRecyclerViewInst
                 });
     }
 
-    @SdkSuppress(minSdkVersion = 16)
     @Test
     public void onInitNodeInfoWithNestedDelegateReturnsNodeProvider() throws Throwable {
         final AccessibilityNodeProviderCompat expectedNodeProvider =
@@ -421,7 +425,6 @@ public class RecyclerViewAccessibilityLifecycleTest extends BaseRecyclerViewInst
                 });
     }
 
-    @SdkSuppress(minSdkVersion = 16)
     @Test
     public void performActionWithhNestedDelegate() throws Throwable {
         final int expectedActionId = 42;
@@ -439,7 +442,6 @@ public class RecyclerViewAccessibilityLifecycleTest extends BaseRecyclerViewInst
                 });
     }
 
-    @SdkSuppress(minSdkVersion = 16)
     @Test
     public void performActionWithhNestedDelegateCallsView() throws Throwable {
         final int expectedActionId = 42;
@@ -467,7 +469,6 @@ public class RecyclerViewAccessibilityLifecycleTest extends BaseRecyclerViewInst
                 });
     }
 
-    @SdkSuppress(minSdkVersion = 16)
     @Test
     public void customItemDelegate() throws Throwable {
         final RecyclerView recyclerView = new RecyclerView(getActivity()) {

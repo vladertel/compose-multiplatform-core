@@ -22,6 +22,7 @@ import static androidx.camera.core.impl.utils.TransformUtils.getNormalizedToBuff
 import static androidx.core.content.ContextCompat.getMainExecutor;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
@@ -44,9 +45,12 @@ import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.Window;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 
 import androidx.annotation.AnyThread;
+import androidx.annotation.ColorInt;
 import androidx.annotation.ColorRes;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
@@ -60,6 +64,9 @@ import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.FocusMeteringAction;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.ImageCapture.ScreenFlashUiControl;
 import androidx.camera.core.Logger;
 import androidx.camera.core.MeteringPoint;
 import androidx.camera.core.MeteringPointFactory;
@@ -72,6 +79,7 @@ import androidx.camera.core.impl.CameraInfoInternal;
 import androidx.camera.core.impl.CameraInternal;
 import androidx.camera.core.impl.ImageOutputConfig;
 import androidx.camera.core.impl.utils.Threads;
+import androidx.camera.view.internal.ScreenFlashUiInfo;
 import androidx.camera.view.internal.compat.quirk.DeviceQuirks;
 import androidx.camera.view.internal.compat.quirk.SurfaceViewNotCroppedByParentQuirk;
 import androidx.camera.view.internal.compat.quirk.SurfaceViewStretchedQuirk;
@@ -79,6 +87,7 @@ import androidx.camera.view.transform.CoordinateTransform;
 import androidx.camera.view.transform.OutputTransform;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
+import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
@@ -106,7 +115,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link View} visible, or initially hiding the {@link View} by setting its
  * {@linkplain View#setAlpha(float) opacity} to 0, then setting it to 1.0F to show it.
  *
- * There are some limitations of transition animations to {@link SurfaceView} and
+ * <p> There are some limitations of transition animations to {@link SurfaceView} and
  * {@link TextureView}, which applies to {@link PreviewView} as well.
  *
  * @see <a href="https://developer.android.com/training/transitions#Limitations">Limitations</a>
@@ -128,6 +137,9 @@ public final class PreviewView extends FrameLayout {
     @VisibleForTesting
     @Nullable
     PreviewViewImplementation mImplementation;
+
+    @NonNull
+    final ScreenFlashView mScreenFlashView;
 
     @NonNull
     final PreviewTransformation mPreviewTransform = new PreviewTransformation();
@@ -209,9 +221,17 @@ public final class PreviewView extends FrameLayout {
                                 "Preview transformation info updated. " + transformationInfo);
                         // TODO(b/159127402): maybe switch to COMPATIBLE mode if target
                         //  rotation is not display rotation.
-                        boolean isFrontCamera =
-                                camera.getCameraInfoInternal().getLensFacing()
-                                        == CameraSelector.LENS_FACING_FRONT;
+                        Integer lensFacing = camera.getCameraInfoInternal().getLensFacing();
+                        boolean isFrontCamera;
+                        if (lensFacing == null) {
+                            // TODO(b/122975195): If the lens facing is null, it's probably an
+                            //  external camera. We treat it as like a front camera with
+                            //  unverified behaviors. Will have to define this later.
+                            Logger.w(TAG, "The lens facing is null, probably an external.");
+                            isFrontCamera = true;
+                        } else {
+                            isFrontCamera = lensFacing == CameraSelector.LENS_FACING_FRONT;
+                        }
                         mPreviewTransform.setTransformationInfo(transformationInfo,
                                 surfaceRequest.getResolution(), isFrontCamera);
 
@@ -224,13 +244,14 @@ public final class PreviewView extends FrameLayout {
                         } else {
                             mUseDisplayRotation = false;
                         }
-                        updateDisplayRotationIfNeeded();
                         redrawPreview();
                     });
 
-            mImplementation = shouldUseTextureView(surfaceRequest, mImplementationMode)
-                    ? new TextureViewImplementation(PreviewView.this, mPreviewTransform)
-                    : new SurfaceViewImplementation(PreviewView.this, mPreviewTransform);
+            if (!shouldReuseImplementation(mImplementation, surfaceRequest, mImplementationMode)) {
+                mImplementation = shouldUseTextureView(surfaceRequest, mImplementationMode)
+                        ? new TextureViewImplementation(PreviewView.this, mPreviewTransform)
+                        : new SurfaceViewImplementation(PreviewView.this, mPreviewTransform);
+            }
 
             PreviewStreamStateObserver streamStateObserver =
                     new PreviewStreamStateObserver(camera.getCameraInfoInternal(),
@@ -250,6 +271,12 @@ public final class PreviewView extends FrameLayout {
                 streamStateObserver.clear();
                 camera.getCameraState().removeObserver(streamStateObserver);
             });
+
+            // PreviewViewImplementation#onSurfaceRequested may remove all child views, check if
+            // ScreenFlashView needs to be re-added
+            if (PreviewView.this.indexOfChild(mScreenFlashView) == -1) {
+                PreviewView.this.addView(mScreenFlashView);
+            }
 
             if (mOnFrameUpdateListener != null && mOnFrameUpdateListenerExecutor != null) {
                 mImplementation.setFrameUpdateListener(mOnFrameUpdateListenerExecutor,
@@ -305,12 +332,16 @@ public final class PreviewView extends FrameLayout {
         if (getBackground() == null) {
             setBackgroundColor(ContextCompat.getColor(getContext(), DEFAULT_BACKGROUND_COLOR));
         }
+
+        mScreenFlashView = new ScreenFlashView(context);
+        mScreenFlashView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT));
     }
 
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        updateDisplayRotationIfNeeded();
         startListeningToDisplayChange();
         addOnLayoutChangeListener(mOnLayoutChangeListener);
         if (mImplementation != null) {
@@ -645,13 +676,21 @@ public final class PreviewView extends FrameLayout {
     void redrawPreview() {
         checkMainThread();
         if (mImplementation != null) {
+            updateDisplayRotationIfNeeded();
             mImplementation.redrawPreview();
         }
         mPreviewViewMeteringPointFactory.recalculate(new Size(getWidth(), getHeight()),
                 getLayoutDirection());
         if (mCameraController != null) {
-            mCameraController.updatePreviewViewTransform(getOutputTransform());
+            mCameraController.updatePreviewViewTransform(getSensorToViewTransform());
         }
+    }
+
+    @VisibleForTesting
+    static boolean shouldReuseImplementation(@Nullable PreviewViewImplementation implementation,
+            @NonNull SurfaceRequest surfaceRequest, @NonNull ImplementationMode mode) {
+        return implementation instanceof SurfaceViewImplementation && !shouldUseTextureView(
+                surfaceRequest, mode);
     }
 
     // Synthetic access
@@ -663,11 +702,10 @@ public final class PreviewView extends FrameLayout {
         boolean isLegacyDevice = surfaceRequest.getCamera().getCameraInfoInternal()
                 .getImplementationType().equals(CameraInfo.IMPLEMENTATION_TYPE_CAMERA2_LEGACY);
         boolean hasSurfaceViewQuirk = DeviceQuirks.get(SurfaceViewStretchedQuirk.class) != null
-                ||  DeviceQuirks.get(SurfaceViewNotCroppedByParentQuirk.class) != null;
-        if (surfaceRequest.isRGBA8888Required() || Build.VERSION.SDK_INT <= 24 || isLegacyDevice
-                || hasSurfaceViewQuirk) {
+                || DeviceQuirks.get(SurfaceViewNotCroppedByParentQuirk.class) != null;
+        if (Build.VERSION.SDK_INT <= 24 || isLegacyDevice || hasSurfaceViewQuirk) {
             // Force to use TextureView when the device is running android 7.0 and below, legacy
-            // level, RGBA8888 is required or SurfaceView has quirks.
+            // level or SurfaceView has quirks.
             return true;
         }
         switch (implementationMode) {
@@ -696,8 +734,6 @@ public final class PreviewView extends FrameLayout {
 
     /**
      * Sets a listener to receive frame update event with sensor timestamp.
-     *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public void setFrameUpdateListener(@NonNull Executor executor,
@@ -717,13 +753,12 @@ public final class PreviewView extends FrameLayout {
 
     /**
      * Listener to be notified when the frame is updated.
-     *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public interface OnFrameUpdateListener {
         /**
          * Invoked when frame updates.
+         *
          * @param timestamp sensor timestamp of this frame.
          */
         void onFrameUpdate(long timestamp);
@@ -934,9 +969,11 @@ public final class PreviewView extends FrameLayout {
             // If already bound to a different controller, ask the old controller to stop
             // using this PreviewView.
             mCameraController.clearPreviewSurface();
+            setScreenFlashUiInfo(null);
         }
         mCameraController = cameraController;
         attachToControllerIfReady(/*shouldFailSilently=*/false);
+        setScreenFlashUiInfo(getScreenFlashUiControl());
     }
 
     /**
@@ -989,23 +1026,47 @@ public final class PreviewView extends FrameLayout {
         if (mImplementation instanceof TextureViewImplementation) {
             matrix.postConcat(getMatrix());
         } else {
-            Logger.w(TAG, "PreviewView needs to be in COMPATIBLE mode for the transform"
-                    + " to work correctly.");
+            if (!getMatrix().isIdentity()) {
+                Logger.w(TAG, "PreviewView needs to be in COMPATIBLE mode for the transform"
+                        + " to work correctly.");
+            }
         }
 
         return new OutputTransform(matrix, new Size(surfaceCropRect.width(),
                 surfaceCropRect.height()));
     }
 
+    /**
+     * Gets the camera sensor to {@link PreviewView} transform.
+     *
+     * <p>The value is a mapping from sensor coordinates to {@link PreviewView} coordinates,
+     * which is, from the rect of {@link CameraCharacteristics#SENSOR_INFO_ACTIVE_ARRAY_SIZE} to the
+     * rect defined by {@code (0, 0, PreviewView#getWidth(), PreviewView#getWidth())}. The matrix
+     * can be used to map the coordinates from one {@link UseCase} to another. For example,
+     * detecting face with {@link ImageAnalysis}, and then highlighting the face in
+     * {@link Preview}.
+     *
+     * <p>This method returns {@code null} if the transformation is not ready. For example, when
+     * {@link PreviewView} layout has not been measured.
+     *
+     * <p>The return value does not include the custom transform applied by the app via methods like
+     * {@link View#setScaleX(float)}.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    @Nullable
+    public Matrix getSensorToViewTransform() {
+        checkMainThread();
+        return mPreviewTransform.getSensorToViewTransform(
+                new Size(getWidth(), getHeight()), getLayoutDirection());
+    }
+
     @MainThread
     private void attachToControllerIfReady(boolean shouldFailSilently) {
         checkMainThread();
-        Display display = getDisplay();
         ViewPort viewPort = getViewPort();
-        if (mCameraController != null && viewPort != null && isAttachedToWindow()
-                && display != null) {
+        if (mCameraController != null && viewPort != null && isAttachedToWindow()) {
             try {
-                mCameraController.attachPreviewSurface(getSurfaceProvider(), viewPort, display);
+                mCameraController.attachPreviewSurface(getSurfaceProvider(), viewPort);
             } catch (IllegalStateException ex) {
                 if (shouldFailSilently) {
                     // Swallow the exception and fail silently if the method is invoked by View
@@ -1016,6 +1077,15 @@ public final class PreviewView extends FrameLayout {
                 }
             }
         }
+    }
+
+    private void setScreenFlashUiInfo(ScreenFlashUiControl control) {
+        if (mCameraController == null) {
+            Logger.d(TAG, "setScreenFlashUiControl: mCameraController is null!");
+            return;
+        }
+        mCameraController.setScreenFlashUiInfo(new ScreenFlashUiInfo(
+                ScreenFlashUiInfo.ProviderType.PREVIEW_VIEW, control));
     }
 
     private void startListeningToDisplayChange() {
@@ -1044,6 +1114,63 @@ public final class PreviewView extends FrameLayout {
         return (DisplayManager) context.getApplicationContext()
                 .getSystemService(Context.DISPLAY_SERVICE);
     }
+
+    /**
+     * Sets a {@link Window} instance for subsequent photo capture requests with
+     * {@link ImageCapture#FLASH_MODE_SCREEN} set.
+     *
+     * <p>The calling of this API will take effect for {@link ImageCapture#FLASH_MODE_SCREEN} only
+     * and the {@code Window} will be ignored for other flash modes. During screen flash photo
+     * capture, the window is used for the purpose of changing brightness.
+     *
+     * <p>If the implementation provided by the user is no longer valid (e.g. due to any
+     * {@link android.app.Activity} or {@link android.view.View} reference used in the
+     * implementation becoming invalid), user needs to re-set a new valid window or
+     * clear the previous one with {@code setScreenFlashWindow(null)}, whichever appropriate.
+     *
+     * <p>For most app scenarios, a {@link Window} instance can be obtained from
+     * {@link Activity#getWindow()}. In case of a fragment, {@link Fragment#getActivity()} can
+     * first be used to get the activity instance.
+     *
+     * @param screenFlashWindow A {@link Window} instance that is used to change the brightness
+     *                          during screen flash photo capture.
+     */
+    @UiThread
+    public void setScreenFlashWindow(@Nullable Window screenFlashWindow) {
+        checkMainThread();
+        mScreenFlashView.setScreenFlashWindow(screenFlashWindow);
+        setScreenFlashUiInfo(getScreenFlashUiControl());
+    }
+
+    /**
+     * Returns an {@link ScreenFlashUiControl} implementation based
+     * on the {@link Window} instance set via {@link #setScreenFlashWindow(Window)}.
+     *
+     * <p> This API uses an internally managed {@link ScreenFlashView} to provide the
+     * {@link ScreenFlashUiControl} implementation.
+     *
+     * @return An {@link ScreenFlashUiControl} implementation provided by
+     *         {@link ScreenFlashView#getScreenFlashUiControl()}.
+     */
+    @UiThread
+    @Nullable
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public ScreenFlashUiControl getScreenFlashUiControl() {
+        return mScreenFlashView.getScreenFlashUiControl();
+    }
+
+    /**
+     * Sets the color of the top overlay view during screen flash.
+     *
+     * @param color The color value of the top overlay.
+     *
+     * @see #getScreenFlashUiControl()
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public void setScreenFlashOverlayColor(@ColorInt int color) {
+        mScreenFlashView.setBackgroundColor(color);
+    }
+
     /**
      * Listener for display rotation changes.
      *
@@ -1067,7 +1194,6 @@ public final class PreviewView extends FrameLayout {
         public void onDisplayChanged(int displayId) {
             Display display = getDisplay();
             if (display != null && display.getDisplayId() == displayId) {
-                updateDisplayRotationIfNeeded();
                 redrawPreview();
             }
         }

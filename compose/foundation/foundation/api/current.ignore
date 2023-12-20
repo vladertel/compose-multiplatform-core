@@ -1,5 +1,5 @@
 // Baseline format: 1.0
-RemovedClass: androidx.compose.foundation.lazy.LazyListItemProviderImplKt:
-    Removed class androidx.compose.foundation.lazy.LazyListItemProviderImplKt
-RemovedClass: androidx.compose.foundation.lazy.grid.LazyGridItemProviderImplKt:
-    Removed class androidx.compose.foundation.lazy.grid.LazyGridItemProviderImplKt
+RemovedClass: androidx.compose.foundation.text2.input.AllCapsTransformationKt:
+    Removed class androidx.compose.foundation.text2.input.AllCapsTransformationKt
+RemovedClass: androidx.compose.foundation.text2.input.MaxLengthTransformationKt:
+    Removed class androidx.compose.foundation.text2.input.MaxLengthTransformationKt

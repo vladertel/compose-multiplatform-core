@@ -26,8 +26,8 @@ import com.intellij.psi.impl.compiled.ClsMethodImpl
 import com.intellij.psi.util.ClassUtil
 import kotlinx.metadata.KmDeclarationContainer
 import kotlinx.metadata.KmFunction
-import kotlinx.metadata.jvm.KotlinClassHeader
 import kotlinx.metadata.jvm.KotlinClassMetadata
+import kotlinx.metadata.jvm.Metadata
 import kotlinx.metadata.jvm.signature
 
 /**
@@ -48,31 +48,27 @@ fun PsiMethod.toKmFunction(): KmFunction? =
  * represents a synthetic class.
  */
 private fun PsiClass.getKmDeclarationContainer(): KmDeclarationContainer? {
-    val classKotlinMetadataAnnotation = annotations.find {
+    val classKotlinMetadataPsiAnnotation = annotations.find {
         // hasQualifiedName() not available on the min version of Lint we compile against
         it.qualifiedName == KotlinMetadataFqn
     } ?: return null
 
-    val metadata = KotlinClassMetadata.read(classKotlinMetadataAnnotation.toHeader())
-        ?: return null
+    val metadata = KotlinClassMetadata.read(classKotlinMetadataPsiAnnotation.toMetadataAnnotation())
 
     return when (metadata) {
-        is KotlinClassMetadata.Class -> metadata.toKmClass()
-        is KotlinClassMetadata.FileFacade -> metadata.toKmPackage()
+        is KotlinClassMetadata.Class -> metadata.kmClass
+        is KotlinClassMetadata.FileFacade -> metadata.kmPackage
         is KotlinClassMetadata.SyntheticClass -> null
         is KotlinClassMetadata.MultiFileClassFacade -> null
-        is KotlinClassMetadata.MultiFileClassPart -> metadata.toKmPackage()
+        is KotlinClassMetadata.MultiFileClassPart -> metadata.kmPackage
         is KotlinClassMetadata.Unknown -> null
     }
 }
 
 /**
- * Returns a [KotlinClassHeader] by parsing the attributes of this @kotlin.Metadata annotation.
- *
- * See: https://github.com/udalov/kotlinx-metadata-examples/blob/master/src/main/java
- * /examples/FindKotlinGeneratedMethods.java
+ * Returns a [Metadata] by parsing the attributes of this @kotlin.Metadata PSI annotation.
  */
-private fun PsiAnnotation.toHeader(): KotlinClassHeader {
+private fun PsiAnnotation.toMetadataAnnotation(): Metadata {
     val attributes = attributes.associate { it.attributeName to it.attributeValue }
 
     fun JvmAnnotationAttributeValue.parseString(): String =
@@ -99,7 +95,7 @@ private fun PsiAnnotation.toHeader(): KotlinClassHeader {
     val packageName = attributes["pn"]?.parseString()
     val extraInt = attributes["xi"]?.parseInt()
 
-    return KotlinClassHeader(
+    return Metadata(
         kind,
         metadataVersion,
         data1,
@@ -132,8 +128,8 @@ private fun KmDeclarationContainer.findKmFunctionForPsiMethod(method: PsiMethod)
 
     return functions.find {
         it.name == expectedName && (
-            it.signature?.desc == expectedSignature ||
-                it.signature?.desc == expectedSignatureConvertedFromUnitToVoid
+            it.signature?.descriptor == expectedSignature ||
+                it.signature?.descriptor == expectedSignatureConvertedFromUnitToVoid
         )
     }
 }

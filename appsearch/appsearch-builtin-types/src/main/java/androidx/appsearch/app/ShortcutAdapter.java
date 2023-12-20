@@ -41,7 +41,7 @@ public class ShortcutAdapter {
         // Hide constructor as utility classes are not meant to be instantiated.
     }
 
-    /** @hide */
+    /** @exportToFramework:hide */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
     public static final String DEFAULT_DATABASE = "__shortcut_adapter_db__";
 
@@ -87,10 +87,7 @@ public class ShortcutAdapter {
      * <p>See {@link ShortcutInfoCompat.Builder#setExcludedFromSurfaces(int)}.
      *
      * <p>Given document object will be stored in the form of {@link Bundle} in
-     * {@link ShortcutInfoCompat} and will remain visible to any library that implements
-     * {@link androidx.core.content.pm.ShortcutInfoChangeListener}. Upon receiving a shortcut
-     * through its listener, libraries may persist the document in a separate storage, which
-     * potentially allows the document to be surfaced in assistant and other proactive surfaces.
+     * {@link ShortcutInfoCompat}.
      *
      * <p>The document that was stored in {@link ShortcutInfoCompat} is discarded when the
      * shortcut is converted into {@link android.content.pm.ShortcutInfo}, meaning that the
@@ -130,7 +127,7 @@ public class ShortcutAdapter {
     /**
      * Extracts {@link GenericDocument} from given {@link ShortcutInfoCompat} if applicable.
      * Returns null if document cannot be found in the given shortcut.
-     * @hide
+     * @exportToFramework:hide
      */
     @Nullable
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)

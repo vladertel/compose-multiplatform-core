@@ -19,12 +19,9 @@ package androidx.compose.foundation.lazy.layout
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.ReusableContentHost
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.saveable.SaveableStateHolder
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Density
 
 /**
  * This class:
@@ -43,36 +40,20 @@ internal class LazyLayoutItemContentFactory(
     /** Contains the cached lambdas produced by the [itemProvider]. */
     private val lambdasCache = mutableMapOf<Any, CachedItemContent>()
 
-    /** Density used to obtain the cached lambdas. */
-    private var densityOfCachedLambdas = Density(0f, 0f)
-
-    /** Constraints used to obtain the cached lambdas. */
-    private var constraintsOfCachedLambdas = Constraints()
-
-    /**
-     * Invalidate the cached lambas if the density or constraints have changed.
-     * TODO(popam): probably LazyLayoutState should provide an invalidate() method instead.
-     */
-    fun onBeforeMeasure(density: Density, constraints: Constraints) {
-        if (density != densityOfCachedLambdas || constraints != constraintsOfCachedLambdas) {
-            densityOfCachedLambdas = density
-            constraintsOfCachedLambdas = constraints
-            lambdasCache.clear()
-        }
-    }
-
     /**
      * Returns the content type for the item with the given key. It is used to improve the item
      * compositions reusing efficiency.
-     **/
+     */
     fun getContentType(key: Any?): Any? {
+        if (key == null) return null
+
         val cachedContent = lambdasCache[key]
         return if (cachedContent != null) {
-            cachedContent.type
+            cachedContent.contentType
         } else {
             val itemProvider = itemProvider()
-            val index = itemProvider.keyToIndexMap[key]
-            if (index != null) {
+            val index = itemProvider.getIndex(key)
+            if (index != -1) {
                 itemProvider.getContentType(index)
             } else {
                 null
@@ -83,24 +64,24 @@ internal class LazyLayoutItemContentFactory(
     /**
      * Return cached item content lambda or creates a new lambda and puts it in the cache.
      */
-    fun getContent(index: Int, key: Any): @Composable () -> Unit {
+    fun getContent(index: Int, key: Any, contentType: Any?): @Composable () -> Unit {
         val cached = lambdasCache[key]
-        val type = itemProvider().getContentType(index)
-        return if (cached != null && cached.lastKnownIndex == index && cached.type == type) {
+        return if (cached != null && cached.index == index && cached.contentType == contentType) {
             cached.content
         } else {
-            val newContent = CachedItemContent(index, key, type)
+            val newContent = CachedItemContent(index, key, contentType)
             lambdasCache[key] = newContent
             newContent.content
         }
     }
 
     private inner class CachedItemContent(
-        initialIndex: Int,
+        index: Int,
         val key: Any,
-        val type: Any?
+        val contentType: Any?
     ) {
-        var lastKnownIndex by mutableStateOf(initialIndex)
+        // the index resolved during the latest composition
+        var index = index
             private set
 
         private var _content: (@Composable () -> Unit)? = null
@@ -109,16 +90,20 @@ internal class LazyLayoutItemContentFactory(
 
         private fun createContentLambda() = @Composable {
             val itemProvider = itemProvider()
-            val index = itemProvider.keyToIndexMap[key]?.also {
-                lastKnownIndex = it
-            } ?: lastKnownIndex
-            if (index < itemProvider.itemCount) {
-                val key = itemProvider.getKey(index)
-                if (key == this.key) {
-                    saveableStateHolder.SaveableStateProvider(key) {
-                        itemProvider.Item(index)
-                    }
-                }
+
+            var index = index
+            if (index >= itemProvider.itemCount || itemProvider.getKey(index) != key) {
+                index = itemProvider.getIndex(key)
+                if (index != -1) this.index = index
+            }
+
+            ReusableContentHost(active = index != -1) {
+                SkippableItem(
+                    itemProvider,
+                    StableValue(saveableStateHolder),
+                    index,
+                    StableValue(key)
+                )
             }
             DisposableEffect(key) {
                 onDispose {
@@ -127,5 +112,26 @@ internal class LazyLayoutItemContentFactory(
                 }
             }
         }
+    }
+}
+
+@Stable
+@JvmInline
+private value class StableValue<T>(val value: T)
+
+/**
+ * Hack around skippable functions to force skip SaveableStateProvider and Item block when
+ * nothing changed. It allows us to skip heavy-weight composition local providers.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SkippableItem(
+    itemProvider: LazyLayoutItemProvider,
+    saveableStateHolder: StableValue<SaveableStateHolder>,
+    index: Int,
+    key: StableValue<Any>
+) {
+    saveableStateHolder.value.SaveableStateProvider(key.value) {
+        itemProvider.Item(index, key.value)
     }
 }

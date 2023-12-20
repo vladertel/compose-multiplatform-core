@@ -19,11 +19,15 @@ package androidx.window.area
 import androidx.window.core.ExperimentalWindowApi
 
 /**
- * Session interface to represent a long-standing
- * WindowArea mode or feature that provides a handle
- * to close the session.
+ * Session interface to represent an active window area feature.
+ *
+ * @see WindowAreaSessionCallback.onSessionStarted
  */
 @ExperimentalWindowApi
-public interface WindowAreaSession {
+interface WindowAreaSession {
+
+    /**
+     * Closes the active session, no-op if the session is not currently active.
+     */
     fun close()
 }

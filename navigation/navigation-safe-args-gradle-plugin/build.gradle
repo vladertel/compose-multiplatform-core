@@ -23,8 +23,16 @@ plugins {
     id("java-gradle-plugin")
 }
 
+configurations {
+    // Config for plugin classpath to be used during tests
+    testPlugin {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+}
+
 dependencies {
-    implementation("com.android.tools.build:gradle:7.0.4")
+    implementation("com.android.tools.build:gradle:7.3.0")
     implementation(libs.kotlinGradlePluginz)
     api(project(":navigation:navigation-safe-args-generator"))
     api(gradleApi())
@@ -32,6 +40,15 @@ dependencies {
     testImplementation(gradleTestKit())
     testImplementation(project(":internal-testutils-gradle-plugin"))
     testImplementation(libs.junit)
+    testPlugin("com.android.tools.build:gradle:7.3.0")
+    testPlugin("com.android.tools.build:aapt2:7.3.0-8691043")
+    testPlugin("com.android.tools.build:aapt2:7.3.0-8691043:linux")
+    testPlugin("com.android.tools.build:aapt2:7.3.0-8691043:osx")
+    testPlugin("com.android.tools.lint:lint-gradle:30.3.0")
+}
+
+tasks.withType(PluginUnderTestMetadata.class).named("pluginUnderTestMetadata").configure {
+    it.pluginClasspath.from(configurations.testPlugin)
 }
 
 SdkResourceGenerator.generateForHostTest(project)
@@ -50,9 +67,8 @@ gradlePlugin {
 }
 
 androidx {
-    name = "Android Navigation TypeSafe Arguments Gradle Plugin"
+    name = "Navigation TypeSafe Arguments Gradle Plugin"
     type = LibraryType.GRADLE_PLUGIN
-    mavenGroup = LibraryGroups.NAVIGATION
     inceptionYear = "2017"
     description = "Android Navigation TypeSafe Arguments Gradle Plugin"
 }

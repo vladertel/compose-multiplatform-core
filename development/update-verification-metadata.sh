@@ -1,83 +1,81 @@
 #!/bin/bash
 set -e
 
+# This script updates trust entries in gradle/verification-metadata.xml
+
+# Usage: $0 [--no-dry-run] [<task>]
+
+# --no-dry-run
+#   Don't pass --dry-run to Gradle, so Gradle executes the corresponding tasks.
+#   This is not normally necessary but in some cases can be a useful workaround.
+#   When https://github.com/gradle/gradle/issues/26289 is resolved, we should reevaluate this behavior
+#
+# <task>
+#   The task to ask Gradle to run. By default this is 'bOS'
+#   When --no-dry-run is removed, we should reevaluate this behavior
+
+dryrun=true
+task="bOS"
+
+while [ "$1" != "" ]; do
+  arg="$1"
+  shift
+  if [ "$arg" == "--no-dry-run" ]; then
+    dryrun=false
+    continue
+  fi
+  task="$arg"
+  break
+done
+
+function usage() {
+  usageError="$1"
+  echo "$usageError"
+  echo "Usage: $0 [--no-dry-run] [<task>]"
+  exit 1
+}
+
+if [ "$1" != "" ]; then
+  usage "Unrecognized argument $1"
+fi
+
 function runGradle() {
-  kmpArgs="-Pandroidx.compose.multiplatformEnabled=true -Pandroidx.enabled.kmp.target.platforms=+native"
-  echo running ./gradlew $kmpArgs "$@"
-  if ./gradlew $kmpArgs "$@"; then
-    echo succeeded: ./gradlew $kmpArgs "$@"
+  echo running ./gradlew "$@"
+  if ./gradlew "$@"; then
+    echo succeeded: ./gradlew "$@"
   else
-    echo failed: ./gradlew $kmpArgs "$@"
+    echo failed: ./gradlew "$@"
     return 1
   fi
 }
 
 # This script regenerates signature-related information (dependency-verification-metadata and keyring)
-function regenerateTrustedKeys() {
-  echo "regenerating list of trusted keys"
+function regenerateVerificationMetadata() {
+  echo "regenerating verification metadata and keyring"
   # regenerate metadata
   # Need to run a clean build, https://github.com/gradle/gradle/issues/19228
-  runGradle --write-verification-metadata pgp,sha256 --dry-run --clean bOS
-  # extract and keep only the <trusted-keys> section
-  WORK_DIR=gradle/update-keys-temp
-  rm -rf "$WORK_DIR"
-  mkdir -p "$WORK_DIR"
+  # Resolving Configurations before task execution is expected. b/297394547
+  dryrunArg=""
+  if [ "$dryrun" == "true" ]; then
+    dryrunArg="--dry-run"
+  fi
+  runGradle --stacktrace --write-verification-metadata pgp,sha256 --export-keys $dryrunArg --clean -Pandroidx.update.signatures=true -Pandroid.dependencyResolutionAtConfigurationTime.disallow=false -Pandroidx.enabled.kmp.target.platforms=+native $task
 
-  # extract the middle of the new file, https://github.com/gradle/gradle/issues/18569
-  grep -B 10000 "<trusted-keys>" gradle/verification-metadata.dryrun.xml > "$WORK_DIR/new.head"
-  grep -A 10000 "</trusted-keys>" gradle/verification-metadata.dryrun.xml > "$WORK_DIR/new.tail"
-  numTopLines="$(cat "$WORK_DIR/new.head" | wc -l)"
-  numTopLinesPlus1="$(($numTopLines + 1))"
-  numBottomLines="$(cat "$WORK_DIR/new.tail" | wc -l)"
-  numLines="$(cat gradle/verification-metadata.dryrun.xml | wc -l)"
-  numMiddleLines="$(($numLines - $numTopLines - $numBottomLines))"
-  # also remove 'version=' lines, https://github.com/gradle/gradle/issues/20192
-  cat gradle/verification-metadata.dryrun.xml | tail -n "+$numTopLinesPlus1" | head -n "$numMiddleLines" | sed 's/ version="[^"]*"//' > "$WORK_DIR/new.middle"
+  # update verification metadata file
 
-  # extract the top and bottom of the old file
-  grep -B 10000 "<trusted-keys>" gradle/verification-metadata.xml > "$WORK_DIR/old.head"
-  grep -A 10000 "</trusted-keys>" gradle/verification-metadata.xml > "$WORK_DIR/old.tail"
+  # first, make sure the resulting file is named "verification-metadata.xml"
+  if [ "$dryrun" == "true" ]; then
+    mv gradle/verification-metadata.dryrun.xml gradle/verification-metadata.xml
+  fi
 
-  # update file
-  cat "$WORK_DIR/old.head" "$WORK_DIR/new.middle" "$WORK_DIR/old.tail" > gradle/verification-metadata.xml
+  # next, remove 'version=' lines https://github.com/gradle/gradle/issues/20192
+  sed -i 's/\(trusted-key.*\)version="[^"]*"/\1/' gradle/verification-metadata.xml
 
-  # remove temporary files
-  rm -rf "$WORK_DIR"
-  rm -rf gradle/verification-metadata.dryrun.xml
+  # rename keyring
+  mv gradle/verification-keyring-dryrun.keys gradle/verification-keyring.keys 2>/dev/null || true
 }
-regenerateTrustedKeys
-
-# updates the keyring, including sorting entries and removing duplicates
-function regenerateKeyring() {
-  # a separate step from regenerating the verification metadata, https://github.com/gradle/gradle/issues/20138
-  echo "regenerating keyring"
-  runGradle --write-verification-metadata sha256 --export-keys --dry-run bOS
-
-  echo "sorting keyring and removing duplicates"
-  # sort and unique the keyring
-  # https://github.com/gradle/gradle/issues/20140
-  # `sed 's/$/NEWLINE/g'` adds the word NEWLINE at the end of each line
-  # `tr -d '\n'` deletes the actual newlines
-  # `sed` again adds a newline at the end of each key, so each key is one line
-  # `sort` orders the keys deterministically
-  # `uniq` removes identical keys
-  # `sed 's/NEWLINE/\n/g'` puts the newlines back
-  cat gradle/verification-keyring-dryrun.keys \
-    | sed 's/$/NEWLINE/g' \
-    | tr -d '\n' \
-    | sed 's/\(-----END PGP PUBLIC KEY BLOCK-----\)/\1\n/g' \
-    | grep "END PGP PUBLIC KEY BLOCK" \
-    | sort \
-    | uniq \
-    | sed 's/NEWLINE/\n/g' \
-    > gradle/verification-keyring.keys
-
-  # remove unused files
-  rm -f gradle/verification-keyring-dryrun.gpg
-  rm -f gradle/verification-keyring-dryrun.keys
-  rm -f gradle/verification-metadata.dryrun.xml
-}
-regenerateKeyring
+regenerateVerificationMetadata
 
 echo
-echo "Done. Please check that these changes look correct ('git diff')"
+echo 'Done. Please check that these changes look correct (`git diff`)'
+echo "If Gradle did not make all expected updates to verification-metadata.xml, you can try '--no-dry-run'. This is slow so you may also want to specify a task. Example: $0 --no-dry-run exportSboms"

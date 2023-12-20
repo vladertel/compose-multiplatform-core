@@ -15,6 +15,10 @@
  */
 package androidx.compose.ui.graphics.colorspace
 
+import androidx.annotation.IntRange
+import androidx.annotation.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.util.packFloats
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.withSign
@@ -148,7 +152,7 @@ abstract class ColorSpace internal constructor(
      * @see model
      */
     val componentCount: Int
-        /*@IntRange(from = 1, to = 4)*/
+        @IntRange(from = 1, to = 4)
         get() = model.componentCount
 
     /**
@@ -217,7 +221,7 @@ abstract class ColorSpace internal constructor(
      * @see getMaxValue
      * @see ColorModel.componentCount
      */
-    abstract fun getMinValue(/*@IntRange(from = 0, to = 3)*/ component: Int): Float
+    abstract fun getMinValue(@IntRange(from = 0, to = 3) component: Int): Float
 
     /**
      * Returns the maximum valid value for the specified component of this
@@ -229,7 +233,7 @@ abstract class ColorSpace internal constructor(
      * @see getMinValue
      * @see ColorModel.componentCount
      */
-    abstract fun getMaxValue(/*@IntRange(from = 0, to = 3)*/ component: Int): Float
+    abstract fun getMaxValue(@IntRange(from = 0, to = 3) component: Int): Float
 
     /**
      * Converts a color value from this color space's model to
@@ -251,7 +255,7 @@ abstract class ColorSpace internal constructor(
      * @see toXyz
      * @see fromXyz
      */
-    /*@Size(3)*/
+    @Size(3)
     fun toXyz(r: Float, g: Float, b: Float): FloatArray {
         return toXyz(floatArrayOf(r, g, b))
     }
@@ -275,8 +279,40 @@ abstract class ColorSpace internal constructor(
      * @see toXyz
      * @see fromXyz
      */
-    /*@Size(min = 3)*/
-    abstract fun toXyz(/*@Size(min = 3)*/ v: FloatArray): FloatArray
+    @Size(min = 3)
+    abstract fun toXyz(@Size(min = 3) v: FloatArray): FloatArray
+
+    /**
+     * Same as [toXyz], but returns only the x and y components packed into a long.
+     */
+    internal open fun toXy(v0: Float, v1: Float, v2: Float): Long {
+        val xyz = toXyz(v0, v1, v2)
+        return packFloats(xyz[0], xyz[1])
+    }
+
+    /**
+     * Same as [toXyz], but returns only the z component.
+     */
+    internal open fun toZ(v0: Float, v1: Float, v2: Float): Float {
+        val xyz = toXyz(v0, v1, v2)
+        return xyz[2]
+    }
+
+    /**
+     * Converts [x], [y], [z] components to this ColorSpace and returns a color
+     * with the resulting values, using [a] for alpha, and [colorSpace] for the
+     * color space.
+     */
+    internal open fun xyzaToColor(
+        x: Float,
+        y: Float,
+        z: Float,
+        a: Float,
+        colorSpace: ColorSpace
+    ): Color {
+        val colors = fromXyz(x, y, z)
+        return Color(colors[0], colors[1], colors[2], a, colorSpace)
+    }
 
     /**
      * Converts tristimulus values from the CIE XYZ space to this
@@ -291,7 +327,7 @@ abstract class ColorSpace internal constructor(
      * @see fromXyz
      * @see toXyz
      */
-    /*@Size(min = 3)*/
+    @Size(min = 3)
     fun fromXyz(x: Float, y: Float, z: Float): FloatArray {
         val xyz = FloatArray(model.componentCount)
         xyz[0] = x
@@ -319,8 +355,8 @@ abstract class ColorSpace internal constructor(
      * @see fromXyz
      * @see toXyz
      */
-    /*@Size(min = 3)*/
-    abstract fun fromXyz(/*@Size(min = 3)*/ v: FloatArray): FloatArray
+    @Size(min = 3)
+    abstract fun fromXyz(@Size(min = 3) v: FloatArray): FloatArray
 
     /**
      * Returns a string representation of the object. This method returns
@@ -380,6 +416,24 @@ abstract class ColorSpace internal constructor(
     }
 }
 
+private fun createConnector(
+    source: ColorSpace,
+    destination: ColorSpace,
+    intent: RenderIntent
+): Connector {
+    return if (source === destination) {
+        Connector.identity(source)
+    } else if (source.model == ColorModel.Rgb && destination.model == ColorModel.Rgb) {
+        Connector.RgbConnector(
+            source as Rgb,
+            destination as Rgb,
+            intent
+        )
+    } else {
+        Connector(source, destination, intent)
+    }
+}
+
 /**
  * Connects two color spaces to allow conversion from the source color
  * space to the destination color space. If the source and destination
@@ -398,18 +452,14 @@ fun ColorSpace.connect(
     destination: ColorSpace = ColorSpaces.Srgb,
     intent: RenderIntent = RenderIntent.Perceptual
 ): Connector {
-    if (this === destination) {
-        return Connector.identity(this)
-    }
-
-    return if (this.model == ColorModel.Rgb && destination.model == ColorModel.Rgb) {
-        Connector.RgbConnector(
-            this as Rgb,
-            destination as Rgb,
-            intent
-        )
+    val srcId = id
+    val dstId = destination.id
+    return if ((srcId or dstId) < 0) { // User-supplied color spaces, don't cache
+        createConnector(this, destination, intent)
     } else {
-        Connector(this, destination, intent)
+        Connectors.getOrPut(connectorKey(srcId, dstId, intent)) {
+            createConnector(this, destination, intent)
+        }
     }
 }
 
@@ -648,6 +698,63 @@ internal fun mul3x3Float3(
 }
 
 /**
+ * Multiplies a vector of 3 components by a 3x3 matrix and returns the first element.
+ *
+ * @param lhs 3x3 matrix, as a non-null array of 9 floats
+ * @param r0: The first element of the vector
+ * @param r1: The second element of the vector
+ * @param r2: The third element of the vector
+ * @return The first element of the resulting multiplication.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun mul3x3Float3_0(
+    lhs: FloatArray,
+    r0: Float,
+    r1: Float,
+    r2: Float
+): Float {
+    return lhs[0] * r0 + lhs[3] * r1 + lhs[6] * r2
+}
+
+/**
+ * Multiplies a vector of 3 components by a 3x3 matrix and returns the second element.
+ *
+ * @param lhs 3x3 matrix, as a non-null array of 9 floats
+ * @param r0: The first element of the vector
+ * @param r1: The second element of the vector
+ * @param r2: The third element of the vector
+ * @return The second element of the resulting multiplication.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun mul3x3Float3_1(
+    lhs: FloatArray,
+    r0: Float,
+    r1: Float,
+    r2: Float
+): Float {
+    return lhs[1] * r0 + lhs[4] * r1 + lhs[7] * r2
+}
+
+/**
+ * Multiplies a vector of 3 components by a 3x3 matrix and returns the third element.
+ *
+ * @param lhs 3x3 matrix, as a non-null array of 9 floats
+ * @param r0: The first element of the vector
+ * @param r1: The second element of the vector
+ * @param r2: The third element of the vector
+ * @return The third element of the resulting multiplication.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun mul3x3Float3_2(
+    lhs: FloatArray,
+    r0: Float,
+    r1: Float,
+    r2: Float
+): Float {
+    return lhs[2] * r0 + lhs[5] * r1 + lhs[8] * r2
+}
+
+/**
  * Multiplies a diagonal 3x3 matrix lhs, represented as an array of 3 floats,
  * by a 3x3 matrix represented as an array of 9 floats.
  *
@@ -689,7 +796,6 @@ internal fun chromaticAdaptation(
     val srcLMS = mul3x3Float3(matrix, srcWhitePoint)
     val dstLMS = mul3x3Float3(matrix, dstWhitePoint)
     // LMS is a diagonal matrix stored as a float[3]
-    val LMS =
-        floatArrayOf(dstLMS[0] / srcLMS[0], dstLMS[1] / srcLMS[1], dstLMS[2] / srcLMS[2])
+    val LMS = floatArrayOf(dstLMS[0] / srcLMS[0], dstLMS[1] / srcLMS[1], dstLMS[2] / srcLMS[2])
     return mul3x3(inverse3x3(matrix), mul3x3Diag(LMS, matrix))
 }

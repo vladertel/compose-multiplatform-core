@@ -1271,6 +1271,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
         return cp;
     }
 
+    @FlakyTest(bugId = 264905014)
     @Test
     @LargeTest
     public void getTimestamp() throws Exception {
@@ -1348,8 +1349,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_MKV_H265_1280x720_500kbps_25fps_AAC_Stereo_128kbps_44100Hz()
             throws Exception {
         playVideoTest(
@@ -1358,8 +1358,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_MP4_H264_480x360_500kbps_25fps_AAC_Stereo_128kbps_44110Hz()
             throws Exception {
         playVideoTest(
@@ -1368,8 +1367,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_MP4_H264_480x360_500kbps_30fps_AAC_Stereo_128kbps_44110Hz()
             throws Exception {
         playVideoTest(
@@ -1378,8 +1376,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_MP4_H264_480x360_1000kbps_25fps_AAC_Stereo_128kbps_44110Hz()
             throws Exception {
         playVideoTest(
@@ -1388,8 +1385,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_MP4_H264_480x360_1000kbps_30fps_AAC_Stereo_128kbps_44110Hz()
             throws Exception {
         playVideoTest(
@@ -1398,8 +1394,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_MP4_H264_480x360_1350kbps_25fps_AAC_Stereo_128kbps_44110Hz()
             throws Exception {
         playVideoTest(
@@ -1408,8 +1403,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_MP4_H264_480x360_1350kbps_30fps_AAC_Stereo_128kbps_44110Hz()
             throws Exception {
         playVideoTest(
@@ -1418,8 +1412,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_MP4_H264_480x360_1350kbps_30fps_AAC_Stereo_128kbps_44110Hz_frag()
             throws Exception {
         playVideoTest(
@@ -1429,8 +1422,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_MP4_H264_480x360_1350kbps_30fps_AAC_Stereo_192kbps_44110Hz()
             throws Exception {
         playVideoTest(
@@ -1439,8 +1431,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_12fps_AAC_Mono_24kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1449,8 +1440,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_12fps_AAC_Mono_24kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1459,8 +1449,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_12fps_AAC_Stereo_24kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1469,8 +1458,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_12fps_AAC_Stereo_24kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1479,8 +1467,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_12fps_AAC_Stereo_128kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1489,8 +1476,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_12fps_AAC_Stereo_128kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1499,8 +1485,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_25fps_AAC_Mono_24kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1509,8 +1494,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_25fps_AAC_Mono_24kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1519,8 +1503,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_25fps_AAC_Stereo_24kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1529,8 +1512,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_25fps_AAC_Stereo_24kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1539,8 +1521,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_25fps_AAC_Stereo_128kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1549,8 +1530,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_56kbps_25fps_AAC_Stereo_128kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1559,8 +1539,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_12fps_AAC_Mono_24kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1569,8 +1548,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_12fps_AAC_Mono_24kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1579,8 +1557,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_12fps_AAC_Stereo_24kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1589,8 +1566,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_12fps_AAC_Stereo_24kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1599,8 +1575,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_12fps_AAC_Stereo_128kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1609,8 +1584,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_12fps_AAC_Stereo_128kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1619,8 +1593,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_25fps_AAC_Mono_24kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1629,8 +1602,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_25fps_AAC_Mono_24kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1639,8 +1611,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_25fps_AAC_Stereo_24kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1649,8 +1620,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_25fps_AAC_Stereo_24kbps_22050Hz()
             throws Exception {
         playVideoTest(
@@ -1659,8 +1629,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_25fps_AAC_Stereo_128kbps_11025Hz()
             throws Exception {
         playVideoTest(
@@ -1669,8 +1638,7 @@ public class MediaPlayer2Test extends MediaPlayer2TestBase {
 
     @Test
     @LargeTest
-    @SdkSuppress(
-            minSdkVersion = Build.VERSION_CODES.KITKAT, maxSdkVersion = Build.VERSION_CODES.O_MR1)
+    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.O_MR1)
     public void localVideo_3gp_H263_176x144_300kbps_25fps_AAC_Stereo_128kbps_22050Hz()
             throws Exception {
         playVideoTest(

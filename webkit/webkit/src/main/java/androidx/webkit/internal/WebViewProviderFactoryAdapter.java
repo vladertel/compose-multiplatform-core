@@ -20,6 +20,8 @@ import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
 
+import org.chromium.support_lib_boundary.DropDataContentProviderBoundaryInterface;
+import org.chromium.support_lib_boundary.ProfileStoreBoundaryInterface;
 import org.chromium.support_lib_boundary.ProxyControllerBoundaryInterface;
 import org.chromium.support_lib_boundary.ServiceWorkerControllerBoundaryInterface;
 import org.chromium.support_lib_boundary.StaticsBoundaryInterface;
@@ -116,5 +118,23 @@ public class WebViewProviderFactoryAdapter implements WebViewProviderFactory {
     public ProxyControllerBoundaryInterface getProxyController() {
         return BoundaryInterfaceReflectionUtil.castToSuppLibClass(
                 ProxyControllerBoundaryInterface.class, mImpl.getProxyController());
+    }
+
+    /**
+     * Adapter method for fetching the support library class representing Drag drop
+     * Image implementation.
+     */
+    @NonNull
+    @Override
+    public DropDataContentProviderBoundaryInterface getDropDataProvider() {
+        return BoundaryInterfaceReflectionUtil.castToSuppLibClass(
+                DropDataContentProviderBoundaryInterface.class, mImpl.getDropDataProvider());
+    }
+
+    @NonNull
+    @Override
+    public ProfileStoreBoundaryInterface getProfileStore() {
+        return BoundaryInterfaceReflectionUtil.castToSuppLibClass(
+                ProfileStoreBoundaryInterface.class, mImpl.getProfileStore());
     }
 }

@@ -23,6 +23,9 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentFactory
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
@@ -32,11 +35,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import kotlin.reflect.KClass
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.reflect.KClass
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
@@ -108,10 +111,10 @@ class DialogFragmentNavigatorTest {
         assertThat(navigatorState.backStack.value)
             .containsExactly(entry)
         dialogNavigator.popBackStack(entry, false)
+        fragmentManager.executePendingTransactions()
         assertThat(navigatorState.backStack.value)
             .isEmpty()
 
-        fragmentManager.executePendingTransactions()
         assertWithMessage("Dialog should not be shown")
             .that(dialogFragment.dialog)
             .isNull()
@@ -162,13 +165,10 @@ class DialogFragmentNavigatorTest {
             .that(dialogFragment.requireDialog().isShowing)
             .isTrue()
         dialogNavigator.popBackStack(entry, false)
+        fragmentManager.executePendingTransactions()
         assertWithMessage("DialogNavigator should pop dialog off the back stack")
             .that(navigatorState.backStack.value)
             .isEmpty()
-        assertWithMessage("Pop should dismiss the DialogFragment")
-            .that(dialogFragment.requireDialog().isShowing)
-            .isFalse()
-        fragmentManager.executePendingTransactions()
         assertWithMessage("Dismiss should remove the dialog")
             .that(dialogFragment.dialog)
             .isNull()
@@ -181,20 +181,61 @@ class DialogFragmentNavigatorTest {
     @Test
     fun testDismiss() {
         lateinit var dialogFragment: DialogFragment
+        val entry = createBackStackEntry()
+        var matchCount = 0
+
         fragmentManager.fragmentFactory = object : FragmentFactory() {
             override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
                 return super.instantiate(classLoader, className).also { fragment ->
                     if (fragment is DialogFragment) {
                         dialogFragment = fragment
+                        // observer before navigator to verify down states
+                        dialogFragment.lifecycle.addObserver(object : LifecycleEventObserver {
+                            override fun onStateChanged(
+                                source: LifecycleOwner,
+                                event: Lifecycle.Event
+                            ) {
+                                if (event == Lifecycle.Event.ON_STOP) {
+                                    if (entry.lifecycle.currentState == Lifecycle.State.CREATED) {
+                                        matchCount++
+                                    }
+                                }
+                                if (event == Lifecycle.Event.ON_DESTROY) {
+                                    if (entry.lifecycle.currentState == Lifecycle.State.DESTROYED) {
+                                        matchCount++
+                                    }
+                                    dialogFragment.lifecycle.removeObserver(this)
+                                }
+                            }
+                        })
                     }
                 }
             }
         }
-        val entry = createBackStackEntry()
 
         dialogNavigator.navigate(listOf(entry), null, null)
         assertThat(navigatorState.backStack.value)
             .containsExactly(entry)
+
+        // observer after navigator to verify up states
+        dialogFragment.lifecycle.addObserver(object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                if (event == Lifecycle.Event.ON_START) {
+                    if (entry.lifecycle.currentState == Lifecycle.State.STARTED) {
+                        matchCount++
+                    }
+                }
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    if (entry.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                        matchCount++
+                    }
+                }
+                if (event == Lifecycle.Event.ON_DESTROY) {
+                    dialogFragment.lifecycle.removeObserver(this)
+                }
+            }
+        })
+
         fragmentManager.executePendingTransactions()
         assertWithMessage("Dialog should be shown")
             .that(dialogFragment.requireDialog().isShowing)
@@ -202,6 +243,7 @@ class DialogFragmentNavigatorTest {
 
         dialogFragment.dismiss()
         fragmentManager.executePendingTransactions()
+        assertThat(matchCount).isEqualTo(4)
         assertWithMessage("Dismiss should remove the dialog from the back stack")
             .that(navigatorState.backStack.value)
             .isEmpty()
@@ -259,6 +301,231 @@ class DialogFragmentNavigatorTest {
         assertWithMessage("Second DialogFragment should be removed from the FragmentManager")
             .that(fragmentManager.fragments)
             .doesNotContain(dialogFragments[1])
+    }
+
+    @UiThreadTest
+    @Test
+    fun testPop_transitioningDialogStaysInTransition() {
+        val dialogFragments = mutableListOf<DialogFragment>()
+        fragmentManager.fragmentFactory = object : FragmentFactory() {
+            override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
+                return super.instantiate(classLoader, className).also { fragment ->
+                    if (fragment is DialogFragment) {
+                        dialogFragments += fragment
+                    }
+                }
+            }
+        }
+
+        val firstEntry = createBackStackEntry()
+        val secondEntry = createBackStackEntry(2)
+        val thirdEntry = createBackStackEntry(3)
+
+        dialogNavigator.navigate(listOf(firstEntry), null, null)
+        dialogNavigator.navigate(listOf(secondEntry), null, null)
+        dialogNavigator.navigate(listOf(thirdEntry), null, null)
+        assertThat(navigatorState.backStack.value).containsExactly(
+            firstEntry, secondEntry, thirdEntry
+        ).inOrder()
+
+        dialogNavigator.popBackStack(secondEntry, false)
+        // should contain all entries as they have not moved to RESUMED state yet
+        assertThat(navigatorState.transitionsInProgress.value).containsExactly(
+            firstEntry, secondEntry, thirdEntry
+        )
+        fragmentManager.executePendingTransactions()
+        assertThat(navigatorState.transitionsInProgress.value).isEmpty()
+    }
+
+    @UiThreadTest
+    @Test
+    fun testPop_nonTransitioningDialogMarkedComplete() {
+        val dialogFragments = mutableListOf<DialogFragment>()
+        fragmentManager.fragmentFactory = object : FragmentFactory() {
+            override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
+                return super.instantiate(classLoader, className).also { fragment ->
+                    if (fragment is DialogFragment) {
+                        dialogFragments += fragment
+                    }
+                }
+            }
+        }
+
+        val firstEntry = createBackStackEntry()
+        val secondEntry = createBackStackEntry(2)
+        val thirdEntry = createBackStackEntry(3)
+
+        dialogNavigator.navigate(listOf(firstEntry), null, null)
+        dialogNavigator.navigate(listOf(secondEntry), null, null)
+        dialogNavigator.navigate(listOf(thirdEntry), null, null)
+        fragmentManager.executePendingTransactions()
+        assertThat(navigatorState.transitionsInProgress.value).isEmpty()
+
+        dialogNavigator.popBackStack(secondEntry, false)
+        // firstEntry was moved to RESUMED so it is no longer transitioning. It should not
+        // be in transition when dialog above it is getting popped.
+        assertThat(navigatorState.transitionsInProgress.value).doesNotContain(firstEntry)
+        fragmentManager.executePendingTransactions()
+        assertThat(navigatorState.transitionsInProgress.value).isEmpty()
+    }
+
+    @UiThreadTest
+    @Test
+    fun testPush_transitioningDialogStaysInTransition() {
+        val dialogFragments = mutableListOf<DialogFragment>()
+        fragmentManager.fragmentFactory = object : FragmentFactory() {
+            override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
+                return super.instantiate(classLoader, className).also { fragment ->
+                    if (fragment is DialogFragment) {
+                        dialogFragments += fragment
+                    }
+                }
+            }
+        }
+
+        val entry = createBackStackEntry()
+        val secondEntry = createBackStackEntry(SECOND_FRAGMENT)
+
+        dialogNavigator.navigate(listOf(entry), null, null)
+        dialogNavigator.navigate(listOf(secondEntry), null, null)
+        // Both entries have not reached RESUME and should be in transition
+        assertThat(navigatorState.transitionsInProgress.value).containsExactly(
+            entry, secondEntry
+        ).inOrder()
+        fragmentManager.executePendingTransactions()
+        assertThat(navigatorState.transitionsInProgress.value).isEmpty()
+    }
+
+    @UiThreadTest
+    @Test
+    fun testPush_nonTransitioningDialogMarkedComplete() {
+        val dialogFragments = mutableListOf<DialogFragment>()
+        fragmentManager.fragmentFactory = object : FragmentFactory() {
+            override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
+                return super.instantiate(classLoader, className).also { fragment ->
+                    if (fragment is DialogFragment) {
+                        dialogFragments += fragment
+                    }
+                }
+            }
+        }
+
+        val entry = createBackStackEntry()
+
+        dialogNavigator.navigate(listOf(entry), null, null)
+        fragmentManager.executePendingTransactions()
+        assertThat(dialogFragments[0].requireDialog().isShowing).isTrue()
+        assertThat(navigatorState.transitionsInProgress.value).isEmpty()
+
+        val secondEntry = createBackStackEntry(SECOND_FRAGMENT)
+
+        dialogNavigator.navigate(listOf(secondEntry), null, null)
+        fragmentManager.executePendingTransactions()
+        assertThat(dialogFragments[1].requireDialog().isShowing).isTrue()
+        // ensure outgoing entry (first entry) is not transitioning
+        assertThat(navigatorState.transitionsInProgress.value).isEmpty()
+    }
+
+    @UiThreadTest
+    @Test
+    fun testConsecutiveNavigateLifecycle() {
+        val dialogFragments = mutableListOf<DialogFragment>()
+        fragmentManager.fragmentFactory = object : FragmentFactory() {
+            override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
+                return super.instantiate(classLoader, className).also { fragment ->
+                    if (fragment is DialogFragment) {
+                        dialogFragments += fragment
+                    }
+                }
+            }
+        }
+
+        val entry = createBackStackEntry()
+        dialogNavigator.navigate(listOf(entry), null, null)
+        fragmentManager.executePendingTransactions()
+
+        assertThat(entry.lifecycle.currentState).isEqualTo(Lifecycle.State.RESUMED)
+
+        val secondEntry = createBackStackEntry(SECOND_FRAGMENT)
+        dialogNavigator.navigate(listOf(secondEntry), null, null)
+        fragmentManager.executePendingTransactions()
+
+        assertThat(navigatorState.backStack.value).containsExactly(entry, secondEntry).inOrder()
+        assertThat(entry.lifecycle.currentState).isEqualTo(Lifecycle.State.STARTED)
+        assertThat(secondEntry.lifecycle.currentState).isEqualTo(Lifecycle.State.RESUMED)
+    }
+
+    @UiThreadTest
+    @Test
+    fun testConsecutiveNavigateThenPopLifecycle() {
+        val dialogFragments = mutableListOf<DialogFragment>()
+        fragmentManager.fragmentFactory = object : FragmentFactory() {
+            override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
+                return super.instantiate(classLoader, className).also { fragment ->
+                    if (fragment is DialogFragment) {
+                        dialogFragments += fragment
+                    }
+                }
+            }
+        }
+
+        val entry = createBackStackEntry()
+        val secondEntry = createBackStackEntry(SECOND_FRAGMENT)
+
+        dialogNavigator.navigate(listOf(entry), null, null)
+        dialogNavigator.navigate(listOf(secondEntry), null, null)
+        fragmentManager.executePendingTransactions()
+
+        assertThat(navigatorState.backStack.value).containsExactly(entry, secondEntry).inOrder()
+        assertThat(entry.lifecycle.currentState).isEqualTo(Lifecycle.State.STARTED)
+        assertThat(secondEntry.lifecycle.currentState).isEqualTo(Lifecycle.State.RESUMED)
+
+        // pop top dialog
+        dialogNavigator.popBackStack(secondEntry, false)
+        fragmentManager.executePendingTransactions()
+
+        assertThat(navigatorState.backStack.value).containsExactly(entry)
+        assertThat(entry.lifecycle.currentState).isEqualTo(Lifecycle.State.RESUMED)
+        assertThat(dialogFragments[0].lifecycle.currentState).isEqualTo(Lifecycle.State.RESUMED)
+        assertThat(secondEntry.lifecycle.currentState).isEqualTo(Lifecycle.State.DESTROYED)
+    }
+
+    @UiThreadTest
+    @Test
+    fun testConsecutiveNavigateThenDismissLifecycle() {
+        val dialogFragments = mutableListOf<DialogFragment>()
+        fragmentManager.fragmentFactory = object : FragmentFactory() {
+            override fun instantiate(classLoader: ClassLoader, className: String): Fragment {
+                return super.instantiate(classLoader, className).also { fragment ->
+                    if (fragment is DialogFragment) {
+                        dialogFragments += fragment
+                    }
+                }
+            }
+        }
+
+        val entry = createBackStackEntry()
+        val secondEntry = createBackStackEntry(SECOND_FRAGMENT)
+
+        dialogNavigator.navigate(listOf(entry), null, null)
+        dialogNavigator.navigate(listOf(secondEntry), null, null)
+        fragmentManager.executePendingTransactions()
+
+        assertThat(navigatorState.backStack.value).containsExactly(entry, secondEntry).inOrder()
+        assertThat(entry.lifecycle.currentState).isEqualTo(Lifecycle.State.STARTED)
+        assertThat(secondEntry.lifecycle.currentState).isEqualTo(Lifecycle.State.RESUMED)
+
+        val secondFragment = dialogFragments[1]
+        assertThat(secondFragment.tag).isEqualTo(secondEntry.id)
+
+        // dismiss top dialog
+        secondFragment.dismiss()
+        fragmentManager.executePendingTransactions()
+
+        assertThat(navigatorState.backStack.value).containsExactly(entry)
+        assertThat(entry.lifecycle.currentState).isEqualTo(Lifecycle.State.RESUMED)
+        assertThat(dialogFragments[0].lifecycle.currentState).isEqualTo(Lifecycle.State.RESUMED)
+        assertThat(secondEntry.lifecycle.currentState).isEqualTo(Lifecycle.State.DESTROYED)
     }
 
     private fun createBackStackEntry(

@@ -17,7 +17,6 @@
 package androidx.car.app.hardware.common;
 
 import static androidx.annotation.RestrictTo.Scope.LIBRARY;
-import static androidx.car.app.hardware.common.PropertyUtils.CAR_ZONE_TO_AREA_ID;
 
 import android.car.hardware.CarPropertyValue;
 import android.content.Context;
@@ -33,7 +32,6 @@ import androidx.concurrent.futures.CallbackToFutureAdapter;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +49,6 @@ import java.util.concurrent.TimeUnit;
  * conversion between vehicle zone and areaId, checks preconditions. After that, it uses
  * {@link PropertyRequestProcessor} to complete the request.
  *
- * @hide
  */
 @RestrictTo(LIBRARY)
 public class PropertyManager {
@@ -120,26 +117,28 @@ public class PropertyManager {
 
         // register properties
         executor.execute(() -> {
-            for (PropertyIdAreaId propertyIdAndAreadId : propertyIdWithAreaIds) {
+            for (PropertyIdAreaId propertyIdAreaId : propertyIdWithAreaIds) {
                 try {
-                    mPropertyRequestProcessor.registerProperty(propertyIdAndAreadId.getPropertyId(),
+                    mPropertyRequestProcessor.registerProperty(propertyIdAreaId.getPropertyId(),
                             sampleRate);
+                    Log.i(LogTags.TAG_CAR_HARDWARE, "Registered property: "
+                            + propertyIdAreaId.getPropertyId());
                 } catch (IllegalArgumentException e) {
                     // the property is not implemented
                     Log.e(LogTags.TAG_CAR_HARDWARE,
                             "Failed to register for property: "
-                                    + propertyIdAndAreadId.getPropertyId(), e);
+                                    + propertyIdAreaId.getPropertyId(), e);
                     mPropertyProcessorCallback.onErrorEvent(
-                            CarInternalError.create(propertyIdAndAreadId.getPropertyId(),
-                                    propertyIdAndAreadId.getAreaId(),
+                            CarInternalError.create(propertyIdAreaId.getPropertyId(),
+                                    propertyIdAreaId.getAreaId(),
                                     CarValue.STATUS_UNIMPLEMENTED));
                 } catch (Exception e) {
                     Log.e(LogTags.TAG_CAR_HARDWARE,
                             "Failed to register for property: "
-                                    + propertyIdAndAreadId.getPropertyId(), e);
+                                    + propertyIdAreaId.getPropertyId(), e);
                     mPropertyProcessorCallback.onErrorEvent(
-                            CarInternalError.create(propertyIdAndAreadId.getPropertyId(),
-                                    propertyIdAndAreadId.getAreaId(), CarValue.STATUS_UNAVAILABLE));
+                            CarInternalError.create(propertyIdAreaId.getPropertyId(),
+                                    propertyIdAreaId.getAreaId(), CarValue.STATUS_UNAVAILABLE));
                 }
             }
         });
@@ -209,25 +208,24 @@ public class PropertyManager {
     }
 
     /**
-     * Returns a list of {@link CarPropertyResponse}s that contain the supported car zones for
-     * the given propertyIds.
+     * Returns a list of {@link CarPropertyProfile}s that contains the supported car zones and
+     * the corresponding min/max values for the given propertyIds.
      *
      * @param propertyIds a list of property Ids.
      * @param executor              executes the expensive operation such as fetching property
      *                              values from cars
-     * @return {@link ListenableFuture} contains a list of {@link CarPropertyResponse}
+     * @return {@link ListenableFuture} contains a list of {@link CarPropertyProfile}
      * @throws SecurityException if the application did not grant permissions for getting
      *                           property
      */
     @NonNull
-    public ListenableFuture<List<CarPropertyResponse<?>>> fetchSupportedZonesResponse(
+    public ListenableFuture<List<CarPropertyProfile<?>>> fetchSupportedZonesResponse(
             @NonNull List<Integer> propertyIds, @NonNull Executor executor) {
         checkPermissions(propertyIds);
         return CallbackToFutureAdapter.getFuture(completer -> {
-            executor.execute(() -> mPropertyRequestProcessor.fetchSupportedCarZones(
+            executor.execute(() -> mPropertyRequestProcessor.fetchCarPropertyProfiles(
                     propertyIds,
-                    (propertyIdAreaIds, errors) -> completer.set(
-                            createResponsesForSupportedCarZones(propertyIdAreaIds, errors))));
+                    completer::set));
             return "Get property values done";
         });
     }
@@ -289,9 +287,13 @@ public class PropertyManager {
         @Override
         public void onChangeEvent(CarPropertyValue carPropertyValue) {
             synchronized (mLock) {
+                int propertyId = carPropertyValue.getPropertyId();
+                Log.i(LogTags.TAG_CAR_HARDWARE, "A change occurred in the value of property: "
+                        + carPropertyValue.toString());
                 // check timestamp
                 if (mListenerAndResponseCache.updateResponseIfNeeded(carPropertyValue)) {
-                    int propertyId = carPropertyValue.getPropertyId();
+                    Log.i(LogTags.TAG_CAR_HARDWARE, "Update needed for property: "
+                            + propertyId);
                     if (PropertyUtils.isOnChangeProperty(propertyId)) {
                         mScheduledExecutorService.execute(() -> dispatchResponsesWithoutDelay(
                                 PropertyIdAreaId.builder().setPropertyId(propertyId)
@@ -323,27 +325,6 @@ public class PropertyManager {
                     error.getPropertyId()).setStatus(error.getErrorCode()).build());
         }
         return carResponses;
-    }
-
-    private static List<CarPropertyResponse<?>> createResponsesForSupportedCarZones(
-            List<PropertyIdAreaId> propertyIdAreaIds,
-            List<CarInternalError> propertyErrors) {
-        List<CarPropertyResponse<?>> carPropertyResponses = new ArrayList<>();
-        for (PropertyIdAreaId propertyIdAreaId : propertyIdAreaIds) {
-            CarPropertyResponse.Builder<Object> carPropertyResponseBuilder =
-                    CarPropertyResponse.builder()
-                            .setPropertyId(propertyIdAreaId.getPropertyId())
-                            .setTimestampMillis(System.currentTimeMillis())
-                            .setCarZones(Collections.singletonList(
-                                    CAR_ZONE_TO_AREA_ID.inverse().get(
-                                            propertyIdAreaId.getAreaId())));
-            carPropertyResponses.add(carPropertyResponseBuilder.build());
-        }
-        for (CarInternalError error : propertyErrors) {
-            carPropertyResponses.add(CarPropertyResponse.builder().setPropertyId(
-                    error.getPropertyId()).setStatus(error.getErrorCode()).build());
-        }
-        return carPropertyResponses;
     }
 
     private void checkPermissions(List<Integer> propertyIds) {

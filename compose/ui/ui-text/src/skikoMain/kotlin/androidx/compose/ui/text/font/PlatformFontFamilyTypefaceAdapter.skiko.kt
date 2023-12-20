@@ -16,13 +16,10 @@
 
 package androidx.compose.ui.text.font
 
-import androidx.compose.ui.text.ExperimentalTextApi
-
-@ExperimentalTextApi
 internal actual class PlatformFontFamilyTypefaceAdapter actual constructor() :
     FontFamilyTypefaceAdapter {
 
-    override fun resolve(
+    actual override fun resolve(
         typefaceRequest: TypefaceRequest,
         platformFontLoader: PlatformFontLoader,
         onAsyncCompletion: (TypefaceResult.Immutable) -> Unit,

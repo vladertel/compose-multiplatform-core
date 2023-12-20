@@ -31,6 +31,7 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.style.MetricAffectingSpan;
 
+import androidx.annotation.DoNotInline;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
@@ -176,7 +177,6 @@ public class PrecomputedTextCompat implements Spannable {
              * @return PrecomputedTextCompat.Builder instance
              * @see StaticLayout.Builder#setTextDirection
              */
-            @RequiresApi(18)
             public Builder setTextDirection(@NonNull TextDirectionHeuristic textDir) {
                 mTextDir = textDir;
                 return this;
@@ -235,7 +235,6 @@ public class PrecomputedTextCompat implements Spannable {
          *
          * @return the {@link TextDirectionHeuristic}
          */
-        @RequiresApi(18)
         public @Nullable TextDirectionHeuristic getTextDirection() {
             return mTextDir;
         }
@@ -267,7 +266,6 @@ public class PrecomputedTextCompat implements Spannable {
 
         /**
          * Similar to equals but don't compare text direction
-         * @hide
          */
         @RestrictTo(LIBRARY_GROUP_PREFIX)
         public boolean equalsWithoutTextDirection(@NonNull Params other) {
@@ -495,7 +493,7 @@ public class PrecomputedTextCompat implements Spannable {
 
     @RequiresApi(28)
     private PrecomputedTextCompat(@NonNull PrecomputedText precomputed, @NonNull Params params) {
-        mText = precomputed;
+        mText = Api28Impl.castToSpannable(precomputed);
         mParams = params;
         mParagraphEnds = null;
         mWrapped = (Build.VERSION.SDK_INT >= 29) ? precomputed : null;
@@ -503,7 +501,6 @@ public class PrecomputedTextCompat implements Spannable {
 
     /**
      * Returns the underlying original text if the text is PrecomputedText.
-     * @hide
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     @RequiresApi(28)
@@ -756,5 +753,17 @@ public class PrecomputedTextCompat implements Spannable {
     @Override
     public String toString() {
         return mText.toString();
+    }
+
+    @RequiresApi(28)
+    static class Api28Impl {
+        private Api28Impl() {
+            // This class is not instantiable.
+        }
+
+        @DoNotInline
+        static Spannable castToSpannable(PrecomputedText precomputedText) {
+            return precomputedText;
+        }
     }
 }

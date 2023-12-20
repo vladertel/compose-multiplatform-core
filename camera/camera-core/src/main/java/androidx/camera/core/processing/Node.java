@@ -24,9 +24,7 @@ import androidx.camera.core.UseCase;
 import androidx.camera.core.impl.CameraCaptureResult;
 
 /**
- * Base unit for CameraX post-processing.
- *
- * <p>All CameraX post-processing should be wrapped by this interface to explicitly define the I/O.
+ * A pub/sub based unit for CameraX post-processing.
  *
  * <p>Both {@link I} and {@link O} should include handlers to buffers that
  * contain camera frames, as well as the callbacks to notify when the frames are updated. One
@@ -64,11 +62,6 @@ public interface Node<I, O> {
      *
      * <p>This method will be invoked in {@code UseCase#createPipeline}. For now, {@code
      * #createPipeline}s are called on the main thread.
-     *
-     * <p> Returns {@code null} if the input does not change the current state of the
-     * {@link Node}. This usually happens when the input specification can be handled by the
-     * previously allocated buffer, thus no new buffer needs to be allocated. The node will
-     * provide the existing buffer for the upstream node to write to.
      */
     @NonNull
     @MainThread
@@ -80,10 +73,10 @@ public interface Node<I, O> {
      * <p>Releases all the resources allocated by the node, including threads, buffers, GL context
      * etc. Once released, the node can never be brought back to life.
      *
-     * <p>This method is usually called during {@link UseCase#onDetached()}. It also can be called
-     * outside of {@link UseCase#onDetached()}. If the pipeline is rebuilt on-the-fly, e.g.
+     * <p>This method is usually called during {@link UseCase#onUnbind()}. It also can be called
+     * outside of {@link UseCase#onUnbind()}. If the pipeline is rebuilt on-the-fly, e.g.
      * target rotation is changed by the app, then the node should be released right away. On the
-     * other hand, it's also possible to not release even after {@link UseCase#onDetached()}, if the
+     * other hand, it's also possible to not release even after {@link UseCase#onUnbind()}, if the
      * node needs to be kept alive across lifecycles. For example, for front/back camera switching
      * during video recording.
      */

@@ -21,14 +21,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
@@ -39,11 +37,9 @@ import androidx.compose.integration.demos.common.Demo
 import androidx.compose.integration.demos.common.DemoCategory
 import androidx.compose.integration.demos.common.FragmentDemo
 import androidx.compose.integration.demos.common.allLaunchableDemos
-import androidx.compose.integration.demos.settings.DecorFitsSystemWindowsSetting
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,12 +47,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallTopAppBar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -67,9 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
@@ -92,12 +85,7 @@ fun DemoApp(
 
     var filterText by rememberSaveable { mutableStateOf("") }
 
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
-
-    // Only handle window insets when the system isn't doing it for us.
-    val insetsModifier = if (!DecorFitsSystemWindowsSetting.asState().value) {
-        Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
-    } else Modifier
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
         topBar = {
@@ -114,11 +102,20 @@ fun DemoApp(
             )
         },
         modifier = Modifier
-            .then(insetsModifier)
             .nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { innerPadding ->
-        val modifier = Modifier.padding(innerPadding)
-        DemoContent(modifier, currentDemo, isFiltering, filterText, onNavigateToDemo, onNavigateUp)
+        val modifier = Modifier
+            // as scaffold currently doesn't consume - consume what's needed
+            .consumeWindowInsets(innerPadding)
+            .padding(innerPadding)
+        DemoContent(
+            modifier,
+            currentDemo,
+            isFiltering,
+            filterText,
+            onNavigateToDemo,
+            onNavigateUp
+        )
     }
 }
 
@@ -242,7 +239,7 @@ private fun DemoAppBar(
             scrollBehavior = scrollBehavior
         )
     } else {
-        SmallTopAppBar(
+        TopAppBar(
             title = {
                 Text(title, Modifier.testTag(Tags.AppBarTitle))
             },
@@ -259,12 +256,8 @@ private fun DemoAppBar(
 private object AppBarIcons {
     @Composable
     fun Back(onClick: () -> Unit) {
-        val icon = when (LocalLayoutDirection.current) {
-            LayoutDirection.Ltr -> Icons.Filled.ArrowBack
-            LayoutDirection.Rtl -> Icons.Filled.ArrowForward
-        }
         IconButton(onClick = onClick) {
-            Icon(icon, null)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
         }
     }
 

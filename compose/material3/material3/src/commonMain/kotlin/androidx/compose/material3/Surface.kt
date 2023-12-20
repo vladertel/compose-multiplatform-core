@@ -26,20 +26,22 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.NonRestartableComposable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.isContainer
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -120,9 +122,12 @@ fun Surface(
                         elevation = absoluteElevation
                     ),
                     border = border,
-                    shadowElevation = shadowElevation
+                    shadowElevation = with(LocalDensity.current) { shadowElevation.toPx() }
                 )
-                .semantics(mergeDescendants = false) {}
+                .semantics(mergeDescendants = false) {
+                    @Suppress("DEPRECATION")
+                    isContainer = true
+                }
                 .pointerInput(Unit) {},
             propagateMinConstraints = true
         ) {
@@ -166,9 +171,8 @@ fun Surface(
  * a `Modifier.semantics { onClick(label = "YOUR_LABEL", action = null) }` to the Surface.
  *
  * 6) Semantics for clicks. Just like with [Modifier.clickable], clickable version of Surface will
- * produce semantics to indicate that it is clicked. Also, by default, accessibility services will
- * describe the element as [Role.Button]. You may change this by passing a desired [Role] with a
- * [Modifier.semantics].
+ * produce semantics to indicate that it is clicked. No semantic role is set by default, you
+ * may specify one by passing a desired [Role] with a [Modifier.semantics].
  *
  * To manually retrieve the content color inside a surface, use [LocalContentColor].
  *
@@ -195,7 +199,6 @@ fun Surface(
  * you want to observe [Interaction]s and customize the appearance / behavior of this Surface in
  * different [Interaction]s.
  */
-@ExperimentalMaterial3Api
 @Composable
 @NonRestartableComposable
 fun Surface(
@@ -216,9 +219,10 @@ fun Surface(
         LocalContentColor provides contentColor,
         LocalAbsoluteTonalElevation provides absoluteElevation
     ) {
+        @Suppress("DEPRECATION_ERROR")
         Box(
             modifier = modifier
-                .minimumTouchTargetSize()
+                .minimumInteractiveComponentSize()
                 .surface(
                     shape = shape,
                     backgroundColor = surfaceColorAtElevation(
@@ -226,13 +230,12 @@ fun Surface(
                         elevation = absoluteElevation
                     ),
                     border = border,
-                    shadowElevation = shadowElevation
+                    shadowElevation = with(LocalDensity.current) { shadowElevation.toPx() }
                 )
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = rememberRipple(),
+                    indication = androidx.compose.material.ripple.rememberRipple(),
                     enabled = enabled,
-                    role = Role.Button,
                     onClick = onClick
                 ),
             propagateMinConstraints = true
@@ -276,9 +279,8 @@ fun Surface(
  * that doesn't require [onClick] param.
  *
  * 6) Semantics for selection. Just like with [Modifier.selectable], selectable version of Surface
- * will produce semantics to indicate that it is selected. Also, by default, accessibility services
- * will describe the element as [Role.Tab]. You may change this by passing a desired [Role] with a
- * [Modifier.semantics].
+ * will produce semantics to indicate that it is selected. No semantic role is set by default, you
+ * may specify one by passing a desired [Role] with a [Modifier.semantics].
  *
  * To manually retrieve the content color inside a surface, use [LocalContentColor].
  *
@@ -306,7 +308,6 @@ fun Surface(
  * you want to observe [Interaction]s and customize the appearance / behavior of this Surface in
  * different [Interaction]s.
  */
-@ExperimentalMaterial3Api
 @Composable
 @NonRestartableComposable
 fun Surface(
@@ -328,9 +329,10 @@ fun Surface(
         LocalContentColor provides contentColor,
         LocalAbsoluteTonalElevation provides absoluteElevation
     ) {
+        @Suppress("DEPRECATION_ERROR")
         Box(
             modifier = modifier
-                .minimumTouchTargetSize()
+                .minimumInteractiveComponentSize()
                 .surface(
                     shape = shape,
                     backgroundColor = surfaceColorAtElevation(
@@ -338,14 +340,13 @@ fun Surface(
                         elevation = absoluteElevation
                     ),
                     border = border,
-                    shadowElevation = shadowElevation
+                    shadowElevation = with(LocalDensity.current) { shadowElevation.toPx() }
                 )
                 .selectable(
                     selected = selected,
                     interactionSource = interactionSource,
-                    indication = rememberRipple(),
+                    indication = androidx.compose.material.ripple.rememberRipple(),
                     enabled = enabled,
-                    role = Role.Tab,
                     onClick = onClick
                 ),
             propagateMinConstraints = true
@@ -389,9 +390,8 @@ fun Surface(
  * handling, consider using a Surface function that doesn't require [onCheckedChange] param.
  *
  * 6) Semantics for toggle. Just like with [Modifier.toggleable], toggleable version of Surface
- * will produce semantics to indicate that it is checked.  Also, by default, accessibility services
- * will describe the element as [Role.Switch]. You may change this by passing a desired [Role] with
- * a [Modifier.semantics].
+ * will produce semantics to indicate that it is checked.  No semantic role is set by default, you
+ * may specify one by passing a desired [Role] with a [Modifier.semantics].
  *
  * To manually retrieve the content color inside a surface, use [LocalContentColor].
  *
@@ -419,7 +419,6 @@ fun Surface(
  * you want to observe [Interaction]s and customize the appearance / behavior of this Surface in
  * different [Interaction]s.
  */
-@ExperimentalMaterial3Api
 @Composable
 @NonRestartableComposable
 fun Surface(
@@ -441,9 +440,10 @@ fun Surface(
         LocalContentColor provides contentColor,
         LocalAbsoluteTonalElevation provides absoluteElevation
     ) {
+        @Suppress("DEPRECATION_ERROR")
         Box(
             modifier = modifier
-                .minimumTouchTargetSize()
+                .minimumInteractiveComponentSize()
                 .surface(
                     shape = shape,
                     backgroundColor = surfaceColorAtElevation(
@@ -451,14 +451,13 @@ fun Surface(
                         elevation = absoluteElevation
                     ),
                     border = border,
-                    shadowElevation = shadowElevation
+                    shadowElevation = with(LocalDensity.current) { shadowElevation.toPx() }
                 )
                 .toggleable(
                     value = checked,
                     interactionSource = interactionSource,
-                    indication = rememberRipple(),
+                    indication = androidx.compose.material.ripple.rememberRipple(),
                     enabled = enabled,
-                    role = Role.Switch,
                     onValueChange = onCheckedChange
                 ),
             propagateMinConstraints = true
@@ -468,24 +467,21 @@ fun Surface(
     }
 }
 
+@Stable
 private fun Modifier.surface(
     shape: Shape,
     backgroundColor: Color,
     border: BorderStroke?,
-    shadowElevation: Dp
-) = this.shadow(shadowElevation, shape, clip = false)
+    shadowElevation: Float,
+) = this
+    .graphicsLayer(shadowElevation = shadowElevation, shape = shape, clip = false)
     .then(if (border != null) Modifier.border(border, shape) else Modifier)
     .background(color = backgroundColor, shape = shape)
     .clip(shape)
 
 @Composable
-private fun surfaceColorAtElevation(color: Color, elevation: Dp): Color {
-    return if (color == MaterialTheme.colorScheme.surface) {
-        MaterialTheme.colorScheme.surfaceColorAtElevation(elevation)
-    } else {
-        color
-    }
-}
+private fun surfaceColorAtElevation(color: Color, elevation: Dp): Color =
+    MaterialTheme.colorScheme.applyTonalElevation(color, elevation)
 
 /**
  * CompositionLocal containing the current absolute elevation provided by [Surface] components. This

@@ -36,6 +36,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -49,6 +52,7 @@ import java.util.TimeZone;
  */
 @RunWith(AndroidJUnit4.class)
 public class CheckTheJavaApisTest {
+    private static TimeZone sSavedTimeZone;
     private final Context mAppContext =
             InstrumentationRegistry.getInstrumentation().getTargetContext();
     private final Locale mLocale = Locale.GERMANY;
@@ -57,6 +61,26 @@ public class CheckTheJavaApisTest {
     {
         mCal.set(2021, Calendar.AUGUST, 23, 19, 53, 47);
         mCal.set(Calendar.MILLISECOND, 123);
+    }
+
+    @BeforeClass
+    public static void beforeClass() {
+        sSavedTimeZone = TimeZone.getDefault();
+    }
+
+    @Before
+    public void beforeTest() {
+        // Some of the test check that the functionality honors the default timezone.
+        // So we make sure it is set to something we control.
+        TimeZone tzLosAngeles = TimeZone.getTimeZone("America/Los_Angeles");
+        TimeZone.setDefault(tzLosAngeles);
+    }
+
+    @After
+    public void afterTest() {
+        if (sSavedTimeZone != null) {
+            TimeZone.setDefault(sSavedTimeZone);
+        }
     }
 
     @Test @SmallTest
@@ -77,7 +101,9 @@ public class CheckTheJavaApisTest {
 
         DateTimeFormatterSkeletonOptions dateTimeFormatterOptions = builder.build();
         String expected;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            expected = "Mo., 23. August 2021 n. Chr. um 19:53:47,123 MEZ";
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             expected = "Mo., 23. August 2021 n. Chr., 19:53:47,123 MEZ";
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             expected = "Mo., 23. August 2021 n. Chr., 10:53:47,123 GMT-07:00";
@@ -115,7 +141,9 @@ public class CheckTheJavaApisTest {
 
         // Verify DateTimeFormatterSkeletonOptions.fromString
         dateTimeFormatterOptions = DateTimeFormatterSkeletonOptions.fromString("yMMMMdjmsEEEE");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            expected = "Montag, 23. August 2021 um 19:53:47";
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             expected = "Montag, 23. August 2021, 19:53:47";
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             expected = "Montag, 23. August 2021, 10:53:47";

@@ -224,7 +224,7 @@ public final class PlatformStorage {
                     if (result.isSuccess()) {
                         future.set(
                                 new SearchSessionImpl(result.getResultValue(), context.mExecutor,
-                                        new FeaturesImpl()));
+                                        new FeaturesImpl(context.mContext)));
                     } else {
                         // Without the SuppressLint annotation on the method, this line causes a
                         // lint error because getResultCode isn't defined as returning a value from
@@ -235,19 +235,6 @@ public final class PlatformStorage {
                     }
                 });
         return future;
-    }
-
-    /**
-     * @deprecated use {@link #createSearchSessionAsync}.
-     *
-     * @param context The {@link SearchContext} contains all information to create a new
-     *                {@link AppSearchSession}
-     */
-    @NonNull
-    @Deprecated
-    public static ListenableFuture<AppSearchSession> createSearchSession(
-            @NonNull SearchContext context) {
-        return createSearchSessionAsync(context);
     }
 
     /**
@@ -267,7 +254,7 @@ public final class PlatformStorage {
                     if (result.isSuccess()) {
                         future.set(new GlobalSearchSessionImpl(
                                 result.getResultValue(), context.mExecutor,
-                                new FeaturesImpl()));
+                                new FeaturesImpl(context.mContext)));
                     } else {
                         // Without the SuppressLint annotation on the method, this line causes a
                         // lint error because getResultCode isn't defined as returning a value from
@@ -278,15 +265,5 @@ public final class PlatformStorage {
                     }
                 });
         return future;
-    }
-
-    /**
-     * @deprecated use {@link #createGlobalSearchSessionAsync}.
-     */
-    @Deprecated
-    @NonNull
-    public static ListenableFuture<GlobalSearchSession> createGlobalSearchSession(
-            @NonNull GlobalSearchContext context) {
-        return createGlobalSearchSessionAsync(context);
     }
 }

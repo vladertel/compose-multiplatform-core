@@ -19,13 +19,13 @@ package androidx.compose.foundation.lazy
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.internal.JvmDefaultWithCompatibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.internal.JvmDefaultWithCompatibility
 
 /**
  * Receiver scope which is used by [LazyColumn] and [LazyRow].
@@ -109,6 +109,9 @@ interface LazyListScope {
      * type could be reused more efficiently. Note that null is a valid type and items of such
      * type will be considered compatible.
      * @param content the content of the header
+     *
+     * Note: More investigations needed to make sure sticky headers API is suitable for various
+     * more generic usecases, e.g. in grids. This API is experimental until the answer is found.
      */
     @ExperimentalFoundationApi
     fun stickyHeader(
@@ -338,7 +341,7 @@ fun LazyRow(
  * @param horizontalAlignment the horizontal alignment applied to the items.
  * @param flingBehavior logic describing fling behavior.
  * @param userScrollEnabled whether the scrolling via the user gestures or accessibility actions
- * is allowed. You can still scroll programmatically using the state even when it is disabled.
+ * is allowed. You can still scroll programmatically using the state even when it is disabled
  * @param content a block which describes the content. Inside this block you can use methods like
  * [LazyListScope.item] to add a single item or [LazyListScope.items] to add a list of items.
  */

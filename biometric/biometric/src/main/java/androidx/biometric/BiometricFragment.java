@@ -48,7 +48,6 @@ import java.util.concurrent.Executor;
  * A fragment that hosts the system-dependent UI for {@link BiometricPrompt} and coordinates logic
  * for the ongoing authentication session across device configuration changes.
  *
- * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class BiometricFragment extends Fragment {
@@ -447,11 +446,6 @@ public class BiometricFragment extends Fragment {
         if (errorCode != BiometricPrompt.BIOMETRIC_SUCCESS) {
             sendErrorAndDismiss(
                     errorCode, ErrorUtils.getFingerprintErrorString(context, errorCode));
-            return;
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
-            Log.e(TAG, "Unable to show fingerprint dialog on API <19.");
             return;
         }
 

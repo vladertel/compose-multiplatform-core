@@ -16,6 +16,12 @@
 
 package androidx.compose.ui.graphics.colorspace
 
+import androidx.annotation.Size
+import androidx.collection.mutableIntObjectMapOf
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.util.unpackFloat1
+import androidx.compose.ui.util.unpackFloat2
+
 /**
  * A connector transforms colors from a source color space to a destination
  * color space.
@@ -126,7 +132,7 @@ internal constructor(
      *
      * @see transform
      */
-    /*@Size(3)*/
+    @Size(3)
     fun transform(r: Float, g: Float, b: Float): FloatArray {
         return transform(floatArrayOf(r, g, b))
     }
@@ -142,8 +148,8 @@ internal constructor(
      *
      * @see transform
      */
-    /*@Size(min = 3)*/
-    open fun transform(/*@Size(min = 3)*/ v: FloatArray): FloatArray {
+    @Size(min = 3)
+    open fun transform(@Size(min = 3) v: FloatArray): FloatArray {
         val xyz = transformSource.toXyz(v)
         if (transform != null) {
             xyz[0] *= transform[0]
@@ -151,6 +157,20 @@ internal constructor(
             xyz[2] *= transform[2]
         }
         return transformDestination.fromXyz(xyz)
+    }
+
+    internal open fun transformToColor(color: Color): Color {
+        val (r, g, b, a) = color
+        val packed = transformSource.toXy(r, g, b)
+        var x = unpackFloat1(packed)
+        var y = unpackFloat2(packed)
+        var z = transformSource.toZ(r, g, b)
+        if (transform != null) {
+            x *= transform[0]
+            y *= transform[1]
+            z *= transform[2]
+        }
+        return transformDestination.xyzaToColor(x, y, z, a, destination)
     }
 
     /**
@@ -168,14 +188,28 @@ internal constructor(
         }
 
         override fun transform(v: FloatArray): FloatArray {
-            v[0] = mSource.eotf(v[0].toDouble()).toFloat()
-            v[1] = mSource.eotf(v[1].toDouble()).toFloat()
-            v[2] = mSource.eotf(v[2].toDouble()).toFloat()
+            v[0] = mSource.eotfFunc(v[0].toDouble()).toFloat()
+            v[1] = mSource.eotfFunc(v[1].toDouble()).toFloat()
+            v[2] = mSource.eotfFunc(v[2].toDouble()).toFloat()
             mul3x3Float3(mTransform, v)
-            v[0] = mDestination.oetf(v[0].toDouble()).toFloat()
-            v[1] = mDestination.oetf(v[1].toDouble()).toFloat()
-            v[2] = mDestination.oetf(v[2].toDouble()).toFloat()
+            v[0] = mDestination.oetfFunc(v[0].toDouble()).toFloat()
+            v[1] = mDestination.oetfFunc(v[1].toDouble()).toFloat()
+            v[2] = mDestination.oetfFunc(v[2].toDouble()).toFloat()
             return v
+        }
+
+        override fun transformToColor(color: Color): Color {
+            val (r, g, b, a) = color
+            val v0 = mSource.eotfFunc(r.toDouble()).toFloat()
+            val v1 = mSource.eotfFunc(g.toDouble()).toFloat()
+            val v2 = mSource.eotfFunc(b.toDouble()).toFloat()
+            val v01 = mul3x3Float3_0(mTransform, v0, v1, v2)
+            val v11 = mul3x3Float3_1(mTransform, v0, v1, v2)
+            val v21 = mul3x3Float3_2(mTransform, v0, v1, v2)
+            val v02 = mDestination.oetfFunc(v01.toDouble()).toFloat()
+            val v12 = mDestination.oetfFunc(v11.toDouble()).toFloat()
+            val v22 = mDestination.oetfFunc(v21.toDouble()).toFloat()
+            return Color(v02, v12, v22, a, mDestination)
         }
 
         /**
@@ -290,10 +324,25 @@ internal constructor(
          */
         internal fun identity(source: ColorSpace): Connector {
             return object : Connector(source, source, RenderIntent.Relative) {
-                override fun transform(v: FloatArray): FloatArray {
-                    return v
-                }
+                override fun transform(v: FloatArray): FloatArray = v
+
+                override fun transformToColor(color: Color): Color = color
             }
         }
     }
+}
+
+internal val Connectors = mutableIntObjectMapOf(
+    connectorKey(ColorSpaces.Srgb.id, ColorSpaces.Srgb.id, RenderIntent.Perceptual),
+    Connector.identity(ColorSpaces.Srgb),
+    connectorKey(ColorSpaces.Srgb.id, ColorSpaces.Oklab.id, RenderIntent.Perceptual),
+    Connector(ColorSpaces.Srgb, ColorSpaces.Oklab, RenderIntent.Perceptual),
+    connectorKey(ColorSpaces.Oklab.id, ColorSpaces.Srgb.id, RenderIntent.Perceptual),
+    Connector(ColorSpaces.Oklab, ColorSpaces.Srgb, RenderIntent.Perceptual)
+)
+
+// See [ColorSpace.MaxId], the id is encoded on 6 bits
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun connectorKey(src: Int, dst: Int, renderIntent: RenderIntent): Int {
+    return src or (dst shl 6) or (renderIntent.value shl 12)
 }

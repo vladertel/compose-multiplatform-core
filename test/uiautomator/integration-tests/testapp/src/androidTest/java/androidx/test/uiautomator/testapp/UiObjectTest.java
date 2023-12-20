@@ -21,11 +21,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import android.graphics.Point;
 import android.graphics.Rect;
 
 import androidx.test.filters.SdkSuppress;
 import androidx.test.uiautomator.UiObject;
-import androidx.test.uiautomator.UiObjectNotFoundException;
 import androidx.test.uiautomator.UiSelector;
 
 import org.junit.Test;
@@ -74,8 +74,7 @@ public class UiObjectTest extends BaseTest {
 
         UiObject noNode = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/no_node"));
 
-        assertThrows(noNode.getSelector().toString(), UiObjectNotFoundException.class,
-                noNode::getChildCount);
+        assertUiObjectNotFound(noNode::getChildCount);
     }
 
     @Test
@@ -87,6 +86,7 @@ public class UiObjectTest extends BaseTest {
                 + "/drag_button"));
         UiObject dragDestination = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
                 + "/drag_destination"));
+
         UiObject expectedDragDest = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
                 + "/drag_destination").text("drag_received"));
 
@@ -107,6 +107,7 @@ public class UiObjectTest extends BaseTest {
                 + "/drag_button"));
         UiObject dragDestination = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
                 + "/drag_destination"));
+
         UiObject expectedDragDest = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
                 + "/drag_destination").text("drag_received"));
         Rect destBounds = dragDestination.getVisibleBounds();
@@ -122,10 +123,19 @@ public class UiObjectTest extends BaseTest {
 
         UiObject swipeRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
                 + "/swipe_region"));
+        UiObject verySmallRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/very_small_region"));
 
+        UiObject expectedSwipeRegion = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id"
+                        + "/swipe_region").text("swipe_up"));
+
+        // Note that the `swipeRegion` will always show the swipe direction, even if the swipe
+        // action does not happen inside `swipeRegion`.
+        assertFalse(verySmallRegion.swipeUp(10));
         assertEquals("no_swipe", swipeRegion.getText());
-        assertTrue(swipeRegion.swipeUp(100));
-        assertEquals("swipe_up", swipeRegion.getText());
+        assertTrue(swipeRegion.swipeUp(10));
+        assertTrue(expectedSwipeRegion.waitForExists(TIMEOUT_MS));
     }
 
     @Test
@@ -134,10 +144,17 @@ public class UiObjectTest extends BaseTest {
 
         UiObject swipeRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
                 + "/swipe_region"));
+        UiObject verySmallRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/very_small_region"));
 
+        UiObject expectedSwipeRegion = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id"
+                        + "/swipe_region").text("swipe_down"));
+
+        assertFalse(verySmallRegion.swipeDown(10));
         assertEquals("no_swipe", swipeRegion.getText());
-        assertTrue(swipeRegion.swipeDown(100));
-        assertEquals("swipe_down", swipeRegion.getText());
+        assertTrue(swipeRegion.swipeDown(10));
+        assertTrue(expectedSwipeRegion.waitForExists(TIMEOUT_MS));
     }
 
     @Test
@@ -146,10 +163,17 @@ public class UiObjectTest extends BaseTest {
 
         UiObject swipeRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
                 + "/swipe_region"));
+        UiObject verySmallRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/very_small_region"));
 
+        UiObject expectedSwipeRegion = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id"
+                        + "/swipe_region").text("swipe_left"));
+
+        assertFalse(verySmallRegion.swipeLeft(10));
         assertEquals("no_swipe", swipeRegion.getText());
-        assertTrue(swipeRegion.swipeLeft(100));
-        assertEquals("swipe_left", swipeRegion.getText());
+        assertTrue(swipeRegion.swipeLeft(10));
+        assertTrue(expectedSwipeRegion.waitForExists(TIMEOUT_MS));
     }
 
     @Test
@@ -158,78 +182,514 @@ public class UiObjectTest extends BaseTest {
 
         UiObject swipeRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
                 + "/swipe_region"));
+        UiObject verySmallRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/very_small_region"));
 
+        UiObject expectedSwipeRegion = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id"
+                        + "/swipe_region").text("swipe_right"));
+
+        assertFalse(verySmallRegion.swipeRight(10));
         assertEquals("no_swipe", swipeRegion.getText());
-        assertTrue(swipeRegion.swipeRight(100));
-        assertEquals("swipe_right", swipeRegion.getText());
+        assertTrue(swipeRegion.swipeRight(10));
+        assertTrue(expectedSwipeRegion.waitForExists(TIMEOUT_MS));
     }
 
-    /* TODO(b/241158642): Implement these tests, and the tests for exceptions of each tested method.
+    @Test
+    public void testClick() throws Exception {
+        launchTestActivity(ClickTestActivity.class);
 
-    public void testClick() {}
+        UiObject button1 = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/button1"));
 
-    public void testClickAndWaitForNewWindow() {}
+        UiObject expectedButton1 = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/button1").text("text1_clicked"));
 
-    public void testClickAndWaitForNewWindow_timeout() {}
+        assertEquals("text1", button1.getText());
+        assertTrue(button1.click());
+        assertTrue(expectedButton1.waitForExists(TIMEOUT_MS));
+    }
 
-    public void testClickTopLeft() {}
+    @Test
+    public void testClickAndWaitForNewWindow() throws Exception {
+        launchTestActivity(ClickAndWaitTestActivity.class);
 
-    public void testLongClickBottomRight() {}
+        UiObject newWindowsButton = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/new_window_button"));
 
-    public void testClickBottomRight() {}
+        assertTrue(newWindowsButton.clickAndWaitForNewWindow());
+    }
 
-    public void testLongClick() {}
+    @Test
+    public void testClickAndWaitForNewWindow_timeout() throws Exception {
+        launchTestActivity(ClickAndWaitTestActivity.class);
 
-    public void testLongClickTopLeft() {}
+        UiObject newWindowsButton = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/new_window_button"));
 
-    public void testGetText() {}
+        assertTrue(newWindowsButton.clickAndWaitForNewWindow(4_000));
+    }
 
-    public void testGetClassName() {}
+    @Test
+    public void testClickTopLeft() throws Exception {
+        launchTestActivity(ClickOnPositionTestActivity.class);
 
-    public void testGetContentDescription() {}
+        UiObject clickRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/click_region"));
 
-    public void testLegacySetText() {}
+        assertEquals("click_region", clickRegion.getText());
+        assertTrue(clickRegion.clickTopLeft());
+        assertEquals("top_left_clicked", clickRegion.getText());
+    }
 
-    public void testSetText() {}
+    @Test
+    public void testLongClickBottomRight() throws Exception {
+        launchTestActivity(ClickOnPositionTestActivity.class);
 
-    public void testClearTextField() {}
+        UiObject clickRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/click_region"));
 
-    public void testIsChecked() {}
+        assertEquals("click_region", clickRegion.getText());
+        assertTrue(clickRegion.longClickBottomRight());
+        assertEquals("bottom_right_long_clicked", clickRegion.getText());
+    }
 
-    public void testIsSelected() {}
+    @Test
+    public void testClickBottomRight() throws Exception {
+        launchTestActivity(ClickOnPositionTestActivity.class);
 
-    public void testIsCheckable() {}
+        UiObject clickRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/click_region"));
 
-    public void testIsEnabled() {}
+        assertEquals("click_region", clickRegion.getText());
+        assertTrue(clickRegion.clickBottomRight());
+        assertEquals("bottom_right_clicked", clickRegion.getText());
+    }
 
-    public void testIsClickable() {}
+    @Test
+    public void testLongClick() throws Exception {
+        launchTestActivity(ClickOnPositionTestActivity.class);
 
-    public void testIsFocused() {}
+        UiObject clickRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/click_region"));
 
-    public void testIsFocusable() {}
+        assertEquals("click_region", clickRegion.getText());
+        assertTrue(clickRegion.longClick());
+        assertTrue(clickRegion.getText().contains("long"));
+    }
 
-    public void testIsScrollable() {}
+    @Test
+    public void testLongClickTopLeft() throws Exception {
+        launchTestActivity(ClickOnPositionTestActivity.class);
 
-    public void testIsLongClickable() {}
+        UiObject clickRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/click_region"));
 
-    public void testGetPackageName() {}
+        assertEquals("click_region", clickRegion.getText());
+        assertTrue(clickRegion.longClickTopLeft());
+        assertEquals("top_left_long_clicked", clickRegion.getText());
+    }
 
-    public void testGetVisibleBounds() {}
+    @Test
+    public void testClickFamily_throwsUiObjectNotFoundException() {
+        launchTestActivity(ClickTestActivity.class);
 
-    public void testGetBounds() {}
+        UiObject noNode = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/no_node"));
 
-    public void testWaitForExists() {}
+        assertUiObjectNotFound(noNode::click);
+        assertUiObjectNotFound(noNode::clickAndWaitForNewWindow);
+        assertUiObjectNotFound(noNode::clickTopLeft);
+        assertUiObjectNotFound(noNode::longClickBottomRight);
+        assertUiObjectNotFound(noNode::clickBottomRight);
+        assertUiObjectNotFound(noNode::longClick);
+        assertUiObjectNotFound(noNode::longClickTopLeft);
+    }
 
-    public void testWaitUntilGone() {}
+    @Test
+    public void testGetText() throws Exception {
+        launchTestActivity(MainActivity.class);
 
-    public void testExists() {}
+        UiObject sampleTextObject = mDevice.findObject(new UiSelector().text("Sample text"));
+        UiObject nullTextObject = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/nested_elements"));
 
-    public void testPinchOut() {}
+        assertEquals("Sample text", sampleTextObject.getText());
+        assertEquals("", nullTextObject.getText());
+    }
 
-    public void testPinchIn() {}
+    @Test
+    public void testGetClassName() throws Exception {
+        launchTestActivity(MainActivity.class);
 
-    public void testPerformTwoPointerGesture() {}
+        UiObject button = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/button"));
+        UiObject textView = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/example_id"));
 
-    public void testPerformMultiPointerGesture() {}
-    */
+        assertEquals("android.widget.Button", button.getClassName());
+        assertEquals("android.widget.TextView", textView.getClassName());
+    }
+
+    @Test
+    public void testGetContentDescription() throws Exception {
+        launchTestActivity(MainActivity.class);
+
+        UiObject button = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/button"));
+        UiObject textView = mDevice.findObject(new UiSelector().text("Text View 1"));
+
+        assertEquals("I'm accessible!", button.getContentDescription());
+        assertEquals("", textView.getContentDescription());
+    }
+
+    @Test
+    public void testSetText() throws Exception {
+        launchTestActivity(ClearTextTestActivity.class);
+
+        UiObject editText = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/edit_text"));
+
+        assertEquals("sample_text", editText.getText());
+        editText.setText("new_text");
+        assertEquals("new_text", editText.getText());
+    }
+
+    @Test
+    public void testClearTextField() throws Exception {
+        launchTestActivity(ClearTextTestActivity.class);
+
+        UiObject editText = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/edit_text"));
+
+        assertEquals("sample_text", editText.getText());
+        editText.clearTextField();
+        assertEquals("", editText.getText());
+    }
+
+    @Test
+    public void testTextFamily_throwsUiObjectNotFoundException() {
+        launchTestActivity(ClearTextTestActivity.class);
+
+        UiObject noNode = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/no_node"));
+
+        assertUiObjectNotFound(noNode::getText);
+        assertUiObjectNotFound(noNode::getClassName);
+        assertUiObjectNotFound(noNode::getContentDescription);
+        assertUiObjectNotFound(() -> noNode.setText("new_text"));
+        assertUiObjectNotFound(noNode::clearTextField);
+        assertUiObjectNotFound(noNode::getPackageName);
+    }
+
+    @Test
+    public void testIsChecked() throws Exception {
+        launchTestActivity(ClickTestActivity.class);
+
+        UiObject checkBox = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/check_box"));
+
+        assertFalse(checkBox.isChecked());
+        checkBox.click();
+        assertTrue(checkBox.isChecked());
+    }
+
+    @Test
+    public void testIsSelected() throws Exception {
+        launchTestActivity(IsSelectedTestActivity.class);
+
+        UiObject selectedButton = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/selected_button"));
+        UiObject selectedTarget = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/selected_target"));
+
+        selectedButton.click();
+        assertTrue(selectedTarget.isSelected());
+    }
+
+    @Test
+    public void testIsCheckable() throws Exception {
+        launchTestActivity(ClickTestActivity.class);
+
+        UiObject checkBox = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/check_box"));
+        UiObject button1 = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/button1"));
+
+        assertTrue(checkBox.isCheckable());
+        assertFalse(button1.isCheckable());
+    }
+
+    @Test
+    public void testIsEnabled() throws Exception {
+        launchTestActivity(IsEnabledTestActivity.class);
+
+        UiObject disabledObject = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/disabled_text_view"));
+        UiObject enabledObject = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/enabled_text_view"));
+
+        assertFalse(disabledObject.isEnabled());
+        assertTrue(enabledObject.isEnabled());
+    }
+
+    @Test
+    public void testIsClickable() throws Exception {
+        launchTestActivity(MainActivity.class);
+
+        UiObject textView = mDevice.findObject(new UiSelector().text("Sample text"));
+        UiObject button = mDevice.findObject(new UiSelector().text("Accessible button"));
+
+        assertFalse(textView.isClickable());
+        assertTrue(button.isClickable());
+    }
+
+    @Test
+    public void testIsFocused() throws Exception {
+        launchTestActivity(IsFocusedTestActivity.class);
+
+        UiObject textView = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/focusable_text_view"));
+        UiObject button = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/button"));
+
+        assertFalse(textView.isFocused());
+        button.click();
+        assertTrue(textView.isFocused());
+    }
+
+    @Test
+    public void testIsFocusable() throws Exception {
+        launchTestActivity(IsFocusedTestActivity.class);
+
+        UiObject nonFocusableTextView =
+                mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                        + "/non_focusable_text_view"));
+        UiObject focusableTextView = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/focusable_text_view"));
+
+        assertFalse(nonFocusableTextView.isFocusable());
+        assertTrue(focusableTextView.isFocusable());
+    }
+
+    @Test
+    public void testIsScrollable() throws Exception {
+        launchTestActivity(VerticalScrollTestActivity.class);
+
+        UiObject scrollView = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/scroll_view"));
+        UiObject textView = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/top_text"));
+
+        assertTrue(scrollView.isScrollable());
+        assertFalse(textView.isScrollable());
+    }
+
+    @Test
+    public void testIsLongClickable() throws Exception {
+        launchTestActivity(IsLongClickableTestActivity.class);
+
+        UiObject longClickableButton = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/long_clickable_button"));
+        UiObject nonLongClickableButton = mDevice.findObject(
+                new UiSelector().resourceId(TEST_APP + ":id/non_long_clickable_button"));
+
+        assertTrue(longClickableButton.isLongClickable());
+        assertFalse(nonLongClickableButton.isLongClickable());
+    }
+
+    @Test
+    public void testAttributeCheckingMethods_throwsUiObjectNotFoundException() {
+        launchTestActivity(ClickTestActivity.class);
+
+        UiObject noNode = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/no_node"));
+
+        assertUiObjectNotFound(noNode::isChecked);
+        assertUiObjectNotFound(noNode::isSelected);
+        assertUiObjectNotFound(noNode::isCheckable);
+        assertUiObjectNotFound(noNode::isEnabled);
+        assertUiObjectNotFound(noNode::isClickable);
+        assertUiObjectNotFound(noNode::isFocused);
+        assertUiObjectNotFound(noNode::isFocusable);
+        assertUiObjectNotFound(noNode::isScrollable);
+        assertUiObjectNotFound(noNode::isLongClickable);
+    }
+
+    @Test
+    public void testGetPackageName() throws Exception {
+        launchTestActivity(MainActivity.class);
+
+        UiObject sampleTextObject = mDevice.findObject(new UiSelector().text("Sample text"));
+
+        assertEquals(TEST_APP, sampleTextObject.getPackageName());
+    }
+
+    @Test
+    public void testGetVisibleBounds() throws Exception {
+        launchTestActivity(VisibleBoundsTestActivity.class);
+
+        UiObject partlyInvisibleRegion =
+                mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                        + "/partly_invisible_region"));
+        UiObject regionInsideScrollable =
+                mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                        + "/region_inside_scrollable"));
+
+        partlyInvisibleRegion.click();
+        regionInsideScrollable.click();
+        assertEquals(partlyInvisibleRegion.getText(),
+                partlyInvisibleRegion.getVisibleBounds().toString());
+        assertEquals(regionInsideScrollable.getText(),
+                regionInsideScrollable.getVisibleBounds().toString());
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 23) // Bounds include invisible regions prior to API 23.
+    public void testGetBounds() throws Exception {
+        launchTestActivity(VisibleBoundsTestActivity.class);
+
+        UiObject partlyInvisibleRegion =
+                mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                        + "/partly_invisible_region"));
+
+        partlyInvisibleRegion.click();
+        assertEquals(partlyInvisibleRegion.getText(),
+                partlyInvisibleRegion.getBounds().toString());
+    }
+
+    @Test
+    public void testWaitForExists() throws Exception {
+        launchTestActivity(WaitTestActivity.class);
+
+        UiObject text1 = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/text_1"));
+        assertEquals("text_1_not_changed", text1.getText());
+
+        UiObject expectedText1 = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/text_1").text("text_1_changed"));
+
+        text1.click();
+        assertTrue(expectedText1.waitForExists(TIMEOUT_MS));
+    }
+
+    @Test
+    public void testWaitForExist_timeout() throws Exception {
+        launchTestActivity(WaitTestActivity.class);
+
+        UiObject text1 = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/text_1"));
+        assertEquals("text_1_not_changed", text1.getText());
+
+        UiObject expectedText1 = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/text_1").text("text_1_changed"));
+
+        assertFalse(expectedText1.waitForExists(1_000));
+    }
+
+    @Test
+    public void testWaitUntilGone() throws Exception {
+        launchTestActivity(WaitTestActivity.class);
+
+        UiObject expectedText1 = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/text_1").text("text_1_not_changed"));
+        assertTrue(expectedText1.exists());
+        expectedText1.click();
+        assertTrue(expectedText1.waitUntilGone(TIMEOUT_MS));
+    }
+
+    @Test
+    public void testWaitUntilGone_timeout() {
+        launchTestActivity(WaitTestActivity.class);
+
+        UiObject expectedText1 = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/text_1").text("text_1_not_changed"));
+        assertTrue(expectedText1.exists());
+        assertFalse(expectedText1.waitUntilGone(1_000));
+    }
+
+    @Test
+    public void testExists() {
+        launchTestActivity(WaitTestActivity.class);
+
+        UiObject text1 = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/text_1"));
+        UiObject text3 = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/text_3"));
+
+        assertTrue(text1.exists());
+        assertFalse(text3.exists());
+    }
+
+    @Test
+    public void testPinchOut() throws Exception {
+        launchTestActivity(PinchTestActivity.class);
+
+        UiObject pinchArea = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/pinch_area"));
+        UiObject scaleText = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/scale_factor"));
+
+        UiObject expectedScaleText = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/scale_factor").text("1.0f"));
+
+        assertTrue(pinchArea.pinchOut(0, 10));
+        assertFalse(expectedScaleText.waitUntilGone(TIMEOUT_MS));
+        assertTrue(pinchArea.pinchOut(100, 10));
+        assertTrue(expectedScaleText.waitUntilGone(TIMEOUT_MS));
+        float scaleValueAfterPinch = Float.parseFloat(scaleText.getText());
+        assertTrue(String.format(
+                "Expected scale text to be greater than 1f after pinchOut(), but got [%f]",
+                scaleValueAfterPinch), scaleValueAfterPinch > 1f);
+    }
+
+    @Test
+    public void testPinchIn() throws Exception {
+        launchTestActivity(PinchTestActivity.class);
+
+        UiObject pinchArea = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/pinch_area"));
+        UiObject scaleText = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/scale_factor"));
+
+        UiObject expectedScaleText = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/scale_factor").text("1.0f"));
+
+        assertTrue(pinchArea.pinchIn(0, 10));
+        assertFalse(expectedScaleText.waitUntilGone(TIMEOUT_MS));
+        assertTrue(pinchArea.pinchIn(100, 10));
+        assertTrue(expectedScaleText.waitUntilGone(TIMEOUT_MS));
+        float scaleValueAfterPinch = Float.parseFloat(scaleText.getText());
+        assertTrue(String.format("Expected scale value to be less than 1f after pinchIn(), "
+                + "but got [%f]", scaleValueAfterPinch), scaleValueAfterPinch < 1f);
+    }
+
+    @Test
+    public void testPinchFamily_throwsExceptions() {
+        launchTestActivity(PinchTestActivity.class);
+
+        UiObject noNode = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id/no_node"));
+        UiObject smallArea = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/small_area"));
+
+        assertUiObjectNotFound(() -> noNode.pinchOut(100, 10));
+        assertUiObjectNotFound(() -> noNode.pinchIn(100, 10));
+        assertThrows(IllegalStateException.class, () -> smallArea.pinchOut(100, 10));
+        assertThrows(IllegalStateException.class, () -> smallArea.pinchIn(100, 10));
+        assertThrows(IllegalArgumentException.class, () -> smallArea.pinchOut(-1, 10));
+        assertThrows(IllegalArgumentException.class, () -> smallArea.pinchOut(101, 10));
+        assertThrows(IllegalArgumentException.class, () -> smallArea.pinchIn(-1, 10));
+        assertThrows(IllegalArgumentException.class, () -> smallArea.pinchIn(101, 10));
+    }
+
+    @Test
+    public void testPerformTwoPointerGesture_withZeroSteps() throws Exception {
+        // Note that most part of `performTwoPointerGesture` (and `performMultiPointerGesture`)
+        // has already been indirectly tested in other tests. This test only test the case when
+        // the `step` parameter is set to zero.
+        launchTestActivity(PointerGestureTestActivity.class);
+
+        UiObject touchRegion = mDevice.findObject(new UiSelector().resourceId(TEST_APP + ":id"
+                + "/touch_region"));
+
+        Rect visibleBounds = touchRegion.getVisibleBounds();
+        Point startPoint1 = new Point(visibleBounds.left + 50, visibleBounds.top + 50);
+        Point startPoint2 = new Point(visibleBounds.right - 50, visibleBounds.top + 50);
+        Point endPoint1 = new Point(visibleBounds.left + 50, visibleBounds.bottom - 50);
+        Point endPoint2 = new Point(visibleBounds.right - 50, visibleBounds.bottom - 50);
+
+        assertTrue(touchRegion.performTwoPointerGesture(startPoint1, startPoint2, endPoint1,
+                endPoint2, 0));
+        assertEquals("2 touch(es) received", touchRegion.getText());
+    }
 }

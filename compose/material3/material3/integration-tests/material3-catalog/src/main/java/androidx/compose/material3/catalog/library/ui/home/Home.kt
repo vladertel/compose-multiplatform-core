@@ -16,13 +16,10 @@
 
 package androidx.compose.material3.catalog.library.ui.home
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -33,6 +30,7 @@ import androidx.compose.material3.catalog.library.ui.common.CatalogScaffold
 import androidx.compose.material3.catalog.library.ui.component.ComponentItem
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
@@ -41,15 +39,20 @@ fun Home(
     components: List<Component>,
     theme: Theme,
     onThemeChange: (theme: Theme) -> Unit,
-    onComponentClick: (component: Component) -> Unit
+    onComponentClick: (component: Component) -> Unit,
+    favorite: Boolean = false,
+    onFavoriteClick: () -> Unit,
 ) {
+    val ltr = LocalLayoutDirection.current
     CatalogScaffold(
         topBarTitle = stringResource(id = R.string.compose_material_3),
         theme = theme,
-        onThemeChange = onThemeChange
+        onThemeChange = onThemeChange,
+        favorite = favorite,
+        onFavoriteClick = onFavoriteClick
     ) { paddingValues ->
         LazyVerticalGrid(
-            modifier = Modifier.padding(paddingValues),
+            modifier = Modifier.consumeWindowInsets(paddingValues),
             columns = GridCells.Adaptive(HomeCellMinSize),
             content = {
                 items(components) { component ->
@@ -59,17 +62,12 @@ fun Home(
                     )
                 }
             },
-            contentPadding = WindowInsets.safeDrawing
-                .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
-                .add(
-                    WindowInsets(
-                        left = HomePadding,
-                        top = HomePadding,
-                        right = HomePadding,
-                        bottom = HomePadding
-                    )
-                )
-                .asPaddingValues()
+            contentPadding = PaddingValues(
+                start = paddingValues.calculateStartPadding(ltr) + HomePadding,
+                top = paddingValues.calculateTopPadding() + HomePadding,
+                end = paddingValues.calculateEndPadding(ltr) + HomePadding,
+                bottom = paddingValues.calculateBottomPadding() + HomePadding
+            )
         )
     }
 }

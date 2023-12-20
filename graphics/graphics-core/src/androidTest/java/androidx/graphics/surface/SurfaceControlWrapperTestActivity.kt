@@ -27,8 +27,17 @@ class SurfaceControlWrapperTestActivity : Activity() {
     lateinit var mSurfaceView: SurfaceView
     lateinit var mFrameLayout: FrameLayout
     lateinit var mLayoutParams: FrameLayout.LayoutParams
-    var DEFAULT_WIDTH = 100
-    var DEFAULT_HEIGHT = 100
+
+    companion object {
+        var DEFAULT_WIDTH = 100
+        var DEFAULT_HEIGHT = 100
+    }
+
+    private var mDestroyCallback: (() -> Unit)? = null
+
+    fun setDestroyCallback(callback: () -> Unit) {
+        mDestroyCallback = callback
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,5 +62,10 @@ class SurfaceControlWrapperTestActivity : Activity() {
 
     fun getSurfaceView(): SurfaceView {
         return mSurfaceView
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mDestroyCallback?.invoke()
     }
 }

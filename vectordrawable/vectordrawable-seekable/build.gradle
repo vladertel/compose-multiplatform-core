@@ -7,7 +7,7 @@ plugins {
 
 dependencies {
     api(project(":vectordrawable:vectordrawable"))
-    api(project(":core:core-animation"))
+    api("androidx.core:core-animation:1.0.0-rc01")
     implementation("androidx.collection:collection:1.1.0")
 
     androidTestImplementation(libs.testExtJunit)
@@ -32,18 +32,14 @@ android {
     aaptOptions {
         additionalParameters("--no-version-vectors")
     }
-
-    buildTypes.all {
-        consumerProguardFiles("proguard-rules.pro")
-    }
     namespace "androidx.vectordrawable.seekable"
 }
 
 androidx {
-    name = "Android SeekableAnimatedVectorDrawable"
+    name = "SeekableAnimatedVectorDrawable"
     publish = Publish.SNAPSHOT_AND_RELEASE
     mavenVersion = LibraryVersions.VECTORDRAWABLE_SEEKABLE
-    mavenGroup = LibraryGroups.VECTORDRAWABLE
     inceptionYear = "2020"
     description = "Android SeekableAnimatedVectorDrawable"
+    metalavaK2UastEnabled = true
 }

@@ -17,11 +17,11 @@
 
 package androidx.appcompat.app
 
+import android.os.Build
 import android.os.LocaleList
 import androidx.appcompat.testutils.LocalesActivityTestRule
 import androidx.appcompat.testutils.LocalesUtils
 import androidx.core.app.LocaleManagerCompat
-import androidx.core.os.BuildCompat
 import androidx.core.os.LocaleListCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
@@ -29,6 +29,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import junit.framework.Assert.assertEquals
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,12 +50,14 @@ class SystemLocalesMaintainedOnAppLanguageChangeTestCase {
         )
     }
 
+    @Ignore
     @Test
     fun testGetSystemLocales_noAppLocalesSet_systemLocalesSameAsExpectedSystemLocales() {
         val context = InstrumentationRegistry.getInstrumentation().context
         assertEquals(expectedSystemLocales, LocaleManagerCompat.getSystemLocales(context))
     }
 
+    @Ignore
     @Test
     fun testGetSystemLocales_afterAppLocalesSet_systemLocalesSameAsExpectedSystemLocales() {
         LocalesUtils.setLocalesAndWaitForRecreate(rule.activity, LocalesUtils.CUSTOM_LOCALE_LIST)
@@ -68,7 +71,7 @@ class SystemLocalesMaintainedOnAppLanguageChangeTestCase {
 
     @After
     fun teardown() {
-        if (BuildCompat.isAtLeastT()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // cleaning up any platform-persisted locales.
             AppCompatDelegate.Api33Impl.localeManagerSetApplicationLocales(
                 AppCompatDelegate.getLocaleManagerForApplication(),

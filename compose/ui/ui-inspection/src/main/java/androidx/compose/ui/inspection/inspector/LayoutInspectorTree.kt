@@ -20,20 +20,24 @@ import android.view.View
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.tooling.CompositionData
 import androidx.compose.runtime.tooling.CompositionGroup
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.R
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.inspection.util.AnchorMap
+import androidx.compose.ui.inspection.util.NO_ANCHOR_ID
 import androidx.compose.ui.layout.GraphicLayerInfo
 import androidx.compose.ui.layout.LayoutInfo
+import androidx.compose.ui.node.InteroperableComposeUiNode
 import androidx.compose.ui.node.Ref
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.ViewRootForInspector
-import androidx.compose.ui.semantics.SemanticsModifier
 import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.tooling.data.ContextCache
 import androidx.compose.ui.tooling.data.ParameterInformation
 import androidx.compose.ui.tooling.data.SourceContext
 import androidx.compose.ui.tooling.data.SourceLocation
 import androidx.compose.ui.tooling.data.UiToolingDataApi
+import androidx.compose.ui.tooling.data.findParameters
 import androidx.compose.ui.tooling.data.mapTree
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
@@ -43,33 +47,9 @@ import androidx.compose.ui.unit.toSize
 import java.util.ArrayDeque
 import java.util.Collections
 import java.util.IdentityHashMap
-import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-
-val systemPackages = setOf(
-    -1,
-    packageNameHash("androidx.compose.animation"),
-    packageNameHash("androidx.compose.animation.core"),
-    packageNameHash("androidx.compose.desktop"),
-    packageNameHash("androidx.compose.foundation"),
-    packageNameHash("androidx.compose.foundation.layout"),
-    packageNameHash("androidx.compose.foundation.text"),
-    packageNameHash("androidx.compose.material"),
-    packageNameHash("androidx.compose.material.ripple"),
-    packageNameHash("androidx.compose.runtime"),
-    packageNameHash("androidx.compose.runtime.saveable"),
-    packageNameHash("androidx.compose.ui"),
-    packageNameHash("androidx.compose.ui.graphics.vector"),
-    packageNameHash("androidx.compose.ui.layout"),
-    packageNameHash("androidx.compose.ui.platform"),
-    packageNameHash("androidx.compose.ui.tooling"),
-    packageNameHash("androidx.compose.ui.selection"),
-    packageNameHash("androidx.compose.ui.semantics"),
-    packageNameHash("androidx.compose.ui.viewinterop"),
-    packageNameHash("androidx.compose.ui.window"),
-)
 
 /**
  * The [InspectorNode.id] will be populated with:
@@ -93,10 +73,6 @@ private val unwantedCalls = setOf(
     "ProvideCommonCompositionLocals",
 )
 
-@VisibleForTesting
-fun packageNameHash(packageName: String) =
-    packageName.fold(0) { hash, char -> hash * 31 + char.code }.absoluteValue
-
 /**
  * Generator of a tree for the Layout Inspector.
  */
@@ -106,8 +82,6 @@ class LayoutInspectorTree {
     var hideSystemNodes = true
     var includeNodesOutsizeOfWindow = true
     var includeAllParameters = true
-    private var searchingForAnchorId = false
-    private var includeParametersForAnchorHash = 0
     private var foundNode: InspectorNode? = null
     private var windowSize = emptySize
     private val inlineClassConverter = InlineClassConverter()
@@ -123,10 +97,13 @@ class LayoutInspectorTree {
     private val ownerMap = IdentityHashMap<InspectorNode, MutableList<MutableInspectorNode>>()
     /** Map from semantics id to a list of merged semantics information */
     private val semanticsMap = mutableMapOf<Int, List<RawParameter>>()
+    /* Map of seemantics id to a list of unmerged semantics information */
+    private val unmergedSemanticsMap = mutableMapOf<Int, List<RawParameter>>()
     /** Set of tree nodes that were stitched into another tree */
     private val stitched =
         Collections.newSetFromMap(IdentityHashMap<MutableInspectorNode, Boolean>())
     private val contextCache = ContextCache()
+    private val anchorMap = AnchorMap()
 
     /**
      * Converts the [CompositionData] set held by [view] into a list of root nodes.
@@ -145,19 +122,22 @@ class LayoutInspectorTree {
         return result
     }
 
-    fun findParameters(view: View, anchorHash: Int): InspectorNode? {
+    fun findParameters(view: View, anchorId: Int): InspectorNode? {
         windowSize = IntSize(view.width, view.height)
         parameterFactory.density = Density(view.context)
+        val identity = anchorMap[anchorId] ?: return null
+
         @Suppress("UNCHECKED_CAST")
         val tables = view.getTag(R.id.inspection_slot_table_set) as?
             Set<CompositionData>
             ?: return null
-        clear()
-        searchingForAnchorId = true
-        includeParametersForAnchorHash = anchorHash
-        val node = tables.firstNotNullOfOrNull { findParameters(it) }
-        clear()
-        return node
+        val node = newNode().apply { this.anchorId = anchorId }
+        val group = tables.firstNotNullOfOrNull { it.find(identity) } ?: return null
+        group.findParameters(contextCache).forEach {
+            val castedValue = castValue(it)
+            node.parameters.add(RawParameter(it.name, castedValue))
+        }
+        return buildAndRelease(node)
     }
 
     /**
@@ -175,8 +155,12 @@ class LayoutInspectorTree {
     private fun collectSemantics(view: View) {
         val root = view as? RootForTest ?: return
         val nodes = root.semanticsOwner.getAllSemanticsNodes(mergingEnabled = true)
+        val unmergedNodes = root.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false)
         nodes.forEach { node ->
             semanticsMap[node.id] = node.config.map { RawParameter(it.key.name, it.value) }
+        }
+        unmergedNodes.forEach { node ->
+            unmergedSemanticsMap[node.id] = node.config.map { RawParameter(it.key.name, it.value) }
         }
     }
 
@@ -195,7 +179,7 @@ class LayoutInspectorTree {
             parameterFactory.create(
                 rootId,
                 node.id,
-                node.anchorHash,
+                node.anchorId,
                 parameter.name,
                 parameter.value,
                 kind,
@@ -228,7 +212,7 @@ class LayoutInspectorTree {
         return parameterFactory.expand(
             rootId,
             node.id,
-            node.anchorHash,
+            node.anchorId,
             parameter.name,
             parameter.value,
             reference,
@@ -257,10 +241,9 @@ class LayoutInspectorTree {
         treeMap.clear()
         ownerMap.clear()
         semanticsMap.clear()
+        unmergedSemanticsMap.clear()
         stitched.clear()
         subCompositions.clear()
-        searchingForAnchorId = false
-        includeParametersForAnchorHash = 0
         foundNode = null
     }
 
@@ -379,11 +362,6 @@ class LayoutInspectorTree {
         return if (belongsToView(fakeParent.layoutNodes, view)) fakeParent else null
     }
 
-    private fun findParameters(table: CompositionData): InspectorNode? {
-        table.mapTree(::convert, contextCache) ?: return null
-        return foundNode
-    }
-
     private fun convert(
         group: CompositionGroup,
         context: SourceContext,
@@ -405,12 +383,21 @@ class LayoutInspectorTree {
         input: List<MutableInspectorNode>,
         buildFakeChildNodes: Boolean = false
     ) {
-        if (parentNode.name == "AndroidView") {
-            // Special case:
-            // We may have captured the View id from an AndroidView Composable.
-            // Add the viewId to the child ComposeNode that should be present.
-            input.singleOrNull { it.name == "ComposeNode" }?.viewId = subCompositions.latestViewId()
-        }
+        // If we're adding an unwanted node from the `input` to the parent node and it has a
+        // View ID, then assign it to the parent view so that we don't lose the context that we
+        // found a View as a descendant of the parent node. Most likely, there were one or more
+        // unwanted intermediate nodes between the node that actually owns the Android View
+        // and the desired node that the View should be associated with in the inspector. If
+        // there's more than one input node with a View ID, we skip this step since it's
+        // unclear how these views would be related.
+        input.singleOrNull { it.viewId != UNDEFINED_ID }
+            ?.takeIf { node ->
+                // Take if the node has been marked as unwanted
+                node.id == UNDEFINED_ID
+            }
+            ?.let { nodeWithView ->
+                parentNode.viewId = nodeWithView.viewId
+            }
 
         var id: Long? = null
         input.forEach { node ->
@@ -446,6 +433,7 @@ class LayoutInspectorTree {
             if (parentNode.id <= UNDEFINED_ID && nodeId != null) nodeId else parentNode.id
     }
 
+    @OptIn(InternalComposeUiApi::class)
     private fun parse(
         group: CompositionGroup,
         context: SourceContext,
@@ -454,6 +442,18 @@ class LayoutInspectorTree {
         val node = newNode()
         node.name = context.name ?: ""
         node.key = group.key as? Int ?: 0
+        node.inlined = context.isInline
+
+        // If this node is associated with an android View, set the node's viewId to point to
+        // the hosted view. We use the parent's uniqueDrawingId since the interopView returned here
+        // will be the view itself, but we want to use the `AndroidViewHolder` that hosts the view
+        // instead of the view directly.
+        (group.node as? InteroperableComposeUiNode?)?.getInteropView()?.let { interopView ->
+            (interopView.parent as? View)?.uniqueDrawingId?.let { viewId ->
+                node.viewId = viewId
+            }
+        }
+
         val layoutInfo = group.node as? LayoutInfo
         if (layoutInfo != null) {
             return parseLayoutInfo(layoutInfo, context, node)
@@ -465,23 +465,14 @@ class LayoutInspectorTree {
         if (unwantedName(node.name) || (node.box == emptyBox && !subCompositions.capturing)) {
             return markUnwanted(group, context, node)
         }
-        if (!searchingForAnchorId) {
-            parseCallLocation(node, context.location)
-            if (isHiddenSystemNode(node)) {
-                return markUnwanted(group, context, node)
-            }
+        parseCallLocation(node, context.location)
+        if (isHiddenSystemNode(node)) {
+            return markUnwanted(group, context, node)
         }
-        val hash = group.identity?.hashCode()
-        node.anchorHash = hash ?: 0
-        node.id = syntheticId(hash)
-        if (includeAllParameters ||
-            (searchingForAnchorId && includeParametersForAnchorHash == hash)
-        ) {
+        node.anchorId = anchorMap[group.identity]
+        node.id = syntheticId(node.anchorId)
+        if (includeAllParameters) {
             addParameters(context, node)
-            if (searchingForAnchorId && includeParametersForAnchorHash == hash) {
-                foundNode = buildAndRelease(node)
-                return newNode()
-            }
         }
         return node
     }
@@ -511,23 +502,26 @@ class LayoutInspectorTree {
         val box = context.bounds
         val size = box.size.toSize()
         val coordinates = layoutInfo.coordinates
-        val topLeft = toIntOffset(coordinates.localToWindow(Offset.Zero))
-        val topRight = toIntOffset(coordinates.localToWindow(Offset(size.width, 0f)))
-        val bottomRight = toIntOffset(coordinates.localToWindow(Offset(size.width, size.height)))
-        val bottomLeft = toIntOffset(coordinates.localToWindow(Offset(0f, size.height)))
         var bounds: QuadBounds? = null
+        if (layoutInfo.isAttached && coordinates.isAttached) {
+            val topLeft = toIntOffset(coordinates.localToWindow(Offset.Zero))
+            val topRight = toIntOffset(coordinates.localToWindow(Offset(size.width, 0f)))
+            val bottomRight =
+                toIntOffset(coordinates.localToWindow(Offset(size.width, size.height)))
+            val bottomLeft = toIntOffset(coordinates.localToWindow(Offset(0f, size.height)))
 
-        if (topLeft.x != box.left || topLeft.y != box.top ||
-            topRight.x != box.right || topRight.y != box.top ||
-            bottomRight.x != box.right || bottomRight.y != box.bottom ||
-            bottomLeft.x != box.left || bottomLeft.y != box.bottom
-        ) {
-            bounds = QuadBounds(
-                topLeft.x, topLeft.y,
-                topRight.x, topRight.y,
-                bottomRight.x, bottomRight.y,
-                bottomLeft.x, bottomLeft.y,
-            )
+            if (topLeft.x != box.left || topLeft.y != box.top ||
+                topRight.x != box.right || topRight.y != box.top ||
+                bottomRight.x != box.right || bottomRight.y != box.bottom ||
+                bottomLeft.x != box.left || bottomLeft.y != box.bottom
+            ) {
+                bounds = QuadBounds(
+                    topLeft.x, topLeft.y,
+                    topRight.x, topRight.y,
+                    bottomRight.x, bottomRight.y,
+                    bottomLeft.x, bottomLeft.y,
+                )
+            }
         }
         if (!includeNodesOutsizeOfWindow) {
             // Ignore this node if the bounds are completely outside the window
@@ -539,21 +533,15 @@ class LayoutInspectorTree {
 
         node.box = box.emptyCheck()
         node.bounds = bounds
-        if (searchingForAnchorId) {
-            return node
-        }
-
         node.layoutNodes.add(layoutInfo)
         val modifierInfo = layoutInfo.getModifierInfo()
-        node.unmergedSemantics.addAll(
-            modifierInfo.asSequence()
-                .map { it.modifier }
-                .filterIsInstance<SemanticsModifier>()
-                .map { it.semanticsConfiguration }
-                .flatMap { config -> config.map { RawParameter(it.key.name, it.value) } }
-        )
 
-        val mergedSemantics = semanticsMap.get(layoutInfo.semanticsId)
+        val unmergedSemantics = unmergedSemanticsMap[layoutInfo.semanticsId]
+        if (unmergedSemantics != null) {
+            node.unmergedSemantics.addAll(unmergedSemantics)
+        }
+
+        val mergedSemantics = semanticsMap[layoutInfo.semanticsId]
         if (mergedSemantics != null) {
             node.mergedSemantics.addAll(mergedSemantics)
         }
@@ -567,10 +555,12 @@ class LayoutInspectorTree {
         return node
     }
 
-    private fun syntheticId(identityHash: Int?): Long {
-        val id = identityHash ?: return UNDEFINED_ID
-        // The hashCode is an Int
-        return id.toLong() - Int.MAX_VALUE.toLong() + RESERVED_FOR_GENERATED_IDS
+    private fun syntheticId(anchorId: Int): Long {
+        if (anchorId == NO_ANCHOR_ID) {
+            return UNDEFINED_ID
+        }
+        // The anchorId is an Int
+        return anchorId.toLong() - Int.MAX_VALUE.toLong() + RESERVED_FOR_GENERATED_IDS
     }
 
     private fun belongsToView(layoutNodes: List<LayoutInfo>, view: View): Boolean =

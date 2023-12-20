@@ -18,6 +18,7 @@ package androidx.camera.extensions.impl;
 import android.content.Context;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.SessionConfiguration;
 import android.os.Build;
 import android.util.Pair;
 import android.util.Size;
@@ -53,7 +54,10 @@ public final class AutoPreviewExtenderImpl implements PreviewExtenderImpl {
     @Override
     public boolean isExtensionAvailable(@NonNull String cameraId,
             @Nullable CameraCharacteristics cameraCharacteristics) {
-        // Implement the logic to check whether the extension function is supported or not.
+        // Return false to skip tests since old devices do not support extensions.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return false;
+        }
 
         if (cameraCharacteristics == null) {
             return false;
@@ -142,5 +146,10 @@ public final class AutoPreviewExtenderImpl implements PreviewExtenderImpl {
         captureStage.addCaptureRequestParameters(CaptureRequest.CONTROL_EFFECT_MODE, EFFECT);
 
         return captureStage;
+    }
+
+    @Override
+    public int onSessionType() {
+        return SessionConfiguration.SESSION_REGULAR;
     }
 }

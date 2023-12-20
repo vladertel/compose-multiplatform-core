@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -42,6 +41,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,18 +51,24 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import kotlin.math.roundToInt
 
 @Preview(showBackground = true)
 @Composable
 fun ScrollableFocusedChildDemo() {
     val resizableState = remember { ResizableState() }
+    var reverseScrolling by remember { mutableStateOf(false) }
 
     Column {
         Text(
@@ -78,7 +84,7 @@ fun ScrollableFocusedChildDemo() {
                 },
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Cut in half")
+                Text("½ size")
             }
             Button(
                 onClick = {
@@ -86,29 +92,41 @@ fun ScrollableFocusedChildDemo() {
                 },
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Fill max size")
+                Text("Max size")
+            }
+            Button(
+                onClick = {
+                    reverseScrolling = !reverseScrolling
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Scroll: ${if (reverseScrolling) "backward" else "forward"}")
             }
         }
 
         FocusGrabber(Modifier.fillMaxWidth())
 
+        var maxViewportSize by remember { mutableStateOf(IntSize.Zero) }
         Resizable(
             resizableState,
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
+                .onSizeChanged { maxViewportSize = it }
         ) {
             Box(
                 Modifier
                     .border(2.dp, Color.Black)
-                    .verticalScroll(rememberScrollState())
-                    .horizontalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState(), reverseScrolling = reverseScrolling)
+                    .horizontalScroll(rememberScrollState(), reverseScrolling = reverseScrolling)
             ) {
                 Box(
                     Modifier
-                        .size(300.dp)
+                        // Ensure there's always something to scroll by making the scrollable
+                        // content a multiple of the available screen space.
+                        .size { maxViewportSize.toSize() * 1.5f }
                         .background(Color.LightGray)
-                        .wrapContentSize(align = Alignment.BottomEnd)
+                        .wrapContentSize(align = Alignment.Center)
                 ) {
                     FocusGrabber()
                 }
@@ -136,8 +154,8 @@ fun FocusGrabber(modifier: Modifier = Modifier) {
 }
 
 private class ResizableState {
-    var widthOverride by mutableStateOf(-1)
-    var heightOverride by mutableStateOf(-1)
+    var widthOverride by mutableIntStateOf(-1)
+    var heightOverride by mutableIntStateOf(-1)
 
     fun resetToMaxSize() {
         widthOverride = -1
@@ -247,5 +265,16 @@ private fun ResizeHandle(orientation: Orientation, onDrag: (Float) -> Unit) {
             drawLine(Color.Black, Offset(x1, startY), Offset(x1, endY), lineWeight)
             drawLine(Color.Black, Offset(x2, startY), Offset(x2, endY), lineWeight)
         }
+    }
+}
+
+/** Measures the modified node to be the size returned from [size]. */
+private fun Modifier.size(size: () -> Size): Modifier = layout { measurable, _ ->
+    val constraints = size().let {
+        Constraints.fixed(it.width.roundToInt(), it.height.roundToInt())
+    }
+    val placeable = measurable.measure(constraints)
+    layout(placeable.width, placeable.height) {
+        placeable.place(IntOffset.Zero)
     }
 }

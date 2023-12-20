@@ -21,10 +21,12 @@ import android.content.Context;
 import android.net.Network;
 import android.net.Uri;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.work.Data;
+import androidx.work.DefaultWorkerFactory;
 import androidx.work.ForegroundUpdater;
 import androidx.work.ListenableWorker;
 import androidx.work.ProgressUpdater;
@@ -61,6 +63,7 @@ public class TestListenableWorkerBuilder<W extends ListenableWorker> {
     private Executor mExecutor;
     private ProgressUpdater mProgressUpdater;
     private ForegroundUpdater mForegroundUpdater;
+    private int mGeneration;
 
     TestListenableWorkerBuilder(@NonNull Context context, @NonNull Class<W> workerClass) {
         mContext = context;
@@ -71,7 +74,7 @@ public class TestListenableWorkerBuilder<W extends ListenableWorker> {
         mTags = Collections.emptyList();
         mRunAttemptCount = 1;
         mRuntimeExtras = new WorkerParameters.RuntimeExtras();
-        mWorkerFactory = WorkerFactory.getDefaultWorkerFactory();
+        mWorkerFactory = DefaultWorkerFactory.INSTANCE;
         mTaskExecutor = new InstantWorkTaskExecutor();
         mExecutor = mTaskExecutor.getSerialTaskExecutor();
         mProgressUpdater = new TestProgressUpdater();
@@ -112,7 +115,6 @@ public class TestListenableWorkerBuilder<W extends ListenableWorker> {
 
     /**
      * @return The {@link TaskExecutor} associated with this unit of work.
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @NonNull
@@ -288,6 +290,20 @@ public class TestListenableWorkerBuilder<W extends ListenableWorker> {
     }
 
     /**
+     * Sets a generation for this work.
+     *
+     * See {@link WorkerParameters#getGeneration()} for details.
+     *
+     * @param generation generation
+     * @return The current {@link TestListenableWorkerBuilder}
+     */
+    @NonNull
+    TestListenableWorkerBuilder<W> setGeneration(@IntRange(from = 0) int generation) {
+        mGeneration = generation;
+        return this;
+    }
+
+    /**
      * Builds the {@link ListenableWorker}.
      *
      * @return the instance of a {@link ListenableWorker}.
@@ -302,6 +318,7 @@ public class TestListenableWorkerBuilder<W extends ListenableWorker> {
                         mTags,
                         getRuntimeExtras(),
                         mRunAttemptCount,
+                        mGeneration,
                         // This is unused for ListenableWorker
                         getExecutor(),
                         getTaskExecutor(),

@@ -16,16 +16,19 @@
 
 package androidx.javascriptengine;
 
+import androidx.annotation.NonNull;
+
 /**
  * Exception thrown when evaluation is terminated due the {@link JavaScriptSandbox} being dead.
  * This can happen when {@link JavaScriptSandbox#close()} is called or when the sandbox process
  * is killed by the framework.
- * <p>
- * This is different from {@link IsolateTerminatedException} which occurs when the
- * {@link JavaScriptIsolate} within a {@link JavaScriptSandbox} is terminated.
  */
-public final class SandboxDeadException extends JavaScriptException {
+public final class SandboxDeadException extends IsolateTerminatedException {
     public SandboxDeadException() {
         super();
+    }
+
+    public SandboxDeadException(@NonNull String message) {
+        super(message);
     }
 }

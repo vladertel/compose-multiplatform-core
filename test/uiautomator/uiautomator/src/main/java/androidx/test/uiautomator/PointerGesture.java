@@ -18,6 +18,8 @@ package androidx.test.uiautomator;
 
 import android.graphics.Point;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -26,7 +28,7 @@ import java.util.Deque;
  */
 class PointerGesture {
     // The list of actions that make up this gesture.
-    private final Deque<PointerAction> mActions = new ArrayDeque<PointerAction>();
+    private final Deque<PointerAction> mActions = new ArrayDeque<>();
     private final long mDelay;
     private final int mDisplayId;
     private long mDuration;
@@ -108,6 +110,11 @@ class PointerGesture {
         return mActions.peekLast().end;
     }
 
+    @NonNull
+    @Override
+    public String toString() {
+        return mActions.toString();
+    }
 
     /** A {@link PointerAction} represents part of a {@link PointerGesture}. */
     private static abstract class PointerAction {
@@ -135,12 +142,15 @@ class PointerGesture {
         public Point interpolate(float fraction) {
             return new Point(start);
         }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return String.format("Pause(point=%s, duration=%dms)", start, duration);
+        }
     }
 
-    /**
-     * A {@link PointerLinearMotionAction} moves the pointer between two points at a constant
-     * speed.
-     */
+    /** Action that moves the pointer between two points at a constant speed. */
     private static class PointerLinearMoveAction extends PointerAction {
 
         public PointerLinearMoveAction(Point startPoint, Point endPoint, int speed) {
@@ -152,6 +162,12 @@ class PointerGesture {
             Point ret = new Point(start);
             ret.offset((int)(fraction * (end.x - start.x)), (int)(fraction * (end.y - start.y)));
             return ret;
+        }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return String.format("Move(start=%s, end=%s, duration=%dms)", start, end, duration);
         }
 
         private static double calcDistance(final Point a, final Point b) {

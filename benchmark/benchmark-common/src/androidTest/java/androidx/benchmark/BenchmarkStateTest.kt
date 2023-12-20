@@ -23,6 +23,8 @@ import androidx.test.filters.FlakyTest
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.test.rule.GrantPermissionRule
+import java.util.concurrent.TimeUnit
+import kotlin.test.assertFailsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -32,17 +34,14 @@ import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.TimeUnit
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
-public class BenchmarkStateTest {
+class BenchmarkStateTest {
     private fun us2ns(ms: Long): Long = TimeUnit.MICROSECONDS.toNanos(ms)
 
     @get:Rule
-    public val writePermissionRule: GrantPermissionRule =
+    val writePermissionRule: GrantPermissionRule =
         GrantPermissionRule.grant(Manifest.permission.WRITE_EXTERNAL_STORAGE)!!
 
     /**
@@ -61,7 +60,7 @@ public class BenchmarkStateTest {
 
     @Test
     @FlakyTest(bugId = 187711141)
-    public fun validateMetrics() {
+    fun validateMetrics() {
         val state = BenchmarkState()
         while (state.keepRunning()) {
             runAndSpin(durationUs = 300) {
@@ -91,7 +90,7 @@ public class BenchmarkStateTest {
     }
 
     @Test
-    public fun keepRunningMissingResume() {
+    fun keepRunningMissingResume() {
         val state = BenchmarkState()
 
         assertEquals(true, state.keepRunning())
@@ -100,7 +99,7 @@ public class BenchmarkStateTest {
     }
 
     @Test
-    public fun pauseCalledTwice() {
+    fun pauseCalledTwice() {
         val state = BenchmarkState()
 
         assertEquals(true, state.keepRunning())
@@ -110,7 +109,7 @@ public class BenchmarkStateTest {
 
     @SdkSuppress(minSdkVersion = 24)
     @Test
-    public fun priorityJitThread() {
+    fun priorityJitThread() {
         assertEquals(
             "JIT priority should not yet be modified",
             ThreadPriority.JIT_INITIAL_PRIORITY,
@@ -131,7 +130,7 @@ public class BenchmarkStateTest {
     }
 
     @Test
-    public fun priorityBenchThread() {
+    fun priorityBenchThread() {
         val initialPriority = ThreadPriority.get()
         assertNotEquals(
             "Priority should not be max",
@@ -151,19 +150,24 @@ public class BenchmarkStateTest {
         assertEquals(initialPriority, ThreadPriority.get())
     }
 
-    private fun iterationCheck(checkingForThermalThrottling: Boolean) {
+    private fun iterationCheck(simplifiedTimingOnlyMode: Boolean) {
         // disable thermal throttle checks, since it can cause loops to be thrown out
         // note that this bypasses allocation count
-        val state = BenchmarkState(simplifiedTimingOnlyMode = checkingForThermalThrottling)
+        val state = BenchmarkState(simplifiedTimingOnlyMode = simplifiedTimingOnlyMode)
         var total = 0
         while (state.keepRunning()) {
             total++
         }
 
         val report = state.getReport()
-        val expectedRepeatCount = BenchmarkState.REPEAT_COUNT_TIME +
-            if (!checkingForThermalThrottling) BenchmarkState.REPEAT_COUNT_ALLOCATION else 0
-        val expectedCount = report.warmupIterations + report.repeatIterations * expectedRepeatCount
+
+        // '50' assumes we're not running in a special mode
+        // that affects repeat count (dry run)
+        val expectedRepeatCount = 50 +
+            if (simplifiedTimingOnlyMode) 0 else BenchmarkState.REPEAT_COUNT_ALLOCATION
+        val expectedCount = report.warmupIterations +
+            report.repeatIterations * expectedRepeatCount +
+            if (Arguments.profiler == MethodTracing && !simplifiedTimingOnlyMode) 1 else 0
         assertEquals(expectedCount, total)
 
         if (Arguments.iterations != null) {
@@ -173,30 +177,28 @@ public class BenchmarkStateTest {
         // verify we're not in warmup mode
         assertTrue(report.warmupIterations > 0)
         assertTrue(report.repeatIterations > 1)
-        // verify we're not running in a special mode that affects repeat count (dry run, profiling)
-        assertEquals(50, BenchmarkState.REPEAT_COUNT_TIME)
     }
 
     @Test
-    public fun iterationCheck_simple() {
-        iterationCheck(checkingForThermalThrottling = true)
+    fun iterationCheck_simple() {
+        iterationCheck(simplifiedTimingOnlyMode = true)
     }
 
     @Test
-    public fun iterationCheck_withAllocations() {
+    fun iterationCheck_withAllocations() {
         // In any of these conditions, it's known that throttling won't happen, so it's safe
         // to check for allocation count, by setting checkingForThermalThrottling = false
         assumeTrue(
             CpuInfo.locked ||
                 IsolationActivity.sustainedPerformanceModeInUse ||
-                Errors.isEmulator
+                DeviceInfo.isEmulator
         )
-        iterationCheck(checkingForThermalThrottling = false)
+        iterationCheck(simplifiedTimingOnlyMode = false)
     }
 
     @Test
     @Suppress("DEPRECATION")
-    public fun bundle() {
+    fun bundle() {
         val bundle = BenchmarkState().apply {
             while (keepRunning()) {
                 // nothing, we're ignoring numbers
@@ -212,8 +214,8 @@ public class BenchmarkStateTest {
         assertTrue("$displayStringV1 should contain foo", displayStringV1.contains("foo"))
         assertTrue("$displayStringV2 should contain foo", displayStringV2.contains("foo"))
         assertTrue(
-            "$displayStringV2 should contain [trace](file://bar)",
-            displayStringV2.contains("[trace](file://bar)")
+            "$displayStringV2 should contain [Trace](file://bar)",
+            displayStringV2.contains("[Trace](file://bar)")
         )
 
         // check attribute presence and naming
@@ -230,7 +232,7 @@ public class BenchmarkStateTest {
     }
 
     @Test
-    public fun notStarted() {
+    fun notStarted() {
         val initialPriority = ThreadPriority.get()
         try {
             BenchmarkState().getReport().getMetricResult("timeNs").median
@@ -242,7 +244,7 @@ public class BenchmarkStateTest {
     }
 
     @Test
-    public fun notFinished() {
+    fun notFinished() {
         val initialPriority = ThreadPriority.get()
         try {
             BenchmarkState().run {
@@ -257,10 +259,9 @@ public class BenchmarkStateTest {
         }
     }
 
-    @Suppress("DEPRECATION")
     @OptIn(ExperimentalExternalReport::class)
     @Test
-    public fun reportResult() {
+    fun reportResult() {
         BenchmarkState.reportData(
             className = "className",
             testName = "testName",
@@ -288,49 +289,68 @@ public class BenchmarkStateTest {
     }
 
     private fun validateProfilerUsage(simplifiedTimingOnlyMode: Boolean?) {
-        try {
-            profilerOverride = StackSamplingLegacy
+        val config = MicrobenchmarkConfig(profiler = ProfilerConfig.StackSamplingLegacy())
 
-            val benchmarkState = if (simplifiedTimingOnlyMode != null) {
-                BenchmarkState(simplifiedTimingOnlyMode)
+        val benchmarkState = if (simplifiedTimingOnlyMode != null) {
+            BenchmarkState(
+                config = config,
+                simplifiedTimingOnlyMode = simplifiedTimingOnlyMode
+            )
+        } else {
+            BenchmarkState(config)
+        }
+
+        // count iters with profiler enabled vs disabled
+        var profilerDisabledIterations = 0
+        var profilerEnabledIterations = 0
+        var profilerAllocationIterations = 0
+        while (benchmarkState.keepRunning()) {
+            if (StackSamplingLegacy.isRunning) {
+                profilerEnabledIterations++
             } else {
-                BenchmarkState()
-            }
+                profilerDisabledIterations++
 
-            // count iters with profiler enabled vs disabled
-            var profilerDisabledIterations = 0
-            var profilerEnabledIterations = 0
-            var profilerAllocationIterations = 0
-            while (benchmarkState.keepRunning()) {
-                if (StackSamplingLegacy.isRunning) {
-                    profilerEnabledIterations++
-                } else {
-                    profilerDisabledIterations++
-
-                    if (profilerEnabledIterations != 0) {
-                        // profiler will only be disabled after running during allocation phase
-                        profilerAllocationIterations++
-                    }
+                if (profilerEnabledIterations != 0) {
+                    // profiler will only be disabled after running during allocation phase
+                    profilerAllocationIterations++
                 }
             }
+        }
 
-            if (simplifiedTimingOnlyMode == true) {
-                // profiler should be always disabled
-                assertNotEquals(0, profilerDisabledIterations)
-                assertEquals(0, profilerEnabledIterations)
-                assertEquals(0, profilerAllocationIterations)
-            } else {
-                // first, profiler disabled, then enabled until end
-                assertNotEquals(0, profilerDisabledIterations)
-                assertNotEquals(0, profilerEnabledIterations)
-                assertNotEquals(0, profilerAllocationIterations)
-            }
-        } finally {
-            profilerOverride = null
+        if (simplifiedTimingOnlyMode == true) {
+            // profiler should be always disabled
+            assertNotEquals(0, profilerDisabledIterations)
+            assertEquals(0, profilerEnabledIterations)
+            assertEquals(0, profilerAllocationIterations)
+        } else {
+            // first, profiler disabled (timing) ...
+            assertNotEquals(0, profilerDisabledIterations)
+            // then enabled (profiling) ...
+            assertNotEquals(0, profilerEnabledIterations)
+            // then disabled again (allocs)
+            assertNotEquals(0, profilerAllocationIterations)
         }
     }
 
-    @Test public fun profiler_default() = validateProfilerUsage(null)
-    @Test public fun profiler_false() = validateProfilerUsage(false)
-    @Test public fun profiler_true() = validateProfilerUsage(true)
+    @Test fun profiler_default() = validateProfilerUsage(null)
+    @Test fun profiler_false() = validateProfilerUsage(false)
+    @Test fun profiler_true() = validateProfilerUsage(true)
+
+    @OptIn(ExperimentalBenchmarkStateApi::class)
+    @Test
+    fun experimentalConstructor() {
+        // min values that don't fail
+        BenchmarkState(
+            warmupCount = null,
+            measurementCount = 1
+        )
+
+        // test failures
+        assertFailsWith<IllegalArgumentException> {
+            BenchmarkState(warmupCount = 0)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            BenchmarkState(measurementCount = 0)
+        }
+    }
 }

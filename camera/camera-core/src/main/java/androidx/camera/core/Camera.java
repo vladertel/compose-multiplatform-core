@@ -17,7 +17,6 @@
 package androidx.camera.core;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.camera.core.impl.CameraConfig;
@@ -76,14 +75,8 @@ public interface Camera {
      * However, it will be transparent to the {@link CameraControl} and {@link CameraInfo}
      * retrieved from {@link #getCameraControl()} and {@link #getCameraInfo()}.
      *
-     * <p> The CameraInternal are returned in the order of preference. The
-     * {@link CameraConfig} that is set via {@link #setExtendedConfig(CameraConfig)} can filter
-     * out specific instances of the CameraInternal. The remaining CameraInternal that comes
-     * first in this ordering will be used.
-     *
      * <p> The set of CameraInternal should be static for the lifetime of the Camera.
      *
-     * @hide
      */
     @NonNull
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -92,35 +85,49 @@ public interface Camera {
     /**
      * Get the currently set extended config of the Camera.
      *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @NonNull
     CameraConfig getExtendedConfig();
 
     /**
-     * Set the extended config of the Camera.
-     *
-     * <p>This is used to apply additional configs that modifying the behavior of the camera and
-     * any attached {@link UseCase}. For example, it may configure the {@link ImageCapture} to use a
-     * {@link androidx.camera.core.impl.CaptureProcessor} in order to implement effects such as
-     * HDR or bokeh.
-     *
-     * @param cameraConfig if null then it will reset the camera to an empty config.
-     * @hide
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    void setExtendedConfig(@Nullable CameraConfig cameraConfig);
-
-    /**
-     * Checks whether the use cases combination is supported by the camera.
+     * Checks whether the use cases combination is supported.
      *
      * @param useCases to be checked whether can be supported.
-     * @return whether the use cases combination is supported by the camera
-     * @hide
+     * @return whether the use cases combination is supported by the camera.
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     default boolean isUseCasesCombinationSupported(@NonNull UseCase... useCases) {
+        return isUseCasesCombinationSupported(true, useCases);
+    }
+
+    /**
+     * Checks whether the use cases combination is supported by camera framework.
+     *
+     * <p>This method verify whether the given use cases can be supported solely by the surface
+     * configurations they require. It doesn't consider the optimization done by CameraX such as
+     * {@link androidx.camera.core.streamsharing.StreamSharing}.
+     *
+     * @param useCases to be checked whether can be supported.
+     * @return whether the use cases combination is supported by the camera.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    default boolean isUseCasesCombinationSupportedByFramework(@NonNull UseCase... useCases) {
+        return isUseCasesCombinationSupported(false, useCases);
+    }
+
+    /**
+     * Checks whether the use cases combination is supported.
+     *
+     * @param withStreamSharing {@code true} if
+     * {@link androidx.camera.core.streamsharing.StreamSharing} feature is considered, otherwise
+     * {@code false}.
+     * @param useCases to be checked whether can be supported.
+     * @return whether the use cases combination is supported by the camera.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    default boolean isUseCasesCombinationSupported(boolean withStreamSharing,
+            @NonNull UseCase... useCases) {
         return true;
     }
 }

@@ -39,7 +39,7 @@ public class LocalesLateOnCreateActivity extends LocalesUpdateActivity {
     public void onCreate(Bundle bundle) {
         // Override locales so that AppCompat attempts to re-apply during onCreate().
 
-        if (Build.VERSION.SDK_INT >= 21) {
+        if (Build.VERSION.SDK_INT >= 24) {
             DEFAULT_LOCALE_LIST = LocaleListCompat.forLanguageTags(
                     Locale.US.toLanguageTag() + "," + Locale.CHINESE.toLanguageTag());
             TEST_LOCALE_LIST = LocaleListCompat.forLanguageTags(
@@ -53,7 +53,13 @@ public class LocalesLateOnCreateActivity extends LocalesUpdateActivity {
             TEST_LOCALE_LIST = LocaleListCompat.create(Locale.CANADA_FRENCH);
             EXPECTED_LOCALE_LIST = LocaleListCompat.create(Locale.CANADA_FRENCH);
         }
-        disableAutomaticLocales(getApplicationContext());
+
+        // Setting default initial locales for testing, apply only if no app-specific locales
+        // are present.
+        if (AppCompatDelegate.getApplicationLocales().equals(
+                LocaleListCompat.getEmptyLocaleList())) {
+            disableAutomaticLocales(getApplicationContext());
+        }
 
         super.onCreate(bundle);
     }
@@ -62,10 +68,8 @@ public class LocalesLateOnCreateActivity extends LocalesUpdateActivity {
         Configuration conf = context.getResources().getConfiguration();
         if (Build.VERSION.SDK_INT >= 24) {
             conf.setLocales(LocaleList.forLanguageTags(locales.toLanguageTags()));
-        } else if (Build.VERSION.SDK_INT >= 17) {
-            conf.setLocale(locales.get(0));
         } else {
-            conf.locale = locales.get(0);
+            conf.setLocale(locales.get(0));
         }
         // updateConfiguration is required to make the configuration change stick.
         // updateConfiguration must be called before any use of the actual Resources.

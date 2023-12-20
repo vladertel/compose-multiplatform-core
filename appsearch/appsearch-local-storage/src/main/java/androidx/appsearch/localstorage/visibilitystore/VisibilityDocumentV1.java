@@ -28,7 +28,7 @@ import java.util.Set;
 
 /**
  * Holds the visibility settings in version 1 that apply to a schema type.
- * @hide
+ * @exportToFramework:hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class VisibilityDocumentV1 extends GenericDocument {
@@ -95,7 +95,7 @@ class VisibilityDocumentV1 extends GenericDocument {
      */
     @NonNull
     String[] getPackageNames() {
-        return getPropertyStringArray(PACKAGE_NAME_PROPERTY);
+        return Preconditions.checkNotNull(getPropertyStringArray(PACKAGE_NAME_PROPERTY));
     }
 
     /**
@@ -105,7 +105,7 @@ class VisibilityDocumentV1 extends GenericDocument {
      */
     @NonNull
     byte[][] getSha256Certs() {
-        return getPropertyBytesArray(SHA_256_CERT_PROPERTY);
+        return Preconditions.checkNotNull(getPropertyBytesArray(SHA_256_CERT_PROPERTY));
     }
 
     /**

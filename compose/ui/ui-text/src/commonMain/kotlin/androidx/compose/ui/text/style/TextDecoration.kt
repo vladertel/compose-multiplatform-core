@@ -17,8 +17,8 @@ package androidx.compose.ui.text.style
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import androidx.compose.ui.text.fastFold
-import androidx.compose.ui.text.fastJoinToString
+import androidx.compose.ui.util.fastFold
+import androidx.compose.ui.util.fastJoinToString
 
 /**
  * Defines a horizontal line to be drawn on the text.
@@ -97,7 +97,7 @@ class TextDecoration internal constructor(val mask: Int) {
         return "TextDecoration[${values.fastJoinToString(separator = ", ")}]"
     }
 
-    override operator fun equals(other: Any?): Boolean {
+    override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is TextDecoration) return false
         if (mask != other.mask) return false

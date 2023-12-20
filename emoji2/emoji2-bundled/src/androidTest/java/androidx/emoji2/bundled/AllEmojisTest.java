@@ -22,16 +22,17 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.graphics.Paint;
 import android.text.Spanned;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 
 import androidx.core.graphics.PaintCompat;
 import androidx.emoji2.bundled.util.EmojiMatcher;
 import androidx.emoji2.bundled.util.TestString;
 import androidx.emoji2.text.EmojiCompat;
-import androidx.emoji2.text.EmojiMetadata;
 import androidx.emoji2.text.EmojiSpan;
+import androidx.emoji2.text.TypefaceEmojiRasterizer;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.filters.LargeTest;
-import androidx.test.filters.SdkSuppress;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -51,7 +52,6 @@ import java.util.Collection;
  */
 @LargeTest
 @RunWith(Parameterized.class)
-@SdkSuppress(minSdkVersion = 19)
 public class AllEmojisTest {
 
     /**
@@ -135,10 +135,27 @@ public class AllEmojisTest {
                 EmojiCompat.get().hasEmojiGlyph(mString, Integer.MAX_VALUE));
     }
 
+    @Test
+    public void emoji_hasDesiredWidth() {
+        TextPaint tp = new TextPaint();
+        // spanned, test fails, width == 0
+        CharSequence processedText = EmojiCompat.get()
+                .process(
+                        mString,
+                        /* start= */ 0,
+                        /* end= */ mString.length(),
+                        /* maxEmojiCount= */ mString.length(),
+                        EmojiCompat.REPLACE_STRATEGY_ALL);
+        float emojiCompatWidth = StaticLayout.getDesiredWidth(processedText, tp);
+        assertTrue("emoji " + mString + " with codepoints " + mCodepoints + "has "
+                + "desired width " + emojiCompatWidth,
+                emojiCompatWidth > 0);
+    }
+
     private void assertSpanCanRenderEmoji(final String str) {
         final Spanned spanned = (Spanned) EmojiCompat.get().process(new TestString(str).toString());
         final EmojiSpan[] spans = spanned.getSpans(0, spanned.length(), EmojiSpan.class);
-        final EmojiMetadata metadata = spans[0].getMetadata();
+        final TypefaceEmojiRasterizer metadata = spans[0].getTypefaceRasterizer();
         mPaint.setTypeface(metadata.getTypeface());
 
         final String codepoint = String.valueOf(Character.toChars(metadata.getId()));

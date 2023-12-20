@@ -46,6 +46,7 @@ actual object PreferenceDataStoreFactory {
      *
      * @return a new DataStore instance with the provided configuration
      */
+    @kotlin.jvm.JvmOverloads // annotation has to match common
     public actual fun createWithPath(
         corruptionHandler: ReplaceFileCorruptionHandler<Preferences>?,
         migrations: List<DataMigration<Preferences>>,
@@ -53,11 +54,11 @@ actual object PreferenceDataStoreFactory {
         produceFile: () -> Path
     ): DataStore<Preferences> {
         val delegate = create(
-            storage = OkioStorage(FileSystem.SYSTEM, PreferencesSerializationSerializer) {
+            storage = OkioStorage(FileSystem.SYSTEM, PreferencesSerializer) {
                 val file = produceFile()
-                check(file.name.endsWith(".${PreferencesSerializationSerializer.fileExtension}")) {
+                check(file.name.endsWith(".${PreferencesSerializer.fileExtension}")) {
                     "File extension for file: $file does not match required extension for" +
-                        " Preferences file: ${PreferencesSerializationSerializer.fileExtension}"
+                        " Preferences file: ${PreferencesSerializer.fileExtension}"
                 }
                 file
             },
@@ -84,6 +85,7 @@ actual object PreferenceDataStoreFactory {
      *
      * @return a new DataStore instance with the provided configuration
      */
+    @kotlin.jvm.JvmOverloads // annotation has to match common
     public actual fun create(
         storage: Storage<Preferences>,
         corruptionHandler: ReplaceFileCorruptionHandler<Preferences>?,

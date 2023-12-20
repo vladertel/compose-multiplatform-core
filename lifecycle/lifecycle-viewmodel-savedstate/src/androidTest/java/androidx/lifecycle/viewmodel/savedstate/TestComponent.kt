@@ -45,11 +45,12 @@ class TestComponent(
         savedStateController.performRestore(bundle)
     }
 
-    override fun getLifecycle(): Lifecycle = lifecycleRegistry
+    override val lifecycle: Lifecycle
+        get() = lifecycleRegistry
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateController.savedStateRegistry
 
-    override fun getViewModelStore(): ViewModelStore = vmStore
+    override val viewModelStore: ViewModelStore = vmStore
 
     fun resume() {
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
@@ -58,10 +59,14 @@ class TestComponent(
     fun recreate(keepingViewModels: Boolean): TestComponent {
         val bundle = Bundle()
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
-        savedStateController.performSave(bundle)
+        performSave(bundle)
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         if (!keepingViewModels) vmStore.clear()
         return TestComponent(vmStore.takeIf { keepingViewModels } ?: ViewModelStore(), bundle)
+    }
+
+    fun performSave(bundle: Bundle) {
+        savedStateController.performSave(bundle)
     }
 
     fun createSavedStateHandle(key: String, bundle: Bundle? = null): SavedStateHandle {

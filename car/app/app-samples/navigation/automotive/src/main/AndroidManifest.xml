@@ -47,8 +47,7 @@
 
   <application
     android:label="@string/app_name"
-    android:icon="@drawable/ic_launcher"
-    android:extractNativeLibs="false">
+    android:icon="@drawable/ic_launcher">
 
     <meta-data
         android:name="com.android.automotive"
@@ -67,6 +66,7 @@
       <intent-filter>
         <action android:name="androidx.car.app.CarAppService" />
         <category android:name="androidx.car.app.category.NAVIGATION"/>
+        <category android:name="androidx.car.app.category.FEATURE_CLUSTER"/>
       </intent-filter>
     </service>
     <service
@@ -77,6 +77,7 @@
 
     <activity
         android:name="androidx.car.app.activity.CarAppActivity"
+        android:configChanges="uiMode"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
         android:exported="true"
         android:launchMode="singleTask"

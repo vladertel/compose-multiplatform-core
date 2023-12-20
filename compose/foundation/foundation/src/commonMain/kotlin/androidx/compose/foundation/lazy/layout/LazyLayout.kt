@@ -20,7 +20,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.SubcomposeLayout
@@ -38,6 +37,12 @@ import androidx.compose.ui.unit.Constraints
  * @param prefetchState allows to schedule items for prefetching
  * @param measurePolicy Measure policy which allows to only compose and measure needed items.
  */
+@Deprecated(
+    message = "Use an overload accepting a lambda prodicing an item provider instead",
+    replaceWith = ReplaceWith(
+        "LazyLayout({ itemProvider }, modifier, prefetchState, measurePolicy)"
+    )
+)
 @ExperimentalFoundationApi
 @Composable
 fun LazyLayout(
@@ -46,36 +51,65 @@ fun LazyLayout(
     prefetchState: LazyLayoutPrefetchState? = null,
     measurePolicy: LazyLayoutMeasureScope.(Constraints) -> MeasureResult
 ) {
+    LazyLayout({ itemProvider }, modifier, prefetchState, measurePolicy)
+}
+
+/**
+ * A layout that only composes and lays out currently needed items. Can be used to build
+ * efficient scrollable layouts.
+ *
+ * @param itemProvider lambda producing an item provider containing all the needed info about
+ * the items which could be used to compose and measure items as part of [measurePolicy].
+ * @param modifier to apply on the layout
+ * @param prefetchState allows to schedule items for prefetching
+ * @param measurePolicy Measure policy which allows to only compose and measure needed items.
+ *
+ * Note: this function is a part of [LazyLayout] harness that allows for building custom lazy
+ * layouts. LazyLayout and all corresponding APIs are still under development and are subject to
+ * change.
+ */
+@ExperimentalFoundationApi
+@Composable
+fun LazyLayout(
+    itemProvider: () -> LazyLayoutItemProvider,
+    modifier: Modifier = Modifier,
+    prefetchState: LazyLayoutPrefetchState? = null,
+    measurePolicy: LazyLayoutMeasureScope.(Constraints) -> MeasureResult
+) {
     val currentItemProvider = rememberUpdatedState(itemProvider)
 
-    val saveableStateHolder = rememberSaveableStateHolder()
-    val itemContentFactory = remember {
-        LazyLayoutItemContentFactory(saveableStateHolder) { currentItemProvider.value }
-    }
-    val subcomposeLayoutState = remember {
-        SubcomposeLayoutState(LazyLayoutItemReusePolicy(itemContentFactory))
-    }
-    prefetchState?.let {
-        LazyLayoutPrefetcher(
-            prefetchState,
-            itemContentFactory,
-            subcomposeLayoutState
-        )
-    }
+    LazySaveableStateHolderProvider { saveableStateHolder ->
+        val itemContentFactory = remember {
+            LazyLayoutItemContentFactory(saveableStateHolder) { currentItemProvider.value() }
+        }
+        val subcomposeLayoutState = remember {
+            SubcomposeLayoutState(LazyLayoutItemReusePolicy(itemContentFactory))
+        }
+        prefetchState?.let {
+            LazyLayoutPrefetcher(
+                prefetchState,
+                itemContentFactory,
+                subcomposeLayoutState
+            )
+        }
 
-    SubcomposeLayout(
-        subcomposeLayoutState,
-        modifier,
-        remember(itemContentFactory, measurePolicy) {
-            { constraints ->
-                itemContentFactory.onBeforeMeasure(this, constraints)
-
-                with(LazyLayoutMeasureScopeImpl(itemContentFactory, this)) {
-                    measurePolicy(constraints)
+        SubcomposeLayout(
+            subcomposeLayoutState,
+            modifier,
+            remember(itemContentFactory, measurePolicy) {
+                { constraints ->
+                    with(
+                        LazyLayoutMeasureScopeImpl(
+                            itemContentFactory,
+                            this
+                        )
+                    ) {
+                        measurePolicy(constraints)
+                    }
                 }
             }
-        }
-    )
+        )
+    }
 }
 
 @ExperimentalFoundationApi

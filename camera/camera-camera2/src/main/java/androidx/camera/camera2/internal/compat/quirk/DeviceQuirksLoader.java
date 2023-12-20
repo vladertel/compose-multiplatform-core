@@ -80,6 +80,21 @@ public class DeviceQuirksLoader {
         if (TorchIsClosedAfterImageCapturingQuirk.load()) {
             quirks.add(new TorchIsClosedAfterImageCapturingQuirk());
         }
+        if (ZslDisablerQuirk.load()) {
+            quirks.add(new ZslDisablerQuirk());
+        }
+        if (ExtraSupportedOutputSizeQuirk.load()) {
+            quirks.add(new ExtraSupportedOutputSizeQuirk());
+        }
+        if (InvalidVideoProfilesQuirk.load()) {
+            quirks.add(new InvalidVideoProfilesQuirk());
+        }
+        if (Preview3AThreadCrashQuirk.load()) {
+            quirks.add(new Preview3AThreadCrashQuirk());
+        }
+        if (SmallDisplaySizeQuirk.load()) {
+            quirks.add(new SmallDisplaySizeQuirk());
+        }
 
         return quirks;
     }

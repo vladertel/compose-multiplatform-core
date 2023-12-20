@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package androidx.playground
+package androidx.build
 
 import java.io.File
 
 /**
  * Helper class to parse the settings.gradle file from the main build and extract a list of
  * projects.
+ *
+ * This is used by Playground projects too, so if it is changed please run `cd room && ./gradlew tasks`
  */
-internal object SettingsParser {
+object SettingsParser {
     /**
      * Match lines that start with includeProject, followed by a require argument for project gradle
      * path and an optional argument for project file path.
@@ -47,6 +49,10 @@ internal object SettingsParser {
         val matcher = includeProjectPattern.matcher(fileContents)
         val includedProjects = mutableListOf<IncludedProject>()
         while (matcher.find()) {
+            if (matcher.group().contains("new File")) {
+                // we don't support explicit project paths in playground
+                continue
+            }
             // check if is an include project line, if so, extract project gradle path and
             // file system path and call the filter
             val projectGradlePath =
@@ -68,7 +74,7 @@ internal object SettingsParser {
     /**
      * Represents an included project from the main settings.gradle file.
      */
-    internal data class IncludedProject(
+    data class IncludedProject(
         /**
          * Gradle path of the project (using : as separator)
          */

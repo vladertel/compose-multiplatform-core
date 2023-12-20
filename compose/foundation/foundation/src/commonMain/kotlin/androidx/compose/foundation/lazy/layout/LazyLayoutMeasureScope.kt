@@ -40,6 +40,10 @@ import androidx.compose.ui.unit.sp
  * Main difference from the regular flow of writing any custom layout is that you have a new
  * function [measure] which accepts item index and constraints, composes the item based and then
  * measures all the layouts emitted in the item content block.
+ *
+ * Note: this interface is a part of [LazyLayout] harness that allows for building custom lazy
+ * layouts. LazyLayout and all corresponding APIs are still under development and are subject to
+ * change.
  */
 @Stable
 @ExperimentalFoundationApi
@@ -51,11 +55,11 @@ sealed interface LazyLayoutMeasureScope : MeasureScope {
      * @param constraints [Constraints] to measure the children emitted into an item content
      * composable specified via [LazyLayoutItemProvider.Item].
      *
-     * @return Array of [Placeable]s. Note that if you emitted multiple children into the item
+     * @return List of [Placeable]s. Note that if you emitted multiple children into the item
      * composable you will receive multiple placeables, each of them will be measured with
      * the passed [constraints].
      */
-    fun measure(index: Int, constraints: Constraints): Array<Placeable>
+    fun measure(index: Int, constraints: Constraints): List<Placeable>
 
     // Below overrides added to work around https://youtrack.jetbrains.com/issue/KT-51672
     // Must be kept in sync until resolved.
@@ -102,21 +106,24 @@ internal class LazyLayoutMeasureScopeImpl internal constructor(
     private val subcomposeMeasureScope: SubcomposeMeasureScope
 ) : LazyLayoutMeasureScope, MeasureScope by subcomposeMeasureScope {
 
+    private val itemProvider = itemContentFactory.itemProvider()
+
     /**
      * A cache of the previously composed items. It allows us to support [get]
      * re-executions with the same index during the same measure pass.
      */
-    private val placeablesCache = hashMapOf<Int, Array<Placeable>>()
+    private val placeablesCache = hashMapOf<Int, List<Placeable>>()
 
-    override fun measure(index: Int, constraints: Constraints): Array<Placeable> {
+    override fun measure(index: Int, constraints: Constraints): List<Placeable> {
         val cachedPlaceable = placeablesCache[index]
         return if (cachedPlaceable != null) {
             cachedPlaceable
         } else {
-            val key = itemContentFactory.itemProvider().getKey(index)
-            val itemContent = itemContentFactory.getContent(index, key)
+            val key = itemProvider.getKey(index)
+            val contentType = itemProvider.getContentType(index)
+            val itemContent = itemContentFactory.getContent(index, key, contentType)
             val measurables = subcomposeMeasureScope.subcompose(key, itemContent)
-            Array(measurables.size) { i ->
+            List(measurables.size) { i ->
                 measurables[i].measure(constraints)
             }.also {
                 placeablesCache[index] = it

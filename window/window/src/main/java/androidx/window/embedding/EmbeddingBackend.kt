@@ -17,32 +17,89 @@
 package androidx.window.embedding
 
 import android.app.Activity
+import android.app.ActivityOptions
+import android.content.Context
+import android.os.IBinder
+import androidx.annotation.RestrictTo
 import androidx.core.util.Consumer
-import androidx.window.core.ExperimentalWindowApi
+import androidx.window.RequiresWindowSdkExtension
 import java.util.concurrent.Executor
 
-// TODO(b/191164045): Move to window-testing or adapt for testing otherwise.
-@ExperimentalWindowApi
-internal interface EmbeddingBackend {
-    fun setSplitRules(rules: Set<EmbeddingRule>)
+/**
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+interface EmbeddingBackend {
+    fun setRules(rules: Set<EmbeddingRule>)
 
-    fun getSplitRules(): Set<EmbeddingRule>
+    fun getRules(): Set<EmbeddingRule>
 
-    fun registerRule(rule: EmbeddingRule)
+    fun addRule(rule: EmbeddingRule)
 
-    fun unregisterRule(rule: EmbeddingRule)
+    fun removeRule(rule: EmbeddingRule)
 
-    fun registerSplitListenerForActivity(
+    fun addSplitListenerForActivity(
         activity: Activity,
         executor: Executor,
         callback: Consumer<List<SplitInfo>>
     )
 
-    fun unregisterSplitListenerForActivity(
+    fun removeSplitListenerForActivity(
         consumer: Consumer<List<SplitInfo>>
     )
 
-    fun isSplitSupported(): Boolean
+    val splitSupportStatus: SplitController.SplitSupportStatus
 
     fun isActivityEmbedded(activity: Activity): Boolean
+
+    @RequiresWindowSdkExtension(2)
+    fun setSplitAttributesCalculator(
+        calculator: (SplitAttributesCalculatorParams) -> SplitAttributes
+    )
+
+    @RequiresWindowSdkExtension(2)
+    fun clearSplitAttributesCalculator()
+
+    fun getActivityStack(activity: Activity): ActivityStack?
+
+    @RequiresWindowSdkExtension(3)
+    fun setLaunchingActivityStack(options: ActivityOptions, token: IBinder): ActivityOptions
+
+    @RequiresWindowSdkExtension(3)
+    fun invalidateTopVisibleSplitAttributes()
+
+    @RequiresWindowSdkExtension(3)
+    fun updateSplitAttributes(splitInfo: SplitInfo, splitAttributes: SplitAttributes)
+
+    companion object {
+
+        private var decorator: (EmbeddingBackend) -> EmbeddingBackend =
+            { it }
+
+        @JvmStatic
+        @RestrictTo(RestrictTo.Scope.LIBRARY)
+        fun getInstance(context: Context): EmbeddingBackend {
+            return decorator(ExtensionEmbeddingBackend.getInstance(context))
+        }
+
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        @JvmStatic
+        fun overrideDecorator(overridingDecorator: EmbeddingBackendDecorator) {
+            decorator = overridingDecorator::decorate
+        }
+
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        @JvmStatic
+        fun reset() {
+            decorator = { it }
+        }
+    }
+}
+
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+interface EmbeddingBackendDecorator {
+
+    /**
+     * Returns an instance of [EmbeddingBackend]
+     */
+    fun decorate(embeddingBackend: EmbeddingBackend): EmbeddingBackend
 }

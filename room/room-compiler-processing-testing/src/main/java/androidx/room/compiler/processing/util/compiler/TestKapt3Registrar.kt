@@ -17,6 +17,8 @@
 
 package androidx.room.compiler.processing.util.compiler
 
+import java.io.File
+import javax.annotation.processing.Processor
 import org.jetbrains.kotlin.base.kapt3.KaptFlag
 import org.jetbrains.kotlin.base.kapt3.KaptOptions
 import org.jetbrains.kotlin.base.kapt3.logString
@@ -25,25 +27,26 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.config.JavaSourceRoot
 import org.jetbrains.kotlin.cli.jvm.config.JvmClasspathRoot
 import org.jetbrains.kotlin.com.intellij.mock.MockProject
-import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
+import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.JVMConfigurationKeys
 import org.jetbrains.kotlin.container.StorageComponentContainer
 import org.jetbrains.kotlin.container.useInstance
+import org.jetbrains.kotlin.descriptors.DeclarationDescriptorWithVisibility
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.extensions.StorageComponentContainerContributor
 import org.jetbrains.kotlin.kapt3.AbstractKapt3Extension
-import org.jetbrains.kotlin.kapt3.KaptAnonymousTypeTransformer
 import org.jetbrains.kotlin.kapt3.base.LoadedProcessors
 import org.jetbrains.kotlin.kapt3.base.incremental.DeclaredProcType
 import org.jetbrains.kotlin.kapt3.base.incremental.IncrementalProcessor
 import org.jetbrains.kotlin.kapt3.util.MessageCollectorBackedKaptLogger
+import org.jetbrains.kotlin.kapt3.util.doOpenInternalPackagesIfRequired
 import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.platform.jvm.isJvm
+import org.jetbrains.kotlin.resolve.jvm.ReplaceWithSupertypeAnonymousTypeTransformer
 import org.jetbrains.kotlin.resolve.jvm.extensions.AnalysisHandlerExtension
 import org.jetbrains.kotlin.resolve.jvm.extensions.PartialAnalysisHandlerExtension
-import java.io.File
-import javax.annotation.processing.Processor
+import org.jetbrains.kotlin.types.KotlinType
 
 /**
  * Registers the KAPT component for the kotlin compilation.
@@ -52,15 +55,18 @@ import javax.annotation.processing.Processor
  * https://github.com/JetBrains/kotlin/blob/master/plugins/kapt3/kapt3-compiler/src/
  *  org/jetbrains/kotlin/kapt3/Kapt3Plugin.kt
  */
+@Suppress("DEPRECATION") // TODO: Migrate ComponentRegistrar to CompilerPluginRegistrar
+@OptIn(ExperimentalCompilerApi::class)
 internal class TestKapt3Registrar(
     val processors: List<Processor>,
     val baseOptions: KaptOptions.Builder,
     val messageCollector: MessageCollector
-) : ComponentRegistrar {
+) : @Suppress("DEPRECATION") org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar {
     override fun registerProjectComponents(
         project: MockProject,
         configuration: CompilerConfiguration
     ) {
+        doOpenInternalPackagesIfRequired()
         val contentRoots = configuration[CLIConfigurationKeys.CONTENT_ROOTS] ?: emptyList()
 
         val optionsBuilder = baseOptions.apply {
@@ -121,7 +127,15 @@ internal class TestKapt3Registrar(
             moduleDescriptor: ModuleDescriptor
         ) {
             if (!platform.isJvm()) return
-            container.useInstance(KaptAnonymousTypeTransformer(analysisExtension))
+            container.useInstance(object : ReplaceWithSupertypeAnonymousTypeTransformer() {
+                override fun transformAnonymousType(
+                    descriptor: DeclarationDescriptorWithVisibility,
+                    type: KotlinType
+                ): KotlinType? {
+                    if (!analysisExtension.analyzePartially) return null
+                    return super.transformAnonymousType(descriptor, type)
+                }
+            })
         }
     }
 }

@@ -23,18 +23,15 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.res.TypedArrayUtils.getString
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
-import androidx.navigation.NavGraph
-import androidx.navigation.NavGraphNavigator
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.createGraph
-import androidx.navigation.ui.NavigationUI.matchDestinations
+import androidx.navigation.ui.test.R
 import androidx.test.annotation.UiThreadTest
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import androidx.testutils.TestNavigator
-import androidx.testutils.TestNavigatorProvider
 import androidx.testutils.test
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -43,15 +40,6 @@ import org.junit.runner.RunWith
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 class NavigationUITest {
-    @Test
-    fun matchDestinationsTest() {
-        val destination = TestNavigator().createDestination().apply {
-            id = 1
-            parent = NavGraph(NavGraphNavigator(TestNavigatorProvider()))
-        }
-
-        assertThat(destination.matchDestinations(setOf(1, 2))).isTrue()
-    }
 
     @UiThreadTest
     @Test
@@ -203,6 +191,33 @@ class NavigationUITest {
         // navigate to destination, static label should be returned directly
         navController.navigate(route = endDestination)
         assertThat(toolbar.title.toString()).isEqualTo(labelString)
+    }
+
+    @UiThreadTest
+    @Test
+    fun navigateWithNonStringArg() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val navController = NavHostController(context)
+        navController.navigatorProvider.addNavigator(TestNavigator())
+
+        val startDestination = "start_destination"
+        val endDestination = "end_destination"
+
+        navController.graph = navController.createGraph(startDestination = startDestination) {
+            test(startDestination)
+            test("$endDestination/{test}") {
+                label = "{test}"
+                argument(name = "test") {
+                    type = NavType.LongType
+                }
+            }
+        }
+
+        val toolbar = Toolbar(context).apply { setupWithNavController(navController) }
+        navController.navigate("$endDestination/123")
+
+        val expected = "123"
+        assertThat(toolbar.title.toString()).isEqualTo(expected)
     }
 
     private fun createToolbarOnDestinationChangedListener(

@@ -16,6 +16,7 @@
 
 package androidx.compose.material.icons.generator
 
+import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -28,35 +29,77 @@ import java.io.File
 import kotlin.reflect.KProperty0
 
 /**
- * Generates a list named `AllIcons` that contains pairs mapping a [KProperty0] of the generated
- * icon to the name of the corresponding XML drawable. This is used so we can run tests comparing
- * the generated icon against the original source drawable.
+ * Generates two lists, named `CoreIcons` and `ExtendedIcons` that contains pairs mapping a
+ * [KProperty0] of the generated icon to the name of the corresponding XML drawable. This is used so
+ * we can run tests comparing the generated icon against the original source drawable.
  *
- * @property icons the list of [Icon]s to generate the manifest from
+ * @property icons the list of [Icon]s to generate the manifest from. This icons list holds all
+ * known icons, and the generator will split them to Core and Extended on [generateTo]
  */
 class IconTestingManifestGenerator(private val icons: List<Icon>) {
     /**
      * Generates the list and writes it to [outputSrcDirectory].
      */
     fun generateTo(outputSrcDirectory: File) {
-        val propertyNames: MutableList<String> = mutableListOf()
+        // Sort and split the icons to Core, CoreAutoMirrored, Extended, and ExtendedAutoMirrored
+        // lists, and generate output for each.
+        val sortedIcons = icons.sortedBy { it.kotlinName }
+        val (coreIcons, extendedIcons) = sortedIcons.partition { CoreIcons.contains(it.kotlinName) }
+        // Here we write the entire set of icons into the CoreFilledIcons, CoreOutlinedIcons,
+        // ExtendedFilledIcons etc. These files will include the deprecated set of icons that we
+        // also have under the auto-mirrored sets at CoreAutoMirroredFilledIcons,
+        // ExtendedAutoMirroredFilledIcons etc., which are also being generated here.
+        // Eventually, we will have the AllExtendedIcons, AllExtendedAutoMirroredIcons,
+        // AllCoreIcons, and AllCoreAutoMirroredIcons providing a combined list of the relevant
+        // icons for testing.
+        generateTo(outputSrcDirectory, coreIcons, "Core", isAutoMirrored = false)
+        generateTo(
+            outputSrcDirectory,
+            coreIcons.filter { it.autoMirrored },
+            "Core$AutoMirroredName",
+            isAutoMirrored = true
+        )
+        generateTo(outputSrcDirectory, extendedIcons, "Extended", isAutoMirrored = false)
+        generateTo(
+            outputSrcDirectory,
+            extendedIcons.filter { it.autoMirrored },
+            "Extended$AutoMirroredName",
+            isAutoMirrored = true
+        )
+    }
 
-        // Split up this list by themes, otherwise we get a Method too large exception.
+    private fun generateTo(
+        outputSrcDirectory: File,
+        icons: List<Icon>,
+        prefix: String,
+        isAutoMirrored: Boolean
+    ) {
+        val propertyNames: MutableList<String> = mutableListOf()
+        // Further split each list by themes, otherwise we get a Method too large exception.
         // We will then generate another file that returns the result of concatenating the list
         // for each theme.
         icons
             .groupBy { it.theme }
             .map { (theme, icons) ->
-                val propertyName = "${theme.themeClassName}Icons"
+                val propertyName = "$prefix${theme.themeClassName}Icons"
                 propertyNames += propertyName
-                theme to generateListOfIconsForTheme(propertyName, theme, icons)
+                theme to generateListOfIconsForTheme(
+                    propertyName,
+                    theme,
+                    icons,
+                    isAutoMirrored
+                )
             }
             .forEach { (theme, fileSpec) ->
                 // KotlinPoet bans wildcard imports, and we run into class compilation errors
                 // (too large a file?) if we add all the imports individually, so let's just add
                 // the imports to each file manually.
-                val wildcardImport =
+                val wildcardImport = if (isAutoMirrored) {
+                    "import androidx.compose.material.icons.$AutoMirroredPackageName." +
+                        "${theme.themePackageName}.*"
+                } else {
                     "import androidx.compose.material.icons.${theme.themePackageName}.*"
+                }
 
                 fileSpec.writeToWithCopyright(outputSrcDirectory) { fileContent ->
                     fileContent.replace(
@@ -71,9 +114,9 @@ class IconTestingManifestGenerator(private val icons: List<Icon>) {
             .addStatement("return " + propertyNames.joinToString(" + "))
             .build()
 
-        FileSpec.builder(PackageNames.MaterialIconsPackage.packageName, "AllIcons")
+        FileSpec.builder(PackageNames.MaterialIconsPackage.packageName, "All${prefix}Icons")
             .addProperty(
-                PropertySpec.builder("AllIcons", type = listOfIconsType)
+                PropertySpec.builder("All${prefix}Icons", type = listOfIconsType)
                     .getter(mainGetter)
                     .build()
             ).setIndent().build().writeToWithCopyright(outputSrcDirectory)
@@ -83,43 +126,55 @@ class IconTestingManifestGenerator(private val icons: List<Icon>) {
 /**
  * Generates a Kotlin file with a list containing all icons of the given [theme].
  *
- * @param propertyName the name of the top level property that we should generate the list under
+ * @param propertyName the name of the top level property that we should generate the icons list
+ * under
  * @param theme the theme that we are generating the file for
  * @param allIcons a list containing all icons that we will filter to match [theme]
+ * @param isAutoMirrored indicates if the icons generated are auto-mirrored
  */
 private fun generateListOfIconsForTheme(
     propertyName: String,
     theme: IconTheme,
-    allIcons: List<Icon>
+    allIcons: List<Icon>,
+    isAutoMirrored: Boolean
 ): FileSpec {
     val icons = allIcons.filter { it.theme == theme }
-
-    val iconStatements = icons.toStatements()
-
+    val iconStatements = icons.toStatements(isAutoMirrored)
+    val propertySpecBuilder = PropertySpec.builder(propertyName, type = listOfIconsType)
+    // The icons list will either have all as auto-mirrored, or all as not auto-mirrored. The list
+    // with the non auto-mirrored icons will hold references to deprecated icons, so we add a
+    // deprecation annotation for the generated list.
+    if (!isAutoMirrored) {
+        propertySpecBuilder.addAnnotation(
+            AnnotationSpec.builder(Suppress::class).addMember("\"DEPRECATION\"").build()
+        )
+    }
+    propertySpecBuilder.initializer(
+        buildCodeBlock {
+            addStatement("listOf(")
+            indent()
+            iconStatements.forEach { add(it) }
+            unindent()
+            addStatement(")")
+        }
+    )
     return FileSpec.builder(PackageNames.MaterialIconsPackage.packageName, propertyName)
-        .addProperty(
-            PropertySpec.builder(propertyName, type = listOfIconsType)
-                .initializer(
-                    buildCodeBlock {
-                        addStatement("listOf(")
-                        indent()
-                        iconStatements.forEach { add(it) }
-                        unindent()
-                        addStatement(")")
-                    }
-                )
-                .build()
-        ).setIndent().build()
+        .addProperty(propertySpecBuilder.build()).setIndent().build()
 }
 
 /**
  * @return a list of [CodeBlock] representing all the statements for the body of the list.
- * For example, one statement would look like `(Icons.Filled::Menu) to menu`.
+ * For example, one statement would look like `(Icons.Filled::Menu) to menu` or
+ * `(Icons.AutoMirrored.Filled::Menu) to menu`.
+ *
+ * @param autoMirrored indicates that the icon's statement should be for an auto-mirrored icon
  */
-private fun List<Icon>.toStatements(): List<CodeBlock> {
+private fun List<Icon>.toStatements(autoMirrored: Boolean): List<CodeBlock> {
     return mapIndexed { index, icon ->
         buildCodeBlock {
-            val iconFunctionReference = "(%T.${icon.theme.themeClassName}::${icon.kotlinName})"
+            val autoMirroredPrefix = if (autoMirrored) "$AutoMirroredName." else ""
+            val iconFunctionReference =
+                "(%T.$autoMirroredPrefix${icon.theme.themeClassName}::${icon.kotlinName})"
             val text = "$iconFunctionReference to \"${icon.xmlFileName}\""
             addStatement(if (index != size - 1) "$text," else text, ClassNames.Icons)
         }

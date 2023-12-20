@@ -33,7 +33,7 @@ dependencies {
     api(libs.rxjava3)
 
     androidTestImplementation(projectOrArtifact(":compose:ui:ui-test-junit4"))
-    androidTestImplementation(projectOrArtifact(":compose:test-utils"))
+    androidTestImplementation(project(":compose:test-utils"))
     androidTestImplementation(libs.testRunner)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.truth)
@@ -44,20 +44,12 @@ dependencies {
 androidx {
     name = "Compose RxJava 3 integration"
     type = LibraryType.PUBLISHED_LIBRARY
-    mavenGroup = LibraryGroups.COMPOSE_RUNTIME
     inceptionYear = "2020"
     description = "Compose integration with RxJava 3"
     legacyDisableKotlinStrictApiMode = true
+    metalavaK2UastEnabled = true
 }
 
 android {
     namespace "androidx.compose.runtime.rxjava3"
-}
-
-tasks.withType(KotlinCompile).configureEach {
-    kotlinOptions {
-        freeCompilerArgs += [
-                "-Xjvm-default=all",
-        ]
-    }
 }

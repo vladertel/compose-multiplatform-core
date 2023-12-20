@@ -16,13 +16,12 @@
 
 package androidx.compose.runtime
 
-import androidx.compose.runtime.snapshots.Snapshot
-import androidx.compose.runtime.snapshots.SnapshotContextElement
+// TODO(aelias): Mark the typealiases internal when https://youtrack.jetbrains.com/issue/KT-36695 is
+//  fixed.
+//  Currently, they behave as internal because the actual is internal, even though the expect is
+//  public.
 
-// TODO(aelias): Mark the typealiases internal when https://youtrack.jetbrains.com/issue/KT-36695 is fixed.
-// Currently, they behave as internal because the actual is internal, even though the expect is public.
-
-internal expect open class ThreadLocal<T>(initialValue: () -> T) {
+internal expect class ThreadLocal<T>(initialValue: () -> T) {
     fun get(): T
     fun set(value: T)
     fun remove()
@@ -64,7 +63,7 @@ internal expect fun identityHashCode(instance: Any?): Int
 @PublishedApi
 internal expect inline fun <R> synchronized(lock: Any, block: () -> R): R
 
-expect class AtomicReference<V>(value: V) {
+internal expect class AtomicReference<V>(value: V) {
     fun get(): V
     fun set(value: V)
     fun getAndSet(value: V): V
@@ -75,14 +74,19 @@ internal expect class AtomicInt(value: Int) {
     fun get(): Int
     fun set(value: Int)
     fun add(amount: Int): Int
+    fun compareAndSet(expect: Int, newValue: Int): Boolean
 }
 
 internal fun AtomicInt.postIncrement(): Int = add(1) - 1
 
 internal expect fun ensureMutable(it: Any)
 
+internal expect class WeakReference<T : Any>(reference: T) {
+    fun get(): T?
+}
+
 @MustBeDocumented
-@Retention(AnnotationRetention.SOURCE)
+@Retention(AnnotationRetention.BINARY)
 @Target(
     AnnotationTarget.FUNCTION,
     AnnotationTarget.CONSTRUCTOR,
@@ -121,7 +125,8 @@ internal expect fun <T> invokeComposableForResult(
     composable: @Composable () -> T
 ): T
 
-@OptIn(ExperimentalComposeApi::class)
-internal expect class SnapshotContextElementImpl(
-    snapshot: Snapshot
-) : SnapshotContextElement
+internal expect fun logError(message: String, e: Throwable)
+
+internal expect fun currentThreadId(): Long
+
+internal expect fun currentThreadName(): String

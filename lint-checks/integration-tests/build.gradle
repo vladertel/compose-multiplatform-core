@@ -23,19 +23,9 @@ plugins {
 }
 
 dependencies {
-    implementation(projectOrArtifact(":annotation:annotation"))
-    implementation(projectOrArtifact(":annotation:annotation-experimental"))
+    implementation(project(":annotation:annotation"))
+    implementation(project(":annotation:annotation-experimental"))
     implementation(libs.kotlinStdlib)
-}
-
-// Allow usage of Kotlin's @Experimental and @RequiresOptIn annotations.
-tasks.withType(KotlinCompile).configureEach {
-    kotlinOptions {
-        freeCompilerArgs += [
-                "-opt-in=kotlin.Experimental",
-                "-opt-in=kotlin.RequiresOptIn",
-        ]
-    }
 }
 
 androidx {
@@ -82,7 +72,10 @@ class CompareFilesTask extends DefaultTask {
 
 // workaround for b/189877657
 afterEvaluate {
-    tasks.named("copyDebugAndroidLintReports").configure {
+    tasks.findByName("copyDebugAndroidLintReports")?.configure {
+        enabled = false
+    }
+    tasks.findByName("copyDebugLintReports")?.configure {
         enabled = false
     }
 }

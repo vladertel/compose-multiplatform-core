@@ -33,10 +33,10 @@ MissingNullability: androidx.customview.widget.ExploreByTouchHelper#onInitialize
     Missing nullability on parameter `host` in method `onInitializeAccessibilityNodeInfo`
 MissingNullability: androidx.customview.widget.ExploreByTouchHelper#onInitializeAccessibilityNodeInfo(android.view.View, androidx.core.view.accessibility.AccessibilityNodeInfoCompat) parameter #1:
     Missing nullability on parameter `info` in method `onInitializeAccessibilityNodeInfo`
-MissingNullability: androidx.customview.widget.ViewDragHelper#create(android.view.ViewGroup, androidx.customview.widget.ViewDragHelper.Callback):
-    Missing nullability on method `create` return
-MissingNullability: androidx.customview.widget.ViewDragHelper#create(android.view.ViewGroup, float, androidx.customview.widget.ViewDragHelper.Callback):
-    Missing nullability on method `create` return
+
+
+NotCloseable: androidx.customview.widget.Openable:
+    Classes that release resources (close()) should implement AutoCloseable and CloseGuard: class androidx.customview.widget.Openable
 
 
 ParcelConstructor: androidx.customview.view.AbsSavedState#AbsSavedState(android.os.Parcel):

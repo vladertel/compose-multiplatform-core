@@ -18,6 +18,9 @@ package androidx.room.integration.testapp.test;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import android.database.sqlite.SQLiteConstraintException;
+import android.os.Build;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.room.EntityDeletionOrUpdateAdapter;
@@ -26,11 +29,14 @@ import androidx.room.EntityUpsertionAdapter;
 import androidx.room.Room;
 import androidx.room.integration.testapp.TestDatabase;
 import androidx.room.integration.testapp.dao.PetDao;
+import androidx.room.integration.testapp.dao.ToyDao;
 import androidx.room.integration.testapp.vo.Pet;
+import androidx.room.integration.testapp.vo.Toy;
 import androidx.sqlite.db.SupportSQLiteStatement;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.test.filters.SmallTest;
+import androidx.test.filters.MediumTest;
+import androidx.test.filters.SdkSuppress;
 
 import org.junit.After;
 import org.junit.Before;
@@ -38,18 +44,29 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 
 @RunWith(AndroidJUnit4.class)
-@SmallTest
+@MediumTest
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.JELLY_BEAN)
 public class EntityUpsertionAdapterTest{
     private TestDatabase mTestDatabase;
     private PetDao mPetDao;
 
+    private ToyDao mToyDao;
+
     private EntityInsertionAdapter<Pet> mInsertionAdapter;
+
+    private EntityInsertionAdapter<Toy> mInsertionAdapterToy;
 
     private EntityDeletionOrUpdateAdapter<Pet> mUpdateAdapter;
 
+    private EntityDeletionOrUpdateAdapter<Toy> mUpdateAdapterToy;
+
     private EntityUpsertionAdapter<Pet> mUpsertionAdapter;
+
+    private EntityUpsertionAdapter<Toy> mUpsertionAdapterToy;
 
     @Before
     public void setUp() {
@@ -92,6 +109,39 @@ public class EntityUpsertionAdapterTest{
                 };
         mUpsertionAdapter =
                 new EntityUpsertionAdapter<>(mInsertionAdapter, mUpdateAdapter);
+        mInsertionAdapterToy = new EntityInsertionAdapter<Toy>(mTestDatabase) {
+            @Override
+            protected void bind(@Nullable SupportSQLiteStatement statement, Toy entity) {
+                statement.bindLong(1, entity.getId());
+                statement.bindString(2, entity.getName());
+                statement.bindLong(3, entity.getPetId());
+            }
+
+            @NonNull
+            @Override
+            protected String createQuery() {
+                return "INSERT INTO `TOY` (`mId`, `mName`, `mPetId`)"
+                        + " VALUES (?,?,?)";
+            }
+        };
+
+        mUpdateAdapterToy = new EntityDeletionOrUpdateAdapter<Toy>(mTestDatabase) {
+            @NonNull
+            @Override
+            protected String createQuery() {
+                return "UPDATE `Toy` SET `mName` = ?, `mPetId` = ? WHERE `mPetId`"
+                        + " = ?";
+            }
+
+            @Override
+            protected void bind(@NonNull SupportSQLiteStatement statement, Toy entity) {
+                statement.bindString(1, entity.getName());
+                statement.bindLong(3, entity.getPetId());
+            }
+        };
+
+        mUpsertionAdapterToy = new EntityUpsertionAdapter<>(mInsertionAdapterToy,
+                mUpdateAdapterToy);
     }
 
     @After
@@ -151,6 +201,65 @@ public class EntityUpsertionAdapterTest{
         long[] testResult = mUpsertionAdapter.upsertAndReturnIdsArray(testPets2);
         assertThat(testResult[8]).isEqualTo(13);
         assertThat(testResult[2]).isEqualTo(-1);
+    }
+
+    @Test
+    public void testUpsertReturnList() {
+        Pet[] testPets = TestUtil.createPetsForUser(0, 1, 10);
+        List<Long> result = mUpsertionAdapter.upsertAndReturnIdsList(testPets);
+        assertThat(result.get(3)).isEqualTo(4);
+    }
+
+    @Test
+    public void testInsertReturnBox() {
+        Pet[] testPets = TestUtil.createPetsForUser(0, 1, 10);
+        Long[] result = mInsertionAdapter.insertAndReturnIdsArrayBox(testPets);
+        assertThat(result[3]).isEqualTo(4);
+    }
+
+    @Test
+    public void upsertReturnIdError() {
+        Pet testPet = TestUtil.createPet(232);
+        Toy testToy = new Toy();
+        testToy.setId(1);
+        testToy.setName("toy name");
+        testToy.setPetId(234);
+        mInsertionAdapter.insert(testPet);
+        testPet.setName("change Pet name");
+        mUpsertionAdapter.upsertAndReturnId(testPet);
+        assertThat(mPetDao.petWithId(232).getName()).isEqualTo("change Pet name");
+        try {
+            mUpsertionAdapterToy.upsertAndReturnId(testToy);
+        } catch (SQLiteConstraintException ex) {
+            assertThat(ex.toString().contains("foreign key"));
+        }
+    }
+
+    @Test
+    public void upsertFKUnique2067Error() {
+        Pet pet = new Pet();
+        pet.setPetId(232);
+        pet.setName(UUID.randomUUID().toString());
+        pet.setAdoptionDate(new Date());
+        mInsertionAdapter.insert(pet);
+
+        Toy testToy = new Toy();
+        testToy.setId(2);
+        testToy.setName("toy name");
+        testToy.setPetId(232);
+
+        Toy testToy2 = new Toy();
+        testToy2.setId(3);
+        testToy2.setName("toy name");
+        testToy2.setPetId(232);
+
+        mUpsertionAdapter.upsertAndReturnId(pet);
+        mUpsertionAdapterToy.upsertAndReturnId(testToy);
+        try {
+            mUpsertionAdapterToy.upsertAndReturnId(testToy2);
+        } catch (SQLiteConstraintException ex) {
+            assertThat(ex.toString().contains("2067"));
+        }
     }
 
     @Test

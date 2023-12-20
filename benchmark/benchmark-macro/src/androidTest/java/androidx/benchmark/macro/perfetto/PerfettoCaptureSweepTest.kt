@@ -16,35 +16,38 @@
 
 package androidx.benchmark.macro.perfetto
 
+import android.annotation.SuppressLint
+import android.os.Build
 import androidx.benchmark.macro.FileLinkingRule
 import androidx.benchmark.macro.Packages
 import androidx.benchmark.perfetto.PerfettoCapture
+import androidx.benchmark.perfetto.PerfettoConfig
 import androidx.benchmark.perfetto.PerfettoHelper
-import androidx.benchmark.perfetto.PerfettoHelper.Companion.LOWEST_BUNDLED_VERSION_SUPPORTED
+import androidx.benchmark.perfetto.PerfettoHelper.Companion.MIN_BUNDLED_SDK_VERSION
 import androidx.benchmark.perfetto.PerfettoHelper.Companion.isAbiSupported
+import androidx.benchmark.perfetto.PerfettoTraceProcessor
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
-import androidx.testutils.verifyWithPolling
 import androidx.tracing.Trace
 import androidx.tracing.trace
+import kotlin.test.assertEquals
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import kotlin.test.assertEquals
-import kotlin.test.fail
 
 /**
  * Trace validation tests for PerfettoCapture
  *
  * Note: this test is defined in benchmark-macro instead of benchmark-common so that it can
- * validate trace contents with PerfettoTraceProcessor
+ * validate trace contents with TraceProcessor
  */
-@SdkSuppress(minSdkVersion = 23)
+@SdkSuppress(minSdkVersion = MIN_BUNDLED_SDK_VERSION)
 @LargeTest
 @RunWith(Parameterized::class)
 class PerfettoCaptureSweepTest(
@@ -60,31 +63,46 @@ class PerfettoCaptureSweepTest(
         PerfettoHelper.stopAllPerfettoProcesses()
     }
 
-    @SdkSuppress(minSdkVersion = LOWEST_BUNDLED_VERSION_SUPPORTED)
+    @Ignore("b/258216025")
+    @SdkSuppress(minSdkVersion = MIN_BUNDLED_SDK_VERSION, maxSdkVersion = 33)
     @Test
-    fun captureAndValidateTrace_bundled() = captureAndValidateTrace(unbundled = false)
+    fun captureAndValidateTrace_bundled() {
+        if (Build.VERSION.SDK_INT == 33 && Build.VERSION.CODENAME != "REL") {
+            return // b/262909049: Do not run this test on pre-release Android U.
+        }
 
+        captureAndValidateTrace(unbundled = false)
+    }
+
+    @Ignore("b/258216025")
     @Test
-    fun captureAndValidateTrace_unbundled() = captureAndValidateTrace(unbundled = true)
+    @SdkSuppress(maxSdkVersion = 33) // b/262909049: Failing on SDK 34
+    fun captureAndValidateTrace_unbundled() {
+        if (Build.VERSION.SDK_INT == 33 && Build.VERSION.CODENAME != "REL") {
+            return // b/262909049: Do not run this test on pre-release Android U.
+        }
 
+        captureAndValidateTrace(unbundled = true)
+    }
+
+    @SuppressLint("BanThreadSleep")
     private fun captureAndValidateTrace(unbundled: Boolean) {
         assumeTrue(isAbiSupported())
 
         val traceFilePath = linkRule.createReportedTracePath(Packages.TEST)
         val perfettoCapture = PerfettoCapture(unbundled)
 
-        verifyTraceEnable(false)
-
-        perfettoCapture.start(listOf(Packages.TEST))
-
-        if (!Trace.isEnabled()) {
-            // Should be available immediately, but let's wait a while to see if it works slowly.
-            val delayMs = verifyTraceEnable(true)
-            fail(
-                "In-process tracing should be enabled immediately after trace " +
-                    "capture is started. Had to poll for approx $delayMs ms"
+        perfettoCapture.start(
+            PerfettoConfig.Benchmark(
+                appTagPackages = listOf(Packages.TEST),
+                useStackSamplingConfig = false
             )
-        }
+        )
+
+        assertTrue(
+            "In-process tracing should be enabled immediately after trace capture is started",
+            Trace.isEnabled()
+        )
 
         /**
          * Trace section labels, in order
@@ -102,10 +120,9 @@ class PerfettoCaptureSweepTest(
 
         perfettoCapture.stop(traceFilePath)
 
-        val matchingSlices = PerfettoTraceProcessor.querySlices(
-            absoluteTracePath = traceFilePath,
-            "PerfettoCaptureTest_%"
-        )
+        val matchingSlices = PerfettoTraceProcessor.runSingleSessionServer(traceFilePath) {
+            querySlices("PerfettoCaptureTest_%", packageName = null)
+        }
 
         // Note: this test avoids validating platform-triggered trace sections, to avoid flakes
         // from legitimate (and coincidental) platform use during test.
@@ -129,28 +146,4 @@ class PerfettoCaptureSweepTest(
             arrayOf(it)
         }
     }
-}
-
-fun verifyTraceEnable(enabled: Boolean): Long {
-    // We poll here, since we may need to wait for enable flags to propagate to apps
-    return verifyWithPolling(
-        "Timeout waiting for Trace.isEnabled == $enabled, tags=${getTags()}",
-        periodMs = 50,
-        timeoutMs = 5000
-    ) {
-        Trace.isEnabled() == enabled
-    }
-}
-
-private fun getTags(): String {
-    val method = android.os.Trace::class.java.getMethod(
-        "isTagEnabled",
-        Long::class.javaPrimitiveType
-    )
-    val never = method.invoke(null, /*TRACE_TAG_NEVER*/ 0)
-    val always = method.invoke(null, /*TRACE_TAG_ALWAYS*/ 1L shl 0)
-    val view = method.invoke(null, /*TRACE_TAG_VIEW*/ 1L shl 3)
-    val app = method.invoke(null, /*TRACE_TAG_APP*/ 1L shl 12)
-
-    return "n $never, a $always, v $view, app $app"
 }

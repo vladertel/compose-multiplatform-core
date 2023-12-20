@@ -18,7 +18,6 @@ package androidx.appcompat.widget;
 
 import static androidx.annotation.RestrictTo.Scope.LIBRARY;
 import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX;
-import static androidx.annotation.RestrictTo.Scope.TESTS;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -56,6 +55,7 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.StringRes;
 import androidx.annotation.StyleRes;
+import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.R;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.content.res.AppCompatResources;
@@ -559,9 +559,7 @@ public class Toolbar extends ViewGroup implements MenuHost {
 
     @Override
     public void onRtlPropertiesChanged(int layoutDirection) {
-        if (Build.VERSION.SDK_INT >= 17) {
-            super.onRtlPropertiesChanged(layoutDirection);
-        }
+        super.onRtlPropertiesChanged(layoutDirection);
 
         ensureContentInsets();
         mContentInsets.setDirection(layoutDirection == ViewCompat.LAYOUT_DIRECTION_RTL);
@@ -580,7 +578,6 @@ public class Toolbar extends ViewGroup implements MenuHost {
         setLogo(AppCompatResources.getDrawable(getContext(), resId));
     }
 
-    /** @hide */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public boolean canShowOverflowMenu() {
         return getVisibility() == VISIBLE && mMenuView != null && mMenuView.isOverflowReserved();
@@ -596,7 +593,6 @@ public class Toolbar extends ViewGroup implements MenuHost {
         return mMenuView != null && mMenuView.isOverflowMenuShowing();
     }
 
-    /** @hide */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public boolean isOverflowMenuShowPending() {
         return mMenuView != null && mMenuView.isOverflowMenuShowPending();
@@ -620,7 +616,6 @@ public class Toolbar extends ViewGroup implements MenuHost {
         return mMenuView != null && mMenuView.hideOverflowMenu();
     }
 
-    /** @hide */
     @RestrictTo(LIBRARY)
     public void setMenu(MenuBuilder menu, ActionMenuPresenter outerPresenter) {
         if (menu == null && mMenuView == null) {
@@ -669,7 +664,6 @@ public class Toolbar extends ViewGroup implements MenuHost {
         }
     }
 
-    /** @hide */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public boolean isTitleTruncated() {
         if (mTitleTextView == null) {
@@ -1610,9 +1604,8 @@ public class Toolbar extends ViewGroup implements MenuHost {
     /**
      * Returns the navigation button view.
      *
-     * @hide Only for use in tests.
      */
-    @RestrictTo(RestrictTo.Scope.TESTS)
+    @VisibleForTesting
     @Nullable
     View getNavButtonView() {
         return mNavButtonView;
@@ -2359,7 +2352,6 @@ public class Toolbar extends ViewGroup implements MenuHost {
         return super.checkLayoutParams(p) && p instanceof LayoutParams;
     }
 
-    /** @hide */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public DecorToolbar getWrapper() {
         if (mWrapper == null) {
@@ -2397,7 +2389,6 @@ public class Toolbar extends ViewGroup implements MenuHost {
     /**
      * Force the toolbar to collapse to zero-height during measurement if
      * it could be considered "empty" (no visible elements with nonzero measured size)
-     * @hide
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public void setCollapsible(boolean collapsible) {
@@ -2407,7 +2398,6 @@ public class Toolbar extends ViewGroup implements MenuHost {
 
     /**
      * Must be called before the menu is accessed
-     * @hide
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public void setMenuCallbacks(MenuPresenter.Callback pcb, MenuBuilder.Callback mcb) {
@@ -2425,18 +2415,16 @@ public class Toolbar extends ViewGroup implements MenuHost {
     }
 
     /**
-     * @hide
      */
-    @RestrictTo(TESTS)
+    @VisibleForTesting
     @Nullable
     final TextView getTitleTextView() {
         return mTitleTextView;
     }
 
     /**
-     * @hide
      */
-    @RestrictTo(TESTS)
+    @VisibleForTesting
     @Nullable
     final TextView getSubtitleTextView() {
         return mSubtitleTextView;

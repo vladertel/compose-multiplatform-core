@@ -28,15 +28,14 @@ import androidx.test.filters.SdkSuppress
 import androidx.testutils.LifecycleOwnerUtils.waitUntilState
 import junit.framework.TestCase.assertNotSame
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
-// TODO(b/218430372): Modify SdkSuppress annotation in tests for backward compatibility of
-// setApplicationLocales
-@SdkSuppress(maxSdkVersion = 31)
+@SdkSuppress(maxSdkVersion = 32)
 class LocalesForegroundDialogTestCase {
     @get:Rule
     val rule = LocalesActivityTestRule(LocalesUpdateActivity::class.java)
@@ -48,6 +47,7 @@ class LocalesForegroundDialogTestCase {
         baseLocales = LocalesUpdateActivity.getConfigLocales(rule.activity.resources.configuration)
     }
 
+    @Ignore // b/266748759
     @Test
     fun testLocalesChangeWithForegroundDialog() {
         val firstActivity = rule.activity

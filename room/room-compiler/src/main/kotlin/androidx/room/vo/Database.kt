@@ -17,13 +17,16 @@
 package androidx.room.vo
 
 import androidx.room.RoomMasterTable
+import androidx.room.compiler.codegen.XClassName
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeElement
 import androidx.room.migration.bundle.DatabaseBundle
 import androidx.room.migration.bundle.SchemaBundle
-import com.squareup.javapoet.ClassName
+import androidx.room.util.SchemaFileResolver
+import java.io.IOException
+import java.io.OutputStream
+import java.nio.file.Path
 import org.apache.commons.codec.digest.DigestUtils
-import java.io.File
 
 /**
  * Holds information about a class annotated with Database.
@@ -41,14 +44,14 @@ data class Database(
     // This variable will be set once auto-migrations are processed given the DatabaseBundle from
     // this object. This is necessary for tracking the versions involved in the auto-migration.
     lateinit var autoMigrations: List<AutoMigration>
-    val typeName: ClassName by lazy { element.className }
+    val typeName: XClassName by lazy { element.asClassName() }
 
     private val implClassName by lazy {
-        "${typeName.simpleNames().joinToString("_")}_Impl"
+        "${typeName.simpleNames.joinToString("_")}_Impl"
     }
 
-    val implTypeName: ClassName by lazy {
-        ClassName.get(typeName.packageName(), implClassName)
+    val implTypeName: XClassName by lazy {
+        XClassName.get(typeName.packageName, implClassName)
     }
 
     val bundle by lazy {
@@ -100,29 +103,39 @@ data class Database(
         DigestUtils.md5Hex(input)
     }
 
-    fun exportSchema(file: File) {
+    // Writes schema file to output path, using the input path to check if the schema has changed
+    // otherwise it is not written.
+    fun exportSchema(inputPath: Path, outputPath: Path) {
         val schemaBundle = SchemaBundle(SchemaBundle.LATEST_FORMAT, bundle)
-        if (file.exists()) {
-            val existing = try {
-                file.inputStream().use {
-                    SchemaBundle.deserialize(it)
-                }
-            } catch (th: Throwable) {
-                throw IllegalStateException(
-                    """
-                    Cannot parse existing schema file: ${file.absolutePath}.
-                    If you've modified the file, you might've broken the JSON format, try
-                    deleting the file and re-running the compiler.
-                    If you've not modified the file, please file a bug at
-                    https://issuetracker.google.com/issues/new?component=413107&template=1096568
-                    with a sample app to reproduce the issue.
-                    """.trimIndent()
-                )
+        val inputStream = try {
+            SchemaFileResolver.RESOLVER.readPath(inputPath)
+        } catch (e: IOException) {
+            null
+        }
+        if (inputStream != null) {
+            val existing = inputStream.use {
+                SchemaBundle.deserialize(it)
             }
+            // If existing schema file is the same as the current schema then do not write the file
+            // which helps the copy task configured by the Room Gradle Plugin skip execution due
+            // to empty variant schema output directory.
             if (existing.isSchemaEqual(schemaBundle)) {
                 return
             }
         }
-        SchemaBundle.serialize(schemaBundle, file)
+        val outputStream = try {
+            SchemaFileResolver.RESOLVER.writePath(outputPath)
+        } catch (e: IOException) {
+            throw IllegalStateException("Couldn't write schema file!", e)
+        }
+        SchemaBundle.serialize(schemaBundle, outputStream)
+    }
+
+    // Writes scheme file to output stream, the stream should be for a resource which disregards
+    // existing schema equality, otherwise use the version of `exportSchema` that takes input and
+    // output paths.
+    fun exportSchemaOnly(outputStream: OutputStream) {
+        val schemaBundle = SchemaBundle(SchemaBundle.LATEST_FORMAT, bundle)
+        SchemaBundle.serialize(schemaBundle, outputStream)
     }
 }
