@@ -60,6 +60,10 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(libs.kotlinStdlibCommon)
             }
 
+            skikoMain {
+                dependsOn(commonMain)
+            }
+
             jvmMain.dependencies {
                 implementation(libs.kotlinStdlib)
             }
@@ -70,11 +74,16 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             if (project.kotlinWasmEnabled.toBoolean()) {
                 wasmJsMain {
+                    dependsOn(skikoMain)
                     dependencies {
                         implementation(libs.kotlinStdlib)
                     }
                 }
             }
+
+            nativeMain.dependsOn(skikoMain)
+            jsMain.dependsOn(skikoMain)
+            desktopMain.dependsOn(skikoMain)
 
             commonTest.dependencies {
                 implementation(kotlin("test-junit"))
