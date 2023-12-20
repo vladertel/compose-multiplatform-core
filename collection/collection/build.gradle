@@ -24,10 +24,8 @@ import org.jetbrains.kotlin.konan.target.Family
 
 plugins {
     id("AndroidXPlugin")
+    id("java")
 }
-
-def macEnabled = KmpPlatformsKt.enableMac(project)
-def linuxEnabled = KmpPlatformsKt.enableLinux(project)
 
 androidXMultiplatform {
     jvm {
@@ -36,8 +34,20 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
+    js()
+    wasm()
+}
 
-    defaultPlatform(PlatformIdentifier.JVM)
+kotlin {
+    watchosArm64()
+    watchosArm32()
+    watchosX64()
+    watchosSimulatorArm64()
+    tvosArm64()
+    tvosX64()
+    tvosSimulatorArm64()
+    mingwX64()
+    linuxX64()
 
     sourceSets {
         all {
@@ -83,16 +93,12 @@ androidXMultiplatform {
             }
         }
 
-        if (macEnabled) {
-            darwinMain {
-                dependsOn(nativeMain)
-            }
+        darwinMain {
+            dependsOn(nativeMain)
         }
 
-        if (linuxEnabled) {
-            linuxMain {
-                dependsOn(nativeMain)
-            }
+        linuxMain {
+            dependsOn(nativeMain)
         }
 
         targets.withType(KotlinNativeTarget.class) {
@@ -105,10 +111,16 @@ androidXMultiplatform {
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     def konanTargetFamily = target.konanTarget.family
-                    if (konanTargetFamily == Family.OSX || konanTargetFamily == Family.IOS) {
+                    if (konanTargetFamily == Family.OSX
+                            || konanTargetFamily == Family.IOS
+                            || konanTargetFamily == Family.WATCHOS
+                            || konanTargetFamily == Family.TVOS
+                    ) {
                         dependsOn(darwinMain)
                     } else if (konanTargetFamily == Family.LINUX) {
                         dependsOn(linuxMain)
+                    } else if (konanTargetFamily == Family.MINGW) {
+                        dependsOn(mingwMain)
                     } else {
                         throw new GradleException("unknown native target ${target}")
                     }
