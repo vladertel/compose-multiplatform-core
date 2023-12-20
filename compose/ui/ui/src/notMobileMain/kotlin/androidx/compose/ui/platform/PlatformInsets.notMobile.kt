@@ -16,4 +16,8 @@
 
 package androidx.compose.ui.platform
 
+actual interface PlatformTextInputSession {
+    actual suspend fun startInputMethod(request: PlatformTextInputMethodRequest): Nothing
+}
+
 internal actual var PlatformInsetsConfig: InsetsConfig = ZeroInsetsConfig

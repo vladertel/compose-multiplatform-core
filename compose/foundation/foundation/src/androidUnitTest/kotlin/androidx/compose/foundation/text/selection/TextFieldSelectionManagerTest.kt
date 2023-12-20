@@ -18,6 +18,7 @@ package androidx.compose.foundation.text.selection
 
 import androidx.compose.foundation.text.HandleState
 import androidx.compose.foundation.text.InternalFoundationTextApi
+import androidx.compose.foundation.text.TextDelegate
 import androidx.compose.foundation.text.TextFieldState
 import androidx.compose.foundation.text.TextLayoutResultProxy
 import androidx.compose.ui.focus.FocusRequester
@@ -63,8 +64,10 @@ import org.mockito.stubbing.Answer
 @RunWith(JUnit4::class)
 class TextFieldSelectionManagerTest {
     private val text = "Hello World"
+    private val textAnnotatedString = AnnotatedString(text)
     private val density = Density(density = 1f)
     private val offsetMapping = OffsetMapping.Identity
+    private val maxLines = 2
     private var value = TextFieldValue(text)
     private val lambda: (TextFieldValue) -> Unit = { value = it }
     private val spyLambda = spy(lambda)
@@ -99,10 +102,10 @@ class TextFieldSelectionManagerTest {
 
         whenever(layoutResult.layoutInput).thenReturn(
             TextLayoutInput(
-                text = AnnotatedString(text),
+                text = textAnnotatedString,
                 style = TextStyle.Default,
                 placeholders = mock(),
-                maxLines = 2,
+                maxLines = maxLines,
                 softWrap = true,
                 overflow = TextOverflow.Ellipsis,
                 density = density,
@@ -112,6 +115,7 @@ class TextFieldSelectionManagerTest {
             )
         )
 
+        whenever(layoutResult.lineCount).thenReturn(maxLines)
         whenever(layoutResult.getWordBoundary(beginOffset))
             .thenAnswer(TextRangeAnswer(fakeTextRange))
         whenever(layoutResult.getWordBoundary(dragOffset))
@@ -133,7 +137,15 @@ class TextFieldSelectionManagerTest {
 
         whenever(layoutResultProxy.value).thenReturn(layoutResult)
 
-        state = TextFieldState(mock(), mock())
+        val textDelegate = mock<TextDelegate> {
+            on { this.text }.thenReturn(textAnnotatedString)
+        }
+
+        state = TextFieldState(
+            textDelegate = textDelegate,
+            recomposeScope = mock(),
+            keyboardController = null
+        )
         state.layoutResult = layoutResultProxy
         manager.state = state
         whenever(state.textDelegate.density).thenReturn(density)
@@ -178,7 +190,7 @@ class TextFieldSelectionManagerTest {
         manager.touchSelectionObserver.onStart(dragBeginPosition)
 
         // Assert
-        assertThat(state.handleState).isEqualTo(HandleState.Selection)
+        assertThat(state.handleState).isEqualTo(HandleState.Cursor)
         assertThat(state.showFloatingToolbar).isFalse()
         assertThat(value.selection).isEqualTo(TextRange(fakeLineEnd))
         verify(
@@ -502,6 +514,10 @@ class TextFieldSelectionManagerTest {
         manager.selectAll()
 
         assertThat(value.selection).isEqualTo(TextRange(0, text.length))
+        assertThat(manager.state).isNotNull()
+        val state = manager.state!!
+        assertThat(state.handleState).isEqualTo(HandleState.Selection)
+        assertThat(state.showFloatingToolbar).isEqualTo(true)
     }
 
     @Test
@@ -514,6 +530,10 @@ class TextFieldSelectionManagerTest {
         manager.selectAll()
 
         assertThat(value.selection).isEqualTo(TextRange(0, text.length))
+        assertThat(manager.state).isNotNull()
+        val state = manager.state!!
+        assertThat(state.handleState).isEqualTo(HandleState.Selection)
+        assertThat(state.showFloatingToolbar).isEqualTo(true)
     }
 
     @Test

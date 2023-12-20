@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+<<<<<<<< HEAD:compose/mpp/demo/src/commonMain/kotlin/androidx/compose/mpp/demo/textfield/android/TextFieldsInDialogDemo.kt
 package androidx.compose.mpp.demo.textfield.android
 
 import androidx.compose.material.Text
@@ -23,3 +24,16 @@ import androidx.compose.runtime.Composable
 fun TextFieldsInDialogDemo() {
     Text("Compose Multiplatform currently not have Dialog() like on Android")
 }
+========
+package androidx.compose.material3.adaptive.navigation.suite
+
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.WindowAdaptiveInfo
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.runtime.Composable
+
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+internal actual val WindowAdaptiveInfoDefault: WindowAdaptiveInfo
+    @Composable
+    get() = currentWindowAdaptiveInfo()
+>>>>>>>> jetpack-compose/1.6.0-beta03:compose/material3/material3-adaptive-navigation-suite/src/androidMain/kotlin/androidx/compose/material3/adaptive/navigation-suite/NavigationSuiteScaffold.android.kt

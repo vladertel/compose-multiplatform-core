@@ -587,8 +587,6 @@ internal class LayoutNodeLayoutDelegate(
             // and regular measure stages. This avoids producing exponential amount of
             // lookahead when LookaheadLayouts are nested.
             if (layoutNode.isOutMostLookaheadRoot()) {
-                measuredOnce = true
-                measurementConstraints = constraints
                 lookaheadPassDelegate!!.run {
                     measuredByParent = LayoutNode.UsageByParent.NotUsed
                     measure(constraints)
@@ -603,6 +601,9 @@ internal class LayoutNodeLayoutDelegate(
          * Return true if the measured size has been changed
          */
         fun remeasure(constraints: Constraints): Boolean {
+            require(!layoutNode.isDeactivated) {
+                "measure is called on a deactivated node"
+            }
             val owner = layoutNode.requireOwner()
             val parent = layoutNode.parent
             @Suppress("Deprecation")
@@ -724,6 +725,9 @@ internal class LayoutNodeLayoutDelegate(
             zIndex: Float,
             layerBlock: (GraphicsLayerScope.() -> Unit)?
         ) {
+            require(!layoutNode.isDeactivated) {
+                "place is called on a deactivated node"
+            }
             layoutState = LayoutState.LayingOut
 
             lastPosition = position
@@ -1263,12 +1267,16 @@ internal class LayoutNodeLayoutDelegate(
 
         // Lookahead remeasurement with the given constraints.
         fun remeasure(constraints: Constraints): Boolean {
+            require(!layoutNode.isDeactivated) {
+                "measure is called on a deactivated node"
+            }
             val parent = layoutNode.parent
             @Suppress("Deprecation")
             layoutNode.canMultiMeasure = layoutNode.canMultiMeasure ||
                 (parent != null && parent.canMultiMeasure)
             if (layoutNode.lookaheadMeasurePending || lookaheadConstraints != constraints) {
                 lookaheadConstraints = constraints
+                measurementConstraints = constraints
                 alignmentLines.usedByModifierMeasurement = false
                 forEachChildAlignmentLinesOwner {
                     it.alignmentLines.usedDuringParentMeasurement = false
@@ -1309,6 +1317,9 @@ internal class LayoutNodeLayoutDelegate(
             zIndex: Float,
             layerBlock: (GraphicsLayerScope.() -> Unit)?
         ) {
+            require(!layoutNode.isDeactivated) {
+                "place is called on a deactivated node"
+            }
             layoutState = LayoutState.LookaheadLayingOut
             placedOnce = true
             onNodePlacedCalled = false

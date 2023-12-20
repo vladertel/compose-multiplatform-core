@@ -17,7 +17,6 @@
 package androidx.compose.foundation.textfield
 
 import android.os.Build
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.FocusInteraction
@@ -40,9 +39,11 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.FocusedWindowTest
+import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.computeSizeForDefaultText
+import androidx.compose.foundation.text.selection.isSelectionHandle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
@@ -54,6 +55,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.testutils.assertPixelColor
 import androidx.compose.testutils.assertShape
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
@@ -64,7 +66,10 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalFontFamilyResolver
@@ -91,9 +96,11 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isNotFocused
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
@@ -166,7 +173,6 @@ import org.mockito.kotlin.verify
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
-@OptIn(ExperimentalFoundationApi::class)
 class TextFieldTest : FocusedWindowTest {
     @get:Rule
     val rule = createComposeRule()
@@ -1300,6 +1306,29 @@ class TextFieldTest : FocusedWindowTest {
         rule.onNodeWithTag(Tag).captureToImage().assertCentered(fontSize)
     }
 
+    @Test
+    fun textField_cursorAppearsOnTouch_thenDisappearsWhenTyping() {
+        rule.setTextFieldTestContent {
+            Box(Modifier.fillMaxSize(), Alignment.Center) {
+                BasicTextField(
+                    value = "test",
+                    onValueChange = {},
+                    // center so that the click places the cursor in the middle of the word
+                    textStyle = TextStyle(textAlign = TextAlign.Center),
+                    modifier = Modifier.testTag(Tag),
+                )
+            }
+        }
+
+        rule.onNode(isSelectionHandle(Handle.Cursor)).assertDoesNotExist()
+
+        rule.onNodeWithTag(Tag).performTouchInput { click() }
+        rule.onNode(isSelectionHandle(Handle.Cursor)).assertExists()
+
+        rule.onNodeWithTag(Tag).performTextInput("t")
+        rule.onNode(isSelectionHandle(Handle.Cursor)).assertDoesNotExist()
+    }
+
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun whenSelectedTextIsRemoved_SelectionCoerces() {
@@ -1455,6 +1484,40 @@ class TextFieldTest : FocusedWindowTest {
         assertThat(actual).isEqualTo(TextRange(0))
     }
 
+    // Regression test for b/311834126
+    @Test
+    fun whenPastingTextThatIncreasesEndOffset_noCrashAndCursorAtEndOfPastedText() {
+        val longText = "Text".repeat(4)
+        val shortText = "Text".repeat(2)
+
+        var tfv by mutableStateOf(TextFieldValue(shortText))
+        lateinit var clipboardManager: ClipboardManager
+        rule.setTextFieldTestContent {
+            clipboardManager = LocalClipboardManager.current
+            BasicTextField(
+                value = tfv,
+                onValueChange = { tfv = it },
+                modifier = Modifier.testTag(Tag)
+            )
+        }
+        clipboardManager.setText(AnnotatedString(longText))
+        rule.waitForIdle()
+
+        val node = rule.onNodeWithTag(Tag)
+        node.performTouchInput { longClick(center) }
+        rule.waitForIdle()
+
+        node.performSemanticsAction(SemanticsActions.PasteText) { it() }
+        rule.waitForIdle()
+
+        val expectedTfv = TextFieldValue(
+            text = longText,
+            selection = TextRange(longText.length)
+        )
+        assertThat(tfv.text).isEqualTo(expectedTfv.text)
+        assertThat(tfv.selection).isEqualTo(expectedTfv.selection)
+    }
+
     @Test
     fun decorationBoxIntrinsics() {
         var size: IntSize? = null
@@ -1531,6 +1594,57 @@ class TextFieldTest : FocusedWindowTest {
         rule.onNode(hasSetTextAction()).performTextInput("hello2")
 
         rule.onNodeWithTag(decorationTag, true).assertDoesNotExist()
+    }
+
+    // Regression test for b/311007530
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun whenToggleReadOnly_onEditedTextField_noChangeNorCrash() {
+        val tag = "tag"
+
+        val text = "text"
+        val tfv = TextFieldValue(
+            text = text,
+            selection = TextRange(text.length)
+        )
+
+        val textAfterBackspace = text.run { substring(0, length - 1) }
+        val tfvAfterBackspace = TextFieldValue(
+            text = textAfterBackspace,
+            selection = TextRange(textAfterBackspace.length),
+        )
+
+        var value by mutableStateOf(tfv)
+        var readOnly by mutableStateOf(false)
+        rule.setTextFieldTestContent {
+            BasicTextField(
+                value = value,
+                onValueChange = { value = it },
+                readOnly = readOnly,
+                modifier = Modifier.testTag(tag),
+            )
+        }
+        val node = rule.onNodeWithTag(tag)
+        // gain focus and place cursor at end of text
+        node.performTouchInput { click(centerRight - Offset(5f, 0f)) }
+        rule.waitForIdle()
+        assertThat(value.text).isEqualTo(tfv.text)
+        assertThat(value.selection).isEqualTo(tfv.selection)
+
+        node.performKeyInput { keyDown(Key.Backspace) }
+        rule.waitForIdle()
+        assertThat(value.text).isEqualTo(tfvAfterBackspace.text)
+        assertThat(value.selection).isEqualTo(tfvAfterBackspace.selection)
+
+        rule.runOnUiThread { readOnly = true }
+        rule.waitForIdle()
+        assertThat(value.text).isEqualTo(tfvAfterBackspace.text)
+        assertThat(value.selection).isEqualTo(tfvAfterBackspace.selection)
+
+        rule.runOnUiThread { readOnly = false }
+        rule.waitForIdle()
+        assertThat(value.text).isEqualTo(tfvAfterBackspace.text)
+        assertThat(value.selection).isEqualTo(tfvAfterBackspace.selection)
     }
 }
 
