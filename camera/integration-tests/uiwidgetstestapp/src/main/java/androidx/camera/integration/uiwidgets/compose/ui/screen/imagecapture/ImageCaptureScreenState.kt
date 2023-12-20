@@ -23,6 +23,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.VisibleForTesting
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraControl.OperationCanceledException
 import androidx.camera.core.CameraSelector
@@ -44,6 +45,8 @@ import androidx.compose.material.icons.sharp.FlashOff
 import androidx.compose.material.icons.sharp.FlashOn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
@@ -63,7 +66,8 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.launch
 
-private const val DEFAULT_LENS_FACING = CameraSelector.LENS_FACING_FRONT
+@VisibleForTesting
+internal const val DEFAULT_LENS_FACING = CameraSelector.LENS_FACING_FRONT
 private const val DEFAULT_FLASH_MODE = ImageCapture.FLASH_MODE_OFF
 
 // State Holder for ImageCaptureScreen
@@ -73,7 +77,7 @@ class ImageCaptureScreenState(
     initialLensFacing: Int = DEFAULT_LENS_FACING,
     initialFlashMode: Int = DEFAULT_FLASH_MODE
 ) {
-    var lensFacing by mutableStateOf(initialLensFacing)
+    var lensFacing by mutableIntStateOf(initialLensFacing)
         private set
 
     var hasFlashUnit by mutableStateOf(false)
@@ -82,17 +86,17 @@ class ImageCaptureScreenState(
     var isCameraReady by mutableStateOf(false)
         private set
 
-    var flashMode: Int by mutableStateOf(getValidInitialFlashMode(initialFlashMode))
+    var flashMode: Int by mutableIntStateOf(getValidInitialFlashMode(initialFlashMode))
         private set
 
     var flashModeIcon: ImageVector = getFlashModeImageVector()
         private set
         get() = getFlashModeImageVector()
 
-    var linearZoom by mutableStateOf(0f)
+    var linearZoom by mutableFloatStateOf(0f)
         private set
 
-    var zoomRatio by mutableStateOf(1f)
+    var zoomRatio by mutableFloatStateOf(1f)
         private set
 
     var qrCodeBoundingBox by mutableStateOf<Rect?>(null)

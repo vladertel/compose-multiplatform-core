@@ -17,15 +17,13 @@
 package androidx.compose.ui.text.font
 
 import android.graphics.Typeface
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.platform.AndroidTypeface
 
-@ExperimentalTextApi
 internal actual class PlatformFontFamilyTypefaceAdapter : FontFamilyTypefaceAdapter {
 
     private val platformTypefaceResolver = PlatformTypefaces()
 
-    override fun resolve(
+    actual override fun resolve(
         typefaceRequest: TypefaceRequest,
         platformFontLoader: PlatformFontLoader,
         onAsyncCompletion: (TypefaceResult.Immutable) -> Unit,

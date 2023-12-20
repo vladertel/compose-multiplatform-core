@@ -17,9 +17,8 @@
 import androidx.build.BundleInsideHelper
 import androidx.build.KmpPlatformsKt
 import androidx.build.LibraryType
-import androidx.build.Publish
+import androidx.build.PlatformIdentifier
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     id("AndroidXPlugin")
@@ -29,14 +28,21 @@ plugins {
 def enableNative = KmpPlatformsKt.enableNative(project)
 
 androidXMultiplatform {
-    jvm {
+    jvm() {
         withJava()
     }
     mac()
     linux()
     ios()
+    // NOTE, if you add android target here, make sure to add the proguard file as well.
+
+    defaultPlatform(PlatformIdentifier.JVM)
 
     sourceSets {
+        all {
+            languageSettings.optIn("kotlin.RequiresOptIn")
+        }
+
         commonMain {
             dependencies {
                 api(libs.kotlinStdlib)
@@ -51,7 +57,7 @@ androidXMultiplatform {
                 implementation(libs.kotlinTestAnnotationsCommon)
                 implementation(libs.kotlinCoroutinesTest)
                 implementation(project(":datastore:datastore-core"))
-                implementation(project(":internal-testutils-kmp"))
+                implementation(project(":kruth:kruth"))
                 implementation(project(":internal-testutils-datastore"))
             }
         }
@@ -64,7 +70,7 @@ androidXMultiplatform {
                 implementation(libs.junit)
                 implementation(libs.kotlinTest)
                 implementation(project(":internal-testutils-datastore"))
-                implementation(project(":internal-testutils-kmp"))
+                implementation(project(":kruth:kruth"))
             }
         }
         if (enableNative) {
@@ -81,26 +87,18 @@ androidXMultiplatform {
                 dependencies {
                     implementation(libs.kotlinTest)
                     implementation(project(":internal-testutils-datastore"))
-                    implementation(project(":internal-testutils-kmp"))
+                    implementation(project(":kruth:kruth"))
                 }
             }
         }
 
-        all {
-            languageSettings.optIn("kotlin.RequiresOptIn")
-        }
-        targets.withType(KotlinNativeTarget).configureEach {
-            binaries.all {
-                binaryOptions["memoryModel"] = "experimental"
-            }
-        }
-        targets.forEach {target ->
+        targets.all { target ->
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
-                    dependsOn(sourceSets["nativeMain"])
+                    dependsOn(nativeMain)
                 }
                 target.compilations["test"].defaultSourceSet {
-                    dependsOn(sourceSets["nativeTest"])
+                    dependsOn(nativeTest)
                 }
             }
         }
@@ -110,20 +108,19 @@ androidXMultiplatform {
 BundleInsideHelper.forInsideJarKmp(
         project,
         /* from = */ "com.google.protobuf",
-        /* to =   */ "androidx.datastore.preferences.protobuf"
+        /* to =   */ "androidx.datastore.preferences.protobuf",
+        // proto-lite dependency includes .proto files, which are not used and would clash if
+        // users also use proto library directly
+        /* dropResourcesWithSuffix = */ ".proto"
 )
 
 dependencies {
-    bundleInside(project(
-            path: ":datastore:datastore-preferences-proto",
-            configuration: "export"
-    ))
+    bundleInside(project(":datastore:datastore-preferences-proto"))
 }
 
 androidx {
-    name = "Android Preferences DataStore Core"
-    type = LibraryType.KMP_LIBRARY
-    mavenGroup = LibraryGroups.DATASTORE
+    name = "Preferences DataStore Core"
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2020"
     description = "Android Preferences DataStore without the Android Dependencies"
     legacyDisableKotlinStrictApiMode = true

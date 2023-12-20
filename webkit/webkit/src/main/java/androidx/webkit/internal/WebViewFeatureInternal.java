@@ -17,7 +17,9 @@
 package androidx.webkit.internal;
 
 import android.content.Context;
+import android.content.pm.PackageInfo;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
@@ -26,7 +28,10 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
+import androidx.webkit.Profile;
+import androidx.webkit.ProfileStore;
 import androidx.webkit.ProxyConfig;
 import androidx.webkit.ProxyController;
 import androidx.webkit.SafeBrowsingResponseCompat;
@@ -37,17 +42,21 @@ import androidx.webkit.WebMessageCompat;
 import androidx.webkit.WebMessagePortCompat;
 import androidx.webkit.WebResourceErrorCompat;
 import androidx.webkit.WebResourceRequestCompat;
+import androidx.webkit.WebSettingsCompat;
 import androidx.webkit.WebViewClientCompat;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 
 import org.chromium.support_lib_boundary.util.Features;
 
+import java.io.File;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Enum representing a WebView feature, this provides functionality for determining whether a
@@ -304,6 +313,15 @@ public class WebViewFeatureInternal {
 
     /**
      * This feature covers
+     * {@link WebMessagePortCompat#postMessage(WebMessageCompat)} with ArrayBuffer type, and
+     * {@link WebViewCompat#postWebMessage(WebView, WebMessageCompat, Uri)} with ArrayBuffer type.
+     */
+    public static final ApiFeature.NoFramework WEB_MESSAGE_ARRAY_BUFFER =
+            new ApiFeature.NoFramework(WebViewFeature.WEB_MESSAGE_ARRAY_BUFFER,
+                    Features.WEB_MESSAGE_ARRAY_BUFFER);
+
+    /**
+     * This feature covers
      * {@link WebMessagePortCompat#setWebMessageCallback(
      *WebMessagePortCompat.WebMessageCallbackCompat)}, and
      * {@link WebMessagePortCompat#setWebMessageCallback(Handler,
@@ -367,6 +385,23 @@ public class WebViewFeatureInternal {
 
     /**
      * This feature covers
+     * {@link androidx.webkit.ProcessGlobalConfig#setDataDirectorySuffix(Context, String)}
+     */
+    public static final StartupApiFeature.P STARTUP_FEATURE_SET_DATA_DIRECTORY_SUFFIX =
+            new StartupApiFeature.P(WebViewFeature.STARTUP_FEATURE_SET_DATA_DIRECTORY_SUFFIX,
+                    StartupFeatures.STARTUP_FEATURE_SET_DATA_DIRECTORY_SUFFIX);
+
+    /**
+     * This feature covers
+     * {@link androidx.webkit.ProcessGlobalConfig#setDirectoryBasePaths(Context, File, File)}.
+     */
+    public static final StartupApiFeature.NoFramework STARTUP_FEATURE_SET_DIRECTORY_BASE_PATH =
+            new StartupApiFeature.NoFramework(
+                    WebViewFeature.STARTUP_FEATURE_SET_DIRECTORY_BASE_PATHS,
+                    StartupFeatures.STARTUP_FEATURE_SET_DIRECTORY_BASE_PATH);
+
+    /**
+     * This feature covers
      * {@link WebViewCompat#getWebViewRenderProcessClient()},
      * {@link WebViewCompat#setWebViewRenderProcessClient(WebViewRenderProcessClient)},
      * {@link WebViewRenderProcessClient#onRenderProcessUnresponsive(WebView, WebViewRenderProcess)},
@@ -378,6 +413,31 @@ public class WebViewFeatureInternal {
 
     /**
      * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#setAlgorithmicDarkeningAllowed(WebSettings, boolean)} and
+     * {@link androidx.webkit.WebSettingsCompat#isAlgorithmicDarkeningAllowed(WebSettings)}.
+     */
+    public static final ApiFeature.T ALGORITHMIC_DARKENING =
+            new ApiFeature.T(WebViewFeature.ALGORITHMIC_DARKENING, Features.ALGORITHMIC_DARKENING) {
+                private final Pattern mVersionPattern = Pattern.compile("\\A\\d+");
+                @Override
+                public boolean isSupportedByWebView() {
+                    boolean supported = super.isSupportedByWebView();
+                    if (!supported || Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        return supported;
+                    }
+                    //Since version 105, WebView has supported the algorithmic darkening for
+                    // pre-Q Android platform.
+                    // WebView should have been loaded.
+                    PackageInfo info = WebViewCompat.getCurrentLoadedWebViewPackage();
+                    if (info == null) return false;
+                    Matcher m = mVersionPattern.matcher(info.versionName);
+                    return m.find() && Integer.parseInt(info.versionName.substring(m.start(),
+                                m.end())) >= 105;
+                }
+            };
+
+    /**
+     * This feature covers
      * {@link ProxyController#setProxyOverride(ProxyConfig, Executor, Runnable)},
      * {@link ProxyController#setProxyOverride(ProxyConfig, Runnable)},
      * {@link ProxyController#clearProxyOverride(Executor, Runnable)}, and
@@ -386,14 +446,6 @@ public class WebViewFeatureInternal {
     public static final ApiFeature.NoFramework PROXY_OVERRIDE = new ApiFeature.NoFramework(
             WebViewFeature.PROXY_OVERRIDE, Features.PROXY_OVERRIDE);
 
-    /**
-     * This feature covers
-     * {@link androidx.webkit.WebSettingsCompat#willSuppressErrorPage(WebSettings)} and
-     * {@link androidx.webkit.WebSettingsCompat#setWillSuppressErrorPage(WebSettings, boolean)}.
-     */
-    public static final ApiFeature.NoFramework SUPPRESS_ERROR_PAGE =
-            new ApiFeature.NoFramework(WebViewFeature.SUPPRESS_ERROR_PAGE,
-                    Features.SUPPRESS_ERROR_PAGE);
 
     /**
      * This feature covers {@link WebViewCompat#isMultiProcessEnabled()}.
@@ -406,7 +458,7 @@ public class WebViewFeatureInternal {
      * {@link androidx.webkit.WebSettingsCompat#setForceDark(WebSettings, int)} and
      * {@link androidx.webkit.WebSettingsCompat#getForceDark(WebSettings)}.
      */
-    public static final ApiFeature.NoFramework FORCE_DARK = new ApiFeature.NoFramework(
+    public static final ApiFeature.Q FORCE_DARK = new ApiFeature.Q(
             WebViewFeature.FORCE_DARK, Features.FORCE_DARK);
 
     /**
@@ -417,15 +469,6 @@ public class WebViewFeatureInternal {
     public static final ApiFeature.NoFramework FORCE_DARK_STRATEGY =
             new ApiFeature.NoFramework(WebViewFeature.FORCE_DARK_STRATEGY,
                     Features.FORCE_DARK_BEHAVIOR);
-
-    /**
-     * This feature covers
-     * {@link androidx.webkit.WebSettingsCompat#setAlgorithmicDarkeningAllowed(WebSettings, boolean)} and
-     * {@link androidx.webkit.WebSettingsCompat#isAlgorithmicDarkeningAllowed(WebSettings)}.
-     */
-    public static final ApiFeature.NoFramework ALGORITHMIC_DARKENING =
-            new ApiFeature.NoFramework(WebViewFeature.ALGORITHMIC_DARKENING,
-                    Features.ALGORITHMIC_DARKENING);
 
     /**
      * This feature covers
@@ -464,24 +507,94 @@ public class WebViewFeatureInternal {
 
     /**
      * This feature covers
-     * {@link androidx.webkit.WebSettingsCompat#setRequestedWithHeaderMode(WebSettings, int)},
-     * {@link androidx.webkit.WebSettingsCompat#getRequestedWithHeaderMode(WebSettings)},
-     * {@link androidx.webkit.ServiceWorkerWebSettingsCompat#setRequestedWithHeaderMode(int)},
-     * and {@link androidx.webkit.ServiceWorkerWebSettingsCompat#getRequestedWithHeaderMode()}
-     */
-    public static final ApiFeature.NoFramework REQUESTED_WITH_HEADER_CONTROL =
-            new ApiFeature.NoFramework(WebViewFeature.REQUESTED_WITH_HEADER_CONTROL,
-                    Features.REQUESTED_WITH_HEADER_CONTROL);
-
-
-    /**
-     * This feature covers
      * {@link androidx.webkit.WebSettingsCompat#setEnterpriseAuthenticationAppLinkPolicyEnabled(WebSettings, boolean)} and
      * {@link androidx.webkit.WebSettingsCompat#getEnterpriseAuthenticationAppLinkPolicyEnabled(WebSettings)}.
      */
     public static final ApiFeature.NoFramework ENTERPRISE_AUTHENTICATION_APP_LINK_POLICY =
             new ApiFeature.NoFramework(WebViewFeature.ENTERPRISE_AUTHENTICATION_APP_LINK_POLICY,
                     Features.ENTERPRISE_AUTHENTICATION_APP_LINK_POLICY);
+
+    /**
+     * This feature covers
+     * {@link androidx.webkit.CookieManager#getCookieInfo(CookieManager, String)}.
+     */
+    public static final ApiFeature.NoFramework GET_COOKIE_INFO =
+            new ApiFeature.NoFramework(WebViewFeature.GET_COOKIE_INFO, Features.GET_COOKIE_INFO);
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}.
+     * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#getRequestedWithHeaderOriginAllowList(WebSettings)],
+     * {@link androidx.webkit.WebSettingsCompat#setRequestedWithHeaderAllowList(WebSettings, Set)},
+     * {@link androidx.webkit.ServiceWorkerWebSettingsCompat#getRequestedWithHeaderAllowList(WebSettings)}, and
+     * {@link androidx.webkit.ServiceWorkerWebSettingsCompat#setRequestedWithHeaderAllowList(WebSettings, Set)}.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public static final ApiFeature.NoFramework REQUESTED_WITH_HEADER_ALLOW_LIST =
+            new ApiFeature.NoFramework(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST,
+                    Features.REQUESTED_WITH_HEADER_ALLOW_LIST);
+
+    /**
+     * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#setUserAgentMetadata(WebSettings, UserAgentMetadata)} and
+     * {@link androidx.webkit.WebSettingsCompat#getUserAgentMetadata(WebSettings)}.
+     *
+     */
+    public static final ApiFeature.NoFramework USER_AGENT_METADATA =
+            new ApiFeature.NoFramework(WebViewFeature.USER_AGENT_METADATA,
+                    Features.USER_AGENT_METADATA);
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}.
+     * This feature covers
+     * {@link Profile#getName()}.
+     * {@link Profile#getWebStorage()}.
+     * {@link Profile#getCookieManager()}.
+     * {@link Profile#getGeolocationPermissions()}.
+     * {@link Profile#getServiceWorkerController()}.
+     * {@link ProfileStore#getProfile(String)}.
+     * {@link ProfileStore#getOrCreateProfile(String)}.
+     * {@link ProfileStore#getAllProfileNames()}.
+     * {@link ProfileStore#deleteProfile(String)}.
+     * {@link ProfileStore#getInstance()}.
+     */
+    public static final ApiFeature.NoFramework MULTI_PROFILE =
+            new ApiFeature.NoFramework(WebViewFeature.MULTI_PROFILE, Features.MULTI_PROFILE) {
+                @Override
+                public boolean isSupportedByWebView() {
+                    // Multi-process mode is a requirement for Multi-Profile feature.
+                    if (!super.isSupportedByWebView()) {
+                        return false;
+                    }
+                    if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROCESS)) {
+                        return WebViewCompat.isMultiProcessEnabled();
+                    }
+                    return false;
+                }
+            };
+
+    /**
+     * Feature for {@link WebViewFeature#isFeatureSupported(String)}.
+     * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#setAttributionRegistrationBehavior(WebSettings, int)}
+     * {@link androidx.webkit.WebSettingsCompat#getAttributionRegistrationBehavior(WebSettings)}
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public static final ApiFeature.NoFramework ATTRIBUTION_REGISTRATION_BEHAVIOR =
+            new ApiFeature.NoFramework(WebViewFeature.ATTRIBUTION_REGISTRATION_BEHAVIOR,
+                    Features.ATTRIBUTION_BEHAVIOR);
+
+    /**
+     * Feature for {@link WebViewFeature#isFeatureSupported(String)}.
+     * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#setWebViewMediaIntegrityApiStatus(WebSettings, WebSettingsCompat.WebViewMediaIntegrityApiStatusConfig)}
+     * {@link androidx.webkit.WebSettingsCompat#getWebViewMediaIntegrityApiStatus(WebSettings)}
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public static final ApiFeature.NoFramework WEBVIEW_MEDIA_INTEGRITY_API_STATUS =
+            new ApiFeature.NoFramework(WebViewFeature.WEBVIEW_MEDIA_INTEGRITY_API_STATUS,
+                    Features.WEBVIEW_MEDIA_INTEGRITY_API_STATUS);
+
     // --- Add new feature constants above this line ---
 
     private WebViewFeatureInternal() {
@@ -494,6 +607,16 @@ public class WebViewFeatureInternal {
     public static boolean isSupported(
             @NonNull @WebViewFeature.WebViewSupportFeature String publicFeatureValue) {
         return isSupported(publicFeatureValue, ApiFeature.values());
+    }
+
+    /**
+     * Return whether a public startup feature is supported by any internal features defined in
+     * this class.
+     */
+    public static boolean isStartupFeatureSupported(
+            @NonNull @WebViewFeature.WebViewStartupFeature String publicFeatureValue,
+            @NonNull Context context) {
+        return isStartupFeatureSupported(publicFeatureValue, StartupApiFeature.values(), context);
     }
 
     /**
@@ -518,6 +641,32 @@ public class WebViewFeatureInternal {
         }
         for (ConditionallySupportedFeature feature : matchingFeatures) {
             if (feature.isSupported()) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Return whether a public startup feature is supported by any {@link StartupApiFeature}s
+     * defined in {@code internalFeatures}.
+     *
+     * @throws RuntimeException if {@code publicFeatureValue} is not matched in
+     *      {@code internalFeatures}
+     */
+    @VisibleForTesting
+    public static boolean isStartupFeatureSupported(
+            @NonNull @WebViewFeature.WebViewStartupFeature String publicFeatureValue,
+            @NonNull Collection<StartupApiFeature> internalFeatures, @NonNull Context context) {
+        Set<StartupApiFeature> matchingFeatures = new HashSet<>();
+        for (StartupApiFeature feature : internalFeatures) {
+            if (feature.getPublicFeatureName().equals(publicFeatureValue)) {
+                matchingFeatures.add(feature);
+            }
+        }
+        if (matchingFeatures.isEmpty()) {
+            throw new RuntimeException("Unknown feature " + publicFeatureValue);
+        }
+        for (StartupApiFeature feature : matchingFeatures) {
+            if (feature.isSupported(context)) return true;
         }
         return false;
     }

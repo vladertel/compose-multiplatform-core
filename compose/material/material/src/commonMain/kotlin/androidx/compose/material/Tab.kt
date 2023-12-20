@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -51,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.fastFirst
 import kotlin.math.max
 
 /**
@@ -163,7 +163,7 @@ fun LeadingIconTab(
     // The color of the Ripple should always the be selected color, as we want to show the color
     // before the item is considered selected, and hence before the new contentColor is
     // provided by TabTransition.
-    val ripple = rememberRipple(bounded = true, color = selectedContentColor)
+    val ripple = rippleOrFallbackImplementation(bounded = true, color = selectedContentColor)
 
     TabTransition(selectedContentColor, unselectedContentColor, selected) {
         Row(
@@ -233,7 +233,7 @@ fun Tab(
     // The color of the Ripple should always the selected color, as we want to show the color
     // before the item is considered selected, and hence before the new contentColor is
     // provided by TabTransition.
-    val ripple = rememberRipple(bounded = true, color = selectedContentColor)
+    val ripple = rippleOrFallbackImplementation(bounded = true, color = selectedContentColor)
 
     TabTransition(selectedContentColor, unselectedContentColor, selected) {
         Column(
@@ -315,7 +315,7 @@ private fun TabBaselineLayout(
         }
     ) { measurables, constraints ->
         val textPlaceable = text?.let {
-            measurables.first { it.layoutId == "text" }.measure(
+            measurables.fastFirst { it.layoutId == "text" }.measure(
                 // Measure with loose constraints for height as we don't want the text to take up more
                 // space than it needs
                 constraints.copy(minHeight = 0)
@@ -323,7 +323,7 @@ private fun TabBaselineLayout(
         }
 
         val iconPlaceable = icon?.let {
-            measurables.first { it.layoutId == "icon" }.measure(constraints)
+            measurables.fastFirst { it.layoutId == "icon" }.measure(constraints)
         }
 
         val tabWidth = max(textPlaceable?.width ?: 0, iconPlaceable?.width ?: 0)

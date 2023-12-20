@@ -15,6 +15,7 @@
  */
 package androidx.navigation
 
+import android.net.Uri
 import android.os.Bundle
 import android.os.Parcelable
 import androidx.annotation.AnyRes
@@ -87,7 +88,6 @@ public abstract class NavType<T>(
      * @param key    bundle key under which to put the value
      * @param value  string representation of a value of this type
      * @return parsed value of the type represented by this NavType
-     * @suppress
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public fun parseAndPut(bundle: Bundle, key: String, value: String): T {
@@ -106,7 +106,6 @@ public abstract class NavType<T>(
      * @param value  string representation of a value of this type
      * @param previousValue previously parsed value of this type
      * @return combined parsed value of the type represented by this NavType
-     * @suppress
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public fun parseAndPut(bundle: Bundle, key: String, value: String?, previousValue: T): T {
@@ -119,6 +118,21 @@ public abstract class NavType<T>(
             return parsedCombinedValue
         }
         return previousValue
+    }
+
+    /**
+     * Serialize a value of this NavType into a String.
+     *
+     * By default it returns value of [kotlin.toString] or null if value passed in is null.
+     *
+     * This method can be override for custom serialization implementation on types such
+     * custom NavType classes.
+     *
+     * @param value a value representing this NavType to be serialized into a String
+     * @return serialized String value of [value]
+     */
+    public open fun serializeAsValue(value: T): String {
+        return value.toString()
     }
 
     /**
@@ -206,7 +220,6 @@ public abstract class NavType<T>(
             return StringType
         }
 
-        /** @suppress */
         @Suppress("UNCHECKED_CAST") // needed for cast to NavType<Any>
         @JvmStatic
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -243,7 +256,6 @@ public abstract class NavType<T>(
         /**
          * @param value nothing
          * @throws IllegalArgumentException not real
-         * @suppress
          */
         @Suppress("UNCHECKED_CAST") // needed for cast to NavType<Any>
         @JvmStatic
@@ -579,8 +591,25 @@ public abstract class NavType<T>(
                 return bundle[key] as String?
             }
 
-            override fun parseValue(value: String): String {
-                return value
+            /**
+             * Returns input value by default.
+             *
+             * If input value is "null", returns null as the reversion of Kotlin standard library
+             * serializing null receivers of [kotlin.toString] into "null".
+             */
+            override fun parseValue(value: String): String? {
+                return if (value == "null") null else value
+            }
+
+            /**
+             * Returns default value of Uri.encode(value).
+             *
+             * If input value is null, returns "null" in compliance with Kotlin standard library
+             * parsing null receivers of [kotlin.toString] into "null".
+             *
+             */
+            override fun serializeAsValue(value: String?): String {
+                return value?.let { Uri.encode(value) } ?: "null"
             }
         }
 

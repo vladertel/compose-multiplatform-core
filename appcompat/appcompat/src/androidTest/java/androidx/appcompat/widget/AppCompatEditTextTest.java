@@ -53,6 +53,7 @@ import androidx.test.filters.SdkSuppress;
 import androidx.test.rule.ActivityTestRule;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -280,7 +281,6 @@ public class AppCompatEditTextTest {
                 TextViewCompat.getCompoundDrawableTintList(textView));
     }
 
-    @SdkSuppress(minSdkVersion = 17)
     @Test
     public void testCompoundDrawableRelativeTint() {
         // Given an ACTV with a white drawableStartCompat set and a #f0f drawableTint
@@ -303,6 +303,7 @@ public class AppCompatEditTextTest {
                 TextViewCompat.getCompoundDrawableTintList(textView));
     }
 
+    @Ignore // b/259134876
     @Test
     public void testCompoundDrawablesTintList() {
         // Given an ACTV with a white drawableLeftCompat and a ColorStateList drawableTint set

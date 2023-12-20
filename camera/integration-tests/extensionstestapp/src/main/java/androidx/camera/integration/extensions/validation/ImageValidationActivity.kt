@@ -36,6 +36,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.integration.extensions.Camera2ExtensionsActivity
 import androidx.camera.integration.extensions.ExtensionTestType.TEST_TYPE_CAMERA2_EXTENSION
+import androidx.camera.integration.extensions.ExtensionTestType.TEST_TYPE_CAMERA2_EXTENSION_STREAM_CONFIG_LATENCY
 import androidx.camera.integration.extensions.ExtensionTestType.TEST_TYPE_CAMERAX_EXTENSION
 import androidx.camera.integration.extensions.INVALID_EXTENSION_MODE
 import androidx.camera.integration.extensions.INVALID_LENS_FACING
@@ -46,11 +47,9 @@ import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_IM
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_IMAGE_URI
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_LENS_FACING
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_REQUEST_CODE
-import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_TEST_RESULT
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_TEST_TYPE
 import androidx.camera.integration.extensions.R
 import androidx.camera.integration.extensions.TestResultType.TEST_RESULT_FAILED
-import androidx.camera.integration.extensions.TestResultType.TEST_RESULT_NOT_TESTED
 import androidx.camera.integration.extensions.TestResultType.TEST_RESULT_PASSED
 import androidx.camera.integration.extensions.ValidationErrorCode.ERROR_CODE_BIND_TO_LIFECYCLE_FAILED
 import androidx.camera.integration.extensions.ValidationErrorCode.ERROR_CODE_EXTENSION_MODE_NOT_SUPPORT
@@ -73,6 +72,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 private const val TAG = "ImageValidationActivity"
+private const val SAVED_STATE_KEY_NOT_FIRST_LAUNCH = "NotFirstLaunch"
+private const val SAVED_STATE_KEY_CURRENT_INDEX = "CurrentIndex"
 
 /**
  * Activity to show the captured images of the specified extension mode and validate the results.
@@ -85,6 +86,7 @@ class ImageValidationActivity : AppCompatActivity() {
     private var extensionMode = INVALID_EXTENSION_MODE
     private val result = Intent()
     private var lensFacing = INVALID_LENS_FACING
+    private lateinit var testResults: TestResults
     private lateinit var testType: String
     private lateinit var cameraId: String
     private lateinit var failButton: ImageButton
@@ -93,24 +95,40 @@ class ImageValidationActivity : AppCompatActivity() {
     private lateinit var viewPager: ViewPager2
     private lateinit var photoImageView: ImageView
     private val imageCaptureActivityRequestCode = ImageCaptureActivity::class.java.hashCode() % 1000
-    private val imageUris = arrayListOf<Pair<Uri, Int>>()
+    private val imageUris = arrayListOf<Uri>()
+    private val imageRotationDegrees = arrayListOf<Int>()
     private var scaledBitmapWidth = 0
     private var scaledBitmapHeight = 0
     private var currentScale = 1.0f
     private var translationX = 0.0f
     private var translationY = 0.0f
+    private var currentIndex = 0
 
+    @Suppress("UNCHECKED_CAST", "DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.image_validation_activity)
+        testResults = TestResults.getInstance(this)
 
         testType = intent?.getStringExtra(INTENT_EXTRA_KEY_TEST_TYPE)!!
         cameraId = intent?.getStringExtra(INTENT_EXTRA_KEY_CAMERA_ID)!!
         lensFacing = intent.getIntExtra(INTENT_EXTRA_KEY_LENS_FACING, INVALID_LENS_FACING)
         extensionMode = intent.getIntExtra(INTENT_EXTRA_KEY_EXTENSION_MODE, INVALID_EXTENSION_MODE)
 
+        savedInstanceState?.let { bundle ->
+            bundle.getSerializable("imageUris")?.let { serializable ->
+                imageUris.addAll(serializable as ArrayList<Uri>)
+            }
+            currentIndex = bundle.getInt(SAVED_STATE_KEY_CURRENT_INDEX, 0)
+        }
+
+        savedInstanceState?.let { bundle ->
+            bundle.getIntegerArrayList("imageRotationDegrees")?.let { serializable ->
+                imageRotationDegrees.addAll(serializable as ArrayList<Int>)
+            }
+        }
+
         result.putExtra(INTENT_EXTRA_KEY_EXTENSION_MODE, extensionMode)
-        result.putExtra(INTENT_EXTRA_KEY_TEST_RESULT, TEST_RESULT_NOT_TESTED)
         val requestCode = intent.getIntExtra(INTENT_EXTRA_KEY_REQUEST_CODE, -1)
         setResult(requestCode, result)
 
@@ -124,15 +142,50 @@ class ImageValidationActivity : AppCompatActivity() {
         supportActionBar!!.subtitle =
             "Camera $cameraId [${getLensFacingStringFromInt(lensFacing)}][$extensionModeString]"
 
-        viewPager = findViewById(R.id.photo_view_pager)
         photoImageView = findViewById(R.id.photo_image_view)
+
+        photoImageView.addOnLayoutChangeListener {
+                _: View?, left: Int, top: Int, right: Int, bottom: Int,
+                oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int ->
+            if (imageUris.isEmpty()) {
+                return@addOnLayoutChangeListener
+            }
+            val isSizeChanged =
+                right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop
+            if (isSizeChanged) {
+                tryShowCaptureResults()
+            }
+        }
+
+        viewPager = findViewById(R.id.photo_view_pager)
+        viewPager.adapter = PhotoPagerAdapter(this)
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                currentIndex = position
+                tryShowCaptureResults()
+            }
+        })
 
         setupButtonControls()
         setupGestureControls()
-        startCaptureImageActivity(testType, cameraId, extensionMode)
+
+        // Launches ImageCaptureActivity automatically only when not-first-launch flag is not true
+        if (savedInstanceState?.getBoolean(SAVED_STATE_KEY_NOT_FIRST_LAUNCH) != true) {
+            startImageCaptureActivity(testType, cameraId, extensionMode)
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(SAVED_STATE_KEY_NOT_FIRST_LAUNCH, true)
+        outState.putInt(SAVED_STATE_KEY_CURRENT_INDEX, currentIndex)
+        outState.putSerializable("imageUris", imageUris)
+        outState.putIntegerArrayList("imageRotationDegrees", imageRotationDegrees)
     }
 
     @Suppress("DEPRECATION")
+    @Deprecated("Deprecated in ComponentActivity")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -148,8 +201,13 @@ class ImageValidationActivity : AppCompatActivity() {
             errorCode == ERROR_CODE_TAKE_PICTURE_FAILED ||
             errorCode == ERROR_CODE_SAVE_IMAGE_FAILED
         ) {
-            result.putExtra(INTENT_EXTRA_KEY_TEST_RESULT, TEST_RESULT_FAILED)
             Log.e(TAG, "Failed to take a picture with error code: $errorCode")
+            testResults.updateTestResultAndSave(
+                testType,
+                cameraId,
+                extensionMode,
+                TEST_RESULT_FAILED
+            )
             finish()
             return
         }
@@ -161,25 +219,22 @@ class ImageValidationActivity : AppCompatActivity() {
             // Closes the activity if there is no image captured.
             if (imageUris.isEmpty()) {
                 finish()
+                return
             }
-            return
         }
 
-        val rotationDegrees = data?.getIntExtra(INTENT_EXTRA_KEY_IMAGE_ROTATION_DEGREES, 0)!!
-        imageUris.add(Pair(uri, rotationDegrees))
+        uri?.let {
+            val rotationDegrees = data?.getIntExtra(INTENT_EXTRA_KEY_IMAGE_ROTATION_DEGREES, 0)!!
+            imageUris.add(it)
+            imageRotationDegrees.add(rotationDegrees)
+        }
 
         viewPager.adapter = PhotoPagerAdapter(this)
-        viewPager.currentItem = imageUris.size - 1
+        viewPager.currentItem = if (uri != null) imageUris.size - 1 else currentIndex
         viewPager.visibility = View.VISIBLE
-        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                super.onPageSelected(position)
-                updatePhotoImageView()
-            }
-        })
+        (viewPager.adapter as PhotoPagerAdapter).notifyDataSetChanged()
 
-        updatePhotoImageView()
-        resetAndHidePhotoImageView()
+        tryShowCaptureResults()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -206,7 +261,7 @@ class ImageValidationActivity : AppCompatActivity() {
     private fun saveCurrentImage() {
         val formatter: Format = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US)
         val savedFileName =
-            "${imageUris[viewPager.currentItem].first.lastPathSegment}" +
+            "${imageUris[viewPager.currentItem].lastPathSegment}" +
                 "[${formatter.format(Calendar.getInstance().time)}].jpg"
 
         val contentValues = ContentValues().apply {
@@ -217,7 +272,7 @@ class ImageValidationActivity : AppCompatActivity() {
 
         val outputUri = copyTempFileToOutputLocation(
             contentResolver,
-            imageUris[viewPager.currentItem].first,
+            imageUris[viewPager.currentItem],
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             contentValues
         )
@@ -236,40 +291,46 @@ class ImageValidationActivity : AppCompatActivity() {
     private fun setupButtonControls() {
         failButton = findViewById(R.id.fail_button)
         failButton.setOnClickListener {
-            result.putExtra(INTENT_EXTRA_KEY_TEST_RESULT, TEST_RESULT_FAILED)
+            testResults.updateTestResultAndSave(
+                testType,
+                cameraId,
+                extensionMode,
+                TEST_RESULT_FAILED
+            )
             finish()
         }
 
         passButton = findViewById(R.id.pass_button)
         passButton.setOnClickListener {
-            result.putExtra(INTENT_EXTRA_KEY_TEST_RESULT, TEST_RESULT_PASSED)
+            testResults.updateTestResultAndSave(
+                testType,
+                cameraId,
+                extensionMode,
+                TEST_RESULT_PASSED
+            )
             finish()
         }
 
         captureButton = findViewById(R.id.capture_button)
         captureButton.setOnClickListener {
-            startCaptureImageActivity(testType, cameraId, extensionMode)
+            startImageCaptureActivity(testType, cameraId, extensionMode)
         }
     }
 
-    private fun startCaptureImageActivity(testType: String, cameraId: String, mode: Int) {
+    private fun startImageCaptureActivity(testType: String, cameraId: String, mode: Int) {
         val intent =
-            if (Build.VERSION.SDK_INT >= 31 && testType == TEST_TYPE_CAMERA2_EXTENSION) Intent(
-                this,
-                Camera2ExtensionsActivity::class.java
-            ) else Intent(this, ImageCaptureActivity::class.java)
+            if (Build.VERSION.SDK_INT >= 31 &&
+                (testType == TEST_TYPE_CAMERA2_EXTENSION ||
+                    testType == TEST_TYPE_CAMERA2_EXTENSION_STREAM_CONFIG_LATENCY))
+                Intent(this, Camera2ExtensionsActivity::class.java)
+            else Intent(this, ImageCaptureActivity::class.java)
 
         intent.putExtra(INTENT_EXTRA_KEY_CAMERA_ID, cameraId)
         intent.putExtra(INTENT_EXTRA_KEY_LENS_FACING, lensFacing)
         intent.putExtra(INTENT_EXTRA_KEY_EXTENSION_MODE, mode)
         intent.putExtra(INTENT_EXTRA_KEY_REQUEST_CODE, imageCaptureActivityRequestCode)
 
-        ActivityCompat.startActivityForResult(
-            this,
-            intent,
-            imageCaptureActivityRequestCode,
-            null
-        )
+        ActivityCompat.startActivityForResult(this, intent, imageCaptureActivityRequestCode, null)
     }
 
     /** Adapter class used to present a fragment containing one photo or video as a page */
@@ -294,8 +355,8 @@ class ImageValidationActivity : AppCompatActivity() {
                 }
 
             return PhotoFragment(
-                imageUris[position].first,
-                imageUris[position].second,
+                imageUris[position],
+                imageRotationDegrees[position],
                 scaleGestureListener
             )
         }
@@ -416,11 +477,20 @@ class ImageValidationActivity : AppCompatActivity() {
         }
     }
 
+    internal fun tryShowCaptureResults() {
+        if (photoImageView.width == 0) {
+            return
+        }
+
+        updatePhotoImageView()
+        resetAndHidePhotoImageView()
+    }
+
     internal fun updatePhotoImageView() {
         val bitmap = decodeImageToBitmap(
             this@ImageValidationActivity.contentResolver,
-            imageUris[viewPager.currentItem].first,
-            imageUris[viewPager.currentItem].second
+            imageUris[viewPager.currentItem],
+            imageRotationDegrees[viewPager.currentItem]
         )
 
         photoImageView.setImageBitmap(bitmap)
@@ -428,7 +498,7 @@ class ImageValidationActivity : AppCompatActivity() {
 
         // Updates the index and file name to the subtitle
         supportActionBar!!.subtitle = "[${viewPager.currentItem + 1}/${imageUris.size}]" +
-            "${imageUris[viewPager.currentItem].first.lastPathSegment}"
+            "${imageUris[viewPager.currentItem].lastPathSegment}"
     }
 
     private fun updateScaledBitmapDims(width: Int, height: Int) {

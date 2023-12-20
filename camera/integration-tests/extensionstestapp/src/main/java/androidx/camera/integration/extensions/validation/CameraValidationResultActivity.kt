@@ -35,7 +35,6 @@ import androidx.camera.integration.extensions.CameraExtensionsActivity
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_CAMERA_ID
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_LENS_FACING
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_REQUEST_CODE
-import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_RESULT_MAP
 import androidx.camera.integration.extensions.IntentExtraKey.INTENT_EXTRA_KEY_TEST_TYPE
 import androidx.camera.integration.extensions.R
 import androidx.camera.integration.extensions.TestResultType.TEST_RESULT_NOT_SUPPORTED
@@ -58,7 +57,7 @@ class CameraValidationResultActivity : AppCompatActivity() {
     private lateinit var testResults: TestResults
     private lateinit var cameraLensFacingMap: LinkedHashMap<String, Int>
     private lateinit var cameraExtensionResultMap: LinkedHashMap<Pair<String, String>,
-        LinkedHashMap<Int, Int>>
+        LinkedHashMap<Int, Pair<Int, String>>>
     private val extensionValidationActivityRequestCode =
         ExtensionValidationResultActivity::class.java.hashCode() % 1000
 
@@ -79,7 +78,7 @@ class CameraValidationResultActivity : AppCompatActivity() {
                 cameraProvider
             ).await()
 
-            testResults = TestResults(this@CameraValidationResultActivity)
+            testResults = TestResults.getInstance(this@CameraValidationResultActivity)
             testResults.loadTestResults(cameraProvider, extensionsManager)
 
             cameraLensFacingMap = testResults.getCameraLensFacingMap()
@@ -128,10 +127,6 @@ class CameraValidationResultActivity : AppCompatActivity() {
                         cameraLensFacingMap[cameraId]
                     )
                     intent.putExtra(
-                        INTENT_EXTRA_KEY_RESULT_MAP,
-                        cameraExtensionResultMap.values.elementAt(position)
-                    )
-                    intent.putExtra(
                         INTENT_EXTRA_KEY_REQUEST_CODE,
                         extensionValidationActivityRequestCode
                     )
@@ -156,7 +151,7 @@ class CameraValidationResultActivity : AppCompatActivity() {
 
     private fun isAnyExtensionModeSupported(testType: String, cameraId: String): Boolean {
         cameraExtensionResultMap[Pair(testType, cameraId)]?.forEach {
-            if (it.value != TEST_RESULT_NOT_SUPPORTED) {
+            if (it.value.first != TEST_RESULT_NOT_SUPPORTED) {
                 return true
             }
         }
@@ -164,6 +159,7 @@ class CameraValidationResultActivity : AppCompatActivity() {
     }
 
     @Suppress("DEPRECATION")
+    @Deprecated("Deprecated in ComponentActivity")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -171,18 +167,7 @@ class CameraValidationResultActivity : AppCompatActivity() {
             return
         }
 
-        val testType = data?.getStringExtra(INTENT_EXTRA_KEY_TEST_TYPE)!!
-        val cameraId = data.getStringExtra(INTENT_EXTRA_KEY_CAMERA_ID)!!
-        val extensionTestResultMap = cameraExtensionResultMap[Pair(testType, cameraId)]
-
-        @Suppress("UNCHECKED_CAST")
-        val map = data.getSerializableExtra(INTENT_EXTRA_KEY_RESULT_MAP) as HashMap<Int, Int>
-        map.forEach {
-            extensionTestResultMap?.put(it.key, it.value)
-        }
-
         adapter.notifyDataSetChanged()
-        testResults.saveTestResults(cameraExtensionResultMap)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

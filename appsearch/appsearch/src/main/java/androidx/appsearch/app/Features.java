@@ -16,6 +16,7 @@
 package androidx.appsearch.app;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RestrictTo;
 
 /**
  * A class that encapsulates all features that are only supported in certain cases (e.g. only on
@@ -26,7 +27,8 @@ import androidx.annotation.NonNull;
  * the feature will be available forever on that AppSearch storage implementation, at that
  * Android API level, on that device.
  */
-// @exportToFramework:copyToPath(testing/testutils/src/android/app/appsearch/testutil/external/Features.java)
+
+// @exportToFramework:copyToPath(../../../cts/tests/appsearch/testutils/src/android/app/appsearch/testutil/external/Features.java)
 public interface Features {
 
     /**
@@ -69,6 +71,105 @@ public interface Features {
     String ADD_PERMISSIONS_AND_GET_VISIBILITY = "ADD_PERMISSIONS_AND_GET_VISIBILITY";
 
     /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link AppSearchSchema.StringPropertyConfig#TOKENIZER_TYPE_RFC822}.
+     */
+    String TOKENIZER_TYPE_RFC822 = "TOKENIZER_TYPE_RFC822";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link AppSearchSchema.LongPropertyConfig#INDEXING_TYPE_RANGE} and all other numeric search
+     * features.
+     *
+     * <p>For details on the numeric search expressions in the query language, see
+     * {@link AppSearchSession#search}.
+     */
+    String NUMERIC_SEARCH = FeatureConstants.NUMERIC_SEARCH;
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link AppSearchSchema.StringPropertyConfig#TOKENIZER_TYPE_VERBATIM} and all other
+     * verbatim search features within the query language that allows clients to search using the
+     * verbatim string operator.
+     *
+     * <p>For details on the verbatim string operator, see {@link AppSearchSession#search}.
+     */
+    String VERBATIM_SEARCH = FeatureConstants.VERBATIM_SEARCH;
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers the expansion of the
+     * query language to conform to the definition of the list filters language
+     * (https://aip.dev/160).
+     *
+     * <p>For more details, see {@link AppSearchSession#search}.
+     */
+    String LIST_FILTER_QUERY_LANGUAGE = FeatureConstants.LIST_FILTER_QUERY_LANGUAGE;
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link SearchSpec#GROUPING_TYPE_PER_SCHEMA}
+     */
+    String SEARCH_SPEC_GROUPING_TYPE_PER_SCHEMA = "SEARCH_SPEC_GROUPING_TYPE_PER_SCHEMA";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link SearchSpec.Builder#setPropertyWeights}.
+     */
+    String SEARCH_SPEC_PROPERTY_WEIGHTS = "SEARCH_SPEC_PROPERTY_WEIGHTS";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link SearchSpec.Builder#addFilterProperties}.
+     * @exportToFramework:hide
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    String SEARCH_SPEC_ADD_FILTER_PROPERTIES = "SEARCH_SPEC_ADD_FILTER_PROPERTIES";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link SearchSpec.Builder#setRankingStrategy(String)}.
+     */
+    String SEARCH_SPEC_ADVANCED_RANKING_EXPRESSION = "SEARCH_SPEC_ADVANCED_RANKING_EXPRESSION";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link AppSearchSchema.StringPropertyConfig#JOINABLE_VALUE_TYPE_QUALIFIED_ID},
+     * {@link SearchSpec.Builder#setJoinSpec}, and all other join features.
+     */
+    String JOIN_SPEC_AND_QUALIFIED_ID = "JOIN_SPEC_AND_QUALIFIED_ID";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link AppSearchSession#searchSuggestionAsync}.
+     */
+    String SEARCH_SUGGESTION = "SEARCH_SUGGESTION";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link AppSearchSchema.StringPropertyConfig.Builder#setDeletionPropagation}.
+     */
+    String SCHEMA_SET_DELETION_PROPAGATION = "SCHEMA_SET_DELETION_PROPAGATION";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers setting schemas with
+     * circular references for {@link AppSearchSession#setSchemaAsync}.
+     */
+    String SET_SCHEMA_CIRCULAR_REFERENCES = "SET_SCHEMA_CIRCULAR_REFERENCES";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link AppSearchSchema.Builder#addParentType}.
+     */
+    String SCHEMA_ADD_PARENT_TYPE = "SCHEMA_ADD_PARENT_TYPE";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}. This feature covers
+     * {@link
+     * AppSearchSchema.DocumentPropertyConfig.Builder#addIndexableNestedProperties(String...)}
+     */
+    String SCHEMA_ADD_INDEXABLE_NESTED_PROPERTIES = "SCHEMA_ADD_INDEXABLE_NESTED_PROPERTIES";
+
+    /**
      * Returns whether a feature is supported at run-time. Feature support depends on the
      * feature in question, the AppSearch backend being used and the Android version of the
      * device.
@@ -81,4 +182,12 @@ public interface Features {
      * backend.
      */
     boolean isFeatureSupported(@NonNull String feature);
+
+    /**
+     * Returns the maximum amount of properties that can be indexed in a Document
+     * given the Android API level and AppSearch backend.
+     *
+     * <p>A property is defined as all values that are present at a particular path.
+     */
+    int getMaxIndexedProperties();
 }

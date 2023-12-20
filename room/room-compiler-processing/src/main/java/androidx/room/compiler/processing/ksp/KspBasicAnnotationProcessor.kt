@@ -38,9 +38,7 @@ abstract class KspBasicAnnotationProcessor @JvmOverloads constructor(
     private val logger = DelegateLogger(symbolProcessorEnvironment.logger)
 
     private val xEnv = KspProcessingEnv(
-        options = symbolProcessorEnvironment.options,
-        codeGenerator = symbolProcessorEnvironment.codeGenerator,
-        logger = logger,
+        delegate = symbolProcessorEnvironment,
         config = config
     )
 
@@ -59,7 +57,8 @@ abstract class KspBasicAnnotationProcessor @JvmOverloads constructor(
             initialize(xEnv)
             initialized = true
         }
-        val xRoundEnv = KspRoundEnv(xEnv, false)
+        val xRoundEnv = KspRoundEnv(env = xEnv)
+        preRound(xEnv, xRoundEnv)
         commonDelegate.processRound(xRoundEnv)
         postRound(xEnv, xRoundEnv)
         xEnv.clearCache() // Reset cache after every round to avoid leaking elements across rounds
@@ -71,12 +70,17 @@ abstract class KspBasicAnnotationProcessor @JvmOverloads constructor(
         return emptyList()
     }
 
-    final override fun finish() {
-        val xRoundEnv = KspRoundEnv(xEnv, true)
+    final override fun finish() = runLastRound(reportMissingElements = true)
+
+    // Don't report missing elements when there's an error to avoid being too noisy.
+    final override fun onError() = runLastRound(reportMissingElements = false)
+
+    private fun runLastRound(reportMissingElements: Boolean) {
+        val xRoundEnv = KspRoundEnv(env = null)
+        preRound(xEnv, xRoundEnv)
         val missingElements = commonDelegate.processLastRound()
         postRound(xEnv, xRoundEnv)
-        if (!xProcessingEnv.config.disableAnnotatedElementValidation && !logger.hasError) {
-            // Report missing elements if no error was raised to avoid being noisy.
+        if (!xProcessingEnv.config.disableAnnotatedElementValidation && reportMissingElements) {
             commonDelegate.reportMissingElements(missingElements)
         }
     }

@@ -20,7 +20,7 @@ plugins {
     id("AndroidXPlugin")
     id("com.android.library")
     id("kotlin-android")
-    id("kotlin-kapt")
+    id("com.google.devtools.ksp")
     id("dagger.hilt.android.plugin")
 }
 
@@ -34,7 +34,7 @@ android {
 dependencies {
     api(libs.kotlinStdlib)
     api(project(":hilt:hilt-navigation"))
-    api("androidx.navigation:navigation-fragment-ktx:2.3.2")
+    api("androidx.navigation:navigation-fragment-ktx:2.5.1")
 
     androidTestImplementation("androidx.fragment:fragment-testing:1.3.0")
     androidTestImplementation(libs.testExtJunit)
@@ -44,7 +44,7 @@ dependencies {
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.hiltAndroid)
     androidTestImplementation(libs.hiltAndroidTesting)
-    kaptAndroidTest(libs.hiltCompiler)
+    kspAndroidTest(libs.hiltCompiler)
     androidTestImplementation(project(":internal-testutils-runtime"))
     androidTestImplementation(project(":internal-testutils-navigation"), {
         exclude group: 'androidx.navigation', module: 'navigation-common'
@@ -56,10 +56,10 @@ hilt {
 }
 
 androidx {
-    name = "Android Navigation Fragment Hilt Extension"
+    name = "Navigation Fragment Hilt Extension"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.HILT
-    mavenGroup = LibraryGroups.HILT
+    mavenVersion = LibraryVersions.HILT_NAVIGATION
     inceptionYear = "2021"
     description = "Android Navigation Fragment Hilt Extension"
+    metalavaK2UastEnabled = true
 }

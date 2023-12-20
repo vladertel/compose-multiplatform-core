@@ -24,14 +24,17 @@ import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.DefaultShadowColor
+import androidx.compose.ui.graphics.Fields
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.RenderEffect
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.ReusableGraphicsLayerScope
+import androidx.compose.ui.graphics.SkiaBackedCanvas
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.graphics.asSkiaPath
@@ -82,6 +85,7 @@ internal class SkiaLayer(
     private var shadowElevation: Float = 0f
     private var ambientShadowColor: Color = DefaultShadowColor
     private var spotShadowColor: Color = DefaultShadowColor
+    private var compositingStrategy: CompositingStrategy = CompositingStrategy.Auto
 
     override fun destroy() {
         picture?.close()
@@ -142,47 +146,38 @@ internal class SkiaLayer(
             matrix
         }
     }
+    private var mutatedFields: Int = 0
 
     override fun updateLayerProperties(
-        scaleX: Float,
-        scaleY: Float,
-        alpha: Float,
-        translationX: Float,
-        translationY: Float,
-        shadowElevation: Float,
-        rotationX: Float,
-        rotationY: Float,
-        rotationZ: Float,
-        cameraDistance: Float,
-        transformOrigin: TransformOrigin,
-        shape: Shape,
-        clip: Boolean,
-        renderEffect: RenderEffect?,
-        ambientShadowColor: Color,
-        spotShadowColor: Color,
+        scope: ReusableGraphicsLayerScope,
         layoutDirection: LayoutDirection,
-        density: Density
+        density: Density,
     ) {
-        this.transformOrigin = transformOrigin
-        this.translationX = translationX
-        this.translationY = translationY
-        this.rotationX = rotationX
-        this.rotationY = rotationY
-        this.rotationZ = rotationZ
-        this.scaleX = scaleX
-        this.scaleY = scaleY
-        this.alpha = alpha
-        this.clip = clip
-        this.shadowElevation = shadowElevation
+        val maybeChangedFields = scope.mutatedFields or mutatedFields
+        this.transformOrigin = scope.transformOrigin
+        this.translationX = scope.translationX
+        this.translationY = scope.translationY
+        this.rotationX = scope.rotationX
+        this.rotationY = scope.rotationY
+        this.rotationZ = scope.rotationZ
+        this.scaleX = scope.scaleX
+        this.scaleY = scope.scaleY
+        this.alpha = scope.alpha
+        this.clip = scope.clip
+        this.shadowElevation = scope.shadowElevation
         this.density = density
-        this.renderEffect = renderEffect
-        this.ambientShadowColor = ambientShadowColor
-        this.spotShadowColor = spotShadowColor
-        outlineCache.shape = shape
+        this.renderEffect = scope.renderEffect
+        this.ambientShadowColor = scope.ambientShadowColor
+        this.spotShadowColor = scope.spotShadowColor
+        this.compositingStrategy = scope.compositingStrategy
+        outlineCache.shape = scope.shape
         outlineCache.layoutDirection = layoutDirection
         outlineCache.density = density
-        updateMatrix()
+        if (maybeChangedFields and Fields.MatrixAffectingFields != 0) {
+            updateMatrix()
+        }
         invalidate()
+        mutatedFields = scope.mutatedFields
     }
 
     // TODO(demin): support perspective projection for rotationX/rotationY (as in Android)
@@ -256,7 +251,11 @@ internal class SkiaLayer(
             }
 
             val currentRenderEffect = renderEffect
-            if (alpha < 1 || currentRenderEffect != null) {
+            val requiresLayer =
+                (alpha < 1 && compositingStrategy != CompositingStrategy.ModulateAlpha) ||
+                currentRenderEffect != null ||
+                compositingStrategy == CompositingStrategy.Offscreen
+            if (requiresLayer) {
                 canvas.saveLayer(
                     bounds,
                     Paint().apply {
@@ -266,6 +265,12 @@ internal class SkiaLayer(
                 )
             } else {
                 canvas.save()
+            }
+            val skiaCanvas = canvas as SkiaBackedCanvas
+            if (compositingStrategy == CompositingStrategy.ModulateAlpha) {
+                skiaCanvas.alphaMultiplier = alpha
+            } else {
+                skiaCanvas.alphaMultiplier = 1.0f
             }
 
             drawBlock(canvas)

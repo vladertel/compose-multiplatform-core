@@ -20,10 +20,10 @@ import static androidx.core.view.inputmethod.EditorInfoTestUtils.createEditorInf
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.anyInt;
 
 import android.os.Parcel;
 import android.support.v4.BaseInstrumentationTestCase;
@@ -86,6 +86,16 @@ public class EditorInfoCompatTest extends BaseInstrumentationTestCase<TestActivi
         assertArrayEquals(EditorInfoCompat.getContentMimeTypes(
                 createEditorInfoForTest(mimeTypes, EditorInfoCompat.Protocol.AndroidX_1_1_0)),
                 mimeTypes);
+    }
+
+    @Test
+    public void testSetStylusHandwritingEnabled() {
+        EditorInfo editorInfo = new EditorInfo();
+        EditorInfoCompat.setStylusHandwritingEnabled(editorInfo, true /* enabled */);
+        assertTrue(EditorInfoCompat.isStylusHandwritingEnabled(editorInfo));
+
+        EditorInfoCompat.setStylusHandwritingEnabled(editorInfo, false /* enabled */);
+        assertFalse(EditorInfoCompat.isStylusHandwritingEnabled(editorInfo));
     }
 
     @Test
@@ -238,12 +248,12 @@ public class EditorInfoCompatTest extends BaseInstrumentationTestCase<TestActivi
 
         assertTrue(TextUtils.equals(expectedTextBeforeCursor,
                 EditorInfoCompat.getInitialTextBeforeCursor(editorInfo, LONG_EXP_TEXT_LENGTH,
-                        anyInt())));
+                        0)));
         assertTrue(TextUtils.equals(expectedSelectedText,
-                EditorInfoCompat.getInitialSelectedText(editorInfo, anyInt())));
+                EditorInfoCompat.getInitialSelectedText(editorInfo, 0)));
         assertTrue(TextUtils.equals(expectedTextAfterCursor,
                 EditorInfoCompat.getInitialTextAfterCursor(editorInfo, LONG_EXP_TEXT_LENGTH,
-                        anyInt())));
+                        0)));
     }
 
     @Test

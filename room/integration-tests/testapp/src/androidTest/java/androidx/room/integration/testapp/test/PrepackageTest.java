@@ -236,8 +236,8 @@ public class PrepackageTest {
                 .createFromAsset("databases/products_v1.db")
                 .addMigrations(new Migration(1, 2) {
                     @Override
-                    public void migrate(@NonNull SupportSQLiteDatabase database) {
-                        database.execSQL(
+                    public void migrate(@NonNull SupportSQLiteDatabase db) {
+                        db.execSQL(
                                 "INSERT INTO Products (id, name) VALUES (null, 'Mofongo')");
                     }
                 })
@@ -257,7 +257,7 @@ public class PrepackageTest {
         ProductsDatabase_v2 database = Room.databaseBuilder(
                 context, ProductsDatabase_v2.class, "products.db")
                 .createFromAsset("databases/products_v1.db")
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(false)
                 .build();
 
         ProductDao dao = database.getProductDao();
@@ -284,7 +284,7 @@ public class PrepackageTest {
         ProductsDatabase_v2 database_v2 = Room.databaseBuilder(
                 context, ProductsDatabase_v2.class, "products.db")
                 .createFromAsset("databases/products_v2.db")
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(false)
                 .build();
         dao = database_v2.getProductDao();
         assertThat(dao.countProducts(), is(3));
@@ -310,7 +310,7 @@ public class PrepackageTest {
         ProductsDatabase_v2 database_v2 = Room.databaseBuilder(
                 context, ProductsDatabase_v2.class, "products.db")
                 .createFromAsset("databases/products_v1.db")
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(false)
                 .build();
         dao = database_v2.getProductDao();
         assertThat(dao.countProducts(), is(0));
@@ -338,12 +338,12 @@ public class PrepackageTest {
                 .createFromAsset("databases/products_v1.db")
                 .addMigrations(new Migration(1, 2) {
                     @Override
-                    public void migrate(@NonNull SupportSQLiteDatabase database) {
-                        database.execSQL(
+                    public void migrate(@NonNull SupportSQLiteDatabase db) {
+                        db.execSQL(
                                 "INSERT INTO Products (id, name) VALUES (null, 'Mofongo')");
                     }
                 })
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(false)
                 .build();
         dao = database_v2.getProductDao();
         assertThat(dao.countProducts(), is(3));
@@ -438,7 +438,7 @@ public class PrepackageTest {
         ProductsDatabase_v2 database_v2 = Room.databaseBuilder(
                 context, ProductsDatabase_v2.class, "products_external.db")
                 .createFromFile(dataDbFile)
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(false)
                 .build();
         dao = database_v2.getProductDao();
         assertThat(dao.countProducts(), is(0));

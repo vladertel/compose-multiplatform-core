@@ -18,13 +18,18 @@ package androidx.camera.core.impl;
 
 import android.hardware.camera2.CaptureResult;
 import android.media.ImageReader;
+import android.util.Pair;
+import android.util.Size;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.camera.core.CameraInfo;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A processor for (1) transforming the surfaces used in Preview/ImageCapture/ImageAnalysis
@@ -51,19 +56,14 @@ public interface SessionProcessor {
      * SessionProcessor is responsible to write the output to this given output surfaces.
      *
      * @param cameraInfo                 cameraInfo for querying the camera info
-     * @param previewSurfaceConfig       output surface for preview. This is mandatory.
-     * @param imageCaptureSurfaceConfig  output surface for image capture. This is mandatory.
-     * @param imageAnalysisSurfaceConfig output surface for image analysis. This is optional.
-     *                                   Passing null if image analysis output is not needed.
+     * @param outputSurfaceConfig output surface configuration for preview, image capture,
+     *                                  image analysis and the postview.
      * @return a {@link SessionConfig} that contains the surfaces and the session parameters and
      * should be used to configure the camera session.
      */
     @NonNull
-    SessionConfig initSession(
-            @NonNull CameraInfo cameraInfo,
-            @NonNull OutputSurface previewSurfaceConfig,
-            @NonNull OutputSurface imageCaptureSurfaceConfig,
-            @Nullable OutputSurface imageAnalysisSurfaceConfig);
+    SessionConfig initSession(@NonNull CameraInfo cameraInfo,
+            @NonNull OutputSurfaceConfiguration outputSurfaceConfig);
 
     /**
      * De-initializes the session. This is called after the camera session is closed.
@@ -108,16 +108,64 @@ public interface SessionProcessor {
      * Requests the SessionProcessor to start the still image capture. The capture task can only
      * perform one at a time.
      *
+     * @param postviewEnabled if postview is enabled or not.
      * @param callback callback to notify the status.
      * @return the id of the capture sequence.
      */
-    int startCapture(
-            @NonNull CaptureCallback callback);
+    int startCapture(boolean postviewEnabled, @NonNull CaptureCallback callback);
 
     /**
      * Aborts the pending capture.
      */
     void abortCapture(int captureSequenceId);
+
+    /**
+     * Sends trigger-type single request such as AF/AE triggers.
+     */
+    default int startTrigger(@NonNull Config config, @NonNull CaptureCallback callback) {
+        return -1;
+    }
+
+    /**
+     * Returns supported output format/size map for postview image. The API is provided
+     * for camera-core to query the supported postview sizes from SessionProcessor.
+     */
+    @NonNull
+    default Map<Integer, List<Size>> getSupportedPostviewSize(@NonNull Size captureSize) {
+        return Collections.emptyMap();
+    }
+
+    /**
+     * Returns the supported camera operations when the SessionProcessor is enabled.
+     */
+    @NonNull
+    default @RestrictedCameraControl.CameraOperation Set<Integer> getSupportedCameraOperations() {
+        return Collections.emptySet();
+    }
+
+    /**
+     * Returns the dynamically calculated capture latency pair in milliseconds.
+     *
+     * The measurement is expected to take in to account dynamic parameters such as the current
+     * scene, the state of 3A algorithms, the state of internal HW modules and return a more
+     * accurate assessment of the capture and/or processing latency.</p>
+     *
+     * @return pair that includes the estimated input frame/frames camera capture latency as the
+     * first field. This is the time between {@link CaptureCallback#onCaptureStarted} and
+     * {@link CaptureCallback#onCaptureProcessStarted}. The second field value includes the
+     * estimated post-processing latency. This is the time between
+     * {@link CaptureCallback#onCaptureProcessStarted} until the processed frame returns back to the
+     * client registered surface.
+     * Both first and second values will be in milliseconds. The total still capture latency will be
+     * the sum of both the first and second values of the pair.
+     * The pair is expected to be null if the dynamic latency estimation is not supported.
+     * If clients have not configured a still capture output, then this method can also return a
+     * null pair.
+     */
+    @Nullable
+    default Pair<Long, Long> getRealtimeCaptureLatency() {
+        return null;
+    }
 
     /**
      * Callback for {@link #startRepeating} and {@link #startCapture}.
@@ -136,7 +184,7 @@ public interface SessionProcessor {
          *                          request or the timestamp at start of capture of the
          *                          first frame in a multi-frame capture, in nanoseconds.
          */
-        void onCaptureStarted(int captureSequenceId, long timestamp);
+        default void onCaptureStarted(int captureSequenceId, long timestamp) {}
 
         /**
          * This method is called when an image (or images in case of multi-frame
@@ -144,7 +192,7 @@ public interface SessionProcessor {
          *
          * @param captureSequenceId id of the current capture sequence
          */
-        void onCaptureProcessStarted(int captureSequenceId);
+        default void onCaptureProcessStarted(int captureSequenceId) {}
 
         /**
          * This method is called instead of {@link #onCaptureProcessStarted} when the camera
@@ -153,7 +201,7 @@ public interface SessionProcessor {
          *
          * @param captureSequenceId id of the current capture sequence
          */
-        void onCaptureFailed(int captureSequenceId);
+        default void onCaptureFailed(int captureSequenceId) {}
 
         /**
          * This method is called independently of the others in the CaptureCallback, when a capture
@@ -166,14 +214,14 @@ public interface SessionProcessor {
          *
          * @param captureSequenceId id of the current capture sequence
          */
-        void onCaptureSequenceCompleted(int captureSequenceId);
+        default void onCaptureSequenceCompleted(int captureSequenceId) {}
 
         /**
          * This method is called when a capture sequence aborts.
          *
          * @param captureSequenceId id of the current capture sequence
          */
-        void onCaptureSequenceAborted(int captureSequenceId);
+        default void onCaptureSequenceAborted(int captureSequenceId) {}
 
         /**
          * Capture result callback that needs to be called when the process capture results are
@@ -197,7 +245,21 @@ public interface SessionProcessor {
          *                             that those two settings and results are always supported and
          *                             applied by the corresponding framework.
          */
-        void onCaptureCompleted(long timestamp, int captureSequenceId,
-                @NonNull Map<CaptureResult.Key, Object> result);
+        default void onCaptureCompleted(long timestamp, int captureSequenceId,
+                @NonNull Map<CaptureResult.Key, Object> result) {}
+
+        /**
+         * Capture progress callback that needs to be called when the process capture is
+         * ongoing and includes the estimated progress of the processing.
+         *
+         * <p>Extensions must ensure that they always call this callback with monotonically
+         * increasing values.</p>
+         *
+         * <p>Extensions are allowed to trigger this callback multiple times but at the minimum the
+         * callback is expected to be called once when processing is done with value 100.</p>
+         *
+         * @param progress             Value between 0 and 100.
+         */
+        default void onCaptureProcessProgressed(int progress) {}
     }
 }

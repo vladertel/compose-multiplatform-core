@@ -16,21 +16,22 @@
 
 package androidx.compose.foundation.layout
 
+import androidx.annotation.FloatRange
 import androidx.compose.runtime.Stable
-import androidx.compose.ui.layout.LayoutModifier
-import androidx.compose.ui.layout.Measurable
-import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.node.LayoutModifierNode
+import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.InspectorInfo
-import androidx.compose.ui.platform.InspectorValueInfo
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.isSatisfiedBy
-import kotlin.math.roundToInt
+import androidx.compose.ui.util.fastRoundToInt
 
 /**
  * Attempts to size the content to match a specified aspect ratio by trying to match one of the
@@ -52,11 +53,11 @@ import kotlin.math.roundToInt
  */
 @Stable
 fun Modifier.aspectRatio(
-    /*@FloatRange(from = 0.0, fromInclusive = false)*/
+    @FloatRange(from = 0.0, fromInclusive = false)
     ratio: Float,
     matchHeightConstraintsFirst: Boolean = false
 ) = this.then(
-    AspectRatioModifier(
+    AspectRatioElement(
         ratio,
         matchHeightConstraintsFirst,
         debugInspectorInfo {
@@ -67,15 +68,44 @@ fun Modifier.aspectRatio(
     )
 )
 
-private class AspectRatioModifier(
+private class AspectRatioElement(
     val aspectRatio: Float,
     val matchHeightConstraintsFirst: Boolean,
-    inspectorInfo: InspectorInfo.() -> Unit
-) : LayoutModifier, InspectorValueInfo(inspectorInfo) {
+    val inspectorInfo: InspectorInfo.() -> Unit
+) : ModifierNodeElement<AspectRatioNode>() {
     init {
         require(aspectRatio > 0) { "aspectRatio $aspectRatio must be > 0" }
     }
 
+    override fun create(): AspectRatioNode {
+        return AspectRatioNode(
+            aspectRatio,
+            matchHeightConstraintsFirst
+        )
+    }
+
+    override fun update(node: AspectRatioNode) {
+        node.aspectRatio = aspectRatio
+        node.matchHeightConstraintsFirst = matchHeightConstraintsFirst
+    }
+
+    override fun InspectorInfo.inspectableProperties() { inspectorInfo() }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        val otherModifier = other as? AspectRatioElement ?: return false
+        return aspectRatio == otherModifier.aspectRatio &&
+            matchHeightConstraintsFirst == other.matchHeightConstraintsFirst
+    }
+
+    override fun hashCode(): Int =
+        aspectRatio.hashCode() * 31 + matchHeightConstraintsFirst.hashCode()
+}
+
+private class AspectRatioNode(
+    var aspectRatio: Float,
+    var matchHeightConstraintsFirst: Boolean,
+) : LayoutModifierNode, Modifier.Node() {
     override fun MeasureScope.measure(
         measurable: Measurable,
         constraints: Constraints
@@ -96,7 +126,7 @@ private class AspectRatioModifier(
         measurable: IntrinsicMeasurable,
         height: Int
     ) = if (height != Constraints.Infinity) {
-        (height * aspectRatio).roundToInt()
+        (height * aspectRatio).fastRoundToInt()
     } else {
         measurable.minIntrinsicWidth(height)
     }
@@ -105,7 +135,7 @@ private class AspectRatioModifier(
         measurable: IntrinsicMeasurable,
         height: Int
     ) = if (height != Constraints.Infinity) {
-        (height * aspectRatio).roundToInt()
+        (height * aspectRatio).fastRoundToInt()
     } else {
         measurable.maxIntrinsicWidth(height)
     }
@@ -114,7 +144,7 @@ private class AspectRatioModifier(
         measurable: IntrinsicMeasurable,
         width: Int
     ) = if (width != Constraints.Infinity) {
-        (width / aspectRatio).roundToInt()
+        (width / aspectRatio).fastRoundToInt()
     } else {
         measurable.minIntrinsicHeight(width)
     }
@@ -123,7 +153,7 @@ private class AspectRatioModifier(
         measurable: IntrinsicMeasurable,
         width: Int
     ) = if (width != Constraints.Infinity) {
-        (width / aspectRatio).roundToInt()
+        (width / aspectRatio).fastRoundToInt()
     } else {
         measurable.maxIntrinsicHeight(width)
     }
@@ -154,7 +184,7 @@ private class AspectRatioModifier(
     private fun Constraints.tryMaxWidth(enforceConstraints: Boolean = true): IntSize {
         val maxWidth = this.maxWidth
         if (maxWidth != Constraints.Infinity) {
-            val height = (maxWidth / aspectRatio).roundToInt()
+            val height = (maxWidth / aspectRatio).fastRoundToInt()
             if (height > 0) {
                 val size = IntSize(maxWidth, height)
                 if (!enforceConstraints || isSatisfiedBy(size)) {
@@ -168,7 +198,7 @@ private class AspectRatioModifier(
     private fun Constraints.tryMaxHeight(enforceConstraints: Boolean = true): IntSize {
         val maxHeight = this.maxHeight
         if (maxHeight != Constraints.Infinity) {
-            val width = (maxHeight * aspectRatio).roundToInt()
+            val width = (maxHeight * aspectRatio).fastRoundToInt()
             if (width > 0) {
                 val size = IntSize(width, maxHeight)
                 if (!enforceConstraints || isSatisfiedBy(size)) {
@@ -181,7 +211,7 @@ private class AspectRatioModifier(
 
     private fun Constraints.tryMinWidth(enforceConstraints: Boolean = true): IntSize {
         val minWidth = this.minWidth
-        val height = (minWidth / aspectRatio).roundToInt()
+        val height = (minWidth / aspectRatio).fastRoundToInt()
         if (height > 0) {
             val size = IntSize(minWidth, height)
             if (!enforceConstraints || isSatisfiedBy(size)) {
@@ -193,7 +223,7 @@ private class AspectRatioModifier(
 
     private fun Constraints.tryMinHeight(enforceConstraints: Boolean = true): IntSize {
         val minHeight = this.minHeight
-        val width = (minHeight * aspectRatio).roundToInt()
+        val width = (minHeight * aspectRatio).fastRoundToInt()
         if (width > 0) {
             val size = IntSize(width, minHeight)
             if (!enforceConstraints || isSatisfiedBy(size)) {
@@ -202,16 +232,4 @@ private class AspectRatioModifier(
         }
         return IntSize.Zero
     }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        val otherModifier = other as? AspectRatioModifier ?: return false
-        return aspectRatio == otherModifier.aspectRatio &&
-            matchHeightConstraintsFirst == other.matchHeightConstraintsFirst
-    }
-
-    override fun hashCode(): Int =
-        aspectRatio.hashCode() * 31 + matchHeightConstraintsFirst.hashCode()
-
-    override fun toString(): String = "AspectRatioModifier(aspectRatio=$aspectRatio)"
 }

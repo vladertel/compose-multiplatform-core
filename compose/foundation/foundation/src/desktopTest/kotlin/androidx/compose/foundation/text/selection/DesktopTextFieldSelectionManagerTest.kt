@@ -17,7 +17,7 @@
 package androidx.compose.foundation.text.selection
 
 import androidx.compose.foundation.text.InternalFoundationTextApi
-import androidx.compose.foundation.text.TextFieldState
+import androidx.compose.foundation.text.LegacyTextFieldState
 import androidx.compose.foundation.text.TextLayoutResultProxy
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
@@ -38,24 +38,26 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.google.common.truth.Truth.assertThat
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.times
-import com.nhaarman.mockitokotlin2.verify
-import com.nhaarman.mockitokotlin2.whenever
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 @RunWith(JUnit4::class)
+@Ignore("b/271123970 Fails in AOSP. Will be fixed after upstreaming Compose for Desktop")
 class DesktopTextFieldSelectionManagerTest {
     private val text = "Hello World"
     private val density = Density(density = 1f)
     private val offsetMapping = OffsetMapping.Identity
     private var value = TextFieldValue(text)
     private val lambda: (TextFieldValue) -> Unit = { value = it }
-    private lateinit var state: TextFieldState
+    private lateinit var state: LegacyTextFieldState
 
     private val dragBeginPosition = Offset.Zero
     private val dragDistance = Offset(300f, 15f)
@@ -114,7 +116,11 @@ class DesktopTextFieldSelectionManagerTest {
 
         whenever(layoutResultProxy.value).thenReturn(layoutResult)
 
-        state = TextFieldState(mock(), mock())
+        state = LegacyTextFieldState(
+            textDelegate = mock(),
+            recomposeScope = mock(),
+            keyboardController = null
+        )
         state.layoutResult = layoutResultProxy
         state.processor.reset(value, null)
         manager.state = state

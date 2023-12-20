@@ -34,33 +34,18 @@ android {
 dependencies {
     api("androidx.annotation:annotation:1.3.0")
     implementation(libs.kotlinStdlib)
-    implementation(project(":compose:runtime:runtime"))
-    implementation(project(":tracing:tracing-perfetto"))
+    implementation("androidx.compose.runtime:runtime:1.3.3")
+    implementation("androidx.tracing:tracing-perfetto:1.0.0")
     implementation("androidx.startup:startup-runtime:1.1.1")
     androidTestImplementation(libs.testExtJunit)
     androidTestImplementation(libs.testRunner)
     androidTestImplementation(libs.truth)
 }
 
-tasks.withType(KotlinCompile).configureEach {
-    kotlinOptions {
-        freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
-    }
-}
-
 androidx {
     name = "Compose Runtime: Tracing"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenVersion = LibraryVersions.COMPOSE_RUNTIME_TRACING
-    mavenGroup = LibraryGroups.COMPOSE_RUNTIME
     inceptionYear = "2022"
     description = "Additional tracing in Compose"
-}
-
-tasks.withType(KotlinCompile).configureEach {
-    kotlinOptions {
-        freeCompilerArgs += [
-                "-Xjvm-default=all",
-        ]
-    }
+    metalavaK2UastEnabled = true
 }

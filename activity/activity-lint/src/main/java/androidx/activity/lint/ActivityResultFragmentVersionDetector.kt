@@ -30,12 +30,12 @@ import com.android.tools.lint.detector.api.Location
 import com.android.tools.lint.detector.api.Project
 import com.android.tools.lint.detector.api.Scope
 import com.android.tools.lint.detector.api.Severity
-import org.jetbrains.uast.UCallExpression
-import org.jetbrains.uast.UElement
 import java.util.EnumSet
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
+import org.jetbrains.uast.UCallExpression
+import org.jetbrains.uast.UElement
 
 class ActivityResultFragmentVersionDetector : Detector(), UastScanner, GradleScanner {
     companion object {
@@ -120,8 +120,8 @@ class ActivityResultFragmentVersionDetector : Detector(), UastScanner, GradleSca
         val mainArtifact = getMemberWithReflection(buildVariant, "mainArtifact")
         val dependencies = getMemberWithReflection(mainArtifact, "dependencies")
         val all = callFunctionWithReflection(dependencies, "getAll")
-        (all as ArrayList<*>).forEach { lmLibrary ->
-            lmLibrary::class.memberProperties.forEach { libraryMembers ->
+        (all as List<*>).forEach { lmLibrary ->
+            lmLibrary!!::class.memberProperties.forEach { libraryMembers ->
                 if (libraryMembers.name == "resolvedCoordinates") {
                     libraryMembers.isAccessible = true
                     reportIssue(libraryMembers.call(lmLibrary).toString(), context, false)

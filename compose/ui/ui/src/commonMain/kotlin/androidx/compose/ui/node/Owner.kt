@@ -13,22 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package androidx.compose.ui.node
 
+import androidx.annotation.RestrictTo
 import androidx.compose.runtime.Applier
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
+import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.focus.FocusOwner
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.PointerIconService
+import androidx.compose.ui.input.pointer.PositionCalculator
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.PlacementScope
+import androidx.compose.ui.modifier.ModifierLocalManager
 import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.PlatformTextInputSessionHandler
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
@@ -38,13 +49,15 @@ import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Owner implements the connection to the underlying view system. On Android, this connects
  * to Android [views][android.view.View] and all layout, draw, input, and accessibility is hooked
  * through them.
  */
-internal interface Owner {
+@OptIn(InternalComposeUiApi::class)
+internal interface Owner : PlatformTextInputSessionHandler, PositionCalculator {
 
     /**
      * The root layout node in the component tree.
@@ -108,12 +121,14 @@ internal interface Owner {
 
     val textInputService: TextInputService
 
+    val softwareKeyboardController: SoftwareKeyboardController
+
     val pointerIconService: PointerIconService
 
     /**
-     * Provide a focus manager that controls focus within Compose.
+     * Provide a focus owner that controls focus within Compose.
      */
-    val focusManager: FocusManager
+    val focusOwner: FocusOwner
 
     /**
      * Provide information about the window that hosts this [Owner].
@@ -135,7 +150,7 @@ internal interface Owner {
      * `true` when layout should draw debug bounds.
      */
     var showLayoutBounds: Boolean
-        /** @suppress */
+        @RestrictTo(RestrictTo.Scope.LIBRARY)
         @InternalCoreApi
         set
 
@@ -149,7 +164,8 @@ internal interface Owner {
     fun onRequestMeasure(
         layoutNode: LayoutNode,
         affectsLookahead: Boolean = false,
-        forceRequest: Boolean = false
+        forceRequest: Boolean = false,
+        scheduleMeasureAndLayout: Boolean = true
     )
 
     /**
@@ -223,7 +239,7 @@ internal interface Owner {
     /**
      * Makes sure the passed [layoutNode] and its subtree is remeasured and has the final sizes.
      */
-    fun forceMeasureTheSubtree(layoutNode: LayoutNode)
+    fun forceMeasureTheSubtree(layoutNode: LayoutNode, affectsLookahead: Boolean = false)
 
     /**
      * Creates an [OwnedLayer] which will be drawing the passed [drawBlock].
@@ -260,6 +276,19 @@ internal interface Owner {
      */
     val snapshotObserver: OwnerSnapshotObserver
 
+    val modifierLocalManager: ModifierLocalManager
+
+    /**
+     * CoroutineContext for launching coroutines in Modifier Nodes.
+     */
+    val coroutineContext: CoroutineContext
+
+    /**
+     * The scope used to place the outermost layout.
+     */
+    val placementScope: Placeable.PlacementScope
+        get() = PlacementScope(this) // default implementation for test owners
+
     /**
      * Registers a call to be made when the [Applier.onEndChanges] is called. [listener]
      * should be called in [onEndApplyChanges] and then removed after being called.
@@ -277,6 +306,8 @@ internal interface Owner {
      * [listener] will be notified after the current or next layout has finished.
      */
     fun registerOnLayoutCompletedListener(listener: OnLayoutCompletedListener)
+
+    val dragAndDropManager: DragAndDropManager
 
     companion object {
         /**

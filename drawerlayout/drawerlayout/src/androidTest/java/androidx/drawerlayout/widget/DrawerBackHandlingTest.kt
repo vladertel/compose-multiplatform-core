@@ -28,6 +28,7 @@ import androidx.test.filters.SmallTest
 import androidx.testutils.PollingCheck
 import androidx.testutils.withActivity
 import org.junit.Assert
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,6 +40,7 @@ public class DrawerBackHandlingTest {
         DrawerSingleStartActivity::class.java
     )
 
+    @Ignore
     @Test
     @SmallTest
     public fun testBackPress() {

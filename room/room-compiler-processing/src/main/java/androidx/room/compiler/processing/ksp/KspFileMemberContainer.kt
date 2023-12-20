@@ -16,20 +16,23 @@
 
 package androidx.room.compiler.processing.ksp
 
+import androidx.room.compiler.codegen.XClassName
 import androidx.room.compiler.processing.XAnnotated
 import androidx.room.compiler.processing.XElement
 import androidx.room.compiler.processing.XMemberContainer
+import androidx.room.compiler.processing.XNullability
 import com.google.devtools.ksp.symbol.AnnotationUseSiteTarget
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.validate
 import com.squareup.javapoet.ClassName
+import com.squareup.kotlinpoet.javapoet.toKClassName
 
 /**
  * [XMemberContainer] implementation for KSFiles.
  */
 internal class KspFileMemberContainer(
-    private val env: KspProcessingEnv,
+    internal val env: KspProcessingEnv,
     private val ksFile: KSFile
 ) : KspMemberContainer,
     XAnnotated by KspAnnotated.create(
@@ -41,8 +44,19 @@ internal class KspFileMemberContainer(
         get() = null
     override val declaration: KSDeclaration?
         get() = null
-    override val className: ClassName by lazy {
 
+    @Deprecated(
+        "Use asClassName().toJavaPoet() to be clear the name is for JavaPoet.",
+        replaceWith = ReplaceWith(
+            "asClassName().toJavaPoet()",
+            "androidx.room.compiler.codegen.toJavaPoet"
+        )
+    )
+    override val className: ClassName by lazy {
+        xClassName.java
+    }
+
+    private val xClassName: XClassName by lazy {
         val pkgName = ksFile.packageName.asString().let {
             if (it == "<root>") {
                 ""
@@ -50,10 +64,14 @@ internal class KspFileMemberContainer(
                 it
             }
         }
-        ClassName.get(
+        val java = ClassName.get(
             pkgName, ksFile.findClassName()
         )
+        val kotlin = java.toKClassName()
+        XClassName(java, kotlin, XNullability.NONNULL)
     }
+
+    override fun asClassName() = xClassName
 
     override fun kindName(): String {
         return "file"
@@ -85,4 +103,8 @@ internal class KspFileMemberContainer(
             }?.value?.toString() ?: fileName.replace(".kt", "Kt")
         }
     }
+
+    override fun isFromJava(): Boolean = false
+
+    override fun isFromKotlin(): Boolean = true
 }

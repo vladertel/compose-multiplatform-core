@@ -28,11 +28,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.tokens.RadioButtonTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -41,11 +39,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
 /**
- * Material Design radio button.
+ * <a href="https://m3.material.io/components/radio-button/overview" class="external" target="_blank">Material Design radio button</a>.
  *
  * Radio buttons allow users to select one option from a set.
  *
@@ -86,13 +85,14 @@ fun RadioButton(
     val radioColor = colors.radioColor(enabled, selected)
     val selectableModifier =
         if (onClick != null) {
+            @Suppress("DEPRECATION_ERROR")
             Modifier.selectable(
                 selected = selected,
                 onClick = onClick,
                 enabled = enabled,
                 role = Role.RadioButton,
                 interactionSource = interactionSource,
-                indication = rememberRipple(
+                indication = androidx.compose.material.ripple.rememberRipple(
                     bounded = false,
                     radius = RadioButtonTokens.StateLayerSize / 2
                 )
@@ -104,7 +104,7 @@ fun RadioButton(
         modifier
             .then(
                 if (onClick != null) {
-                    Modifier.minimumTouchTargetSize()
+                    Modifier.minimumInteractiveComponentSize()
                 } else {
                     Modifier
                 }
@@ -128,28 +128,17 @@ fun RadioButton(
 }
 
 /**
- * Represents the color used by a [RadioButton] in different states.
- *
- * See [RadioButtonDefaults.colors] for the default implementation that follows Material
- * specifications.
- */
-@Stable
-interface RadioButtonColors {
-    /**
-     * Represents the main color used to draw the outer and inner circles, depending on whether
-     * the [RadioButton] is [enabled] / [selected].
-     *
-     * @param enabled whether the [RadioButton] is enabled
-     * @param selected whether the [RadioButton] is selected
-     */
-    @Composable
-    fun radioColor(enabled: Boolean, selected: Boolean): State<Color>
-}
-
-/**
  * Defaults used in [RadioButton].
  */
 object RadioButtonDefaults {
+
+    /**
+     * Creates a [RadioButtonColors] that will animate between the provided colors according to
+     * the Material specification.
+     */
+    @Composable
+    fun colors() = MaterialTheme.colorScheme.defaultRadioButtonColors
+
     /**
      * Creates a [RadioButtonColors] that will animate between the provided colors according to
      * the Material specification.
@@ -163,43 +152,77 @@ object RadioButtonDefaults {
      */
     @Composable
     fun colors(
-        selectedColor: Color = RadioButtonTokens.SelectedIconColor.toColor(),
-        unselectedColor: Color = RadioButtonTokens.UnselectedIconColor.toColor(),
-        disabledSelectedColor: Color = RadioButtonTokens.DisabledSelectedIconColor
-            .toColor()
-            .copy(alpha = RadioButtonTokens.DisabledSelectedIconOpacity),
-        disabledUnselectedColor: Color = RadioButtonTokens.DisabledUnselectedIconColor
-            .toColor()
-            .copy(alpha = RadioButtonTokens.DisabledUnselectedIconOpacity)
-    ): RadioButtonColors {
-        return remember(
-            selectedColor,
-            unselectedColor,
-            disabledSelectedColor,
-            disabledUnselectedColor
-        ) {
-            DefaultRadioButtonColors(
-                selectedColor,
-                unselectedColor,
-                disabledSelectedColor,
-                disabledUnselectedColor
-            )
+        selectedColor: Color = Color.Unspecified,
+        unselectedColor: Color = Color.Unspecified,
+        disabledSelectedColor: Color = Color.Unspecified,
+        disabledUnselectedColor: Color = Color.Unspecified
+    ): RadioButtonColors = MaterialTheme.colorScheme.defaultRadioButtonColors.copy(
+        selectedColor,
+        unselectedColor,
+        disabledSelectedColor,
+        disabledUnselectedColor
+    )
+
+    internal val ColorScheme.defaultRadioButtonColors: RadioButtonColors
+        get() {
+            return defaultRadioButtonColorsCached ?: RadioButtonColors(
+                selectedColor = fromToken(RadioButtonTokens.SelectedIconColor),
+                unselectedColor = fromToken(RadioButtonTokens.UnselectedIconColor),
+                disabledSelectedColor = fromToken(RadioButtonTokens.DisabledSelectedIconColor)
+                    .copy(alpha = RadioButtonTokens.DisabledSelectedIconOpacity),
+                disabledUnselectedColor = fromToken(RadioButtonTokens.DisabledUnselectedIconColor)
+                    .copy(alpha = RadioButtonTokens.DisabledUnselectedIconOpacity)
+            ).also {
+                defaultRadioButtonColorsCached = it
+            }
         }
-    }
 }
 
 /**
- * Default [RadioButtonColors] implementation.
+ * Represents the color used by a [RadioButton] in different states.
+ *
+ * @constructor create an instance with arbitrary colors.
+ * See [RadioButtonDefaults.colors] for the default implementation that follows Material
+ * specifications.
+ *
+ * @param selectedColor the color to use for the RadioButton when selected and enabled.
+ * @param unselectedColor the color to use for the RadioButton when unselected and enabled.
+ * @param disabledSelectedColor the color to use for the RadioButton when disabled and selected.
+ * @param disabledUnselectedColor the color to use for the RadioButton when disabled and not
+ * selected.
  */
 @Immutable
-private class DefaultRadioButtonColors(
-    private val selectedColor: Color,
-    private val unselectedColor: Color,
-    private val disabledSelectedColor: Color,
-    private val disabledUnselectedColor: Color
-) : RadioButtonColors {
+class RadioButtonColors constructor(
+    val selectedColor: Color,
+    val unselectedColor: Color,
+    val disabledSelectedColor: Color,
+    val disabledUnselectedColor: Color
+) {
+    /**
+     * Returns a copy of this SelectableChipColors, optionally overriding some of the values.
+     * This uses the Color.Unspecified to mean “use the value from the source”
+     */
+    fun copy(
+        selectedColor: Color = this.selectedColor,
+        unselectedColor: Color = this.unselectedColor,
+        disabledSelectedColor: Color = this.disabledSelectedColor,
+        disabledUnselectedColor: Color = this.disabledUnselectedColor,
+    ) = RadioButtonColors(
+        selectedColor.takeOrElse { this.selectedColor },
+        unselectedColor.takeOrElse { this.unselectedColor },
+        disabledSelectedColor.takeOrElse { this.disabledSelectedColor },
+        disabledUnselectedColor.takeOrElse { this.disabledUnselectedColor },
+    )
+
+    /**
+     * Represents the main color used to draw the outer and inner circles, depending on whether
+     * the [RadioButton] is [enabled] / [selected].
+     *
+     * @param enabled whether the [RadioButton] is enabled
+     * @param selected whether the [RadioButton] is selected
+     */
     @Composable
-    override fun radioColor(enabled: Boolean, selected: Boolean): State<Color> {
+    internal fun radioColor(enabled: Boolean, selected: Boolean): State<Color> {
         val target = when {
             enabled && selected -> selectedColor
             enabled && !selected -> unselectedColor
@@ -218,9 +241,7 @@ private class DefaultRadioButtonColors(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other == null || this::class != other::class) return false
-
-        other as DefaultRadioButtonColors
+        if (other == null || other !is RadioButtonColors) return false
 
         if (selectedColor != other.selectedColor) return false
         if (unselectedColor != other.unselectedColor) return false

@@ -16,6 +16,7 @@
 
 package androidx.wear.watchface.complications.datasource
 
+import androidx.annotation.CallSuper
 import androidx.annotation.UiThread
 import androidx.wear.watchface.complications.data.ComplicationData
 import kotlinx.coroutines.CoroutineScope
@@ -24,9 +25,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-/**
- * Kotlin coroutine wrapper for [ComplicationDataSourceService] producing [ComplicationData].
- */
+/** Kotlin coroutine wrapper for [ComplicationDataSourceService] producing [ComplicationData]. */
 public abstract class SuspendingComplicationDataSourceService : ComplicationDataSourceService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -34,9 +33,7 @@ public abstract class SuspendingComplicationDataSourceService : ComplicationData
         request: ComplicationRequest,
         listener: ComplicationRequestListener
     ) {
-        scope.launch {
-            listener.onComplicationData(onComplicationRequest(request))
-        }
+        scope.launch { listener.onComplicationData(onComplicationRequest(request)) }
     }
 
     /**
@@ -44,8 +41,8 @@ public abstract class SuspendingComplicationDataSourceService : ComplicationData
      *
      * The [ComplicationData] returned from this method will be passed to the
      * [ComplicationDataSourceService.ComplicationRequestListener] provided to
-     * [onComplicationRequest].
-     * Return `null` to indicate that the previous complication data shouldn't be overwritten.
+     * [onComplicationRequest]. Return `null` to indicate that the previous complication data
+     * shouldn't be overwritten.
      *
      * @see ComplicationDataSourceService.onComplicationRequest
      * @see ComplicationDataSourceService.ComplicationRequestListener.onComplicationData
@@ -53,7 +50,8 @@ public abstract class SuspendingComplicationDataSourceService : ComplicationData
     @UiThread
     abstract suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData?
 
-    override fun onDestroy() {
+    @CallSuper
+    open override fun onDestroy() {
         super.onDestroy()
         scope.cancel()
     }
@@ -63,17 +61,15 @@ public abstract class SuspendingComplicationDataSourceService : ComplicationData
  * Kotlin coroutine wrapper for [ComplicationDataSourceService] producing
  * [ComplicationDataTimeline].
  */
-public abstract class
-SuspendingTimelineComplicationDataSourceService : ComplicationDataSourceService() {
+public abstract class SuspendingTimelineComplicationDataSourceService :
+    ComplicationDataSourceService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     final override fun onComplicationRequest(
         request: ComplicationRequest,
         listener: ComplicationRequestListener
     ) {
-        scope.launch {
-            listener.onComplicationDataTimeline(onComplicationRequest(request))
-        }
+        scope.launch { listener.onComplicationDataTimeline(onComplicationRequest(request)) }
     }
 
     /**
@@ -81,9 +77,8 @@ SuspendingTimelineComplicationDataSourceService : ComplicationDataSourceService(
      *
      * The [ComplicationDataTimeline] returned from this method will be passed to the
      * [ComplicationDataSourceService.ComplicationRequestListener] provided to
-     * [onComplicationRequest].
-     * Return `null` to indicate that the previous complication data timeline shouldn't be
-     * overwritten.
+     * [onComplicationRequest]. Return `null` to indicate that the previous complication data
+     * timeline shouldn't be overwritten.
      *
      * @see ComplicationDataSourceService.onComplicationRequest
      * @see ComplicationDataSourceService.ComplicationRequestListener.onComplicationData

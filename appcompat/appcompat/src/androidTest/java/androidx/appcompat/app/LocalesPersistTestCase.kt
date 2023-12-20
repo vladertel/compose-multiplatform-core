@@ -18,16 +18,20 @@
 
 package androidx.appcompat.app
 
+import android.content.Context
 import android.content.Intent
 import androidx.appcompat.testutils.LocalesActivityTestRule
 import androidx.appcompat.testutils.LocalesUtils.CUSTOM_LOCALE_LIST
 import androidx.appcompat.testutils.LocalesUtils.assertConfigurationLocalesEquals
+import androidx.appcompat.testutils.LocalesUtils.setLocalesAndWait
 import androidx.appcompat.testutils.LocalesUtils.setLocalesAndWaitForRecreate
+import androidx.core.app.LocaleManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
+import junit.framework.Assert.assertEquals
 import junit.framework.Assert.assertNull
 import org.junit.After
 import org.junit.Before
@@ -37,9 +41,7 @@ import org.junit.runner.RunWith
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
-// TODO(b/218430372): Modify SdkSuppress annotation in tests for backward compatibility of
-// setApplicationLocales
-@SdkSuppress(maxSdkVersion = 31)
+@SdkSuppress(maxSdkVersion = 32)
 class LocalesPersistTestCase() {
     @get:Rule
     val rule = LocalesActivityTestRule(LocalesUpdateActivity::class.java)
@@ -117,6 +119,16 @@ class LocalesPersistTestCase() {
 
         // assert that the new activity started with the systemLocales.
         assertConfigurationLocalesEquals(systemLocales, secondActivity)
+    }
+
+    @Test
+    fun testGetAppLocalesFromNonActivityContext() {
+        AppCompatDelegate.setIsAutoStoreLocalesOptedIn(true)
+
+        setLocalesAndWait(rule, CUSTOM_LOCALE_LIST)
+
+        val appContext: Context = InstrumentationRegistry.getInstrumentation().targetContext
+        assertEquals(CUSTOM_LOCALE_LIST, LocaleManagerCompat.getApplicationLocales(appContext))
     }
 
     @After

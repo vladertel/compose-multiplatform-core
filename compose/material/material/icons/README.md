@@ -6,7 +6,6 @@ Material iconography is split across these modules:
  1. The `generator` module, in `generator/` - this module processes and generates Kotlin source files as part of the build step of the other modules. This module is not shipped as an artifact, and caches its outputs based on the input icons (found in `generator/raw-icons`).
  2. `material-icons-core` , in `core/` - this module contains _core_ icons, the set of most-commonly-used icons used by applications, including the icons that are required by Material components themselves, such as the menu icon. This module is fairly small and is depended on by `material`.
  3. `material-icons-extended`, in `extended/` - this module contains every icon that is not in `material-icons-core`, and has a transitive `api` dependency on `material-icons-core`, so depending on this module will provide every single Material icon (over 5000 at the time of writing). Due to the excessive size of this module, this module should ***NOT*** be included as a direct dependency of any other library, and should only be used if Proguard / R8 is enabled.
- 4. `material-icons-extended-$theme`, in `extended/` - these modules each contain a specific theme from material-icons-extended, to facilitate compiling the icon soure files more quickly in parallel
 
 ## Icon Generation
 
@@ -20,7 +19,8 @@ Generation is split into a few distinct steps:
 To add new icons, simply use the icon downloading script at `generator/download_material_icons.py`, run any Gradle command that will trigger compilation of the icon modules (such as `./gradlew buildOnServer`), and follow the message in the build failure asking to confirm API changes by updating the API tracking file.
 
 ## Icon Testing
-Similar to how we generate Kotlin source for each icon, we also generate a 'testing manifest' that contains a list of all the source drawables, matched to their generated code representations. This allows us to run screenshot comparison tests (`IconComparisonTest`) that compare each pixel of the generated and source drawables, to ensure we generated the correct code, and that any changes in parsing logic that causes inconsistencies with our generation logic is caught in CI.
+1. Similar to how we generate Kotlin source for each icon, we also generate a 'testing manifest' that contains a list of all the source drawables, matched to their generated code representations. This allows us to run screenshot comparison tests (`CoreIconComparisonTest`, and `ExtendedIconComparisonTest`) that compare each pixel of the generated and source drawables, to ensure we generated the correct code, and that any changes in parsing logic that causes inconsistencies with our generation logic is caught in CI.
+2. Note that, for performance reasons, the `ExtendedIconComparisonTest` is marked with `@Ignore` and will not run on a regular test execution. **It's important to run this test locally after every icons update**.
 
 ## Useful files
 

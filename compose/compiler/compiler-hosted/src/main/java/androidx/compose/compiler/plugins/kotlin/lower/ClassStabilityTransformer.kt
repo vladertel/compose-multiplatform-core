@@ -16,11 +16,14 @@
 
 package androidx.compose.compiler.plugins.kotlin.lower
 
+import androidx.compose.compiler.plugins.kotlin.ComposeClassIds
 import androidx.compose.compiler.plugins.kotlin.ModuleMetrics
-import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
 import androidx.compose.compiler.plugins.kotlin.analysis.Stability
-import androidx.compose.compiler.plugins.kotlin.analysis.normalize
+import androidx.compose.compiler.plugins.kotlin.analysis.StabilityInferencer
 import androidx.compose.compiler.plugins.kotlin.analysis.forEach
+import androidx.compose.compiler.plugins.kotlin.analysis.hasStableMarker
+import androidx.compose.compiler.plugins.kotlin.analysis.knownStable
+import androidx.compose.compiler.plugins.kotlin.analysis.normalize
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
@@ -57,14 +60,16 @@ enum class StabilityBits(val bits: Int) {
  * annotation on it, as well as putting a static final int of the stability to be used at runtime.
  */
 class ClassStabilityTransformer(
+    private val useK2: Boolean,
     context: IrPluginContext,
     symbolRemapper: DeepCopySymbolRemapper,
     metrics: ModuleMetrics,
-) : AbstractComposeLowering(context, symbolRemapper, metrics),
+    stabilityInferencer: StabilityInferencer
+) : AbstractComposeLowering(context, symbolRemapper, metrics, stabilityInferencer),
     ClassLoweringPass,
     ModuleLoweringPass {
 
-    private val StabilityInferredClass = getTopLevelClass(ComposeFqNames.StabilityInferred)
+    private val StabilityInferredClass = getTopLevelClass(ComposeClassIds.StabilityInferred)
     private val UNSTABLE = StabilityBits.UNSTABLE.bitsForSlot(0)
     private val STABLE = StabilityBits.STABLE.bitsForSlot(0)
 
@@ -84,7 +89,12 @@ class ClassStabilityTransformer(
         val cls = result as? IrClass ?: return result
 
         if (
-            cls.visibility != DescriptorVisibilities.PUBLIC ||
+            (
+                // Including public AND internal to support incremental compilation, which
+                // is separated by file.
+                cls.visibility != DescriptorVisibilities.PUBLIC &&
+                    cls.visibility != DescriptorVisibilities.INTERNAL
+            ) ||
             cls.isEnumClass ||
             cls.isEnumEntry ||
             cls.isInterface ||
@@ -103,10 +113,11 @@ class ClassStabilityTransformer(
                 marked = true,
                 stability = Stability.Stable,
             )
+            cls.addStabilityMarkerField(irConst(STABLE))
             return cls
         }
 
-        val stability = stabilityOf(declaration.defaultType).normalize()
+        val stability = stabilityInferencer.stabilityOf(declaration.defaultType).normalize()
 
         // remove type parameters
 
@@ -124,15 +135,19 @@ class ClassStabilityTransformer(
                         if (index != -1) {
                             // the stability of this parameter matters for the stability of the
                             // class
-                            parameterMask = parameterMask or 0b1 shl index
+                            parameterMask = parameterMask or (0b1 shl index)
                         } else {
                             externalParameters = true
                         }
                     }
+
                     else -> {
                         /* No action necessary */
                     }
                 }
+            }
+            if (stability.knownStable() && symbols.size < 32) {
+                parameterMask = parameterMask or (0b1 shl symbols.size)
             }
             stableExpr = if (externalParameters)
                 irConst(UNSTABLE)
@@ -140,14 +155,16 @@ class ClassStabilityTransformer(
                 stability.irStableExpression { irConst(STABLE) } ?: irConst(UNSTABLE)
         } else {
             stableExpr = stability.irStableExpression() ?: irConst(UNSTABLE)
+            if (stability.knownStable()) {
+                parameterMask = 0b1
+            }
         }
         metrics.recordClass(
             declaration,
             marked = false,
             stability = stability
         )
-
-        cls.annotations = cls.annotations + IrConstructorCallImpl(
+        val annotation = IrConstructorCallImpl(
             UNDEFINED_OFFSET,
             UNDEFINED_OFFSET,
             StabilityInferredClass.defaultType,
@@ -160,27 +177,36 @@ class ClassStabilityTransformer(
             it.putValueArgument(0, irConst(parameterMask))
         }
 
-        val stabilityField = makeStabilityField().also { f ->
-            f.parent = cls
-            f.initializer = IrExpressionBodyImpl(
+        if (useK2) {
+            context.annotationsRegistrar.addMetadataVisibleAnnotationsToElement(cls, annotation)
+        } else {
+            cls.annotations += annotation
+        }
+
+        cls.addStabilityMarkerField(stableExpr)
+        return result
+    }
+
+    private fun IrClass.addStabilityMarkerField(stabilityExpression: IrExpression) {
+        val stabilityField = makeStabilityField().apply {
+            parent = this@addStabilityMarkerField
+            initializer = IrExpressionBodyImpl(
                 UNDEFINED_OFFSET,
                 UNDEFINED_OFFSET,
-                stableExpr
+                stabilityExpression
             )
         }
 
         if (context.platform.isJvm()) {
-            cls.declarations += stabilityField
+            declarations += stabilityField
         } else {
             // This ensures proper mangles in k/js and k/native (since kotlin 1.6.0-rc2)
-            val stabilityProp = makeStabilityProp().also {
-                it.parent = cls
-                it.backingField = stabilityField
+            val stabilityProp = makeStabilityProp().apply {
+                parent = this@addStabilityMarkerField
+                backingField = stabilityField
             }
             stabilityField.correspondingPropertySymbol = stabilityProp.symbol
-            cls.declarations += stabilityProp
+            declarations += stabilityProp
         }
-
-        return result
     }
 }

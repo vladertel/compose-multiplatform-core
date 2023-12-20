@@ -18,6 +18,7 @@ package androidx.activity.result
 
 import android.app.Activity.RESULT_OK
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
@@ -29,7 +30,9 @@ import androidx.lifecycle.testing.TestLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import com.google.common.truth.Truth.assertThat
+import leakcanary.DetectLeaksAfterTestSuccess
 import org.junit.Assert.fail
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -47,6 +50,9 @@ class ActivityResultRegistryTest {
         }
     }
 
+    @get:Rule
+    val rule = DetectLeaksAfterTestSuccess()
+
     @Test
     fun testRegisterLifecycleOwnerCallback() {
         val lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
@@ -54,12 +60,10 @@ class ActivityResultRegistryTest {
 
         // register for the result
         val activityResult = registry.register(
-            "test", lifecycleOwner,
-            TakePicturePreview(),
-            ActivityResultCallback {
-                resultReturned = true
-            }
-        )
+            "test", lifecycleOwner, TakePicturePreview()
+        ) {
+            resultReturned = true
+        }
 
         // move the state to started
         lifecycleOwner.currentState = Lifecycle.State.STARTED
@@ -77,8 +81,8 @@ class ActivityResultRegistryTest {
         // register for the result
         val activityResult = registry.register(
             "test", lifecycleOwner,
-            TakePicturePreview(), ActivityResultCallback {}
-        )
+            TakePicturePreview()
+        ) {}
 
         // saved the state of the registry
         val state = Bundle()
@@ -96,11 +100,10 @@ class ActivityResultRegistryTest {
         var resultReturned = false
         // re-register for the result that should have been saved
         registry.register(
-            "test", lifecycleOwner, TakePicturePreview(),
-            ActivityResultCallback {
-                resultReturned = true
-            }
-        )
+            "test", lifecycleOwner, TakePicturePreview()
+        ) {
+            resultReturned = true
+        }
 
         lifecycleOwner.currentState = Lifecycle.State.STARTED
 
@@ -114,9 +117,8 @@ class ActivityResultRegistryTest {
         try {
             // register for the result
             registry.register(
-                "test", lifecycleOwner,
-                TakePicturePreview(), ActivityResultCallback {}
-            )
+                "test", lifecycleOwner, TakePicturePreview()
+            ) {}
             fail("Registering for activity result after Lifecycle ON_CREATE should fail")
         } catch (e: IllegalStateException) {
             assertThat(e).hasMessageThat().contains(
@@ -133,9 +135,8 @@ class ActivityResultRegistryTest {
 
         // register for the result
         val activityResult = registry.register(
-            "test", lifecycleOwner,
-            TakePicturePreview(), ActivityResultCallback {}
-        )
+            "test", lifecycleOwner, TakePicturePreview()
+        ) {}
 
         // saved the state of the registry
         val state = Bundle()
@@ -150,11 +151,10 @@ class ActivityResultRegistryTest {
         var resultReturned = false
         // re-register for the result that should have been saved
         registry.register(
-            "test", lifecycleOwner, TakePicturePreview(),
-            ActivityResultCallback {
-                resultReturned = true
-            }
-        )
+            "test", lifecycleOwner, TakePicturePreview()
+        ) {
+            resultReturned = true
+        }
 
         // launch the result
         activityResult.launch(null)
@@ -195,13 +195,12 @@ class ActivityResultRegistryTest {
         var resultReturned = false
         val activityResult = dispatchResultRegistry.register(
             "test", lifecycleOwner, TakePicture(),
-            ActivityResultCallback {
-                resultReturned = true
-            }
-        )
+        ) {
+            resultReturned = true
+        }
 
         // launch the result
-        activityResult.launch(null)
+        activityResult.launch(Uri.EMPTY)
 
         // move to CREATED and make sure the callback is not fired
         lifecycleOwner.currentState = Lifecycle.State.CREATED
@@ -239,10 +238,9 @@ class ActivityResultRegistryTest {
         var resultReturned = false
         val activityResult = dispatchResultRegistry.register(
             "test", lifecycleOwner, TakePicturePreview(),
-            ActivityResultCallback {
-                resultReturned = true
-            }
-        )
+        ) {
+            resultReturned = true
+        }
 
         // launch the result
         activityResult.launch(null)
@@ -271,9 +269,8 @@ class ActivityResultRegistryTest {
 
         // register for the result
         val activityResult = registry.register(
-            "test", lifecycleOwner,
-            TakePicturePreview(), ActivityResultCallback {}
-        )
+            "test", lifecycleOwner, TakePicturePreview()
+        ) {}
 
         // saved the state of the registry
         val state = Bundle()
@@ -291,11 +288,10 @@ class ActivityResultRegistryTest {
         var resultReturned = false
         // re-register for the result that should have been saved
         registry.register(
-            "test", lifecycleOwner, TakePicturePreview(),
-            ActivityResultCallback {
-                resultReturned = true
-            }
-        )
+            "test", lifecycleOwner, TakePicturePreview()
+        ) {
+            resultReturned = true
+        }
 
         // move to CREATED and make sure the callback is not fired
         lifecycleOwner.currentState = Lifecycle.State.CREATED
@@ -315,7 +311,7 @@ class ActivityResultRegistryTest {
         var resultReturned = false
         val activityResult = registry.register("key", lifecycleOwner, StartActivityForResult()) { }
 
-        activityResult.launch(null)
+        activityResult.launch(Intent())
 
         val savedState = Bundle()
         registry.onSaveInstanceState(savedState)
@@ -404,7 +400,7 @@ class ActivityResultRegistryTest {
 
         val activityResult = noDispatchRegistry.register("key", StartActivityForResult()) { }
 
-        activityResult.launch(null)
+        activityResult.launch(Intent())
         activityResult.unregister()
 
         var callbackExecuted = false
@@ -433,7 +429,7 @@ class ActivityResultRegistryTest {
 
         val activityResult = noDispatchRegistry.register("key", StartActivityForResult()) { }
 
-        activityResult.launch(null)
+        activityResult.launch(Intent())
         activityResult.unregister()
 
         var callbackExecuted = false
@@ -454,12 +450,12 @@ class ActivityResultRegistryTest {
         activityResult.unregister()
 
         try {
-            activityResult.launch(null)
+            activityResult.launch(Intent())
         } catch (e: IllegalStateException) {
             assertThat(e).hasMessageThat().contains(
                 "Attempting to launch an unregistered ActivityResultLauncher with contract " +
-                    contract + " and input null. You must ensure the ActivityResultLauncher is " +
-                    "registered before calling launch()."
+                    contract + " and input ${Intent()}. You must ensure the " +
+                    "ActivityResultLauncher is registered before calling launch()."
             )
         }
     }

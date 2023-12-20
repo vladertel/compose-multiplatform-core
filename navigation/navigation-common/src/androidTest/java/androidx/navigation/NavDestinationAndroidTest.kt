@@ -33,6 +33,8 @@ class NavDestinationAndroidTest {
     companion object {
         private const val DESTINATION_ROUTE = "test"
         private const val URI_PATTERN = "uriPattern"
+        private const val TEST_ACTION_ID = 1
+        private const val TEST_ACTION_DESTINATION_ID = 2
         private const val TEST_ARG_KEY = "stringArg"
         private const val TEST_ARG_VALUE_AAA = "aaa"
     }
@@ -162,6 +164,133 @@ class NavDestinationAndroidTest {
         assertWithMessage("Deep link should extract id argument correctly")
             .that(match?.matchingArgs?.getInt("id"))
             .isEqualTo(43)
+    }
+
+    @Test
+    fun matchDeepLinkWithSingleQueryParamAndFrag() {
+        val destination = NoOpNavigator().createDestination()
+        destination.addArgument("id", intArgument())
+        destination.addDeepLink("www.example.com/users?{id}#{myFrag}")
+
+        val match = destination.matchDeepLink(
+            Uri.parse("https://www.example.com/users?43#theFrag")
+        )
+
+        assertWithMessage("Deep link should match")
+            .that(match)
+            .isNotNull()
+        assertWithMessage("Deep link should extract id argument correctly")
+            .that(match?.matchingArgs?.getInt("id"))
+            .isEqualTo(43)
+    }
+
+    @Test
+    fun matchDeepLinkFragExactMatch() {
+        val destination = NoOpNavigator().createDestination()
+        destination.addArgument("frag", nullableStringArgument())
+        destination.addDeepLink("www.example.com/users")
+        destination.addDeepLink("www.example.com/users#{frag}")
+
+        val match = destination.matchDeepLink(
+            Uri.parse("https://www.example.com/users#testFrag")
+        )
+
+        assertWithMessage("Deep link should match")
+            .that(match)
+            .isNotNull()
+        assertWithMessage("Deep link should match with frag")
+            .that(match?.matchingArgs?.size())
+            .isEqualTo(1)
+        assertWithMessage("Deep link should extract frag argument correctly")
+            .that(match?.matchingArgs?.getString("frag"))
+            .isEqualTo("testFrag")
+    }
+
+    @Test
+    fun matchDeepLinkFragBestMatchSingleArg() {
+        val destination = NoOpNavigator().createDestination()
+        destination.addArgument("frag", nullableStringArgument())
+        destination.addArgument("frag2", nullableStringArgument())
+        destination.addDeepLink("www.example.com/users#{frag1}&{frag2}")
+        destination.addDeepLink("www.example.com/users#{frag}")
+
+        val match = destination.matchDeepLink(
+            Uri.parse("https://www.example.com/users#testFrag")
+        )
+
+        assertWithMessage("Deep link should match")
+            .that(match)
+            .isNotNull()
+        assertWithMessage("Deep link should match with link with single frag")
+            .that(match?.matchingArgs?.size())
+            .isEqualTo(1)
+        assertWithMessage("Deep link should extract frag argument correctly")
+            .that(match?.matchingArgs?.getString("frag"))
+            .isEqualTo("testFrag")
+    }
+
+    @Test
+    fun matchDeepLinkFragBestMatchMultiArg() {
+        val destination = NoOpNavigator().createDestination()
+        destination.addArgument("frag", nullableStringArgument())
+        destination.addArgument("frag2", nullableStringArgument())
+        destination.addDeepLink("www.example.com/users#{frag1}_{frag2}")
+        destination.addDeepLink("www.example.com/users#{frag}")
+
+        val match = destination.matchDeepLink(
+            Uri.parse("https://www.example.com/users#testFrag1_testFrag2")
+        )
+
+        assertWithMessage("Deep link should match")
+            .that(match)
+            .isNotNull()
+        assertWithMessage("Deep link should match with link with multiple frags")
+            .that(match?.matchingArgs?.size())
+            .isEqualTo(2)
+        assertWithMessage("Deep link should extract first frag argument correctly")
+            .that(match?.matchingArgs?.getString("frag1"))
+            .isEqualTo("testFrag1")
+        assertWithMessage("Deep link should extract second frag argument correctly")
+            .that(match?.matchingArgs?.getString("frag2"))
+            .isEqualTo("testFrag2")
+    }
+
+    @Test
+    fun matchDeepLinkWithOptionalFragMatch() {
+        val destination = NoOpNavigator().createDestination()
+        destination.addArgument("frag", nullableStringArgument())
+        destination.addDeepLink("www.example.com/users")
+        destination.addDeepLink("www.example.com/users#param1={value1}")
+
+        val match = destination.matchDeepLink(
+            Uri.parse("https://www.example.com/users#myFrag")
+        )
+        // fragment is optional here, the fragment not matching should not stop it from
+        // matching with the link without fragment
+        assertWithMessage("Deep link should match with the link without fragment")
+            .that(match)
+            .isNotNull()
+        assertWithMessage("Deep link should not match with frag")
+            .that(match?.matchingArgs?.size())
+            .isEqualTo(0)
+    }
+
+    @Test
+    fun matchDeepLinkWithRequiredFragNoMatch() {
+        val destination = NoOpNavigator().createDestination()
+
+        destination.addDeepLink("www.example.com/users")
+        destination.addArgument("value1", stringArgument())
+        destination.addDeepLink("www.example.com/users#param1={value1}")
+
+        val match = destination.matchDeepLink(
+            Uri.parse("https://www.example.com/users")
+        )
+        // the fragment is a required argument in this case so the requested link should
+        // not match with the exact path
+        assertWithMessage("Deep link should not match")
+            .that(match)
+            .isNull()
     }
 
     @Test
@@ -515,7 +644,7 @@ class NavDestinationAndroidTest {
     fun equalsNull() {
         val destination = NoOpNavigator().createDestination()
 
-        assertThat(destination.equals(null)).isFalse()
+        assertThat(destination).isNotEqualTo(null)
     }
 
     @Test
@@ -524,13 +653,15 @@ class NavDestinationAndroidTest {
         destination.route = DESTINATION_ROUTE
         destination.addDeepLink(URI_PATTERN)
         destination.addArgument(TEST_ARG_KEY, stringArgument(TEST_ARG_VALUE_AAA))
+        destination.putAction(TEST_ACTION_ID, NavAction(TEST_ACTION_DESTINATION_ID))
 
         val destination2 = NoOpNavigator().createDestination()
         destination2.route = DESTINATION_ROUTE
         destination2.addDeepLink(URI_PATTERN)
         destination2.addArgument(TEST_ARG_KEY, stringArgument(TEST_ARG_VALUE_AAA))
+        destination2.putAction(TEST_ACTION_ID, NavAction(TEST_ACTION_DESTINATION_ID))
 
-        assertThat(destination == destination2).isTrue()
+        assertThat(destination).isEqualTo(destination2)
     }
 
     @Test
@@ -545,7 +676,7 @@ class NavDestinationAndroidTest {
         destination2.addDeepLink("differentPattern")
         destination2.addArgument(TEST_ARG_KEY, stringArgument(TEST_ARG_VALUE_AAA))
 
-        assertThat(destination == destination2).isFalse()
+        assertThat(destination).isNotEqualTo(destination2)
     }
 
     @Test
@@ -560,6 +691,6 @@ class NavDestinationAndroidTest {
         destination2.addDeepLink(URI_PATTERN)
         destination2.addArgument(TEST_ARG_KEY, stringArgument("bbb"))
 
-        assertThat(destination == destination2).isFalse()
+        assertThat(destination).isNotEqualTo(destination2)
     }
 }

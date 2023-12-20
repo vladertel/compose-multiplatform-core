@@ -19,18 +19,15 @@ package androidx.camera.integration.avsync.model
 import android.content.Context
 import android.media.AudioTrack
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.filters.LargeTest
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class AudioGeneratorDeviceTest {
@@ -44,24 +41,24 @@ class AudioGeneratorDeviceTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun initAudioTrack_throwExceptionWhenFrequencyNegative() = runTest {
-        audioGenerator.initAudioTrack(context, -5300, 11.0)
+    fun initAudioGenerator_throwExceptionWhenFrequencyNegative(): Unit = runBlocking {
+        audioGenerator.initial(context, -5300, 11.0)
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun initAudioTrack_throwExceptionWhenLengthNegative() = runTest {
-        audioGenerator.initAudioTrack(context, 5300, -11.0)
+    fun initAudioGenerator_throwExceptionWhenLengthNegative(): Unit = runBlocking {
+        audioGenerator.initial(context, 5300, -11.0)
     }
 
     @Test
-    fun initAudioTrack_canWorkCorrectly() = runTest {
-        initialAudioTrack(5300, 11.0)
+    fun initAudioGenerator_canWorkCorrectly(): Unit = runBlocking {
+        initialAudioGenerator(5300, 11.0)
     }
 
     @Test
-    fun canStartAndStopAudioTrack_withoutExceptionAfterInitialized() = runBlocking {
+    fun canStartAndStopAudioGeneration_withoutExceptionAfterInitialized(): Unit = runBlocking {
         // Arrange.
-        initialAudioTrack(5300, 11.0)
+        initialAudioGenerator(5300, 11.0)
 
         // Act. and Verify.
         audioGenerator.start()
@@ -73,8 +70,8 @@ class AudioGeneratorDeviceTest {
         assertThat(audioGenerator.audioTrack!!.playState).isEqualTo(AudioTrack.PLAYSTATE_STOPPED)
     }
 
-    private suspend fun initialAudioTrack(frequency: Int, beepLengthInSec: Double) {
-        val isInitialized = audioGenerator.initAudioTrack(context, frequency, beepLengthInSec)
+    private suspend fun initialAudioGenerator(frequency: Int, beepLengthInSec: Double) {
+        val isInitialized = audioGenerator.initial(context, frequency, beepLengthInSec)
         assertThat(isInitialized).isTrue()
         assertThat(audioGenerator.audioTrack!!.state).isEqualTo(AudioTrack.STATE_INITIALIZED)
         assertThat(audioGenerator.audioTrack!!.playbackHeadPosition).isEqualTo(0)

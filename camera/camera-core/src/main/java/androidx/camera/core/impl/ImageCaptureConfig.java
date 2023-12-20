@@ -25,8 +25,10 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCapture.CaptureMode;
+import androidx.camera.core.ImageCapture.ScreenFlashUiControl;
 import androidx.camera.core.ImageReaderProxyProvider;
 import androidx.camera.core.internal.IoConfig;
+import androidx.camera.core.resolutionselector.ResolutionSelector;
 
 import java.util.concurrent.Executor;
 
@@ -47,8 +49,6 @@ public final class ImageCaptureConfig implements UseCaseConfig<ImageCapture>, Im
             Option.create("camerax.core.imageCapture.flashMode", int.class);
     public static final Option<CaptureBundle> OPTION_CAPTURE_BUNDLE =
             Option.create("camerax.core.imageCapture.captureBundle", CaptureBundle.class);
-    public static final Option<CaptureProcessor> OPTION_CAPTURE_PROCESSOR =
-            Option.create("camerax.core.imageCapture.captureProcessor", CaptureProcessor.class);
     public static final Option<Integer> OPTION_BUFFER_FORMAT =
             Option.create("camerax.core.imageCapture.bufferFormat", Integer.class);
     public static final Option<Integer> OPTION_MAX_CAPTURE_STAGES =
@@ -62,6 +62,17 @@ public final class ImageCaptureConfig implements UseCaseConfig<ImageCapture>, Im
             Option.create("camerax.core.imageCapture.flashType", int.class);
     public static final Option<Integer> OPTION_JPEG_COMPRESSION_QUALITY =
             Option.create("camerax.core.imageCapture.jpegCompressionQuality", int.class);
+    public static final Option<ScreenFlashUiControl> OPTION_SCREEN_FLASH_UI_CONTROL =
+            Option.create("camerax.core.imageCapture.screenFlashUiControl",
+                    ScreenFlashUiControl.class);
+    public static final Option<ResolutionSelector> OPTION_POSTVIEW_RESOLUTION_SELECTOR =
+            Option.create("camerax.core.useCase.postviewResolutionSelector",
+                    ResolutionSelector.class);
+
+    public static final Option<Boolean> OPTION_POSTVIEW_ENABLED =
+            Option.create("camerax.core.useCase.isPostviewEnabled",
+                    Boolean.class);
+
     // *********************************************************************************************
 
     private final OptionsBundle mConfig;
@@ -144,29 +155,6 @@ public final class ImageCaptureConfig implements UseCaseConfig<ImageCapture>, Im
     }
 
     /**
-     * Returns the {@link CaptureProcessor}.
-     *
-     * @param valueIfMissing The value to return if this configuration option has not been set.
-     * @return The stored value or <code>valueIfMissing</code> if the value does not exist in this
-     * configuration.
-     */
-    @Nullable
-    public CaptureProcessor getCaptureProcessor(@Nullable CaptureProcessor valueIfMissing) {
-        return retrieveOption(OPTION_CAPTURE_PROCESSOR, valueIfMissing);
-    }
-
-    /**
-     * Returns the {@link CaptureProcessor}.
-     *
-     * @return The stored value, if it exists in this configuration.
-     * @throws IllegalArgumentException if the option does not exist in this configuration.
-     */
-    @NonNull
-    public CaptureProcessor getCaptureProcessor() {
-        return retrieveOption(OPTION_CAPTURE_PROCESSOR);
-    }
-
-    /**
      * Returns the {@link ImageFormat} of the capture in memory.
      *
      * @param valueIfMissing The value to return if this configuration option has not been set.
@@ -223,7 +211,6 @@ public final class ImageCaptureConfig implements UseCaseConfig<ImageCapture>, Im
     /**
      * Gets the caller provided {@link ImageReaderProxy}.
      *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Nullable
@@ -234,7 +221,6 @@ public final class ImageCaptureConfig implements UseCaseConfig<ImageCapture>, Im
     /**
      * Returns whether ImageCapture should use a software JPEG encoder, if available.
      *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public boolean isSoftwareJpegEncoderRequested() {
@@ -285,6 +271,29 @@ public final class ImageCaptureConfig implements UseCaseConfig<ImageCapture>, Im
     @IntRange(from = 1, to = 100)
     public int getJpegQuality() {
         return retrieveOption(OPTION_JPEG_COMPRESSION_QUALITY);
+    }
+
+    /**
+     * Gets the caller provided {@link ScreenFlashUiControl}.
+     */
+    @Nullable
+    public ScreenFlashUiControl getScreenFlashUiControl() {
+        return retrieveOption(OPTION_SCREEN_FLASH_UI_CONTROL, null);
+    }
+
+    /**
+     * @return the {@link ResolutionSelector} used to determine the size of the postview.
+     */
+    @Nullable
+    public ResolutionSelector getPostviewResolutionSelector() {
+        return retrieveOption(OPTION_POSTVIEW_RESOLUTION_SELECTOR, null);
+    }
+
+    /**
+     * @return if postview is enabled.
+     */
+    public boolean isPostviewEnabled() {
+        return retrieveOption(OPTION_POSTVIEW_ENABLED, false);
     }
 
     // Implementations of IO default methods

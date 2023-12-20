@@ -22,6 +22,7 @@ import com.google.devtools.ksp.KspOptions
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.google.devtools.ksp.processing.impl.MessageCollectorBasedKSPLogger
+import java.io.File
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.config.JavaSourceRoot
@@ -30,31 +31,32 @@ import org.jetbrains.kotlin.com.intellij.core.CoreApplicationEnvironment
 import org.jetbrains.kotlin.com.intellij.mock.MockProject
 import org.jetbrains.kotlin.com.intellij.psi.PsiTreeChangeAdapter
 import org.jetbrains.kotlin.com.intellij.psi.PsiTreeChangeListener
-import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
+import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.languageVersionSettings
 import org.jetbrains.kotlin.resolve.extensions.AnalysisHandlerExtension
-import java.io.File
 
 /**
  * Registers the KSP component for the kotlin compilation.
  */
+@Suppress("DEPRECATION") // TODO: Migrate ComponentRegistrar to CompilerPluginRegistrar
+@OptIn(ExperimentalCompilerApi::class)
 internal class TestKspRegistrar(
     val kspWorkingDir: File,
     val baseOptions: KspOptions.Builder,
 
     val processorProviders: List<SymbolProcessorProvider>,
     val messageCollector: MessageCollector
-) : ComponentRegistrar {
+) : @Suppress("DEPRECATION") org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar {
     override fun registerProjectComponents(
         project: MockProject,
         configuration: CompilerConfiguration
     ) {
         baseOptions.apply {
-            projectBaseDir = project.basePath?.let {
-                File(it)
-            } ?: kspWorkingDir
+            projectBaseDir = project.basePath?.let { File(it) } ?: kspWorkingDir
             incremental = false
             incrementalLog = false
+            languageVersionSettings = configuration.languageVersionSettings
             // NOT supported yet, hence we set a default
             classOutputDir = classOutputDir ?: kspWorkingDir.resolve(
                 KspCliOption

@@ -1,85 +1,139 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 7.4.0-alpha08" type="baseline" client="gradle" dependencies="false" name="AGP (7.4.0-alpha08)" variant="all" version="7.4.0-alpha08">
+<issues format="6" by="lint 8.3.0-alpha04" type="baseline" client="gradle" dependencies="false" name="AGP (8.3.0-alpha04)" variant="all" version="8.3.0-alpha04">
 
     <issue
-        id="NewApi"
-        message="Call requires API level 33 (current min is 14): `android.os.ext.SdkExtensions#getExtensionVersion`"
-        errorLine1="                    getExtensionVersion(Build.VERSION_CODES.R) >= 2"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 18"
+        errorLine1="    @RequiresApi(18)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
     </issue>
 
     <issue
-        id="NewApi"
-        message="Call requires API level 33 (current min is 14): `android.os.ext.SdkExtensions#getExtensionVersion`"
-        errorLine1="                    getExtensionVersion(Build.VERSION_CODES.R) >= 2"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 18"
+        errorLine1="        @RequiresApi(18)"
+        errorLine2="        ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
     </issue>
 
     <issue
-        id="NewApi"
-        message="Call requires API level 33 (current min is 19): `android.provider.MediaStore#getPickImagesMaxLimit`"
-        errorLine1="                    require(maxItems &lt;= MediaStore.getPickImagesMaxLimit()) {"
-        errorLine2="                                                   ~~~~~~~~~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
     </issue>
 
     <issue
-        id="NewApi"
-        message="Call requires API level 33 (current min is 19): `android.provider.MediaStore#getPickImagesMaxLimit`"
-        errorLine1="                MediaStore.getPickImagesMaxLimit()"
-        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
     </issue>
 
     <issue
-        id="ClassVerificationFailure"
-        message="This call references a method added in API level 33; however, the containing class androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia is reachable from earlier API levels and will fail run-time class verification."
-        errorLine1="                    getExtensionVersion(Build.VERSION_CODES.R) >= 2"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
     </issue>
 
     <issue
-        id="ClassVerificationFailure"
-        message="This call references a method added in API level 33; however, the containing class androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.Companion is reachable from earlier API levels and will fail run-time class verification."
-        errorLine1="                    getExtensionVersion(Build.VERSION_CODES.R) >= 2"
-        errorLine2="                    ~~~~~~~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
     </issue>
 
     <issue
-        id="ClassVerificationFailure"
-        message="This call references a method added in API level 33; however, the containing class androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia is reachable from earlier API levels and will fail run-time class verification."
-        errorLine1="                    require(maxItems &lt;= MediaStore.getPickImagesMaxLimit()) {"
-        errorLine2="                                                   ~~~~~~~~~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
     </issue>
 
     <issue
-        id="ClassVerificationFailure"
-        message="This call references a method added in API level 33; however, the containing class androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia.Companion is reachable from earlier API levels and will fail run-time class verification."
-        errorLine1="                MediaStore.getPickImagesMaxLimit()"
-        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/androidx/activity/result/contract/ActivityResultContracts.kt"/>
-    </issue>
-
-    <issue
-        id="ClassVerificationFailure"
-        message="This call references a method added in API level 33; however, the containing class androidx.activity.ComponentActivity is reachable from earlier API levels and will fail run-time class verification."
-        errorLine1="            mOnBackPressedDispatcher.setOnBackInvokedDispatcher(getOnBackInvokedDispatcher());"
-        errorLine2="                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="        if (Build.VERSION.SDK_INT >= 19) {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
             file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="        if (19 &lt;= SDK_INT &amp;&amp; SDK_INT &lt;= 23) {"
+        errorLine2="            ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is never &lt; 19"
+        errorLine1="        if (SDK_INT &lt; Build.VERSION_CODES.JELLY_BEAN) {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="    @RequiresApi(19)"
+        errorLine2="    ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 16"
+        errorLine1="    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ComponentActivity.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="@RequiresApi(19)"
+        errorLine2="~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/ImmLeaksCleaner.java"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="@RequiresApi(19)"
+        errorLine2="~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/result/PickVisualMediaRequest.kt"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 19"
+        errorLine1="@RequiresApi(19)"
+        errorLine2="~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/androidx/activity/result/PickVisualMediaRequest.kt"/>
     </issue>
 
 </issues>

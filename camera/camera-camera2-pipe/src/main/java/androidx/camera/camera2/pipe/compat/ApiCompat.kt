@@ -21,13 +21,19 @@ import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraExtensionCharacteristics
+import android.hardware.camera2.CameraExtensionSession
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
+import android.hardware.camera2.params.ExtensionSessionConfiguration
 import android.hardware.camera2.params.InputConfiguration
+import android.hardware.camera2.params.MultiResolutionStreamInfo
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
+import android.media.ImageReader
+import android.media.ImageWriter
 import android.os.Build
 import android.os.Handler
 import android.util.Size
@@ -35,6 +41,7 @@ import android.view.Surface
 import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
+import androidx.camera.camera2.pipe.CameraMetadata
 import java.util.concurrent.Executor
 
 @RequiresApi(Build.VERSION_CODES.M)
@@ -63,11 +70,7 @@ internal object Api23Compat {
         stateCallback: CameraCaptureSession.StateCallback,
         handler: Handler?
     ) {
-        cameraDevice.createConstrainedHighSpeedCaptureSession(
-            outputs,
-            stateCallback,
-            handler
-        )
+        cameraDevice.createConstrainedHighSpeedCaptureSession(outputs, stateCallback, handler)
     }
 
     @JvmStatic
@@ -118,9 +121,7 @@ internal object Api24Compat {
         handler: Handler?
     ) {
         cameraDevice.createCaptureSessionByOutputConfigurations(
-            outputConfig,
-            stateCallback,
-            handler
+            outputConfig, stateCallback, handler
         )
     }
 
@@ -136,10 +137,7 @@ internal object Api24Compat {
         handler: Handler?
     ) {
         cameraDevice.createReprocessableCaptureSessionByConfigurations(
-            inputConfig,
-            outputs,
-            stateCallback,
-            handler
+            inputConfig, outputs, stateCallback, handler
         )
     }
 
@@ -218,9 +216,7 @@ internal object Api28Compat {
 
     @JvmStatic
     @DoNotInline
-    fun getPhysicalCameraIds(
-        cameraCharacteristics: CameraCharacteristics
-    ): Set<String> {
+    fun getPhysicalCameraIds(cameraCharacteristics: CameraCharacteristics): Set<String> {
         return cameraCharacteristics.physicalCameraIds
     }
 
@@ -254,10 +250,7 @@ internal object Api28Compat {
 
     @JvmStatic
     @DoNotInline
-    fun setSessionParameters(
-        sessionConfig: SessionConfiguration,
-        params: CaptureRequest
-    ) {
+    fun setSessionParameters(sessionConfig: SessionConfiguration, params: CaptureRequest) {
         sessionConfig.sessionParameters = params
     }
 
@@ -301,4 +294,192 @@ internal object Api28Compat {
     ) {
         cameraManager.registerAvailabilityCallback(executor, callback)
     }
+
+    @JvmStatic
+    @DoNotInline
+    fun discardFreeBuffers(imageReader: ImageReader) {
+        imageReader.discardFreeBuffers()
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.Q)
+internal object Api29Compat {
+    @JvmStatic
+    @DoNotInline
+    fun imageReaderNewInstance(
+        width: Int,
+        height: Int,
+        format: Int,
+        capacity: Int,
+        usage: Long
+    ): ImageReader {
+        return ImageReader.newInstance(width, height, format, capacity, usage)
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun imageWriterNewInstance(
+        surface: Surface,
+        maxImages: Int,
+        format: Int
+    ): ImageWriter {
+        return ImageWriter.newInstance(surface, maxImages, format)
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.R)
+internal object Api30Compat {
+    @JvmStatic
+    @DoNotInline
+    fun getConcurrentCameraIds(cameraManager: CameraManager): Set<Set<String>> {
+        return cameraManager.concurrentCameraIds
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.S)
+internal object Api31Compat {
+    @JvmStatic
+    @DoNotInline
+    fun newInputConfiguration(
+        inputConfigData: List<InputConfigData>,
+        cameraId: String
+    ): InputConfiguration {
+        val multiResolutionInput = inputConfigData.map { input ->
+            MultiResolutionStreamInfo(input.width, input.height, cameraId)
+        }
+        return InputConfiguration(multiResolutionInput, inputConfigData.first().format)
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun createExtensionCaptureSession(
+        cameraDevice: CameraDevice,
+        extensionConfiguration: ExtensionSessionConfiguration
+    ) {
+        cameraDevice.createExtensionSession(extensionConfiguration)
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getCameraExtensionCharacteristics(
+        cameraManager: CameraManager,
+        cameraId: String
+    ): CameraExtensionCharacteristics = cameraManager.getCameraExtensionCharacteristics(cameraId)
+
+    @JvmStatic
+    @DoNotInline
+    fun newExtensionSessionConfiguration(
+        extensionMode: Int,
+        outputs: List<OutputConfiguration?>,
+        executor: Executor,
+        stateCallback: CameraExtensionSession.StateCallback
+    ): ExtensionSessionConfiguration {
+        return ExtensionSessionConfiguration(extensionMode, outputs, executor, stateCallback)
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getSupportedExtensions(
+        extensionCharacteristics: CameraExtensionCharacteristics
+    ): List<Int> = extensionCharacteristics.supportedExtensions
+
+    @JvmStatic
+    @DoNotInline
+    fun getExtensionSupportedSizes(
+        extensionCharacteristics: CameraExtensionCharacteristics,
+        extension: Int,
+        imageFormat: Int
+    ): List<Size> = extensionCharacteristics.getExtensionSupportedSizes(extension, imageFormat)
+
+    @JvmStatic
+    @DoNotInline
+    fun getExtensionSupportedSizes(
+        extensionCharacteristics: CameraExtensionCharacteristics,
+        extension: Int,
+        klass: Class<*>
+    ): List<Size> =
+        extensionCharacteristics.getExtensionSupportedSizes(extension, klass)
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+internal object Api33Compat {
+    @JvmStatic
+    @DoNotInline
+    fun setDynamicRangeProfile(outputConfig: OutputConfiguration, dynamicRangeProfile: Long) {
+        outputConfig.dynamicRangeProfile = dynamicRangeProfile
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getDynamicRangeProfile(outputConfig: OutputConfiguration): Long {
+        return outputConfig.dynamicRangeProfile
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun setMirrorMode(outputConfig: OutputConfiguration, mirrorMode: Int) {
+        outputConfig.mirrorMode = mirrorMode
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getMirrorMode(outputConfig: OutputConfiguration): Int {
+        return outputConfig.mirrorMode
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun setStreamUseCase(outputConfig: OutputConfiguration, streamUseCase: Long) {
+        outputConfig.streamUseCase = streamUseCase
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getAvailableStreamUseCases(cameraMetadata: CameraMetadata): LongArray? {
+        return cameraMetadata[CameraCharacteristics.SCALER_AVAILABLE_STREAM_USE_CASES]
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getStreamUseCase(outputConfig: OutputConfiguration): Long {
+        return outputConfig.streamUseCase
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun setTimestampBase(outputConfig: OutputConfiguration, timestampBase: Int) {
+        outputConfig.timestampBase = timestampBase
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getTimestampBase(outputConfig: OutputConfiguration): Int {
+        return outputConfig.timestampBase
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getAvailableCaptureRequestKeys(
+        extensionCharacteristics: CameraExtensionCharacteristics,
+        extension: Int
+    ): Set<CaptureRequest.Key<Any>> =
+        extensionCharacteristics.getAvailableCaptureRequestKeys(extension)
+
+    @JvmStatic
+    @DoNotInline
+    fun getAvailableCaptureResultKeys(
+        extensionCharacteristics: CameraExtensionCharacteristics,
+        extension: Int
+    ): Set<CaptureResult.Key<Any>> =
+        extensionCharacteristics.getAvailableCaptureResultKeys(extension)
+}
+
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+internal object Api34Compat {
+    @JvmStatic
+    @DoNotInline
+    fun isPostviewAvailable(
+        extensionCharacteristics: CameraExtensionCharacteristics,
+        extension: Int
+    ): Boolean = extensionCharacteristics.isPostviewAvailable(extension)
 }

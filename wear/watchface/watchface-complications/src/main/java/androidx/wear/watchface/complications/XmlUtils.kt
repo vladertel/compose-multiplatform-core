@@ -19,14 +19,13 @@
 
 package androidx.wear.watchface.complications
 
+import android.content.res.Resources
 import android.content.res.XmlResourceParser
 import androidx.annotation.RestrictTo
 import org.xmlpull.v1.XmlPullParser
 
-/**
- * Exception to be thrown if an incorrect node is reached during parsing.
- */
-/** @hide */
+/** Exception to be thrown if an incorrect node is reached during parsing. */
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 class IllegalNodeException(parser: XmlResourceParser) :
     IllegalArgumentException("Unexpected node ${parser.name} at line ${parser.lineNumber}")
 
@@ -45,4 +44,56 @@ fun XmlResourceParser.iterate(block: () -> Unit) {
         }
         type = this.next()
     }
+}
+
+/**
+ * Move to the beginning of the expectedNode.
+ *
+ * @param expectedNode called on each node.
+ */
+fun XmlPullParser.moveToStart(expectedNode: String) {
+    var type: Int
+    do {
+        type = next()
+    } while (type != XmlPullParser.END_DOCUMENT && type != XmlPullParser.START_TAG)
+
+    require(name == expectedNode) { "Expected a $expectedNode node but is $name" }
+}
+
+/**
+ * Gets the value of a string attribute from resource value, if not found, return the value itself
+ * or null if there is no value
+ *
+ * @param resources the [Resources] from which the value is loaded.
+ * @param parser The [XmlResourceParser] instance.
+ * @param name the name of the attribute.
+ */
+fun getStringRefAttribute(resources: Resources, parser: XmlResourceParser, name: String): String? {
+    return if (parser.hasValue(name)) {
+        val resId = parser.getAttributeResourceValue(NAMESPACE_APP, name, 0)
+        if (resId == 0) {
+            parser.getAttributeValue(NAMESPACE_APP, name)
+        } else {
+            resources.getString(resId)
+        }
+    } else null
+}
+
+/**
+ * Gets the value of a integer attribute from resource value, if not found, return the value itself
+ * or null if there is no value
+ *
+ * @param resources the [Resources] from which the value is loaded.
+ * @param parser The [XmlResourceParser] instance.
+ * @param name the name of the attribute.
+ */
+fun getIntRefAttribute(resources: Resources, parser: XmlResourceParser, name: String): Int? {
+    return if (parser.hasValue(name)) {
+        val resId = parser.getAttributeResourceValue(NAMESPACE_APP, name, 0)
+        if (resId == 0) {
+            parser.getAttributeValue(NAMESPACE_APP, name).toInt()
+        } else {
+            resources.getInteger(resId)
+        }
+    } else null
 }

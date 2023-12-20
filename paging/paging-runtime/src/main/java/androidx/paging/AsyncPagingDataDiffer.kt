@@ -16,8 +16,8 @@
 
 package androidx.paging
 
-import android.util.Log
 import androidx.annotation.IntRange
+import androidx.annotation.MainThread
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.coroutineScope
 import androidx.paging.LoadType.REFRESH
@@ -28,6 +28,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -160,7 +161,8 @@ constructor(
     @Suppress("MemberVisibilityCanBePrivate") // synthetic access
     internal var inGetItem: Boolean = false
 
-    private val differBase = object : PagingDataDiffer<T>(differCallback, mainDispatcher) {
+    internal val presenter = object : PagingDataPresenter<T>(differCallback, mainDispatcher) {
+        // TODO("To be removed when all PageEvent types have moved to presentPagingDataEvent")
         override suspend fun presentNewList(
             previousList: NullPaddedList<T>,
             newList: NullPaddedList<T>,
@@ -190,6 +192,85 @@ constructor(
                     newList = newList,
                     oldPosition = lastAccessedIndex
                 )
+            }
+        }
+
+        /**
+         * Insert the event's page to the storage, and dispatch associated callbacks for
+         * change (placeholder becomes real item) or insert (real item is appended).
+         *
+         * For each insert (or removal) there are three potential events:
+         *
+         * 1) change
+         *     this covers any placeholder/item conversions, and is done first
+         *
+         * 2) item insert/remove
+         *     this covers any remaining items that are inserted/removed, but aren't swapping with
+         *     placeholders
+         *
+         * 3) placeholder insert/remove
+         *     after the above, placeholder count can be wrong for a number of reasons - approximate
+         *     counting or filtering are the most common. In either case, we adjust placeholders at
+         *     the far end of the list, so that they don't trigger animations near the user.
+         */
+        override suspend fun presentPagingDataEvent(event: PagingDataEvent<T>) {
+            when (event) {
+                is PagingDataEvent.Prepend -> event.apply {
+                    val insertSize = inserted.size
+
+                    val placeholdersChangedCount =
+                        minOf(oldPlaceholdersBefore, insertSize)
+                    val placeholdersChangedPos = oldPlaceholdersBefore - placeholdersChangedCount
+                    val itemsInsertedCount = insertSize - placeholdersChangedCount
+                    val itemsInsertedPos = 0
+
+                    // ... then trigger callbacks, so callbacks won't see inconsistent state
+                    if (placeholdersChangedCount > 0) {
+                        updateCallback.onChanged(
+                            placeholdersChangedPos, placeholdersChangedCount, null
+                        )
+                    }
+                    if (itemsInsertedCount > 0) {
+                        updateCallback.onInserted(itemsInsertedPos, itemsInsertedCount)
+                    }
+                    val placeholderInsertedCount =
+                        newPlaceholdersBefore - oldPlaceholdersBefore + placeholdersChangedCount
+                    if (placeholderInsertedCount > 0) {
+                        updateCallback.onInserted(0, placeholderInsertedCount)
+                    } else if (placeholderInsertedCount < 0) {
+                        updateCallback.onRemoved(0, -placeholderInsertedCount)
+                    }
+                }
+                is PagingDataEvent.Append -> event.apply {
+                    val insertSize = inserted.size
+                    val placeholdersChangedCount = minOf(oldPlaceholdersAfter, insertSize)
+                    val placeholdersChangedPos = startIndex
+                    val itemsInsertedCount = insertSize - placeholdersChangedCount
+                    val itemsInsertedPos = placeholdersChangedPos + placeholdersChangedCount
+
+                    if (placeholdersChangedCount > 0) {
+                        updateCallback.onChanged(
+                            placeholdersChangedPos, placeholdersChangedCount, null
+                        )
+                    }
+                    if (itemsInsertedCount > 0) {
+                        updateCallback.onInserted(itemsInsertedPos, itemsInsertedCount)
+                    }
+                    val placeholderInsertedCount =
+                        newPlaceholdersAfter - oldPlaceholdersAfter + placeholdersChangedCount
+                    val newTotalSize = startIndex + insertSize + newPlaceholdersAfter
+                    if (placeholderInsertedCount > 0) {
+                        updateCallback.onInserted(
+                            newTotalSize - placeholderInsertedCount,
+                            placeholderInsertedCount
+                        )
+                    } else if (placeholderInsertedCount < 0) {
+                        updateCallback.onRemoved(newTotalSize, -placeholderInsertedCount)
+                    }
+                }
+                else -> {
+                    // to implement
+                }
             }
         }
 
@@ -224,7 +305,7 @@ constructor(
      */
     suspend fun submitData(pagingData: PagingData<T>) {
         submitDataId.incrementAndGet()
-        differBase.collectFrom(pagingData)
+        presenter.collectFrom(pagingData)
     }
 
     /**
@@ -245,7 +326,7 @@ constructor(
             // Check id when this job runs to ensure the last synchronous call submitData always
             // wins.
             if (submitDataId.get() == id) {
-                differBase.collectFrom(pagingData)
+                presenter.collectFrom(pagingData)
             }
         }
     }
@@ -262,7 +343,7 @@ constructor(
      *  * [RemoteMediator.load] returning [RemoteMediator.MediatorResult.Error]
      */
     fun retry() {
-        differBase.retry()
+        presenter.retry()
     }
 
     /**
@@ -282,7 +363,7 @@ constructor(
      * @sample androidx.paging.samples.refreshSample
      */
     fun refresh() {
-        differBase.refresh()
+        presenter.refresh()
     }
 
     /**
@@ -293,10 +374,11 @@ constructor(
      * @param index Index of item to get, must be >= 0, and < [itemCount]
      * @return The item, or `null`, if a `null` placeholder is at the specified position.
      */
+    @MainThread
     fun getItem(@IntRange(from = 0) index: Int): T? {
         try {
             inGetItem = true
-            return differBase[index]
+            return presenter[index]
         } finally {
             inGetItem = false
         }
@@ -309,15 +391,16 @@ constructor(
      * @param index Index of the presented item to return, including placeholders.
      * @return The presented item at position [index], `null` if it is a placeholder
      */
+    @MainThread
     fun peek(@IntRange(from = 0) index: Int): T? {
-        return differBase.peek(index)
+        return presenter.peek(index)
     }
 
     /**
      * Returns a new [ItemSnapshotList] representing the currently presented items, including any
      * placeholders if they are enabled.
      */
-    fun snapshot(): ItemSnapshotList<T> = differBase.snapshot()
+    fun snapshot(): ItemSnapshotList<T> = presenter.snapshot()
 
     /**
      * Get the number of items currently presented by this Differ. This value can be directly
@@ -326,7 +409,7 @@ constructor(
      * @return Number of items being presented, including placeholders.
      */
     val itemCount: Int
-        get() = differBase.size
+        get() = presenter.size
 
     /**
      * A hot [Flow] of [CombinedLoadStates] that emits a snapshot whenever the loading state of the
@@ -337,7 +420,7 @@ constructor(
      *
      * @sample androidx.paging.samples.loadStateFlowSample
      */
-    val loadStateFlow: Flow<CombinedLoadStates> = differBase.loadStateFlow
+    val loadStateFlow: Flow<CombinedLoadStates> = presenter.loadStateFlow.filterNotNull()
 
     /**
      * A hot [Flow] that emits after the pages presented to the UI are updated, even if the
@@ -357,7 +440,7 @@ constructor(
      * update, which is useful in cases where you are simply updating UI and don't care about
      * tracking the exact number of page updates.
      */
-    val onPagesUpdatedFlow: Flow<Unit> = differBase.onPagesUpdatedFlow
+    val onPagesUpdatedFlow: Flow<Unit> = presenter.onPagesUpdatedFlow
 
     /**
      * Add a listener which triggers after the pages presented to the UI are updated, even if the
@@ -374,7 +457,7 @@ constructor(
      * @see removeOnPagesUpdatedListener
      */
     fun addOnPagesUpdatedListener(listener: () -> Unit) {
-        differBase.addOnPagesUpdatedListener(listener)
+        presenter.addOnPagesUpdatedListener(listener)
     }
 
     /**
@@ -386,7 +469,7 @@ constructor(
      * @see addOnPagesUpdatedListener
      */
     fun removeOnPagesUpdatedListener(listener: () -> Unit) {
-        differBase.removeOnPagesUpdatedListener(listener)
+        presenter.removeOnPagesUpdatedListener(listener)
     }
 
     /**
@@ -402,7 +485,7 @@ constructor(
      * @sample androidx.paging.samples.addLoadStateListenerSample
      */
     fun addLoadStateListener(listener: (CombinedLoadStates) -> Unit) {
-        differBase.addLoadStateListener(listener)
+        presenter.addLoadStateListener(listener)
     }
 
     /**
@@ -412,38 +495,6 @@ constructor(
      * @see addLoadStateListener
      */
     fun removeLoadStateListener(listener: (CombinedLoadStates) -> Unit) {
-        differBase.removeLoadStateListener(listener)
-    }
-
-    private companion object {
-        init {
-            /**
-             * Implements the Logger interface from paging-common and injects it into the LOGGER
-             * global var stored within Pager.
-             *
-             * Checks for null LOGGER because paging-compose can also inject a Logger
-             * with the same implementation
-             */
-            LOGGER = LOGGER ?: object : Logger {
-                override fun isLoggable(level: Int): Boolean {
-                    return Log.isLoggable(LOG_TAG, level)
-                }
-
-                override fun log(level: Int, message: String, tr: Throwable?) {
-                    when {
-                        tr != null && level == Log.DEBUG -> Log.d(LOG_TAG, message, tr)
-                        tr != null && level == Log.VERBOSE -> Log.v(LOG_TAG, message, tr)
-                        level == Log.DEBUG -> Log.d(LOG_TAG, message)
-                        level == Log.VERBOSE -> Log.v(LOG_TAG, message)
-                        else -> {
-                            throw IllegalArgumentException(
-                                "debug level $level is requested but Paging only supports " +
-                                    "default logging for level 2 (DEBUG) or level 3 (VERBOSE)"
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        presenter.removeLoadStateListener(listener)
     }
 }

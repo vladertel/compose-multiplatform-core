@@ -18,7 +18,6 @@ package androidx.webkit.internal;
 
 import android.annotation.SuppressLint;
 import android.net.Uri;
-import android.os.Build;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -26,12 +25,14 @@ import android.webkit.WebViewClient;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.webkit.Profile;
 import androidx.webkit.WebMessageCompat;
 import androidx.webkit.WebMessagePortCompat;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewRenderProcess;
 import androidx.webkit.WebViewRenderProcessClient;
 
+import org.chromium.support_lib_boundary.ProfileBoundaryInterface;
 import org.chromium.support_lib_boundary.WebViewProviderBoundaryInterface;
 import org.chromium.support_lib_boundary.util.BoundaryInterfaceReflectionUtil;
 
@@ -54,7 +55,6 @@ public class WebViewProviderAdapter {
     /**
      * Adapter method WebViewCompat.insertVisualStateCallback().
      */
-    @RequiresApi(Build.VERSION_CODES.KITKAT)
     public void insertVisualStateCallback(
             long requestId, @NonNull WebViewCompat.VisualStateCallback callback) {
         mImpl.insertVisualStateCallback(requestId,
@@ -78,7 +78,6 @@ public class WebViewProviderAdapter {
     /**
      * Adapter method for {@link WebViewCompat#postWebMessage(WebView, WebMessageCompat, Uri)}.
      */
-    @RequiresApi(Build.VERSION_CODES.KITKAT)
     public void postWebMessage(@NonNull WebMessageCompat message, @NonNull Uri targetOrigin) {
         mImpl.postMessageToMainFrame(
                 BoundaryInterfaceReflectionUtil.createInvocationHandlerFor(
@@ -89,7 +88,6 @@ public class WebViewProviderAdapter {
      * Adapter method for {@link WebViewCompat#addWebMessageListener(android.webkit.WebView,
      * String, List<String>, androidx.webkit.WebViewCompat.WebMessageListener)}.
      */
-    @RequiresApi(Build.VERSION_CODES.KITKAT)
     public void addWebMessageListener(@NonNull String jsObjectName,
             @NonNull String[] allowedOriginRules,
             @NonNull WebViewCompat.WebMessageListener listener) {
@@ -158,7 +156,6 @@ public class WebViewProviderAdapter {
     // WebViewRenderProcessClient is a callback class, so it should be last. See
     // https://issuetracker.google.com/issues/139770271.
     @SuppressLint("LambdaLast")
-    @RequiresApi(Build.VERSION_CODES.KITKAT)
     public void setWebViewRenderProcessClient(@Nullable Executor executor,
             @Nullable WebViewRenderProcessClient webViewRenderProcessClient) {
         InvocationHandler handler = webViewRenderProcessClient != null
@@ -166,5 +163,23 @@ public class WebViewProviderAdapter {
                         new WebViewRenderProcessClientAdapter(executor, webViewRenderProcessClient))
                 : null;
         mImpl.setWebViewRendererClient(handler);
+    }
+
+    /**
+     * Adapter method for {@link WebViewCompat#setProfile(WebView, String)}.
+     */
+    public void setProfileWithName(@NonNull String profileName) {
+        mImpl.setProfile(profileName);
+    }
+
+    /**
+     * Adapter method for {@link WebViewCompat#getProfile(WebView)}.
+     */
+    @NonNull
+    public Profile getProfile() {
+        ProfileBoundaryInterface profile = BoundaryInterfaceReflectionUtil.castToSuppLibClass(
+                ProfileBoundaryInterface.class, mImpl.getProfile());
+
+        return new ProfileImpl(profile);
     }
 }

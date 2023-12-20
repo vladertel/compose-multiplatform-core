@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import kotlinx.coroutines.flow.Flow;
+
 /**
  * WorkManager is the recommended library for persistent work.
  * Scheduled work is guaranteed to execute sometime after its {@link Constraints} are met.
@@ -118,8 +120,7 @@ import java.util.concurrent.TimeUnit;
  * uniquely-identifiable name (see
  * {@link #beginUniqueWork(String, ExistingWorkPolicy, OneTimeWorkRequest)}).
  * <p>
- * <a name="initializing"></a>
- * <b>Initializing WorkManager</b>
+ * <h3 id="initializing">Initializing WorkManager</h3>
  * <p>
  * By default, WorkManager auto-initializes itself using a built-in {@code ContentProvider}.
  * ContentProviders are created and run before the {@code Application} object, so this allows the
@@ -128,8 +129,7 @@ import java.util.concurrent.TimeUnit;
  * {@link Configuration.Provider} or
  * {@link WorkManager#initialize(android.content.Context, androidx.work.Configuration)}.
  * <p>
- * <a name="worker_class_names"></a>
- * <b>Renaming and Removing ListenableWorker Classes</b>
+ * <h3 id="worker_class_names">Renaming and Removing ListenableWorker Classes</h3>
  * <p>
  * Exercise caution in renaming classes derived from {@link ListenableWorker}s.  WorkManager stores
  * the class name in its internal database when the {@link WorkRequest} is enqueued so it can later
@@ -523,6 +523,16 @@ public abstract class WorkManager {
     public abstract @NonNull LiveData<WorkInfo> getWorkInfoByIdLiveData(@NonNull UUID id);
 
     /**
+     * Gets a {@link Flow} of the {@link WorkInfo} for a given work id.
+     *
+     * @param id The id of the work
+     * @return A {@link Flow} of the {@link WorkInfo} associated with {@code id}; note that
+     *         this {@link WorkInfo} may be {@code null} if {@code id} is not known to
+     *         WorkManager.
+     */
+    public abstract @NonNull Flow<WorkInfo> getWorkInfoByIdFlow(@NonNull UUID id);
+
+    /**
      * Gets a {@link ListenableFuture} of the {@link WorkInfo} for a given work id.
      *
      * @param id The id of the work
@@ -540,6 +550,14 @@ public abstract class WorkManager {
      */
     public abstract @NonNull LiveData<List<WorkInfo>> getWorkInfosByTagLiveData(
             @NonNull String tag);
+
+    /**
+     * Gets a {@link Flow} of the {@link WorkInfo} for all work for a given tag.
+     *
+     * @param tag The tag of the work
+     * @return A {@link Flow} list of {@link WorkInfo} for work tagged with {@code tag}
+     */
+    public abstract @NonNull Flow<List<WorkInfo>> getWorkInfosByTagFlow(@NonNull String tag);
 
     /**
      * Gets a {@link ListenableFuture} of the {@link WorkInfo} for all work for a given tag.
@@ -560,6 +578,17 @@ public abstract class WorkManager {
      *         {@code uniqueWorkName}
      */
     public abstract @NonNull LiveData<List<WorkInfo>> getWorkInfosForUniqueWorkLiveData(
+            @NonNull String uniqueWorkName);
+
+    /**
+     * Gets a {@link Flow} of the {@link WorkInfo} for all work in a work chain with a given
+     * unique name.
+     *
+     * @param uniqueWorkName The unique name used to identify the chain of work
+     * @return A {@link Flow} of the {@link WorkInfo} for work in the chain named
+     *         {@code uniqueWorkName}
+     */
+    public abstract @NonNull Flow<List<WorkInfo>> getWorkInfosForUniqueWorkFlow(
             @NonNull String uniqueWorkName);
 
     /**
@@ -585,6 +614,17 @@ public abstract class WorkManager {
             @NonNull WorkQuery workQuery);
 
     /**
+     * Gets the {@link Flow} of the {@link List} of {@link WorkInfo} for all work
+     * referenced by the {@link WorkQuery} specification.
+     *
+     * @param workQuery The work query specification
+     * @return A {@link Flow} of the {@link List} of {@link WorkInfo} for work
+     * referenced by this {@link WorkQuery}.
+     */
+    public abstract @NonNull Flow<List<WorkInfo>> getWorkInfosFlow(
+            @NonNull WorkQuery workQuery);
+
+    /**
      * Gets the {@link ListenableFuture} of the {@link List} of {@link WorkInfo} for all work
      * referenced by the {@link WorkQuery} specification.
      *
@@ -596,7 +636,9 @@ public abstract class WorkManager {
             @NonNull WorkQuery workQuery);
 
     /**
-     * Updates the work with the new specification.
+     * Updates the work with the new specification. A {@link WorkRequest} passed as parameter
+     * must have an id set with {@link WorkRequest.Builder#setId(UUID)} that matches an id of the
+     * previously enqueued work.
      * <p>
      * It preserves enqueue time, e.g. if a work was enqueued 3 hours ago and had 6 hours long
      * initial delay, after the update it would be still eligible for run in 3 hours, assuming
@@ -657,7 +699,6 @@ public abstract class WorkManager {
     }
 
     /**
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     protected WorkManager() {

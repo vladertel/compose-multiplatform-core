@@ -28,8 +28,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Sampled
 @Composable
 fun ExposedDropdownMenuSample() {
@@ -39,9 +42,11 @@ fun ExposedDropdownMenuSample() {
     // We want to react on tap/press on TextField to show menu
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+        onExpandedChange = { expanded = it },
     ) {
         TextField(
+            // The `menuAnchor` modifier must be passed to the text field for correctness.
+            modifier = Modifier.menuAnchor(),
             readOnly = true,
             value = selectedOptionText,
             onValueChange = {},
@@ -59,7 +64,8 @@ fun ExposedDropdownMenuSample() {
                     onClick = {
                         selectedOptionText = selectionOption
                         expanded = false
-                    }
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 )
             }
         }
@@ -67,6 +73,7 @@ fun ExposedDropdownMenuSample() {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Preview
 @Sampled
 @Composable
 fun EditableExposedDropdownMenuSample() {
@@ -75,9 +82,11 @@ fun EditableExposedDropdownMenuSample() {
     var selectedOptionText by remember { mutableStateOf("") }
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+        onExpandedChange = { expanded = it },
     ) {
         TextField(
+            // The `menuAnchor` modifier must be passed to the text field for correctness.
+            modifier = Modifier.menuAnchor(),
             value = selectedOptionText,
             onValueChange = { selectedOptionText = it },
             label = { Text("Label") },
@@ -97,7 +106,8 @@ fun EditableExposedDropdownMenuSample() {
                         onClick = {
                             selectedOptionText = selectionOption
                             expanded = false
-                        }
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                     )
                 }
             }

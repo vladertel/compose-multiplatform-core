@@ -43,6 +43,7 @@ public class KeyguardUtilsTest {
     @Mock private Context mContext;
     @Mock private KeyguardManager mKeyguardManager;
 
+    @SuppressWarnings("deprecation") // b/251211046
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
@@ -98,7 +99,7 @@ public class KeyguardUtilsTest {
     }
 
     @Test
-    @Config(minSdk = Build.VERSION_CODES.JELLY_BEAN, maxSdk = Build.VERSION_CODES.LOLLIPOP_MR1)
+    @Config(maxSdk = Build.VERSION_CODES.LOLLIPOP_MR1)
     public void testIsDeviceSecuredWithCredential_CorrectlyReturnsTrue_OnApi16To22() {
         when(mContext.getSystemService(anyString())).thenReturn(mKeyguardManager);
         when(mKeyguardManager.isKeyguardSecure()).thenReturn(true);

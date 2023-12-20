@@ -76,7 +76,6 @@ import java.lang.annotation.Retention;
  * @see androidx.viewpager.widget.ViewPager
  */
 public final class ViewPager2 extends ViewGroup {
-    /** @hide */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     @Retention(SOURCE)
     @IntDef({ORIENTATION_HORIZONTAL, ORIENTATION_VERTICAL})
@@ -86,14 +85,12 @@ public final class ViewPager2 extends ViewGroup {
     public static final int ORIENTATION_HORIZONTAL = RecyclerView.HORIZONTAL;
     public static final int ORIENTATION_VERTICAL = RecyclerView.VERTICAL;
 
-    /** @hide */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     @Retention(SOURCE)
     @IntDef({SCROLL_STATE_IDLE, SCROLL_STATE_DRAGGING, SCROLL_STATE_SETTLING})
     public @interface ScrollState {
     }
 
-    /** @hide */
     @SuppressWarnings("WeakerAccess")
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     @Retention(SOURCE)
@@ -556,7 +553,7 @@ public final class ViewPager2 extends ViewGroup {
         int snapPosition = mLayoutManager.getPosition(snapView);
 
         if (snapPosition != mCurrentItem && getScrollState() == SCROLL_STATE_IDLE) {
-            /** TODO: revisit if push to {@link ScrollEventAdapter} / separate component */
+            /* TODO: revisit if push to {@link ScrollEventAdapter} / separate component */
             mPageChangeEventDispatcher.onPageSelected(snapPosition);
         }
 
@@ -948,7 +945,6 @@ public final class ViewPager2 extends ViewGroup {
     }
 
     @Override
-    @RequiresApi(17)
     public void setLayoutDirection(int layoutDirection) {
         super.setLayoutDirection(layoutDirection);
         mAccessibilityProvider.onSetLayoutDirection();
@@ -960,7 +956,6 @@ public final class ViewPager2 extends ViewGroup {
         mAccessibilityProvider.onInitializeAccessibilityNodeInfo(info);
     }
 
-    @RequiresApi(16)
     @Override
     public boolean performAccessibilityAction(int action, @Nullable Bundle arguments) {
         if (mAccessibilityProvider.handlesPerformAccessibilityAction(action, arguments)) {
@@ -1452,9 +1447,7 @@ public final class ViewPager2 extends ViewGroup {
         public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
             AccessibilityNodeInfoCompat infoCompat = AccessibilityNodeInfoCompat.wrap(info);
             addCollectionInfo(infoCompat);
-            if (Build.VERSION.SDK_INT >= 16) {
-                addScrollActions(infoCompat);
-            }
+            addScrollActions(infoCompat);
         }
 
         @Override

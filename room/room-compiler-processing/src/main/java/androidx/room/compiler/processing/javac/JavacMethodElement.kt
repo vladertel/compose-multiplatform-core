@@ -22,7 +22,7 @@ import androidx.room.compiler.processing.XProcessingEnv
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeElement
 import androidx.room.compiler.processing.XTypeParameterElement
-import androidx.room.compiler.processing.javac.kotlin.KmFunction
+import androidx.room.compiler.processing.javac.kotlin.KmFunctionContainer
 import com.google.auto.common.MoreElements
 import com.google.auto.common.MoreTypes
 import javax.lang.model.element.ElementKind
@@ -42,6 +42,10 @@ internal class JavacMethodElement(
         }
     }
 
+    override val propertyName: String? by lazy {
+        if (isKotlinPropertyMethod()) kotlinMetadata?.propertyName else null
+    }
+
     override val name: String by lazy {
         kotlinMetadata?.name ?: jvmName
     }
@@ -51,8 +55,8 @@ internal class JavacMethodElement(
 
     override val typeParameters: List<XTypeParameterElement> by lazy {
         element.typeParameters.mapIndexed { index, typeParameter ->
-            val typeArgument = kotlinMetadata?.typeArguments?.get(index)
-            JavacTypeParameterElement(env, this, typeParameter, typeArgument)
+            val typeParameterMetadata = kotlinMetadata?.typeParameters?.get(index)
+            JavacTypeParameterElement(env, this, typeParameter, typeParameterMetadata)
         }
     }
 
@@ -71,7 +75,7 @@ internal class JavacMethodElement(
         }
     }
 
-    override val kotlinMetadata: KmFunction? by lazy {
+    override val kotlinMetadata: KmFunctionContainer? by lazy {
         (enclosingElement as? JavacTypeElement)?.kotlinMetadata?.getFunctionMetadata(element)
     }
 
@@ -99,6 +103,10 @@ internal class JavacMethodElement(
         )
     }
 
+    val defaultValue: JavacAnnotationValue? = element.defaultValue?.let {
+        JavacAnnotationValue(env, this, element.defaultValue, returnType)
+    }
+
     override fun asMemberOf(other: XType): XMethodType {
         return if (other !is JavacDeclaredType || enclosingElement.type.isSameType(other)) {
             executableType
@@ -114,7 +122,7 @@ internal class JavacMethodElement(
 
     override fun isJavaDefault() = element.modifiers.contains(Modifier.DEFAULT)
 
-    override fun isSuspendFunction() = kotlinMetadata?.isSuspend() == true
+    override fun isSuspendFunction() = kotlinMetadata?.isSuspend == true
 
     override fun isExtensionFunction() = kotlinMetadata?.isExtension() == true
 
@@ -177,4 +185,10 @@ internal class JavacMethodElement(
             env.wrapTypeElement(it)
         }
     }
+
+    override fun isKotlinPropertyMethod() = kotlinMetadata?.isPropertyFunction() ?: false
+
+    override fun isKotlinPropertySetter() = kotlinMetadata?.isPropertySetter() ?: false
+
+    override fun isKotlinPropertyGetter() = kotlinMetadata?.isPropertyGetter() ?: false
 }

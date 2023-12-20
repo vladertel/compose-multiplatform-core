@@ -59,7 +59,6 @@ import androidx.tv.foundation.lazy.AutoTestFrameClock
 import androidx.tv.foundation.lazy.list.setContentWithTestViewConfiguration
 import com.google.common.collect.Range
 import com.google.common.truth.IntegerSubject
-import com.google.common.truth.Truth
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -71,6 +70,8 @@ import org.junit.runners.Parameterized
 class LazyGridTest(
     private val orientation: Orientation
 ) : BaseLazyGridTestWithOrientation(orientation) {
+
+    @Suppress("PrivatePropertyName")
     private val LazyGridTag = "LazyGridTag"
 
     companion object {
@@ -148,7 +149,7 @@ class LazyGridTest(
             }
         }
 
-        rule.keyPress(3)
+        rule.keyPress(2)
 
         rule.onNodeWithTag("4")
             .assertIsDisplayed()
@@ -670,9 +671,9 @@ class LazyGridTest(
                 state.scrollToItem(50)
             }
             composedIndexes.forEach {
-                Truth.assertThat(it).isLessThan(count)
+                assertThat(it).isLessThan(count)
             }
-            Truth.assertThat(state.firstVisibleItemIndex).isEqualTo(9)
+            assertThat(state.firstVisibleItemIndex).isEqualTo(9)
         }
     }
 
@@ -723,7 +724,7 @@ class LazyGridTest(
             }
         }
 
-        rule.keyPress(3)
+        rule.keyPress(2)
 
         rule.onNodeWithTag("1")
             .assertMainAxisStartPositionInRootIsEqualTo(0.dp)
@@ -891,7 +892,7 @@ class LazyGridTest(
         }
 
         rule.runOnIdle {
-            Truth.assertThat(exception).isInstanceOf(IllegalArgumentException::class.java)
+            assertThat(exception).isInstanceOf(IllegalArgumentException::class.java)
         }
     }
 
@@ -922,17 +923,17 @@ class LazyGridTest(
         }
 
         rule.runOnIdle {
-            Truth.assertThat(remeasureCount).isEqualTo(1)
+            assertThat(remeasureCount).isEqualTo(1)
             counter.value++
         }
 
         rule.runOnIdle {
-            Truth.assertThat(remeasureCount).isEqualTo(1)
+            assertThat(remeasureCount).isEqualTo(1)
         }
     }
 
     @Test
-    fun scrollingALotDoesntCauseLazyLayoutRecomposition() {
+    fun scrollingALotDoesNotCauseLazyLayoutRecomposition() {
         var recomposeCount = 0
         lateinit var state: TvLazyGridState
 
@@ -953,7 +954,7 @@ class LazyGridTest(
         }
 
         rule.runOnIdle {
-            Truth.assertThat(recomposeCount).isEqualTo(1)
+            assertThat(recomposeCount).isEqualTo(1)
 
             runBlocking {
                 state.scrollToItem(100)
@@ -961,7 +962,7 @@ class LazyGridTest(
         }
 
         rule.runOnIdle {
-            Truth.assertThat(recomposeCount).isEqualTo(1)
+            assertThat(recomposeCount).isEqualTo(1)
         }
     }
 
@@ -1058,6 +1059,39 @@ class LazyGridTest(
             assertThat(state.numMeasurePasses).isEqualTo(1)
         }
     }
+
+    @Test
+    fun fillingFullSize_nextItemIsNotComposed() {
+        val state = TvLazyGridState()
+        state.prefetchingEnabled = false
+        val itemSizePx = 5f
+        val itemSize = with(rule.density) { itemSizePx.toDp() }
+        rule.setContentWithTestViewConfiguration {
+            LazyGrid(
+                1,
+                Modifier
+                    .testTag(LazyGridTag)
+                    .mainAxisSize(itemSize),
+                state
+            ) {
+                items(3) { index ->
+                    Box(Modifier.size(itemSize).testTag("$index"))
+                }
+            }
+        }
+
+        repeat(3) { index ->
+            rule.onNodeWithTag("$index")
+                .assertIsDisplayed()
+            rule.onNodeWithTag("${index + 1}")
+                .assertDoesNotExist()
+            rule.runOnIdle {
+                runBlocking {
+                    state.scrollBy(itemSizePx)
+                }
+            }
+        }
+    }
 }
 
 internal fun IntegerSubject.isEqualTo(expected: Int, tolerance: Int) {
@@ -1065,6 +1099,8 @@ internal fun IntegerSubject.isEqualTo(expected: Int, tolerance: Int) {
 }
 
 internal fun ComposeContentTestRule.keyPress(keyCode: Int, numberOfPresses: Int = 1) {
-    for (index in 0 until numberOfPresses)
+    repeat(numberOfPresses) {
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(keyCode)
+        waitForIdle()
+    }
 }

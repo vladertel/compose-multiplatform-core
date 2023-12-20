@@ -49,7 +49,7 @@ public class DefaultWorkerFactoryTest extends DatabaseTest {
     @Before
     public void setUp() {
         mContext = ApplicationProvider.getApplicationContext();
-        mDefaultWorkerFactory = WorkerFactory.getDefaultWorkerFactory();
+        mDefaultWorkerFactory = DefaultWorkerFactory.INSTANCE;
         mProgressUpdater = mock(ProgressUpdater.class);
         mForegroundUpdater = mock(ForegroundUpdater.class);
     }
@@ -70,6 +70,7 @@ public class DefaultWorkerFactoryTest extends DatabaseTest {
                         work.getTags(),
                         new WorkerParameters.RuntimeExtras(),
                         1,
+                        0,
                         executor,
                         new WorkManagerTaskExecutor(executor),
                         mDefaultWorkerFactory,
@@ -97,6 +98,7 @@ public class DefaultWorkerFactoryTest extends DatabaseTest {
                         work.getTags(),
                         new WorkerParameters.RuntimeExtras(),
                         1,
+                        0,
                         executor,
                         new WorkManagerTaskExecutor(executor),
                         mDefaultWorkerFactory,

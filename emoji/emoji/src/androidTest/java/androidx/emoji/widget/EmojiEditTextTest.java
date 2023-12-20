@@ -44,6 +44,7 @@ import org.junit.runner.RunWith;
 
 @MediumTest
 @RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = 22) // there's a memory leak in API 21 that this triggers
 public class EmojiEditTextTest {
 
     @SuppressWarnings("deprecation")
@@ -87,7 +88,6 @@ public class EmojiEditTextTest {
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = 19)
     public void testSetMaxCount() {
         final TestActivity activity = mActivityRule.getActivity();
         final EmojiEditText editText = activity.findViewById(R.id.editTextWithMaxCount);

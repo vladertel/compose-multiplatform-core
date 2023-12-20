@@ -133,7 +133,6 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * @hide
  */
 @RestrictTo(LIBRARY)
 class AppCompatDelegateImpl extends AppCompatDelegate
@@ -378,6 +377,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
                 mBackCallback = Api33Impl.registerOnBackPressedCallback(mDispatcher, this);
             } else if (!shouldRegister && mBackCallback != null) {
                 Api33Impl.unregisterOnBackInvokedCallback(mDispatcher, mBackCallback);
+                mBackCallback = null;
             }
         }
     }
@@ -422,8 +422,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             }
 
             try {
-                ContextThemeWrapperCompatApi17Impl.applyOverrideConfiguration(
-                        (android.view.ContextThemeWrapper) baseContext, config);
+                ((android.view.ContextThemeWrapper) baseContext).applyOverrideConfiguration(config);
                 return baseContext;
             } catch (IllegalStateException e) {
                 if (DEBUG) {
@@ -475,7 +474,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             // Workaround for incorrect default fontScale on earlier SDKs.
             overrideConfig.fontScale = 0f;
             Configuration referenceConfig =
-                    Api17Impl.createConfigurationContext(baseContext, overrideConfig)
+                    baseContext.createConfigurationContext(overrideConfig)
                             .getResources().getConfiguration();
             // Revert the uiMode change so that the diff doesn't include uiMode.
             Configuration baseConfig = baseContext.getResources().getConfiguration();
@@ -523,21 +522,6 @@ class AppCompatDelegateImpl extends AppCompatDelegate
         }
 
         return super.attachBaseContext2(wrappedContext);
-    }
-
-    /**
-     * Helper for accessing new APIs on {@link android.view.ContextThemeWrapper}.
-     */
-    @RequiresApi(17)
-    private static class ContextThemeWrapperCompatApi17Impl {
-        private ContextThemeWrapperCompatApi17Impl() {
-            // This class is non-instantiable.
-        }
-
-        static void applyOverrideConfiguration(android.view.ContextThemeWrapper context,
-                Configuration overrideConfiguration) {
-            context.applyOverrideConfiguration(overrideConfiguration);
-        }
     }
 
     @Override
@@ -725,10 +709,6 @@ class AppCompatDelegateImpl extends AppCompatDelegate
         // handled by the application.
         applyApplicationSpecificConfig(false,
                 /* isLocalesApplicationRequired */ false);
-
-        // We may have just changed the resource configuration. Make sure that everyone after us
-        // sees the same configuration by modifying the parameter's internal state.
-        newConfig.updateFrom(mContext.getResources().getConfiguration());
     }
 
     @Override
@@ -963,7 +943,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
                 // Floating windows can never have an action bar, reset the flags
                 mHasActionBar = mOverlayActionBar = false;
             } else if (mHasActionBar) {
-                /**
+                /*
                  * This needs some explanation. As we can not use the android:theme attribute
                  * pre-L, we emulate it by manually creating a LayoutInflater using a
                  * ContextThemeWrapper pointing to actionBarTheme.
@@ -986,7 +966,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
                         .findViewById(R.id.decor_content_parent);
                 mDecorContentParent.setWindowCallback(getWindowCallback());
 
-                /**
+                /*
                  * Propagate features to DecorContentParent
                  */
                 if (mOverlayActionBar) {
@@ -1580,7 +1560,6 @@ class AppCompatDelegateImpl extends AppCompatDelegate
 
     boolean dispatchKeyEvent(KeyEvent event) {
         // Check AppCompatDialog directly since it isn't able to implement KeyEventDispatcher
-        // while it is @hide.
         if (mHost instanceof KeyEventDispatcher.Component || mHost instanceof AppCompatDialog) {
             View root = mWindow.getDecorView();
             if (root != null && KeyEventDispatcher.dispatchBeforeHierarchy(root, event)) {
@@ -2611,7 +2590,13 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             // one from the requested locales.
             if (requestedLocales.isEmpty()) {
                 localesToBeApplied = LocaleListCompat.getEmptyLocaleList();
+            } else if (Build.VERSION.SDK_INT >= 21) {
+                localesToBeApplied =
+                        LocaleListCompat.forLanguageTags(Api21Impl.toLanguageTag(
+                                requestedLocales.get(0)));
             } else {
+                // The method Locale.forLanguageTag() was introduced in API level 21,
+                // using Locale.toString() method for APIs below that.
                 localesToBeApplied =
                         LocaleListCompat.forLanguageTags(requestedLocales.get(0).toString());
             }
@@ -2626,7 +2611,6 @@ class AppCompatDelegateImpl extends AppCompatDelegate
     }
 
     @Override
-    @RequiresApi(17)
     public void setLocalNightMode(@NightMode int mode) {
         if (DEBUG) {
             Log.d(TAG, String.format("setLocalNightMode. New: %d, Current: %d",
@@ -2686,11 +2670,9 @@ class AppCompatDelegateImpl extends AppCompatDelegate
     void setConfigurationLocales(Configuration conf, @NonNull LocaleListCompat locales) {
         if (Build.VERSION.SDK_INT >= 24) {
             Api24Impl.setLocales(conf, locales);
-        } else if (Build.VERSION.SDK_INT >= 17) {
-            Api17Impl.setLocale(conf, locales.get(0));
-            Api17Impl.setLayoutDirection(conf, locales.get(0));
         } else {
-            conf.locale = locales.get(0);
+            conf.setLocale(locales.get(0));
+            conf.setLayoutDirection(locales.get(0));
         }
     }
 
@@ -2794,9 +2776,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
         }
         if (newLocales != null && !currentLocales.equals(newLocales)) {
             configChanges |= ActivityInfo.CONFIG_LOCALE;
-            if (Build.VERSION.SDK_INT >= 17) {
-                configChanges |= ActivityInfo.CONFIG_LAYOUT_DIRECTION;
-            }
+            configChanges |= ActivityInfo.CONFIG_LAYOUT_DIRECTION;
         }
 
         if (DEBUG) {
@@ -2829,6 +2809,14 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             if (DEBUG) {
                 Log.d(TAG, "updateAppConfiguration attempting to recreate Activity: "
                         + mHost);
+            }
+
+            // To workaround the android framework issue(b/242026447) which doesn't update the
+            // layout direction after recreating in Android S.
+            if (Build.VERSION.SDK_INT >= 31
+                    && (configChanges & ActivityInfo.CONFIG_LAYOUT_DIRECTION) != 0) {
+                View view = ((Activity) mHost).getWindow().getDecorView();
+                view.setLayoutDirection(overrideConfig.getLayoutDirection());
             }
             ActivityCompat.recreate((Activity) mHost);
             handled = true;
@@ -2866,7 +2854,7 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             }
         }
 
-        if (handled && newLocales != null) {
+        if (newLocales != null) {
             // LocaleListCompat's default locales are updated here using the configuration
             // locales to keep default locales in sync with application locales and also to cover
             // the case where framework re-adjusts input locales by bringing forward the most
@@ -2937,7 +2925,6 @@ class AppCompatDelegateImpl extends AppCompatDelegate
     }
 
     /**
-     * @hide
      */
     @NonNull
     @RestrictTo(LIBRARY)
@@ -3626,7 +3613,6 @@ class AppCompatDelegateImpl extends AppCompatDelegate
     }
 
     /**
-     * @hide
      */
     @VisibleForTesting
     @RestrictTo(LIBRARY)
@@ -3900,8 +3886,8 @@ class AppCompatDelegateImpl extends AppCompatDelegate
             delta.smallestScreenWidthDp = change.smallestScreenWidthDp;
         }
 
-        if (Build.VERSION.SDK_INT >= 17) {
-            Api17Impl.generateConfigDelta_densityDpi(base, change, delta);
+        if (base.densityDpi != change.densityDpi) {
+            delta.densityDpi = change.densityDpi;
         }
 
         // Assets sequence and window configuration are not supported.
@@ -3909,37 +3895,11 @@ class AppCompatDelegateImpl extends AppCompatDelegate
         return delta;
     }
 
-    @RequiresApi(17)
-    static class Api17Impl {
-        private Api17Impl() { }
-
-        static void generateConfigDelta_densityDpi(@NonNull Configuration base,
-                @NonNull Configuration change, @NonNull Configuration delta) {
-            if (base.densityDpi != change.densityDpi) {
-                delta.densityDpi = change.densityDpi;
-            }
-        }
-
-        static Context createConfigurationContext(@NonNull Context context,
-                @NonNull Configuration overrideConfiguration) {
-            return context.createConfigurationContext(overrideConfiguration);
-        }
-
-        @DoNotInline
-        static void setLayoutDirection(Configuration configuration, Locale loc) {
-            configuration.setLayoutDirection(loc);
-        }
-
-        @DoNotInline
-        static void setLocale(Configuration configuration, Locale loc) {
-            configuration.setLocale(loc);
-        }
-    }
-
     @RequiresApi(21)
     static class Api21Impl {
         private Api21Impl() { }
 
+        @DoNotInline
         static boolean isPowerSaveMode(PowerManager powerManager) {
             return powerManager.isPowerSaveMode();
         }

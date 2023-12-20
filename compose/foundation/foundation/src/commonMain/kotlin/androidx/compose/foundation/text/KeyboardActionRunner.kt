@@ -18,20 +18,23 @@ package androidx.compose.foundation.text
 
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeAction.Companion.Default
-import androidx.compose.ui.text.input.ImeAction.Companion.None
+import androidx.compose.ui.text.input.ImeAction.Companion.Done
 import androidx.compose.ui.text.input.ImeAction.Companion.Go
+import androidx.compose.ui.text.input.ImeAction.Companion.Next
+import androidx.compose.ui.text.input.ImeAction.Companion.None
+import androidx.compose.ui.text.input.ImeAction.Companion.Previous
 import androidx.compose.ui.text.input.ImeAction.Companion.Search
 import androidx.compose.ui.text.input.ImeAction.Companion.Send
-import androidx.compose.ui.text.input.ImeAction.Companion.Previous
-import androidx.compose.ui.text.input.ImeAction.Companion.Next
-import androidx.compose.ui.text.input.ImeAction.Companion.Done
 
 /**
  * This class can be used to run keyboard actions when the user triggers an IME action.
  */
-internal class KeyboardActionRunner : KeyboardActionScope {
+internal class KeyboardActionRunner(
+    private val keyboardController: SoftwareKeyboardController?
+) : KeyboardActionScope {
 
     /**
      * The developer specified [KeyboardActions].
@@ -68,9 +71,10 @@ internal class KeyboardActionRunner : KeyboardActionScope {
         when (imeAction) {
             Next -> focusManager.moveFocus(FocusDirection.Next)
             Previous -> focusManager.moveFocus(FocusDirection.Previous)
+            Done -> keyboardController?.hide()
             // Note: Don't replace this with an else. These are specified explicitly so that we
             // don't forget to update this when statement when new imeActions are added.
-            Done, Go, Search, Send, Default, None -> Unit // Do Nothing.
+            Go, Search, Send, Default, None -> Unit // Do Nothing.
         }
     }
 }

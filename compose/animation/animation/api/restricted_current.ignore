@@ -1,3 +1,7 @@
 // Baseline format: 1.0
-ChangedType: androidx.compose.animation.SingleValueAnimationKt#animateColorAsState(long, androidx.compose.animation.core.AnimationSpec<androidx.compose.ui.graphics.Color>, kotlin.jvm.functions.Function1<? super androidx.compose.ui.graphics.Color,? extends kotlin.Unit>):
-    Method androidx.compose.animation.SingleValueAnimationKt.animateColorAsState has changed return type from androidx.compose.runtime.State<androidx.compose.ui.graphics.Color> to androidx.compose.runtime.State<? extends androidx.compose.ui.graphics.Color>
+AddedMethod: androidx.compose.animation.AnimatedContentTransitionScope#getKeepUntilTransitionsFinished(androidx.compose.animation.ExitTransition.Companion):
+    Added method androidx.compose.animation.AnimatedContentTransitionScope.getKeepUntilTransitionsFinished(androidx.compose.animation.ExitTransition.Companion)
+
+
+RemovedMethod: androidx.compose.animation.AnimatedContentTransitionScope#getHold(androidx.compose.animation.ExitTransition.Companion):
+    Removed method androidx.compose.animation.AnimatedContentTransitionScope.getHold(androidx.compose.animation.ExitTransition.Companion)

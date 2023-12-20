@@ -17,15 +17,19 @@
 package androidx.compose.material.samples
 
 import androidx.annotation.Sampled
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.Checkbox
 import androidx.compose.material.CheckboxDefaults
 import androidx.compose.material.MaterialTheme
@@ -34,13 +38,20 @@ import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.material.TriStateCheckbox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.InputMode.Companion.Keyboard
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 
@@ -81,6 +92,29 @@ fun TriStateCheckboxSample() {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun FocusedCheckboxSample() {
+    Text("The gray circle around this checkbox means it's non-touch focused.  Press Tab to move it")
+
+    val focusRequester = FocusRequester()
+    Box(Modifier.wrapContentSize(Alignment.TopStart)) {
+        Checkbox(
+            modifier = Modifier.wrapContentSize(Alignment.TopStart)
+                .focusRequester(focusRequester),
+            checked = true,
+            onCheckedChange = { }
+        )
+    }
+
+    val localInputModeManager = LocalInputModeManager.current
+    LaunchedEffect(Unit) {
+        if (localInputModeManager.requestInputMode(Keyboard)) {
+            focusRequester.requestFocus()
+        }
+    }
+}
+
 @Sampled
 @Composable
 fun CheckboxSample() {
@@ -99,6 +133,22 @@ fun SwitchSample() {
         checked = checkedState.value,
         onCheckedChange = { checkedState.value = it }
     )
+
+    var pineappleOnPizza by remember { mutableStateOf(true) }
+
+    Row(
+        Modifier
+            .padding(16.dp)
+            .toggleable(
+                role = Role.Switch,
+                value = pineappleOnPizza,
+                onValueChange = { pineappleOnPizza = it },
+            )
+    ) {
+        Switch(checked = pineappleOnPizza, onCheckedChange = null)
+        Spacer(Modifier.width(8.dp))
+        Text("Pineapple on pizza?")
+    }
 }
 
 @Sampled

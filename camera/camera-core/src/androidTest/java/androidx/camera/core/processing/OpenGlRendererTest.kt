@@ -16,44 +16,49 @@
 
 package androidx.camera.core.processing
 
-import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
+import android.hardware.DataSpace
 import android.hardware.camera2.CameraDevice
-import android.media.Image
-import android.media.ImageReader
+import android.hardware.camera2.params.OutputConfiguration
 import android.opengl.Matrix
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Looper
+import android.util.Size
 import android.view.Surface
+import androidx.annotation.RequiresApi
+import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat
+import androidx.camera.camera2.internal.compat.params.DynamicRangeConversions
+import androidx.camera.camera2.internal.compat.params.DynamicRangesCompat
+import androidx.camera.core.CameraSelector.LENS_FACING_BACK
+import androidx.camera.core.DynamicRange
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
-import androidx.camera.testing.CameraUtil
+import androidx.camera.testing.impl.CameraUtil
+import androidx.camera.testing.impl.TestImageUtil.createBitmap
+import androidx.camera.testing.impl.TestImageUtil.getAverageDiff
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import androidx.testutils.assertThrows
-import androidx.testutils.fail
 import com.google.common.truth.Truth.assertThat
 import java.util.Locale
 import kotlin.coroutines.ContinuationInterceptor
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.android.asCoroutineDispatcher
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.collectIndexed
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
+import org.junit.Assert.fail
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.mock
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
@@ -103,7 +108,13 @@ class OpenGlRendererTest {
     private lateinit var glHandler: Handler
     private lateinit var glDispatcher: CoroutineDispatcher
     private lateinit var glRenderer: OpenGlRenderer
+    private lateinit var cameraId: String
+    private lateinit var cameraCharacteristicsCompat: CameraCharacteristicsCompat
     private lateinit var cameraDeviceHolder: CameraUtil.CameraDeviceHolder
+    private lateinit var renderOutput: RenderOutput<*>
+    private var lensFacing = LENS_FACING_BACK
+    private val surfacesToRelease = mutableListOf<Surface>()
+    private val surfaceTexturesToRelease = mutableListOf<SurfaceTexture>()
 
     @Before
     fun setUp() {
@@ -117,6 +128,15 @@ class OpenGlRendererTest {
         if (::cameraDeviceHolder.isInitialized) {
             CameraUtil.releaseCameraDevice(cameraDeviceHolder)
         }
+        if (::renderOutput.isInitialized) {
+            renderOutput.release()
+        }
+        for (surface in surfacesToRelease) {
+            surface.release()
+        }
+        for (surfaceTexture in surfaceTexturesToRelease) {
+            surfaceTexture.release()
+        }
         if (::glRenderer.isInitialized) {
             withContext(glDispatcher) {
                 glRenderer.release()
@@ -125,6 +145,45 @@ class OpenGlRendererTest {
         if (::glThread.isInitialized) {
             glThread.quitSafely()
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    @Test
+    fun drawInputSurface_snapshotReturnsTheSame(): Unit = runBlocking(glDispatcher) {
+        // Arrange: set up renderer and Surface.
+        createOpenGlRendererAndInit()
+        val surfaceTexture = SurfaceTexture(glRenderer.textureName).apply {
+            setDefaultBufferSize(WIDTH, HEIGHT)
+            surfaceTexturesToRelease.add(this)
+        }
+        val inputSurface = Surface(surfaceTexture).apply {
+            surfacesToRelease.add(this)
+        }
+        // Listen for OnFrameAvailable updates before drawing.
+        val deferredOnFrameAvailable = CompletableDeferred<Unit>()
+        surfaceTexture.setOnFrameAvailableListener({
+            deferredOnFrameAvailable.complete(Unit)
+        }, Handler(Looper.getMainLooper()))
+
+        // Draw bitmap to inputSurface.
+        val inputImage = createBitmap(WIDTH, HEIGHT)
+        val canvas = inputSurface.lockHardwareCanvas()
+        canvas.drawBitmap(inputImage, 0f, 0f, null)
+        inputSurface.unlockCanvasAndPost(canvas)
+
+        // Wait for frame available and update texture.
+        withTimeoutOrNull(5_000) {
+            deferredOnFrameAvailable.await()
+        } ?: fail("Timed out waiting for SurfaceTexture frame available.")
+        surfaceTexture.updateTexImage()
+
+        // Act: take a snapshot.
+        val matrix = FloatArray(16)
+        Matrix.setIdentityM(matrix, 0)
+        val result = glRenderer.snapshot(Size(WIDTH, HEIGHT), matrix)
+
+        // Assert: the result is identical to the input.
+        assertThat(getAverageDiff(result, inputImage)).isEqualTo(0)
     }
 
     @Test
@@ -136,10 +195,10 @@ class OpenGlRendererTest {
     }
 
     @Test
-    fun setOutputSurfaceWithoutInit_throwException(): Unit = runBlocking(glDispatcher) {
+    fun registerOutputSurfaceWithoutInit_throwException(): Unit = runBlocking(glDispatcher) {
         createOpenGlRenderer()
         assertThrows(IllegalStateException::class.java) {
-            glRenderer.setOutputSurface(mock(Surface::class.java))
+            glRenderer.registerOutputSurface(createAutoReleaseSurface())
         }
     }
 
@@ -147,7 +206,15 @@ class OpenGlRendererTest {
     fun renderWithoutInit_throwException(): Unit = runBlocking(glDispatcher) {
         createOpenGlRenderer()
         assertThrows(IllegalStateException::class.java) {
-            glRenderer.render(123L, IDENTITY_MATRIX)
+            glRenderer.render(123L, IDENTITY_MATRIX, createAutoReleaseSurface())
+        }
+    }
+
+    @Test
+    fun unregisterOutputSurfaceWithoutInit_throwException(): Unit = runBlocking(glDispatcher) {
+        createOpenGlRenderer()
+        assertThrows(IllegalStateException::class.java) {
+            glRenderer.unregisterOutputSurface(createAutoReleaseSurface())
         }
     }
 
@@ -166,10 +233,10 @@ class OpenGlRendererTest {
     }
 
     @Test
-    fun setOutputSurfaceOnNonGlThread_throwException(): Unit = runBlocking {
+    fun registerOnNonGlThread_throwException(): Unit = runBlocking {
         createOpenGlRendererAndInit()
         assertThrows(IllegalStateException::class.java) {
-            glRenderer.setOutputSurface(mock(Surface::class.java))
+            glRenderer.registerOutputSurface(createAutoReleaseSurface())
         }
     }
 
@@ -177,7 +244,15 @@ class OpenGlRendererTest {
     fun renderOnNonGlThread_throwException(): Unit = runBlocking {
         createOpenGlRendererAndInit()
         assertThrows(IllegalStateException::class.java) {
-            glRenderer.render(123L, IDENTITY_MATRIX)
+            glRenderer.render(123L, IDENTITY_MATRIX, createAutoReleaseSurface())
+        }
+    }
+
+    @Test
+    fun unregisterOnNonGlThread_throwException(): Unit = runBlocking {
+        createOpenGlRendererAndInit()
+        assertThrows(IllegalStateException::class.java) {
+            glRenderer.unregisterOutputSurface(createAutoReleaseSurface())
         }
     }
 
@@ -191,177 +266,302 @@ class OpenGlRendererTest {
 
     @Test
     fun initByInvalidShaderString_throwException() {
-        val shaderProvider = object : ShaderProvider {
-            override fun createFragmentShader(
-                samplerVarName: String,
-                fragCoordsVarName: String
-            ) = "Invalid shader"
-        }
+        val shaderProvider = createCustomShaderProvider(shaderString = "Invalid shader")
         assertThrows(IllegalArgumentException::class.java) {
             runBlocking(glDispatcher) {
-                createOpenGlRendererAndInit(shaderProvider)
+                createOpenGlRendererAndInit(shaderProvider = shaderProvider)
             }
         }
     }
 
     @Test
     fun initByFailedShaderProvider_throwException() {
-        val shaderProvider = object : ShaderProvider {
-            override fun createFragmentShader(
-                samplerVarName: String,
-                fragCoordsVarName: String
-            ) = throw RuntimeException("Failed Shader")
-        }
+        val shaderProvider =
+            createCustomShaderProvider(exceptionToThrow = RuntimeException("Failed Shader"))
         assertThrows(IllegalArgumentException::class.java) {
             runBlocking(glDispatcher) {
-                createOpenGlRendererAndInit(shaderProvider)
+                createOpenGlRendererAndInit(shaderProvider = shaderProvider)
             }
         }
     }
 
     @Test
     fun initByIncorrectSamplerName_throwException() {
-        val shaderProvider = object : ShaderProvider {
-            override fun createFragmentShader(
-                samplerVarName: String,
-                fragCoordsVarName: String
-            ) = getCustomFragmentShader("_mySampler_", fragCoordsVarName)
-        }
+        val shaderProvider = createCustomShaderProvider(samplerVarName = "_mySampler_")
         assertThrows(IllegalArgumentException::class.java) {
             runBlocking(glDispatcher) {
-                createOpenGlRendererAndInit(shaderProvider)
+                createOpenGlRendererAndInit(shaderProvider = shaderProvider)
             }
         }
     }
 
     @Test
     fun initByIncorrectFragCoordsName_throwException() {
-        val shaderProvider = object : ShaderProvider {
-            override fun createFragmentShader(
-                samplerVarName: String,
-                fragCoordsVarName: String
-            ) = getCustomFragmentShader(samplerVarName, "_myFragCoords_")
-        }
+        val shaderProvider = createCustomShaderProvider(fragCoordsVarName = "_myFragCoords_")
         assertThrows(IllegalArgumentException::class.java) {
             runBlocking(glDispatcher) {
-                createOpenGlRendererAndInit(shaderProvider)
+                createOpenGlRendererAndInit(shaderProvider = shaderProvider)
             }
         }
+    }
+
+    @Test
+    fun init_returnsFormattedVersionStrings() = runBlocking(glDispatcher) {
+        val graphicsDeviceInfo = initRender()
+        val versionRegex = "([0-9]+)\\.([0-9]+)"
+        assertThat(graphicsDeviceInfo.glVersion).matches(versionRegex)
+        assertThat(graphicsDeviceInfo.eglVersion).matches(versionRegex)
     }
 
     @Test
     fun reInit(): Unit = runBlocking(glDispatcher) {
         createOpenGlRendererAndInit()
         glRenderer.release()
-        glRenderer.init(ShaderProvider.DEFAULT)
+        glRenderer.init(DynamicRange.SDR, ShaderProvider.DEFAULT)
         assertThat(glRenderer.textureName).isNotEqualTo(0L)
     }
 
+    @SdkSuppress(minSdkVersion = 23)
     @Test
     fun render(): Unit = runBlocking(glDispatcher) {
-        testRenderFromCameraToImageReader()
+        testRender(OutputType.IMAGE_READER)
+    }
+
+    @SdkSuppress(minSdkVersion = 21, maxSdkVersion = 22)
+    @Test
+    fun renderBelowApi23(): Unit = runBlocking(glDispatcher) {
+        testRender(OutputType.SURFACE_TEXTURE)
+    }
+
+    @SdkSuppress(minSdkVersion = 33) // HDR is supported from API 33.
+    @Test
+    fun renderByHlg(): Unit = runBlocking(glDispatcher) {
+        val dynamicRange = DynamicRange.HLG_10_BIT
+        val graphicsDeviceInfo = initRender(dynamicRange = dynamicRange)
+        // Without the EGL_EXT_gl_colorspace_bt2020_hlg extension, we can't set the dataspace on
+        // the output surface, so we shouldn't expect a specified standard and transfer.
+        // As a fallback in the future, we can tonemap to PQ and make use of the
+        // EGL_EXT_gl_colorspace_bt2020_pq, should it exist on the device.
+        val (expectedStandard, expectedTransfer) =
+            if (graphicsDeviceInfo.eglExtensions.contains("EGL_EXT_gl_colorspace_bt2020_hlg")) {
+                Pair(DataSpace.STANDARD_BT2020, DataSpace.TRANSFER_HLG)
+            } else {
+                Pair(null, null)
+            }
+
+        testRender(
+            OutputType.SURFACE_TEXTURE, dynamicRange = dynamicRange,
+            shouldInit = false, /* already initialized */
+            expectedStandard = expectedStandard,
+            expectedTransfer = expectedTransfer
+        )
+    }
+
+    @SdkSuppress(minSdkVersion = 23)
+    @Test
+    fun renderByCustomShader(): Unit = runBlocking(glDispatcher) {
+        testRender(OutputType.IMAGE_READER, shaderProvider = createCustomShaderProvider())
+    }
+
+    @SdkSuppress(minSdkVersion = 21, maxSdkVersion = 22)
+    @Test
+    fun renderByCustomShaderBelowApi23(): Unit = runBlocking(glDispatcher) {
+        testRender(OutputType.SURFACE_TEXTURE, shaderProvider = createCustomShaderProvider())
     }
 
     @Test
-    fun renderByCustomShader(): Unit = runBlocking(glDispatcher) {
-        val shaderProvider = object : ShaderProvider {
-            override fun createFragmentShader(
-                samplerVarName: String,
-                fragCoordsVarName: String
-            ): String = getCustomFragmentShader(samplerVarName, fragCoordsVarName)
-        }
-        testRenderFromCameraToImageReader(shaderProvider)
+    fun unregisterOutputSurface(): Unit = runBlocking(glDispatcher) {
+        // Arrange.
+        createOpenGlRendererAndInit()
+
+        // Prepare output
+        val outputSurface = createAutoReleaseSurface()
+
+        // Assert.
+        glRenderer.registerOutputSurface(outputSurface)
+        assertThat(glRenderer.mOutputSurfaceMap[outputSurface]).isNotNull()
+        glRenderer.unregisterOutputSurface(outputSurface)
+        assertThat(glRenderer.mOutputSurfaceMap[outputSurface]).isNull()
     }
 
-    private suspend fun testRenderFromCameraToImageReader(
-        shaderProvider: ShaderProvider = ShaderProvider.DEFAULT
+    private suspend fun initRender(
+        dynamicRange: DynamicRange = DynamicRange.SDR,
+        shaderProvider: ShaderProvider = ShaderProvider.DEFAULT,
+    ): OpenGlRenderer.GraphicDeviceInfo {
+        prepareCamera()
+        assumeDynamicRange(dynamicRange)
+        return createOpenGlRendererAndInit(
+            dynamicRange = dynamicRange,
+            shaderProvider = shaderProvider
+        )
+    }
+
+    private suspend fun testRender(
+        outputType: OutputType,
+        dynamicRange: DynamicRange = DynamicRange.SDR,
+        shaderProvider: ShaderProvider = ShaderProvider.DEFAULT,
+        shouldInit: Boolean = true,
+        expectedStandard: Int? = null,
+        expectedTransfer: Int? = null
     ) {
         // Arrange.
-        createOpenGlRendererAndInit(shaderProvider = shaderProvider)
+        if (shouldInit) {
+            initRender(dynamicRange, shaderProvider)
+        }
 
         // Prepare input
         val surfaceTexture = SurfaceTexture(glRenderer.textureName).apply {
             setDefaultBufferSize(WIDTH, HEIGHT)
         }
         val inputSurface = Surface(surfaceTexture)
-        openCameraAndSetRepeating(inputSurface)
+        openCameraAndSetRepeating(inputSurface, dynamicRange)
         cameraDeviceHolder.closedFuture.addListener({
             inputSurface.release()
             surfaceTexture.release()
         }, CameraXExecutors.directExecutor())
 
         // Prepare output
-        val imageReader =
-            ImageReader.newInstance(WIDTH, HEIGHT, ImageFormat.PRIVATE, 2)
-        val imageFlow = callbackFlow<Image> {
-            val listener = ImageReader.OnImageAvailableListener {
-                trySend(it.acquireLatestImage())
-            }
-            imageReader.setOnImageAvailableListener(listener, glHandler)
-            awaitClose { imageReader.close() }
-        }
+        renderOutput = RenderOutput.createRenderOutput(outputType)
+        val outputSurface = renderOutput.surface
 
         // Bridge input to output
+        glRenderer.registerOutputSurface(outputSurface)
         surfaceTexture.setOnFrameAvailableListener({
             it.updateTexImage()
-            glRenderer.setOutputSurface(imageReader.surface)
-            glRenderer.render(0L, IDENTITY_MATRIX)
+            glRenderer.render(0L, IDENTITY_MATRIX, outputSurface)
         }, glHandler)
 
-        val scope = CoroutineScope(glDispatcher)
-        val imageCollectJob = scope.launch {
-            imageFlow.collectIndexed { index, image ->
-                image.close()
-                if (index >= 4) {
-                    scope.cancel()
-                }
+        // Assert.
+        assertThat(renderOutput.await(/*imageCount=*/5, /*timeoutInMs=*/10_000L)).isTrue()
+        expectedStandard?.let {
+            if (Build.VERSION.SDK_INT >= 33) {
+                assertThat(DataSpace.getStandard(renderOutput.dataSpace)).isEqualTo(it)
+            } else {
+                fail("Color standard only supported on API 33 and above.")
             }
         }
-
-        // Assert.
-        withTimeoutOrNull(10_000L) {
-            imageCollectJob.join()
-            true
-        } ?: fail("Timed out to receive images")
+        expectedTransfer?.let {
+            if (Build.VERSION.SDK_INT >= 33) {
+                assertThat(DataSpace.getTransfer(renderOutput.dataSpace)).isEqualTo(it)
+            } else {
+                fail("Transfer function only supported on API 33 and above.")
+            }
+        }
     }
 
     private suspend fun createOpenGlRendererAndInit(
+        dynamicRange: DynamicRange = DynamicRange.SDR,
         shaderProvider: ShaderProvider = ShaderProvider.DEFAULT
-    ) {
+    ): OpenGlRenderer.GraphicDeviceInfo {
         createOpenGlRenderer()
 
-        if (currentCoroutineContext()[ContinuationInterceptor] == glDispatcher) {
+        return if (currentCoroutineContext()[ContinuationInterceptor] == glDispatcher) {
             // same dispatcher, init directly
-            glRenderer.init(shaderProvider)
+            glRenderer.init(dynamicRange, shaderProvider)
         } else {
             runBlocking(glDispatcher) {
-                glRenderer.init(shaderProvider)
+                return@runBlocking glRenderer.init(dynamicRange, shaderProvider)
             }
         }
     }
 
-    private fun getCustomFragmentShader(samplerVarName: String, fragCoordsVarName: String) =
-        String.format(
-            Locale.US,
-            CUSTOM_SHADER_FORMAT,
-            samplerVarName,
-            fragCoordsVarName,
-            samplerVarName,
-            fragCoordsVarName
-        )
+    private fun createCustomShaderProvider(
+        samplerVarName: String? = null,
+        fragCoordsVarName: String? = null,
+        shaderString: String? = null,
+        exceptionToThrow: Exception? = null,
+    ) = object : ShaderProvider {
+        override fun createFragmentShader(
+            correctSamplerVarName: String,
+            correctFragCoordsVarName: String
+        ): String {
+            exceptionToThrow?.let { throw it }
+            return shaderString ?: String.format(
+                Locale.US,
+                CUSTOM_SHADER_FORMAT,
+                samplerVarName ?: correctSamplerVarName,
+                fragCoordsVarName ?: correctFragCoordsVarName,
+                samplerVarName ?: correctSamplerVarName,
+                fragCoordsVarName ?: correctFragCoordsVarName
+            )
+        }
+    }
 
     private fun createOpenGlRenderer() {
         glRenderer = OpenGlRenderer()
     }
 
-    private fun openCameraAndSetRepeating(surface: Surface) {
-        cameraDeviceHolder = CameraUtil.getCameraDevice(null)
-        val captureSessionHolder = cameraDeviceHolder.createCaptureSession(listOf(surface))
+    private fun createAutoReleaseSurface(): Surface {
+        val surfaceTexture = SurfaceTexture(0)
+        surfaceTexture.setDefaultBufferSize(WIDTH, HEIGHT)
+        surfaceTexturesToRelease.add(surfaceTexture)
+        val surface = Surface(surfaceTexture)
+        surfacesToRelease.add(surface)
+
+        return surface
+    }
+
+    private fun prepareCamera() {
+        assumeTrue(CameraUtil.hasCameraWithLensFacing(lensFacing))
+        cameraId = CameraUtil.getCameraIdWithLensFacing(lensFacing)!!
+        val cameraCharacteristics = CameraUtil.getCameraCharacteristics(lensFacing)!!
+        cameraCharacteristicsCompat = CameraCharacteristicsCompat.toCameraCharacteristicsCompat(
+            cameraCharacteristics,
+            cameraId
+        )
+    }
+
+    private fun assumeDynamicRange(dynamicRange: DynamicRange) {
+        if (dynamicRange == DynamicRange.SDR) {
+            // SDR is always supported.
+            return
+        }
+        val supportedDynamicRange =
+            DynamicRangesCompat.fromCameraCharacteristics(cameraCharacteristicsCompat)
+                .supportedDynamicRanges
+        assumeTrue(
+            "$dynamicRange is not in supported set $supportedDynamicRange",
+            supportedDynamicRange.contains(dynamicRange)
+        )
+    }
+
+    private fun openCameraAndSetRepeating(surface: Surface, dynamicRange: DynamicRange) {
+        // Open camera
+        cameraDeviceHolder = CameraUtil.getCameraDevice(cameraId, null)
+
+        // Create capture session
+        val captureSessionHolder = if (dynamicRange == DynamicRange.SDR) {
+            cameraDeviceHolder.createCaptureSession(listOf(surface))
+        } else {
+            if (Build.VERSION.SDK_INT >= 33) {
+                val outputConfiguration = OutputConfiguration(surface).apply {
+                    dynamicRangeProfile = dynamicRange.toDynamicRangeProfile()
+                }
+                cameraDeviceHolder.createCaptureSessionByOutputConfigurations(
+                    listOf(outputConfiguration)
+                )
+            } else {
+                throw AssertionError("HDR is supported from API 33")
+            }
+        }
+
+        // Set repeating
         captureSessionHolder.startRepeating(
             CameraDevice.TEMPLATE_PREVIEW,
             listOf(surface),
             null,
             null
         )
+    }
+
+    @RequiresApi(33)
+    private fun DynamicRange.toDynamicRangeProfile(): Long {
+        val dynamicRangeProfiles =
+            DynamicRangesCompat.fromCameraCharacteristics(cameraCharacteristicsCompat)
+                .toDynamicRangeProfiles()!!
+        return DynamicRangeConversions.dynamicRangeToFirstSupportedProfile(
+            this,
+            dynamicRangeProfiles
+        )!!
     }
 }

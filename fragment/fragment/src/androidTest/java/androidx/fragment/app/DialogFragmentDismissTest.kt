@@ -19,6 +19,7 @@ package androidx.fragment.app
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.DialogInterface
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import androidx.fragment.app.test.EmptyFragmentTestActivity
@@ -26,12 +27,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertWithMessage
-import org.junit.Rule
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import leakcanary.DetectLeaksAfterTestSuccess
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.RuleChain
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
 /**
  * Class representing the different ways of dismissing a [DialogFragment]
@@ -99,13 +102,22 @@ class DialogFragmentDismissTest(
     }
 
     @Suppress("DEPRECATION")
+    val activityTestRule =
+        androidx.test.rule.ActivityTestRule(EmptyFragmentTestActivity::class.java)
+
+    // Detect leaks BEFORE and AFTER activity is destroyed
     @get:Rule
-    var activityTestRule = androidx.test.rule.ActivityTestRule(
-        EmptyFragmentTestActivity::class.java
-    )
+    val ruleChain: RuleChain = RuleChain.outerRule(DetectLeaksAfterTestSuccess())
+        .around(activityTestRule)
 
     @Test
     fun testDialogFragmentDismiss() {
+        // There is a leak in API 30 InputMethodManager that causes this test to be flaky.
+        // Once https://github.com/square/leakcanary/issues/2592 is addressed we can upgrade
+        // leak canary and remove this.
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.R) {
+            return
+        }
         val fragment = TestDialogFragment()
         activityTestRule.runOnUiThread {
             fragment.showNow(activityTestRule.activity.supportFragmentManager, null)
@@ -118,7 +130,9 @@ class DialogFragmentDismissTest(
         var dialogIsNonNull = false
         var isShowing = false
         var onDismissCalledCount = 0
-        val countDownLatch = CountDownLatch(3)
+        val onStopCountDownLatch = CountDownLatch(1)
+        val onDestroyCountDownLatch = CountDownLatch(1)
+        val dismissCountDownLatch = CountDownLatch(1)
         activityTestRule.runOnUiThread {
             fragment.lifecycle.addObserver(
                 LifecycleEventObserver { _, event ->
@@ -126,20 +140,18 @@ class DialogFragmentDismissTest(
                         val dialog = fragment.dialog
                         dialogIsNonNull = dialog != null
                         isShowing = dialog != null && dialog.isShowing
-                        countDownLatch.countDown()
+                        onStopCountDownLatch.countDown()
                     } else if (event == Lifecycle.Event.ON_DESTROY) {
                         onDismissCalledCount = fragment.onDismissCalledCount
-                        countDownLatch.countDown()
+                        onDestroyCountDownLatch.countDown()
                     }
                 }
             )
         }
         var dismissOnMainThread = false
-        var dismissCalled = false
         fragment.dismissCallback = {
-            dismissCalled = true
             dismissOnMainThread = Looper.myLooper() == Looper.getMainLooper()
-            countDownLatch.countDown()
+            dismissCountDownLatch.countDown()
         }
 
         if (mainThread) {
@@ -150,13 +162,16 @@ class DialogFragmentDismissTest(
             operation.run(fragment)
         }
 
+        assertWithMessage("Timed out waiting for ON_STOP")
+            .that(onStopCountDownLatch.await(1, TimeUnit.SECONDS))
+            .isTrue()
+        assertWithMessage("Timed out waiting for onDismiss callback")
+            .that(dismissCountDownLatch.await(2, TimeUnit.SECONDS))
+            .isTrue()
         assertWithMessage("Timed out waiting for ON_DESTROY")
-            .that(countDownLatch.await(5, TimeUnit.SECONDS))
+            .that(onDestroyCountDownLatch.await(2, TimeUnit.SECONDS))
             .isTrue()
 
-        assertWithMessage("Dialog should be dismissed")
-            .that(dismissCalled)
-            .isTrue()
         assertWithMessage("Dismiss should always be called on the main thread")
             .that(dismissOnMainThread)
             .isTrue()
@@ -169,8 +184,7 @@ class DialogFragmentDismissTest(
 
         if (operation is ActivityFinish) {
             assertWithMessage(
-                "Dialog should still be showing in onStop() during " +
-                    "the normal lifecycle"
+                "Dialog should still be showing in onStop() during the normal lifecycle"
             )
                 .that(isShowing)
                 .isTrue()

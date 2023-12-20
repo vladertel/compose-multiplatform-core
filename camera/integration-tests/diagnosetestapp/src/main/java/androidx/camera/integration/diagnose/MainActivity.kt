@@ -28,42 +28,43 @@ import android.util.Size
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
-import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.mlkit.vision.MlKitAnalyzer
+import androidx.camera.video.MediaStoreOutputOptions
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.CameraController
+import androidx.camera.view.CameraController.IMAGE_ANALYSIS
 import androidx.camera.view.CameraController.IMAGE_CAPTURE
 import androidx.camera.view.CameraController.VIDEO_CAPTURE
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
-import androidx.camera.view.video.ExperimentalVideo
-import androidx.camera.view.video.OnVideoSavedCallback
-import androidx.camera.view.video.OutputFileOptions
-import androidx.camera.view.video.OutputFileResults
+import androidx.camera.view.video.AudioConfig
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.concurrent.ExecutorService
-import androidx.camera.mlkit.vision.MlKitAnalyzer
-import androidx.camera.view.CameraController.IMAGE_ANALYSIS
 import androidx.core.util.Preconditions
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.tabs.TabLayout
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.util.concurrent.Executor
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@SuppressLint("NullAnnotationGroup", "MissingPermission")
 class MainActivity : AppCompatActivity() {
 
     private lateinit var cameraController: LifecycleCameraController
+    private lateinit var activeRecording: Recording
     private lateinit var previewView: PreviewView
     private lateinit var overlayView: OverlayView
     private lateinit var executor: Executor
@@ -72,6 +73,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var barcodeScanner: BarcodeScanner
     private lateinit var analyzer: MlKitAnalyzer
     private lateinit var diagnoseBtn: Button
+    private lateinit var imageCaptureBtn: Button
+    private lateinit var videoCaptureBtn: Button
     private lateinit var calibrationExecutor: ExecutorService
     private var calibrationThreadId: Long = -1
     private lateinit var diagnosisDispatcher: ExecutorCoroutineDispatcher
@@ -89,6 +92,10 @@ class MainActivity : AppCompatActivity() {
         diagnosis = Diagnosis()
         barcodeScanner = BarcodeScanning.getClient()
         diagnoseBtn = findViewById(R.id.diagnose_btn)
+        imageCaptureBtn = findViewById(R.id.image_capture_btn)
+        imageCaptureBtn.visibility = View.INVISIBLE
+        videoCaptureBtn = findViewById(R.id.video_capture_btn)
+        videoCaptureBtn.visibility = View.INVISIBLE
         calibrationExecutor = Executors.newSingleThreadExecutor() { runnable ->
             val thread = Executors.defaultThreadFactory().newThread(runnable)
             thread.name = "CalibrationThread"
@@ -118,7 +125,6 @@ class MainActivity : AppCompatActivity() {
         tabLayout.addTab(diagnoseTab)
 
         // Setup UI events
-        // TODO: switch TabItems to TabLayout.Tab for selecting on id
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 Log.d(TAG, "tab selected id:${tab?.view?.id}")
@@ -132,35 +138,120 @@ class MainActivity : AppCompatActivity() {
 
             override fun onTabUnselected(tab: TabLayout.Tab?) {
                 Log.d(TAG, "tab unselected:${tab?.view?.id}")
-                if (tab?.view?.id == R.id.diagnose) {
-                    // disable overlay
-                    overlayView.visibility = View.INVISIBLE
-                    // unbind MLKit analyzer
-                    cameraController.clearImageAnalysisAnalyzer()
-                }
+                deselectMode(tab?.view?.id)
             }
         })
+
+        imageCaptureBtn.setOnClickListener {
+            val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
+                .format(System.currentTimeMillis())
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
+                }
+            }
+
+            // Create output options object which contains file + metadata
+            val outputOptions = ImageCapture.OutputFileOptions
+                .Builder(
+                    contentResolver,
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    contentValues
+                )
+                .build()
+
+            // Set up image capture listener, which is triggered after photo has
+            // been taken
+            cameraController.takePicture(
+                outputOptions,
+                executor,
+                object : ImageCapture.OnImageSavedCallback {
+                    override fun onError(exc: ImageCaptureException) {
+                        val msg = "Photo capture failed: ${exc.message}"
+                        showToast(msg)
+                    }
+
+                    override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                        val msg = "Photo capture succeeded: ${output.savedUri}"
+                        showToast(msg)
+                    }
+                }
+            )
+        }
+
+        videoCaptureBtn.setOnClickListener {
+            // determine whether the onclick is to start recording or stop recording
+            if (cameraController.isRecording) {
+                activeRecording.stop()
+                videoCaptureBtn.setText(R.string.start_video_capture)
+                val msg = "video stopped recording"
+                showToast(msg)
+            } else {
+                // building file output
+                val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
+                    .format(System.currentTimeMillis())
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
+                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+                        put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/CameraX-Video")
+                    }
+                }
+                val outputOptions = MediaStoreOutputOptions
+                    .Builder(contentResolver, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
+                    .setContentValues(contentValues)
+                    .build()
+                Log.d(TAG, "finished composing video name")
+
+                val audioConfig = AudioConfig.create(true)
+
+                // start recording
+                try {
+                    activeRecording = cameraController.startRecording(
+                        outputOptions, audioConfig, executor
+                    ) { event ->
+                        if (event is VideoRecordEvent.Finalize) {
+                            val uri = event.outputResults.outputUri
+                            if (event.error == VideoRecordEvent.Finalize.ERROR_NONE) {
+                                val msg = "Video record succeeded: $uri"
+                                showToast(msg)
+                            } else {
+                                Log.e(TAG, "Video saving failed: ${event.cause}")
+                            }
+                        }
+                    }
+                    videoCaptureBtn.setText(R.string.stop_video_capture)
+                    val msg = "video recording"
+                    showToast(msg)
+                } catch (exception: RuntimeException) {
+                    Log.e(TAG, "Video failed to record: " + exception.message)
+                }
+            }
+        }
 
         diagnoseBtn.setOnClickListener {
             lifecycleScope.launch {
                 try {
                     val reportFile = withContext(diagnosisDispatcher) {
-                        // TODO: create functionality for adding diagnosis task and setting is aggregated
+                        // creating tasks to diagnose
                         val taskList = mutableListOf<DiagnosisTask>()
+                        taskList.add(CollectDeviceInfoTask())
+                        taskList.add(ImageCaptureTask())
                         val isAggregated = true
                         Log.i(TAG, "dispatcher: ${Thread.currentThread().name}")
                         diagnosis.diagnose(baseContext, taskList, cameraController, isAggregated)
                     }
                     val msg: String = if (reportFile != null) {
-                        Log.d(TAG, "file at ${reportFile.path}")
-                        "Successfully collected device info"
+                        "Successfully collected diagnosis to ${reportFile.path}"
                     } else {
                         "Diagnosis failed: No file"
                     }
-                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                    showToast(msg)
                 } catch (e: IOException) {
                     val msg = "Failed to collect information"
-                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                    showToast(msg)
                     Log.e(TAG, "IOException caught: ${e.message}")
                 }
             }
@@ -177,11 +268,8 @@ class MainActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 startCamera()
             } else {
-                Toast.makeText(
-                    this,
-                    "Permissions not granted by the user.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                val msg = "Permissions not granted by the user"
+                showToast(msg)
                 // TODO: fail gracefully
                 finish()
             }
@@ -196,115 +284,33 @@ class MainActivity : AppCompatActivity() {
 
     private fun selectMode(id: Int?) {
         when (id) {
-            R.id.image_capture -> takePhoto()
-            R.id.video_capture -> captureVideo()
+            R.id.image_capture -> photoMode()
+            R.id.video_capture -> videoMode()
             R.id.diagnose -> diagnose()
         }
     }
 
-    private fun takePhoto() {
-        cameraController.setEnabledUseCases(IMAGE_CAPTURE)
-
-        val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
-            .format(System.currentTimeMillis())
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
+    private fun deselectMode(id: Int?) {
+        when (id) {
+            R.id.image_capture -> imageCaptureBtn.visibility = View.INVISIBLE
+            R.id.video_capture -> videoCaptureBtn.visibility = View.INVISIBLE
+            R.id.diagnose -> {
+                // disable overlay
+                overlayView.visibility = View.INVISIBLE
+                // unbind MLKit analyzer
+                cameraController.clearImageAnalysisAnalyzer()
             }
         }
-
-        // Create output options object which contains file + metadata
-        val outputOptions = ImageCapture.OutputFileOptions
-            .Builder(
-                contentResolver,
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                contentValues
-            )
-            .build()
-
-        // Set up image capture listener, which is triggered after photo has
-        // been taken
-        cameraController.takePicture(
-            outputOptions,
-            executor,
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onError(exc: ImageCaptureException) {
-                    val msg = "Photo capture failed: ${exc.message}"
-                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                    Log.d(TAG, msg)
-                }
-
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val msg = "Photo capture succeeded: ${output.savedUri}"
-                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                    Log.d(TAG, msg)
-                }
-            }
-        )
     }
 
-    @SuppressLint("NullAnnotationGroup")
-    @OptIn(ExperimentalVideo::class)
-    private fun captureVideo() {
-        // determine whether the onclick is to start recording or stop recording
-        if (cameraController.isRecording) {
-            cameraController.stopRecording()
-            val msg = "video stopped recording"
-            Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-            Log.d(TAG, msg)
-        } else {
-            // enabling video capture
-            cameraController.setEnabledUseCases(VIDEO_CAPTURE)
+    private fun photoMode() {
+        cameraController.setEnabledUseCases(IMAGE_CAPTURE)
+        imageCaptureBtn.visibility = View.VISIBLE
+    }
 
-            // building file output
-            val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
-                .format(System.currentTimeMillis())
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-                put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
-                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                    put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/CameraX-Video")
-                }
-            }
-            val outputFileOptions = OutputFileOptions
-                .builder(
-                    contentResolver,
-                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                    contentValues
-                )
-                .build()
-            Log.d(TAG, "finished composing video name")
-
-            // start recording
-            try {
-                cameraController.startRecording(
-                    outputFileOptions,
-                    executor,
-                    object : OnVideoSavedCallback {
-                        override fun onVideoSaved(outputFileResults: OutputFileResults) {
-                            val msg = "Video record succeeded: " + outputFileResults.savedUri
-                            Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                            Log.d(TAG, msg)
-                        }
-
-                        override fun onError(
-                            videoCaptureError: Int,
-                            message: String,
-                            cause: Throwable?
-                        ) {
-                            Log.e(TAG, "Video saving failed: $message")
-                        }
-                    }
-                )
-                val msg = "video recording"
-                Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                Log.d(TAG, msg)
-            } catch (exception: RuntimeException) {
-                Log.e(TAG, "Video failed to record: " + exception.message)
-            }
-        }
+    private fun videoMode() {
+        cameraController.setEnabledUseCases(VIDEO_CAPTURE)
+        videoCaptureBtn.visibility = View.VISIBLE
     }
 
     private fun diagnose() {
@@ -349,6 +355,11 @@ class MainActivity : AppCompatActivity() {
     private fun checkCalibrationThread() {
         Preconditions.checkState(calibrationThreadId == Thread.currentThread().id,
             "Not working on Calibration Thread")
+    }
+
+    private fun showToast(msg: String) {
+        Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+        Log.d(TAG, msg)
     }
 
     override fun onDestroy() {

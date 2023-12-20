@@ -17,7 +17,10 @@
 package androidx.camera.core.impl.utils;
 
 import static androidx.camera.core.impl.utils.TransformUtils.getExifTransform;
+import static androidx.camera.core.impl.utils.TransformUtils.getRotationDegrees;
 import static androidx.camera.core.impl.utils.TransformUtils.rectToVertices;
+import static androidx.camera.core.impl.utils.TransformUtils.rotateSize;
+import static androidx.camera.core.impl.utils.TransformUtils.within360;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -44,6 +47,109 @@ public class TransformUtilsTest {
 
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
+
+    @Test
+    public void reversSize() {
+        assertThat(TransformUtils.reverseSize(new Size(640, 480))).isEqualTo(new Size(480, 640));
+    }
+
+    @Test
+    public void rotateSize_multipleOf90() {
+        Size size = new Size(WIDTH, HEIGHT);
+        //noinspection SuspiciousNameCombination
+        Size rotatedSize = new Size(HEIGHT, WIDTH);
+
+        assertThat(rotateSize(size, 0)).isEqualTo(size);
+        assertThat(rotateSize(size, 90)).isEqualTo(rotatedSize);
+        assertThat(rotateSize(size, 180)).isEqualTo(size);
+        assertThat(rotateSize(size, 270)).isEqualTo(rotatedSize);
+        assertThat(rotateSize(size, 360)).isEqualTo(size);
+        assertThat(rotateSize(size, 450)).isEqualTo(rotatedSize);
+        assertThat(rotateSize(size, -90)).isEqualTo(rotatedSize);
+        assertThat(rotateSize(size, -450)).isEqualTo(rotatedSize);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void rotateSize_notMultipleOf90() {
+        rotateSize(new Size(WIDTH, HEIGHT), 1);
+    }
+
+    @Test
+    public void within360_forVariousValues() {
+        // Positive degrees
+        assertThat(within360(90)).isEqualTo(90);
+        assertThat(within360(360)).isEqualTo(0);
+        assertThat(within360(400)).isEqualTo(40);
+        assertThat(within360(800)).isEqualTo(80);
+        // Negative degrees
+        assertThat(within360(-90)).isEqualTo(270);
+        assertThat(within360(-200)).isEqualTo(160);
+        assertThat(within360(-360)).isEqualTo(0);
+        assertThat(within360(-400)).isEqualTo(320);
+        assertThat(within360(-800)).isEqualTo(280);
+    }
+
+    @Test
+    public void getRectToRect_withRotation() {
+        // Arrange.
+        // From 10x10 with xy-offset 10 to 100x100 with xy-offset 0
+        RectF sourceRect = new RectF(10, 10f, 20f, 20f);
+        RectF targetRect = new RectF(0f, 0f, 100f, 100f);
+
+        RectF testRect0 = new RectF(11f, 11f, 12f, 12f);
+        RectF testRect90 = new RectF(testRect0);
+        RectF testRect180 = new RectF(testRect0);
+        RectF testRect270 = new RectF(testRect0);
+        RectF expectRect0 = new RectF(10f, 10f, 20f, 20f);
+        RectF expectRect90 = new RectF(80f, 10f, 90f, 20f);
+        RectF expectRect180 = new RectF(80f, 80f, 90f, 90f);
+        RectF expectRect270 = new RectF(10f, 80f, 20f, 90f);
+
+        // Act.
+        TransformUtils.getRectToRect(sourceRect, targetRect, 0).mapRect(testRect0);
+        TransformUtils.getRectToRect(sourceRect, targetRect, 90).mapRect(testRect90);
+        TransformUtils.getRectToRect(sourceRect, targetRect, 180).mapRect(testRect180);
+        TransformUtils.getRectToRect(sourceRect, targetRect, 270).mapRect(testRect270);
+
+        // Assert.
+        assertThat(testRect0).isEqualTo(expectRect0);
+        assertThat(testRect90).isEqualTo(expectRect90);
+        assertThat(testRect180).isEqualTo(expectRect180);
+        assertThat(testRect270).isEqualTo(expectRect270);
+    }
+
+    @Test
+    public void getRectToRect_withRotationAndMirroring() {
+        // Arrange.
+        // From 10x10 with xy-offset 10 to 100x100 with xy-offset 0
+        RectF sourceRect = new RectF(10, 10f, 20f, 20f);
+        RectF targetRect = new RectF(0f, 0f, 100f, 100f);
+
+        RectF testRect0 = new RectF(11f, 11f, 12f, 12f);
+        RectF testRect90 = new RectF(testRect0);
+        RectF testRect180 = new RectF(testRect0);
+        RectF testRect270 = new RectF(testRect0);
+        RectF expectRect0 = new RectF(80f, 10f, 90f, 20f);
+        RectF expectRect90 = new RectF(10f, 10f, 20f, 20f);
+        RectF expectRect180 = new RectF(10f, 80f, 20f, 90f);
+        RectF expectRect270 = new RectF(80f, 80f, 90f, 90f);
+
+        // Act.
+        TransformUtils.getRectToRect(sourceRect, targetRect, 0, true)
+                .mapRect(testRect0);
+        TransformUtils.getRectToRect(sourceRect, targetRect, 90, true)
+                .mapRect(testRect90);
+        TransformUtils.getRectToRect(sourceRect, targetRect, 180, true)
+                .mapRect(testRect180);
+        TransformUtils.getRectToRect(sourceRect, targetRect, 270, true)
+                .mapRect(testRect270);
+
+        // Assert.
+        assertThat(testRect0).isEqualTo(expectRect0);
+        assertThat(testRect90).isEqualTo(expectRect90);
+        assertThat(testRect180).isEqualTo(expectRect180);
+        assertThat(testRect270).isEqualTo(expectRect270);
+    }
 
     @Test
     public void viewPortMatchAllowRoundingError() {
@@ -123,6 +229,15 @@ public class TransformUtilsTest {
         });
     }
 
+    @Test
+    public void getRotationDegrees_canReturnCorrectly() {
+        assertThat(getRotationDegrees(createMatrixWithRotation(0))).isEqualTo(0);
+        assertThat(getRotationDegrees(createMatrixWithRotation(90))).isEqualTo(90);
+        assertThat(getRotationDegrees(createMatrixWithRotation(180))).isEqualTo(180);
+        assertThat(getRotationDegrees(createMatrixWithRotation(270))).isEqualTo(270);
+        assertThat(getRotationDegrees(createMatrixWithRotation(-90))).isEqualTo(270);
+    }
+
     private void verifyExifOrientation(int orientationFlag, float[] mappedVertices) {
         float[] vertices = rectToVertices(new RectF(0, 0, WIDTH, HEIGHT));
         Matrix matrix = getExifTransform(orientationFlag, WIDTH, HEIGHT);
@@ -130,5 +245,11 @@ public class TransformUtilsTest {
         for (int i = 0; i < vertices.length; i++) {
             assertThat(vertices[i]).isWithin(1E-4F).of(mappedVertices[i]);
         }
+    }
+
+    private Matrix createMatrixWithRotation(int rotationDegrees) {
+        Matrix result = new Matrix();
+        result.postRotate(rotationDegrees);
+        return result;
     }
 }

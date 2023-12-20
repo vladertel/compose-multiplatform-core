@@ -155,7 +155,7 @@ public final class PrintHelper {
      */
     public static boolean systemSupportsPrint() {
         // Supported on Android 4.4 or later.
-        return Build.VERSION.SDK_INT >= 19;
+        return true;
     }
 
     /**
@@ -233,7 +233,7 @@ public final class PrintHelper {
      */
     public int getOrientation() {
         // Unset defaults to landscape but might turn image
-        if (Build.VERSION.SDK_INT >= 19 && mOrientation == 0) {
+        if (mOrientation == 0) {
             return ORIENTATION_LANDSCAPE;
         }
         return mOrientation;
@@ -259,7 +259,7 @@ public final class PrintHelper {
      */
     public void printBitmap(@NonNull final String jobName, @NonNull final Bitmap bitmap,
             @Nullable final OnPrintFinishCallback callback) {
-        if (Build.VERSION.SDK_INT < 19 || bitmap == null) {
+        if (bitmap == null) {
             return;
         }
 
@@ -357,10 +357,6 @@ public final class PrintHelper {
     public void printBitmap(@NonNull final String jobName, @NonNull final Uri imageFile,
             @Nullable final OnPrintFinishCallback callback)
             throws FileNotFoundException {
-        if (Build.VERSION.SDK_INT < 19) {
-            return;
-        }
-
         PrintDocumentAdapter printDocumentAdapter = new PrintUriAdapter(jobName, imageFile,
                 callback, mScaleMode);
 
@@ -644,7 +640,7 @@ public final class PrintHelper {
             @Override
             protected Throwable doInBackground(Void... params) {
                 try {
-                    if (Api16Impl.isCanceled(cancellationSignal)) {
+                    if (cancellationSignal.isCanceled()) {
                         return null;
                     }
 
@@ -654,7 +650,7 @@ public final class PrintHelper {
                     Bitmap maybeGrayscale = convertBitmapForColorMode(bitmap,
                             Api19Impl.getColorMode(pdfAttributes));
 
-                    if (Api16Impl.isCanceled(cancellationSignal)) {
+                    if (cancellationSignal.isCanceled()) {
                         return null;
                     }
 
@@ -699,7 +695,7 @@ public final class PrintHelper {
                         // Finish the page.
                         Api19Impl.finishPage(pdfDocument, page);
 
-                        if (Api16Impl.isCanceled(cancellationSignal)) {
+                        if (cancellationSignal.isCanceled()) {
                             return null;
                         }
 
@@ -729,7 +725,7 @@ public final class PrintHelper {
 
             @Override
             protected void onPostExecute(Throwable throwable) {
-                if (Api16Impl.isCanceled(cancellationSignal)) {
+                if (cancellationSignal.isCanceled()) {
                     // Cancelled.
                     Api19Impl.onWriteCancelled(writeResultCallback);
                 } else if (throwable == null) {
@@ -843,19 +839,6 @@ public final class PrintHelper {
         c.setBitmap(null);
 
         return grayscale;
-    }
-
-    @RequiresApi(16)
-    static class Api16Impl {
-        private Api16Impl() {
-            // This class is not instantiable.
-        }
-
-        @DoNotInline
-        static boolean isCanceled(CancellationSignal cancellationSignal) {
-            return cancellationSignal.isCanceled();
-        }
-
     }
 
     @RequiresApi(19)

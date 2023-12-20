@@ -16,11 +16,17 @@
 
 package androidx.compose.ui.input.pointer
 
+import androidx.collection.LongSparseArray
 import androidx.compose.runtime.collection.MutableVector
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.util.PointerIdArray
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.InternalCoreApi
+import androidx.compose.ui.node.Nodes
+import androidx.compose.ui.node.dispatchForKind
+import androidx.compose.ui.node.layoutCoordinates
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEach
 
@@ -31,43 +37,43 @@ import androidx.compose.ui.util.fastForEach
  * @property rootCoordinates the root [LayoutCoordinates] that [PointerInputChange]s will be
  * relative to.
  */
-@OptIn(InternalCoreApi::class)
 internal class HitPathTracker(private val rootCoordinates: LayoutCoordinates) {
 
     /*@VisibleForTesting*/
     internal val root: NodeParent = NodeParent()
 
     /**
-     * Associates a [pointerId] to a list of hit [pointerInputFilters] and keeps track of them.
+     * Associates a [pointerId] to a list of hit [pointerInputNodes] and keeps track of them.
      *
      * This enables future calls to [dispatchChanges] to dispatch the correct [PointerInputChange]s
      * to the right [PointerInputFilter]s at the right time.
      *
-     * If [pointerInputFilters] is empty, nothing will be added.
+     * If [pointerInputNodes] is empty, nothing will be added.
      *
      * @param pointerId The id of the pointer that was hit tested against [PointerInputFilter]s
-     * @param pointerInputFilters The [PointerInputFilter]s that were hit by [pointerId].  Must be
+     * @param pointerInputNodes The [PointerInputFilter]s that were hit by [pointerId].  Must be
      * ordered from ancestor to descendant.
      */
-    fun addHitPath(pointerId: PointerId, pointerInputFilters: List<PointerInputFilter>) {
+    fun addHitPath(pointerId: PointerId, pointerInputNodes: List<Modifier.Node>) {
         var parent: NodeParent = root
         var merging = true
-        eachPin@ for (i in pointerInputFilters.indices) {
-            val pointerInputFilter = pointerInputFilters[i]
+        eachPin@ for (i in pointerInputNodes.indices) {
+            val pointerInputNode = pointerInputNodes[i]
             if (merging) {
                 val node = parent.children.firstOrNull {
-                    it.pointerInputFilter == pointerInputFilter
+                    it.modifierNode == pointerInputNode
                 }
                 if (node != null) {
                     node.markIsIn()
-                    if (pointerId !in node.pointerIds) node.pointerIds.add(pointerId)
+                    node.pointerIds.add(pointerId)
                     parent = node
                     continue@eachPin
                 } else {
                     merging = false
                 }
             }
-            val node = Node(pointerInputFilter).apply {
+            // TODO(lmr): i wonder if Node here and PointerInputNode ought to be the same thing?
+            val node = Node(pointerInputNode).apply {
                 pointerIds.add(pointerId)
             }
             parent.children.add(node)
@@ -134,12 +140,12 @@ internal class HitPathTracker(private val rootCoordinates: LayoutCoordinates) {
  * pointer or [PointerInputFilter] information.
  */
 /*@VisibleForTesting*/
-@OptIn(InternalCoreApi::class)
+@OptIn(InternalCoreApi::class, ExperimentalComposeUiApi::class)
 internal open class NodeParent {
     val children: MutableVector<Node> = mutableVectorOf()
 
     open fun buildCache(
-        changes: Map<PointerId, PointerInputChange>,
+        changes: LongSparseArray<PointerInputChange>,
         parentCoordinates: LayoutCoordinates,
         internalPointerEvent: InternalPointerEvent,
         isInBounds: Boolean
@@ -169,7 +175,7 @@ internal open class NodeParent {
      * @param internalPointerEvent the [InternalPointerEvent] needed to construct [PointerEvent]s
      */
     open fun dispatchMainEventPass(
-        changes: Map<PointerId, PointerInputChange>,
+        changes: LongSparseArray<PointerInputChange>,
         parentCoordinates: LayoutCoordinates,
         internalPointerEvent: InternalPointerEvent,
         isInBounds: Boolean
@@ -222,7 +228,7 @@ internal open class NodeParent {
         var index = 0
         while (index < children.size) {
             val child = children[index]
-            if (!child.pointerInputFilter.isAttached) {
+            if (!child.modifierNode.isAttached) {
                 children.removeAt(index)
                 child.dispatchCancel()
             } else {
@@ -247,16 +253,13 @@ internal open class NodeParent {
  * hit it (tracked as [PointerId]s).
  */
 /*@VisibleForTesting*/
-@OptIn(InternalCoreApi::class)
-internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
+@OptIn(InternalCoreApi::class, ExperimentalComposeUiApi::class)
+internal class Node(val modifierNode: Modifier.Node) : NodeParent() {
 
-    // Note: this is essentially a set, and writes should be guarded accordingly. We use a
-    // MutableVector here instead since a set ends up being quite heavy, and calls to
-    // set.contains() show up noticeably (~1%) in traces. Since the maximum size of this vector
-    // is small (due to the limited amount of concurrent PointerIds there _could_ be), iterating
-    // through the small vector in most cases should have a lower performance impact than using a
-    // set.
-    val pointerIds: MutableVector<PointerId> = mutableVectorOf()
+    // Note: pointerIds are stored in a structure specific to their value type (PointerId).
+    // This structure uses a LongArray internally, which avoids auto-boxing caused by
+    // a more generic collection such as HashMap or MutableVector.
+    val pointerIds = PointerIdArray()
 
     /**
      * Cached properties that will be set before the main event pass, and reset after the final
@@ -266,15 +269,16 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
      * @see buildCache
      * @see clearCache
      */
-    private val relevantChanges: MutableMap<PointerId, PointerInputChange> = mutableMapOf()
+    private val relevantChanges: LongSparseArray<PointerInputChange> = LongSparseArray(2)
     private var coordinates: LayoutCoordinates? = null
     private var pointerEvent: PointerEvent? = null
     private var wasIn = false
     private var isIn = true
     private var hasExited = true
 
+    val vec = mutableVectorOf<Long>()
     override fun dispatchMainEventPass(
-        changes: Map<PointerId, PointerInputChange>,
+        changes: LongSparseArray<PointerInputChange>,
         parentCoordinates: LayoutCoordinates,
         internalPointerEvent: InternalPointerEvent,
         isInBounds: Boolean
@@ -289,10 +293,12 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
             val event = pointerEvent!!
             val size = coordinates!!.size
             // Dispatch on the tunneling pass.
-            pointerInputFilter.onPointerEvent(event, PointerEventPass.Initial, size)
+            modifierNode.dispatchForKind(Nodes.PointerInput) {
+                it.onPointerEvent(event, PointerEventPass.Initial, size)
+            }
 
             // Dispatch to children.
-            if (pointerInputFilter.isAttached) {
+            if (modifierNode.isAttached) {
                 children.forEach {
                     it.dispatchMainEventPass(
                         // Pass only the already-filtered and position-translated changes down to
@@ -305,9 +311,11 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
                 }
             }
 
-            if (pointerInputFilter.isAttached) {
+            if (modifierNode.isAttached) {
                 // Dispatch on the bubbling pass.
-                pointerInputFilter.onPointerEvent(event, PointerEventPass.Main, size)
+                modifierNode.dispatchForKind(Nodes.PointerInput) {
+                    it.onPointerEvent(event, PointerEventPass.Main, size)
+                }
             }
         }
     }
@@ -323,10 +331,12 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
             val event = pointerEvent!!
             val size = coordinates!!.size
             // Dispatch on the tunneling pass.
-            pointerInputFilter.onPointerEvent(event, PointerEventPass.Final, size)
+            modifierNode.dispatchForKind(Nodes.PointerInput) {
+                it.onPointerEvent(event, PointerEventPass.Final, size)
+            }
 
             // Dispatch to children.
-            if (pointerInputFilter.isAttached) {
+            if (modifierNode.isAttached) {
                 children.forEach { it.dispatchFinalEventPass(internalPointerEvent) }
             }
         }
@@ -344,7 +354,7 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
      * @see clearCache
      */
     override fun buildCache(
-        changes: Map<PointerId, PointerInputChange>,
+        changes: LongSparseArray<PointerInputChange>,
         parentCoordinates: LayoutCoordinates,
         internalPointerEvent: InternalPointerEvent,
         isInBounds: Boolean
@@ -358,38 +368,47 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
             )
 
         // Avoid future work if we know this node will no-op
-        if (!pointerInputFilter.isAttached) return true
+        if (!modifierNode.isAttached) return true
 
-        coordinates = pointerInputFilter.layoutCoordinates
+        modifierNode.dispatchForKind(Nodes.PointerInput) {
+            coordinates = it.layoutCoordinates
+        }
 
         @OptIn(ExperimentalComposeUiApi::class)
-        for ((key, change) in changes) {
-            // Filter for changes that are associated with pointer ids that are relevant to this
-            // node
-            if (key in pointerIds) {
-                // And translate their position relative to the parent coordinates, to give us a
-                // change local to the PointerInputFilter's coordinates
-                val historical = mutableListOf<HistoricalChange>()
-                change.historical.fastForEach {
-                    historical.add(
-                        HistoricalChange(
-                            it.uptimeMillis,
-                            coordinates!!.localPositionOf(parentCoordinates, it.position)
-                        )
-                    )
-                }
+        for (j in 0 until changes.size()) {
+            val keyValue = changes.keyAt(j)
+            val change = changes.valueAt(j)
 
-                relevantChanges[key] = change.copy(
-                    previousPosition = coordinates!!.localPositionOf(
-                        parentCoordinates,
-                        change.previousPosition
-                    ),
-                    currentPosition = coordinates!!.localPositionOf(
-                        parentCoordinates,
-                        change.position
-                    ),
-                    historical = historical
-                )
+            if (pointerIds.contains(keyValue)) {
+                val prevPosition = change.previousPosition
+                val currentPosition = change.position
+
+                if (prevPosition.isValid() && currentPosition.isValid()) {
+                    // And translate their position relative to the parent coordinates, to give us a
+                    // change local to the PointerInputFilter's coordinates
+                    val historical = ArrayList<HistoricalChange>(change.historical.size)
+                    change.historical.fastForEach {
+                        historical.add(
+                            HistoricalChange(
+                                it.uptimeMillis,
+                                coordinates!!.localPositionOf(parentCoordinates, it.position),
+                                it.originalEventPosition
+                            )
+                        )
+                    }
+
+                    relevantChanges.put(keyValue, change.copy(
+                        previousPosition = coordinates!!.localPositionOf(
+                            parentCoordinates,
+                            prevPosition
+                        ),
+                        currentPosition = coordinates!!.localPositionOf(
+                            parentCoordinates,
+                            currentPosition
+                        ),
+                        historical = historical
+                    ))
+                }
             }
         }
 
@@ -402,12 +421,16 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
         // Clean up any pointerIds that weren't dispatched
         for (i in pointerIds.lastIndex downTo 0) {
             val pointerId = pointerIds[i]
-            if (!changes.containsKey(pointerId)) {
+            if (!changes.containsKey(pointerId.value)) {
                 pointerIds.removeAt(i)
             }
         }
 
-        val event = PointerEvent(relevantChanges.values.toList(), internalPointerEvent)
+        val changesList = ArrayList<PointerInputChange>(relevantChanges.size())
+        for (i in 0 until relevantChanges.size()) {
+            changesList.add(relevantChanges.valueAt(i))
+        }
+        val event = PointerEvent(changesList, internalPointerEvent)
         val enterExitChange = event.changes.fastFirstOrNull {
             internalPointerEvent.issuesEnterExitEvent(it.id)
         }
@@ -471,7 +494,7 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
     }
 
     /**
-     * Calls [block] if there are relevant changes, and if [pointerInputFilter] is attached
+     * Calls [block] if there are relevant changes, and if [modifierNode] is attached
      *
      * @return whether [block] was called
      */
@@ -481,7 +504,7 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
         // If there are no relevant changes, there is nothing to process so return false.
         if (relevantChanges.isEmpty()) return false
         // If the input filter is not attached, avoid dispatching
-        if (!pointerInputFilter.isAttached) return false
+        if (!modifierNode.isAttached) return false
 
         block()
 
@@ -498,7 +521,9 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
      */
     override fun dispatchCancel() {
         children.forEach { it.dispatchCancel() }
-        pointerInputFilter.onCancel()
+        modifierNode.dispatchForKind(Nodes.PointerInput) {
+            it.onCancelPointerInput()
+        }
     }
 
     fun markIsIn() {
@@ -527,7 +552,7 @@ internal class Node(val pointerInputFilter: PointerInputFilter) : NodeParent() {
     }
 
     override fun toString(): String {
-        return "Node(pointerInputFilter=$pointerInputFilter, children=$children, " +
+        return "Node(pointerInputFilter=$modifierNode, children=$children, " +
             "pointerIds=$pointerIds)"
     }
 }

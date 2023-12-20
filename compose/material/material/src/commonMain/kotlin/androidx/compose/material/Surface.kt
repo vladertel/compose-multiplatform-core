@@ -28,7 +28,6 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -40,6 +39,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.isContainer
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
@@ -127,7 +127,10 @@ fun Surface(
                     border = border,
                     elevation = elevation
                 )
-                .semantics(mergeDescendants = false) {}
+                .semantics(mergeDescendants = false) {
+                    @Suppress("DEPRECATION")
+                    isContainer = true
+                }
                 .pointerInput(Unit) {},
             propagateMinConstraints = true
         ) {
@@ -175,9 +178,8 @@ fun Surface(
  * that doesn't require [onClick] param.
  *
  * 7) Semantics for clicks. Just like with [Modifier.clickable], clickable version of Surface will
- * produce semantics to indicate that it is clicked. Also, by default, accessibility services will
- * describe the element as [Role.Button]. You may change this by passing a desired [Role] with a
- * [Modifier.semantics].
+ * produce semantics to indicate that it is clicked. No semantic role is set by default, you
+ * may specify one by passing a desired [Role] with a [Modifier.semantics].
  *
  * @sample androidx.compose.material.samples.ClickableSurfaceSample
  *
@@ -225,7 +227,7 @@ fun Surface(
     ) {
         Box(
             modifier = modifier
-                .minimumTouchTargetSize()
+                .minimumInteractiveComponentSize()
                 .surface(
                     shape = shape,
                     backgroundColor = surfaceColorAtElevation(
@@ -238,9 +240,8 @@ fun Surface(
                 )
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = rememberRipple(),
+                    indication = rippleOrFallbackImplementation(),
                     enabled = enabled,
-                    role = Role.Button,
                     onClick = onClick
                 ),
             propagateMinConstraints = true
@@ -289,9 +290,8 @@ fun Surface(
  * that doesn't require [onClick] param.
  *
  * 7) Semantics for selection. Just like with [Modifier.selectable], selectable version of Surface
- * will produce semantics to indicate that it is selected. Also, by default, accessibility services
- * will describe the element as [Role.Tab]. You may change this by passing a desired [Role] with a
- * [Modifier.semantics].
+ * will produce semantics to indicate that it is selected. No semantic role is set by default, you
+ * may specify one by passing a desired [Role] with a [Modifier.semantics].
  *
  * @sample androidx.compose.material.samples.SelectableSurfaceSample
  *
@@ -341,7 +341,7 @@ fun Surface(
     ) {
         Box(
             modifier = modifier
-                .minimumTouchTargetSize()
+                .minimumInteractiveComponentSize()
                 .surface(
                     shape = shape,
                     backgroundColor = surfaceColorAtElevation(
@@ -355,9 +355,8 @@ fun Surface(
                 .selectable(
                     selected = selected,
                     interactionSource = interactionSource,
-                    indication = rememberRipple(),
+                    indication = rippleOrFallbackImplementation(),
                     enabled = enabled,
-                    role = Role.Tab,
                     onClick = onClick
                 ),
             propagateMinConstraints = true
@@ -406,9 +405,8 @@ fun Surface(
  * handling, consider using a Surface function that doesn't require [onCheckedChange] param.
  *
  * 7) Semantics for toggle. Just like with [Modifier.toggleable], toggleable version of Surface
- * will produce semantics to indicate that it is checked.  Also, by default, accessibility services
- * will describe the element as [Role.Switch]. You may change this by passing a desired [Role] with
- * a [Modifier.semantics].
+ * will produce semantics to indicate that it is checked.  No semantic role is set by default, you
+ * may specify one by passing a desired [Role] with a [Modifier.semantics].
  *
  * @sample androidx.compose.material.samples.ToggleableSurfaceSample
  *
@@ -458,7 +456,7 @@ fun Surface(
     ) {
         Box(
             modifier = modifier
-                .minimumTouchTargetSize()
+                .minimumInteractiveComponentSize()
                 .surface(
                     shape = shape,
                     backgroundColor = surfaceColorAtElevation(
@@ -472,9 +470,8 @@ fun Surface(
                 .toggleable(
                     value = checked,
                     interactionSource = interactionSource,
-                    indication = rememberRipple(),
+                    indication = rippleOrFallbackImplementation(),
                     enabled = enabled,
-                    role = Role.Switch,
                     onValueChange = onCheckedChange
                 ),
             propagateMinConstraints = true
@@ -591,7 +588,7 @@ fun Surface(
     ) {
         Box(
             modifier
-                .minimumTouchTargetSize()
+                .minimumInteractiveComponentSize()
                 .surface(
                     shape = shape,
                     backgroundColor = surfaceColorAtElevation(

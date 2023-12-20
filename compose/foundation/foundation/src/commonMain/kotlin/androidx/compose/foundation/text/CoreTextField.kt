@@ -14,26 +14,36 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.compose.foundation.text
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.text.input.internal.createLegacyPlatformTextInputServiceAdapter
+import androidx.compose.foundation.text.input.internal.legacyTextInputAdapter
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.SelectionHandleAnchor
 import androidx.compose.foundation.text.selection.SelectionHandleInfo
 import androidx.compose.foundation.text.selection.SelectionHandleInfoKey
 import androidx.compose.foundation.text.selection.SimpleLayout
 import androidx.compose.foundation.text.selection.TextFieldSelectionHandle
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
 import androidx.compose.foundation.text.selection.isSelectionHandleInVisibleBound
+import androidx.compose.foundation.text.selection.selectionGestureInput
 import androidx.compose.foundation.text.selection.textFieldMagnifier
+import androidx.compose.foundation.text.selection.updateSelectionTouchMode
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.DontMemoize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.RecomposeScope
 import androidx.compose.runtime.currentRecomposeScope
@@ -41,8 +51,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -74,15 +86,20 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalTextInputService
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.SoftwareKeyboardController
+import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.semantics.copyText
 import androidx.compose.ui.semantics.cutText
 import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.editable
 import androidx.compose.ui.semantics.editableText
 import androidx.compose.ui.semantics.getTextLayoutResult
-import androidx.compose.ui.semantics.imeAction
+import androidx.compose.ui.semantics.insertTextAtCursor
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onImeAction
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.password
 import androidx.compose.ui.semantics.pasteText
@@ -95,7 +112,10 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.CommitTextCommand
+import androidx.compose.ui.text.input.DeleteAllCommand
 import androidx.compose.ui.text.input.EditProcessor
+import androidx.compose.ui.text.input.FinishComposingTextCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.OffsetMapping
@@ -107,8 +127,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastRoundToInt
 import kotlin.math.max
-import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -154,8 +176,10 @@ import kotlinx.coroutines.launch
  * provided, there will be no cursor drawn
  * @param softWrap Whether the text should break at soft line breaks. If false, the glyphs in the
  * text will be positioned as if there was unlimited horizontal space.
- * @param maxLines The maximum height in terms of maximum number of visible lines. Should be
- * equal or greater than 1.
+ * @param maxLines The maximum height in terms of maximum number of visible lines. It is required
+ * that 1 <= [minLines] <= [maxLines].
+ * @param minLines The minimum height in terms of minimum number of visible lines. It is required
+ * that 1 <= [minLines] <= [maxLines].
  * @param imeOptions Contains different IME configuration options.
  * @param keyboardActions when the input service emits an IME action, the corresponding callback
  * is called. Note that this IME action may be different from what you specified in
@@ -185,6 +209,7 @@ internal fun CoreTextField(
     cursorBrush: Brush = SolidColor(Color.Unspecified),
     softWrap: Boolean = true,
     maxLines: Int = Int.MAX_VALUE,
+    minLines: Int = DefaultMinLines,
     imeOptions: ImeOptions = ImeOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     enabled: Boolean = true,
@@ -192,15 +217,19 @@ internal fun CoreTextField(
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit =
         @Composable { innerTextField -> innerTextField() }
 ) {
-    val focusRequester = FocusRequester()
+    val focusRequester = remember { FocusRequester() }
+    val legacyTextInputServiceAdapter = remember { createLegacyPlatformTextInputServiceAdapter() }
+    val textInputService: TextInputService = remember {
+        TextInputService(legacyTextInputServiceAdapter)
+    }
 
     // CompositionLocals
-    // If the text field is disabled or read-only, we should not deal with the input service
-    val textInputService = if (!enabled || readOnly) null else LocalTextInputService.current
     val density = LocalDensity.current
     val fontFamilyResolver = LocalFontFamilyResolver.current
     val selectionBackgroundColor = LocalTextSelectionColors.current.backgroundColor
     val focusManager = LocalFocusManager.current
+    val windowInfo = LocalWindowInfo.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // Scroll state
     val singleLine = maxLines == 1 && !softWrap && imeOptions.singleLine
@@ -224,8 +253,8 @@ internal fun CoreTextField(
     // If developer doesn't pass new value to TextField, recompose won't happen but internal state
     // and IME may think it is updated. To fix this inconsistent state, enforce recompose.
     val scope = currentRecomposeScope
-    val state = remember {
-        TextFieldState(
+    val state = remember(keyboardController) {
+        LegacyTextFieldState(
             TextDelegate(
                 text = visualText,
                 style = textStyle,
@@ -233,7 +262,8 @@ internal fun CoreTextField(
                 density = density,
                 fontFamilyResolver = fontFamilyResolver
             ),
-            recomposeScope = scope
+            recomposeScope = scope,
+            keyboardController = keyboardController
         )
     }
     state.update(
@@ -281,31 +311,34 @@ internal fun CoreTextField(
         }
         state.hasFocus = it.isFocused
 
-        if (textInputService != null) {
-            notifyTextInputServiceOnFocusChange(
+        if (state.hasFocus && enabled && !readOnly) {
+            startInputSession(
                 textInputService,
                 state,
                 value,
-                imeOptions
+                imeOptions,
+                offsetMapping
             )
+        } else {
+            endInputSession(state)
+        }
 
-            // The focusable modifier itself will request the entire focusable be brought into view
-            // when it gains focus – in this case, that's the decoration box. However, since text
-            // fields may have their own internal scrolling, and the decoration box can do anything,
-            // we also need to specifically request that the cursor itself be brought into view.
-            // TODO(b/216790855) If this request happens after the focusable's request, the field
-            //  will only be scrolled far enough to show the cursor, _not_ the entire decoration
-            //  box.
-            if (it.isFocused) {
-                state.layoutResult?.let { layoutResult ->
-                    coroutineScope.launch {
-                        bringIntoViewRequester.bringSelectionEndIntoView(
-                            value,
-                            state.textDelegate,
-                            layoutResult.value,
-                            offsetMapping
-                        )
-                    }
+        // The focusable modifier itself will request the entire focusable be brought into view
+        // when it gains focus – in this case, that's the decoration box. However, since text
+        // fields may have their own internal scrolling, and the decoration box can do anything,
+        // we also need to specifically request that the cursor itself be brought into view.
+        // TODO(b/216790855) If this request happens after the focusable's request, the field
+        //  will only be scrolled far enough to show the cursor, _not_ the entire decoration
+        //  box.
+        if (it.isFocused) {
+            state.layoutResult?.let { layoutResult ->
+                coroutineScope.launch {
+                    bringIntoViewRequester.bringSelectionEndIntoView(
+                        value,
+                        state.textDelegate,
+                        layoutResult.value,
+                        offsetMapping
+                    )
                 }
             }
         }
@@ -313,53 +346,60 @@ internal fun CoreTextField(
     }
 
     // Hide the keyboard if made disabled or read-only while focused (b/237308379).
-    if (enabled && !readOnly) {
-        // TODO(b/230536793) This is a workaround since we don't get an explicit focus blur event
-        //  when the text field is removed from the composition entirely.
-        DisposableEffect(state) {
-            onDispose {
-                if (state.hasFocus) {
-                    onBlur(state)
+    val writeable by rememberUpdatedState(enabled && !readOnly)
+    LaunchedEffect(Unit) {
+        try {
+            snapshotFlow { writeable }.collect { writeable ->
+                // When hasFocus changes, the session will be stopped/started in the focus
+                // handler so we don't need to handle its changes here.
+                if (writeable && state.hasFocus) {
+                    startInputSession(
+                        textInputService,
+                        state,
+                        manager.value,
+                        imeOptions,
+                        offsetMapping
+                    )
+                } else {
+                    endInputSession(state)
                 }
             }
+        } finally {
+            // TODO(b/230536793) This is a workaround since we don't get an explicit focus blur
+            //  event when the text field is removed from the composition entirely.
+            endInputSession(state)
         }
     }
 
-    val pointerModifier = if (isInTouchMode) {
-        val selectionModifier =
-            Modifier.longPressDragGestureFilter(manager.touchSelectionObserver, enabled)
-        Modifier
-            .tapPressTextFieldModifier(interactionSource, enabled) { offset ->
-                tapToFocus(state, focusRequester, !readOnly)
-                if (state.hasFocus) {
-                    if (state.handleState != HandleState.Selection) {
-                        state.layoutResult?.let { layoutResult ->
-                            TextFieldDelegate.setCursorOffset(
-                                offset,
-                                layoutResult,
-                                state.processor,
-                                offsetMapping,
-                                state.onValueChange
-                            )
-                            // Won't enter cursor state when text is empty.
-                            if (state.textDelegate.text.isNotEmpty()) {
-                                state.handleState = HandleState.Cursor
-                            }
+    val pointerModifier = Modifier
+        .updateSelectionTouchMode { state.isInTouchMode = it }
+        .tapPressTextFieldModifier(interactionSource, enabled) { offset ->
+            tapToFocus(state, focusRequester, !readOnly)
+            if (state.hasFocus) {
+                if (state.handleState != HandleState.Selection) {
+                    state.layoutResult?.let { layoutResult ->
+                        TextFieldDelegate.setCursorOffset(
+                            offset,
+                            layoutResult,
+                            state.processor,
+                            offsetMapping,
+                            state.onValueChange
+                        )
+                        // Won't enter cursor state when text is empty.
+                        if (state.textDelegate.text.isNotEmpty()) {
+                            state.handleState = HandleState.Cursor
                         }
-                    } else {
-                        manager.deselect(offset)
                     }
+                } else {
+                    manager.deselect(offset)
                 }
             }
-            .then(selectionModifier)
-    } else {
-        Modifier
-            .mouseDragGestureDetector(
-                observer = manager.mouseSelectionObserver,
-                enabled = enabled
-            )
-            .pointerHoverIcon(textPointerIcon)
-    }
+        }
+        .selectionGestureInput(
+            mouseSelectionObserver = manager.mouseSelectionObserver,
+            textDragObserver = manager.touchSelectionObserver,
+        )
+        .pointerHoverIcon(textPointerIcon)
 
     val drawModifier = Modifier.drawBehind {
         state.layoutResult?.let { layoutResult ->
@@ -377,9 +417,10 @@ internal fun CoreTextField(
 
     val onPositionedModifier = Modifier.onGloballyPositioned {
         state.layoutCoordinates = it
+        state.layoutResult?.innerTextFieldCoordinates = it
         if (enabled) {
             if (state.handleState == HandleState.Selection) {
-                if (state.showFloatingToolbar) {
+                if (state.showFloatingToolbar && isWindowFocusedBehindFlag(windowInfo)) {
                     manager.showSelectionToolbar()
                 } else {
                     manager.hideSelectionToolbar()
@@ -388,22 +429,35 @@ internal fun CoreTextField(
                     manager.isSelectionHandleInVisibleBound(isStartHandle = true)
                 state.showSelectionHandleEnd =
                     manager.isSelectionHandleInVisibleBound(isStartHandle = false)
+                state.showCursorHandle = value.selection.collapsed
             } else if (state.handleState == HandleState.Cursor) {
                 state.showCursorHandle =
                     manager.isSelectionHandleInVisibleBound(isStartHandle = true)
             }
+            notifyFocusedRect(state, value, offsetMapping)
+            state.layoutResult?.let { layoutResult ->
+                state.inputSession?.let { inputSession ->
+                    if (state.hasFocus) {
+                        TextFieldDelegate.updateTextLayoutResult(
+                            inputSession,
+                            value,
+                            offsetMapping,
+                            layoutResult
+                        )
+                    }
+                }
+            }
         }
-        state.layoutResult?.innerTextFieldCoordinates = it
     }
 
     val isPassword = visualTransformation is PasswordVisualTransformation
     val semanticsModifier = Modifier.semantics(true) {
         // focused semantics are handled by Modifier.focusable()
-        this.imeAction = imeOptions.imeAction
         this.editableText = transformedText.text
         this.textSelectionRange = value.selection
         if (!enabled) this.disabled()
         if (isPassword) this.password()
+        if (enabled && !readOnly) this.editable()
         getTextLayoutResult {
             if (state.layoutResult != null) {
                 it.add(state.layoutResult!!.value)
@@ -412,20 +466,59 @@ internal fun CoreTextField(
                 false
             }
         }
-        setText {
-            state.onValueChange(TextFieldValue(it.text, TextRange(it.text.length)))
+        setText { text ->
+            if (readOnly || !enabled) return@setText false
+
+            // If the action is performed while in an active text editing session, treat this like
+            // an IME command and update the text by going through the buffer. This keeps the buffer
+            // state consistent if other IME commands are performed before the next recomposition,
+            // and is used for the testing code path.
+            state.inputSession?.let { session ->
+                TextFieldDelegate.onEditCommand(
+                    ops = listOf(DeleteAllCommand(), CommitTextCommand(text, 1)),
+                    editProcessor = state.processor,
+                    state.onValueChange,
+                    session
+                )
+            } ?: run {
+                state.onValueChange(TextFieldValue(text.text, TextRange(text.text.length)))
+            }
             true
         }
-        setSelection { selectionStart, selectionEnd, traversalMode ->
+        insertTextAtCursor { text ->
+            if (readOnly || !enabled) return@insertTextAtCursor false
+
+            // If the action is performed while in an active text editing session, treat this like
+            // an IME command and update the text by going through the buffer. This keeps the buffer
+            // state consistent if other IME commands are performed before the next recomposition,
+            // and is used for the testing code path.
+            state.inputSession?.let { session ->
+                TextFieldDelegate.onEditCommand(
+                    // Finish composing text first because when the field is focused the IME might
+                    // set composition.
+                    ops = listOf(FinishComposingTextCommand(), CommitTextCommand(text, 1)),
+                    editProcessor = state.processor,
+                    state.onValueChange,
+                    session
+                )
+            } ?: run {
+                val newText =
+                    value.text.replaceRange(value.selection.start, value.selection.end, text)
+                val newCursor = TextRange(value.selection.start + text.length)
+                state.onValueChange(TextFieldValue(newText, newCursor))
+            }
+            true
+        }
+        setSelection { selectionStart, selectionEnd, relativeToOriginalText ->
             // in traversal mode we get selection from the `textSelectionRange` semantics which is
             // selection in original text. In non-traversal mode selection comes from the Talkback
             // and indices are relative to the transformed text
-            val start = if (traversalMode) {
+            val start = if (relativeToOriginalText) {
                 selectionStart
             } else {
                 offsetMapping.transformedToOriginal(selectionStart)
             }
-            val end = if (traversalMode) {
+            val end = if (relativeToOriginalText) {
                 selectionEnd
             } else {
                 offsetMapping.transformedToOriginal(selectionEnd)
@@ -440,7 +533,7 @@ internal fun CoreTextField(
             ) {
                 // Do not show toolbar if it's a traversal mode (with the volume keys), or
                 // if the cursor just moved to beginning or end.
-                if (traversalMode || start == end) {
+                if (relativeToOriginalText || start == end) {
                     manager.exitSelectionMode()
                 } else {
                     manager.enterSelectionMode()
@@ -456,6 +549,13 @@ internal fun CoreTextField(
                 manager.exitSelectionMode()
                 false
             }
+        }
+        onImeAction(imeOptions.imeAction) {
+            // This will perform the appropriate default action if no handler has been specified, so
+            // as far as the platform is concerned, we always handle the action and never want to
+            // defer to the default _platform_ implementation.
+            state.onImeActionPerformed(imeOptions.imeAction)
+            true
         }
         onClick {
             // according to the documentation, we still need to provide proper semantics actions
@@ -487,15 +587,15 @@ internal fun CoreTextField(
         }
     }
 
-    val cursorModifier =
-        Modifier.cursor(state, value, offsetMapping, cursorBrush, enabled && !readOnly)
+    val showCursor = enabled && !readOnly && isWindowFocusedBehindFlag(windowInfo)
+    val cursorModifier = Modifier.cursor(state, value, offsetMapping, cursorBrush, showCursor)
 
     DisposableEffect(manager) {
         onDispose { manager.hideSelectionToolbar() }
     }
 
     DisposableEffect(imeOptions) {
-        if (textInputService != null && state.hasFocus) {
+        if (state.hasFocus) {
             state.inputSession = TextFieldDelegate.restartInput(
                 textInputService = textInputService,
                 value = value,
@@ -517,23 +617,27 @@ internal fun CoreTextField(
             editable = !readOnly,
             singleLine = maxLines == 1,
             offsetMapping = offsetMapping,
-            undoManager = undoManager
+            undoManager = undoManager,
+            imeAction = imeOptions.imeAction,
         )
 
     // Modifiers that should be applied to the outer text field container. Usually those include
     // gesture and semantics modifiers.
     val decorationBoxModifier = modifier
+        .legacyTextInputAdapter(legacyTextInputServiceAdapter)
         .then(focusModifier)
+        .interceptDPadAndMoveFocus(state, focusManager)
         .previewKeyEventToDeselectOnBack(state, manager)
         .then(textKeyInputModifier)
         .textFieldScrollable(scrollerPosition, interactionSource, enabled)
         .then(pointerModifier)
         .then(semanticsModifier)
-        .onGloballyPositioned {
+        .onGloballyPositioned @DontMemoize {
             state.layoutResult?.decorationBoxCoordinates = it
         }
 
-    val showHandleAndMagnifier = enabled && state.hasFocus && isInTouchMode
+    val showHandleAndMagnifier =
+        enabled && state.hasFocus && state.isInTouchMode && isWindowFocusedBehindFlag(windowInfo)
     val magnifierModifier = if (showHandleAndMagnifier) {
         Modifier.textFieldMagnifier(manager)
     } else {
@@ -548,12 +652,16 @@ internal fun CoreTextField(
                 // min height is set for maxLines == 1 in order to prevent text cuts for single line
                 // TextFields
                 .heightIn(min = state.minHeightForSingleLineField)
-                .maxLinesHeight(maxLines, textStyle)
+                .heightInLines(
+                    textStyle = textStyle,
+                    minLines = minLines,
+                    maxLines = maxLines
+                )
                 .textFieldScroll(
-                    scrollerPosition,
-                    value,
-                    visualTransformation,
-                    { state.layoutResult }
+                    scrollerPosition = scrollerPosition,
+                    textFieldValue = value,
+                    visualTransformation = visualTransformation,
+                    textLayoutResultProvider = { state.layoutResult },
                 )
                 .then(cursorModifier)
                 .then(drawModifier)
@@ -582,6 +690,7 @@ internal fun CoreTextField(
                             if (prevResult != result) {
                                 state.layoutResult = TextLayoutResultProxy(result)
                                 onTextLayout(result)
+                                notifyFocusedRect(state, value, offsetMapping)
                             }
 
                             // calculate the min height for single line text to prevent text cuts.
@@ -599,8 +708,8 @@ internal fun CoreTextField(
                                 width = width,
                                 height = height,
                                 alignmentLines = mapOf(
-                                    FirstBaseline to result.firstBaseline.roundToInt(),
-                                    LastBaseline to result.lastBaseline.roundToInt()
+                                    FirstBaseline to result.firstBaseline.fastRoundToInt(),
+                                    LastBaseline to result.lastBaseline.fastRoundToInt()
                                 )
                             ) {}
                         }
@@ -617,11 +726,12 @@ internal fun CoreTextField(
 
                 SelectionToolbarAndHandles(
                     manager = manager,
-                    show = state.handleState == HandleState.Selection &&
+                    show = state.handleState != HandleState.None &&
                         state.layoutCoordinates != null &&
                         state.layoutCoordinates!!.isAttached &&
                         showHandleAndMagnifier
                 )
+
                 if (
                     state.handleState == HandleState.Cursor &&
                     !readOnly &&
@@ -679,7 +789,7 @@ internal enum class HandleState {
 
 /**
  * Indicates which handle is being dragged when the user is dragging on a text field handle.
- * @see TextFieldState.handleState
+ * @see LegacyTextFieldState.handleState
  */
 internal enum class Handle {
     Cursor,
@@ -692,7 +802,7 @@ internal enum class Handle {
  * text and clear selection popups.
  */
 private fun Modifier.previewKeyEventToDeselectOnBack(
-    state: TextFieldState,
+    state: LegacyTextFieldState,
     manager: TextFieldSelectionManager
 ) = onPreviewKeyEvent { keyEvent ->
     if (state.handleState == HandleState.Selection && keyEvent.cancelsTextSelection()) {
@@ -704,9 +814,10 @@ private fun Modifier.previewKeyEventToDeselectOnBack(
 }
 
 @OptIn(InternalFoundationTextApi::class)
-internal class TextFieldState(
+internal class LegacyTextFieldState(
     var textDelegate: TextDelegate,
-    val recomposeScope: RecomposeScope
+    val recomposeScope: RecomposeScope,
+    val keyboardController: SoftwareKeyboardController?,
 ) {
     val processor = EditProcessor()
     var inputSession: TextInputSession? = null
@@ -722,8 +833,17 @@ internal class TextFieldState(
      */
     var minHeightForSingleLineField by mutableStateOf(0.dp)
 
-    /** The last layout coordinates for the Text's layout, used by selection */
-    var layoutCoordinates: LayoutCoordinates? = null
+    /**
+     * The last layout coordinates for the inner text field LayoutNode, used by selection and
+     * notifyFocusedRect. Since this layoutCoordinates only used for relative position calculation,
+     * we are guarding ourselves from using it when it's not attached.
+     */
+    private var _layoutCoordinates: LayoutCoordinates? = null
+    var layoutCoordinates: LayoutCoordinates?
+        get() = _layoutCoordinates?.takeIf { it.isAttached }
+        set(value) {
+            _layoutCoordinates = value
+        }
 
     /**
      * You should be using proxy type [TextLayoutResultProxy] if you need to translate touch
@@ -775,8 +895,13 @@ internal class TextFieldState(
 
     /**
      * A flag to check if the floating toolbar should show.
+     *
+     * This state is meant to represent the floating toolbar status regardless of if all touch
+     * behaviors are disabled (like if the user is using a mouse). This is so that when touch
+     * behaviors are re-enabled, the toolbar status will still reflect whether it should be shown
+     * at that point.
      */
-    var showFloatingToolbar = false
+    var showFloatingToolbar by mutableStateOf(false)
 
     /**
      * True if the position of the selection start handle is within a visible part of the window
@@ -806,7 +931,10 @@ internal class TextFieldState(
     var isLayoutResultStale: Boolean = true
         private set
 
-    private val keyboardActionRunner: KeyboardActionRunner = KeyboardActionRunner()
+    var isInTouchMode: Boolean by mutableStateOf(true)
+
+    private val keyboardActionRunner: KeyboardActionRunner =
+        KeyboardActionRunner(keyboardController)
 
     /**
      * DO NOT USE, use [onValueChange] instead. This is original callback provided to the TextField.
@@ -870,38 +998,36 @@ internal class TextFieldState(
  * Request focus on tap. If already focused, makes sure the keyboard is requested.
  */
 private fun tapToFocus(
-    state: TextFieldState,
+    state: LegacyTextFieldState,
     focusRequester: FocusRequester,
     allowKeyboard: Boolean
 ) {
     if (!state.hasFocus) {
         focusRequester.requestFocus()
     } else if (allowKeyboard) {
-        state.inputSession?.showSoftwareKeyboard()
+        state.keyboardController?.show()
     }
 }
 
-private fun notifyTextInputServiceOnFocusChange(
+private fun startInputSession(
     textInputService: TextInputService,
-    state: TextFieldState,
+    state: LegacyTextFieldState,
     value: TextFieldValue,
-    imeOptions: ImeOptions
+    imeOptions: ImeOptions,
+    offsetMapping: OffsetMapping
 ) {
-    if (state.hasFocus) {
-        state.inputSession = TextFieldDelegate.onFocus(
-            textInputService,
-            value,
-            state.processor,
-            imeOptions,
-            state.onValueChange,
-            state.onImeActionPerformed
-        )
-    } else {
-        onBlur(state)
-    }
+    state.inputSession = TextFieldDelegate.onFocus(
+        textInputService,
+        value,
+        state.processor,
+        imeOptions,
+        state.onValueChange,
+        state.onImeActionPerformed
+    )
+    notifyFocusedRect(state, value, offsetMapping)
 }
 
-private fun onBlur(state: TextFieldState) {
+private fun endInputSession(state: LegacyTextFieldState) {
     state.inputSession?.let { session ->
         TextFieldDelegate.onBlur(session, state.processor, state.onValueChange)
     }
@@ -941,9 +1067,11 @@ internal suspend fun BringIntoViewRequester.bringSelectionEndIntoView(
         selectionEndInTransformed < textLayoutResult.layoutInput.text.length -> {
             textLayoutResult.getBoundingBox(selectionEndInTransformed)
         }
+
         selectionEndInTransformed != 0 -> {
             textLayoutResult.getBoundingBox(selectionEndInTransformed - 1)
         }
+
         else -> { // empty text.
             val defaultSize = computeSizeForDefaultText(
                 textDelegate.style,
@@ -1001,19 +1129,30 @@ private fun SelectionToolbarAndHandles(manager: TextFieldSelectionManager, show:
 
 @Composable
 internal fun TextFieldCursorHandle(manager: TextFieldSelectionManager) {
-    if (manager.state?.showCursorHandle == true) {
+    if (manager.state?.showCursorHandle == true && manager.transformedText?.isNotEmpty() == true) {
         val observer = remember(manager) { manager.cursorDragObserver() }
         val position = manager.getCursorPosition(LocalDensity.current)
         CursorHandle(
             handlePosition = position,
             modifier = Modifier
                 .pointerInput(observer) {
-                    detectDownAndDragGesturesWithObserver(observer)
+                    coroutineScope {
+                        // UNDISPATCHED because this runs upon first pointer event and
+                        // without it the event would pass before the handler is ready
+                        launch(start = CoroutineStart.UNDISPATCHED) {
+                            detectDownAndDragGesturesWithObserver(observer)
+                        }
+                        launch(start = CoroutineStart.UNDISPATCHED) {
+                            detectTapGestures { manager.showSelectionToolbar() }
+                        }
+                    }
                 }
                 .semantics {
                     this[SelectionHandleInfoKey] = SelectionHandleInfo(
                         handle = Handle.Cursor,
-                        position = position
+                        position = position,
+                        anchor = SelectionHandleAnchor.Middle,
+                        visible = true,
                     )
                 },
             content = null
@@ -1027,3 +1166,34 @@ internal expect fun CursorHandle(
     modifier: Modifier,
     content: @Composable (() -> Unit)?
 )
+
+// TODO(b/262648050) Try to find a better API.
+@OptIn(InternalFoundationTextApi::class)
+private fun notifyFocusedRect(
+    state: LegacyTextFieldState,
+    value: TextFieldValue,
+    offsetMapping: OffsetMapping
+) {
+    // If this reports state reads it causes an invalidation cycle.
+    // This function doesn't need to be invalidated anyway because it's already explicitly called
+    // after updating text layout or position.
+    Snapshot.withoutReadObservation {
+        val layoutResult = state.layoutResult ?: return
+        val inputSession = state.inputSession ?: return
+        val layoutCoordinates = state.layoutCoordinates ?: return
+        TextFieldDelegate.notifyFocusedRect(
+            value,
+            state.textDelegate,
+            layoutResult.value,
+            layoutCoordinates,
+            inputSession,
+            state.hasFocus,
+            offsetMapping
+        )
+    }
+}
+
+// (b/308895081) Temporary disable use of Window Focus for cursor blinking state
+internal const val USE_WINDOW_FOCUS_ENABLED = false
+internal fun isWindowFocusedBehindFlag(windowInfo: WindowInfo) =
+    if (USE_WINDOW_FOCUS_ENABLED) windowInfo.isWindowFocused else true

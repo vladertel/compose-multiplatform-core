@@ -43,11 +43,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.DefaultCameraDistance
+import androidx.compose.ui.graphics.DefaultShadowColor
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.colorspace.ColorModel
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.debugInspectorInfo
@@ -63,6 +66,7 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Density
@@ -670,6 +674,44 @@ class ParameterFactoryTest {
     }
 
     @Test
+    fun testSingleModifierNode() {
+        validate(
+            create(
+                "modifier",
+                Modifier.graphicsLayer(
+                    scaleX = 2f,
+                    scaleY = 1.5f,
+                    alpha = 0.5f,
+                    clip = true
+                )
+            )
+        ) {
+            parameter("modifier", ParameterType.String, "") {
+                parameter("graphicsLayer", ParameterType.String, "") {
+                    parameter("scaleX", ParameterType.Float, 2f)
+                    parameter("scaleY", ParameterType.Float, 1.5f)
+                    parameter("alpha", ParameterType.Float, 0.5f)
+                    parameter("translationX", ParameterType.Float, 0f)
+                    parameter("translationY", ParameterType.Float, 0f)
+                    parameter("shadowElevation", ParameterType.Float, 0f)
+                    parameter("rotationX", ParameterType.Float, 0f)
+                    parameter("rotationY", ParameterType.Float, 0f)
+                    parameter("rotationZ", ParameterType.Float, 0f)
+                    parameter("cameraDistance", ParameterType.Float, DefaultCameraDistance)
+                    parameter("transformOrigin", ParameterType.String, "Center")
+                    parameter("shape", ParameterType.String, "RectangleShape")
+                    parameter("clip", ParameterType.Boolean, true)
+                    // parameter("renderEffect", ParameterType.String, "")
+                    val shadowArgb = DefaultShadowColor.toArgb()
+                    parameter("ambientShadowColor", ParameterType.Color, shadowArgb, index = 14)
+                    parameter("spotShadowColor", ParameterType.Color, shadowArgb, index = 15)
+                    parameter("compositingStrategy", ParameterType.String, "Auto", index = 16)
+                }
+            }
+        }
+    }
+
+    @Test
     fun testWrappedModifier() {
         fun Modifier.frame(color: Color) = inspectable(
             debugInspectorInfo {
@@ -881,7 +923,8 @@ class ParameterFactoryTest {
     fun testTextStyle() {
         val style = TextStyle(
             color = Color.Red,
-            textDecoration = TextDecoration.Underline
+            textDecoration = TextDecoration.Underline,
+            textDirection = TextDirection.Content
         )
         validate(create("style", style)) {
             parameter("style", ParameterType.String, TextStyle::class.java.simpleName) {
@@ -890,6 +933,7 @@ class ParameterFactoryTest {
                 parameter("letterSpacing", ParameterType.String, "Unspecified", index = 7)
                 parameter("background", ParameterType.String, "Unspecified", index = 11)
                 parameter("textDecoration", ParameterType.String, "Underline", index = 12)
+                parameter("textDirection", ParameterType.String, "Content", index = 14)
                 parameter("lineHeight", ParameterType.String, "Unspecified", index = 15)
             }
         }

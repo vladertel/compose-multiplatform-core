@@ -52,7 +52,6 @@ import java.lang.annotation.RetentionPolicy;
  * A fragment that provides a standard prompt UI for fingerprint authentication on versions prior
  * to Android 9.0 (API 28).
  *
- * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class FingerprintDialogFragment extends DialogFragment {
@@ -150,7 +149,6 @@ public class FingerprintDialogFragment extends DialogFragment {
      *
      * @return A {@link FingerprintDialogFragment}.
      */
-    @RequiresApi(Build.VERSION_CODES.KITKAT)
     @NonNull
     static FingerprintDialogFragment newInstance(boolean hostedInActivity) {
         final FingerprintDialogFragment fragment = new FingerprintDialogFragment();

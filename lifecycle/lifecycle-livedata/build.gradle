@@ -19,26 +19,40 @@ import androidx.build.Publish
 plugins {
     id("AndroidXPlugin")
     id("com.android.library")
+    id("org.jetbrains.kotlin.android")
 }
 
 dependencies {
-    implementation("androidx.arch.core:core-common:2.1.0")
-    api("androidx.arch.core:core-runtime:2.1.0")
+    api(libs.kotlinStdlib)
+    api(libs.kotlinCoroutinesCore)
+    api("androidx.arch.core:core-runtime:2.2.0")
     api(project(":lifecycle:lifecycle-livedata-core"))
+    api(project(":lifecycle:lifecycle-livedata-core-ktx"))
+
+    implementation("androidx.arch.core:core-common:2.2.0")
 
     testImplementation(project(":lifecycle:lifecycle-runtime-testing"))
-    testImplementation("androidx.arch.core:core-testing:2.1.0")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation(libs.kotlinCoroutinesTest)
     testImplementation(libs.junit)
-    testImplementation(libs.mockitoCore)
+    testImplementation(libs.mockitoCore4)
+    testImplementation(libs.truth)
+
+    androidTestImplementation(libs.testExtJunit)
+    androidTestImplementation(libs.testCore)
+    androidTestImplementation(libs.testRules)
+    androidTestImplementation(libs.testRunner)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.kotlinCoroutinesTest)
+    androidTestImplementation(libs.kotlinCoroutinesAndroid)
 }
 
 androidx {
-    name = "Android Lifecycle LiveData"
+    name = "Lifecycle LiveData"
     publish = Publish.SNAPSHOT_AND_RELEASE
-    mavenGroup = LibraryGroups.LIFECYCLE
     inceptionYear = "2017"
     description = "Android Lifecycle LiveData"
+    metalavaK2UastEnabled = true
 }
 
 android {

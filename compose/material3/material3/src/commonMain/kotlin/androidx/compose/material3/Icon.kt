@@ -38,8 +38,13 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 
 /**
- * Icon component that draws [imageVector] using [tint], defaulting to [LocalContentColor]. For a
- * clickable icon, see [IconButton].
+ * A Material Design icon component that draws [imageVector] using [tint], with a default value
+ * of [LocalContentColor]. If [imageVector] has no intrinsic size, this component will use the
+ * recommended default size. Icon is an opinionated component designed to be used with single-color
+ * icons so that they can be tinted correctly for the component they are placed in. For multicolored
+ * icons and icons that should not be tinted, use [Color.Unspecified] for [tint]. For generic images
+ * that should not be tinted, and do not follow the recommended icon size, use the generic
+ * [androidx.compose.foundation.Image] instead. For a clickable icon, see [IconButton].
  *
  * To learn more about icons, see [Material Design icons](https://m3.material.io/styles/icons/overview)
  *
@@ -68,8 +73,13 @@ fun Icon(
 }
 
 /**
- * Icon component that draws [bitmap] using [tint], defaulting to [LocalContentColor]. For a
- * clickable icon, see [IconButton].
+ * A Material Design icon component that draws [bitmap] using [tint], with a default value
+ * of [LocalContentColor]. If [bitmap] has no intrinsic size, this component will use the
+ * recommended default size. Icon is an opinionated component designed to be used with single-color
+ * icons so that they can be tinted correctly for the component they are placed in. For multicolored
+ * icons and icons that should not be tinted, use [Color.Unspecified] for [tint]. For generic images
+ * that should not be tinted, and do not follow the recommended icon size, use the generic
+ * [androidx.compose.foundation.Image] instead. For a clickable icon, see [IconButton].
  *
  * To learn more about icons, see [Material Design icons](https://m3.material.io/styles/icons/overview)
  *
@@ -99,8 +109,13 @@ fun Icon(
 }
 
 /**
- * Icon component that draws a [painter] using [tint], defaulting to [LocalContentColor]. For a
- * clickable icon, see [IconButton].
+ * A Material Design icon component that draws [painter] using [tint], with a default value
+ * of [LocalContentColor]. If [painter] has no intrinsic size, this component will use the
+ * recommended default size. Icon is an opinionated component designed to be used with single-color
+ * icons so that they can be tinted correctly for the component they are placed in. For multicolored
+ * icons and icons that should not be tinted, use [Color.Unspecified] for [tint]. For generic images
+ * that should not be tinted, and do not follow the recommended icon size, use the generic
+ * [androidx.compose.foundation.Image] instead. For a clickable icon, see [IconButton].
  *
  * To learn more about icons, see [Material Design icons](https://m3.material.io/styles/icons/overview)
  *
@@ -120,7 +135,9 @@ fun Icon(
     modifier: Modifier = Modifier,
     tint: Color = LocalContentColor.current
 ) {
-    val colorFilter = if (tint == Color.Unspecified) null else ColorFilter.tint(tint)
+    val colorFilter = remember(tint) {
+        if (tint == Color.Unspecified) null else ColorFilter.tint(tint)
+    }
     val semantics =
         if (contentDescription != null) {
             Modifier.semantics {

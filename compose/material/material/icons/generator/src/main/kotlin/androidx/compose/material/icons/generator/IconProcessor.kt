@@ -21,14 +21,12 @@ import java.io.File
 import java.util.Locale
 
 /**
- * Processes vector drawables in [iconDirectory] into a list of icons, removing any unwanted
+ * Processes vector drawables in [iconDirectories] into a list of icons, removing any unwanted
  * attributes (such as android: attributes that reference the theme) from the XML source.
  *
- * Drawables in [iconDirectory] should match the following structure, see download_material_icons.py
- * to update icons, using this structure.
+ * Each directory in [iconDirectories] should contain a flat list of icons to process. For example,
+ * given the existing structure in raw-icons:
  *
- * // Top level
- * [iconDirectory]
  * // Theme name
  * ├── filled
  *     // Icon name
@@ -39,31 +37,41 @@ import java.util.Locale
  * ├── twotone
  * └── sharp
  *
- * @param iconDirectory root directory containing the directory structure mentioned above
+ * Each directory in [iconDirectories] should be a theme directory (filled, outlined, etc).
+ *
+ * @param iconDirectories list of directories containing icon to process
  * @param expectedApiFile location of the checked-in API file that contains the current list of
  * all icons processed and generated
  * @param generatedApiFile location of the to-be-generated API file in the build directory,
  * that we will write to and compare with [expectedApiFile]. This way the generated file can be
  * copied to overwrite the expected file, 'confirming' any API changes as a result of changing
- * icons in [iconDirectory].
+ * icons in [iconDirectories].
+ * @param expectedAutoMirroredApiFile location of the checked-in API file that contains the current
+ * list of all auto-mirrored icons processed and generated
+ * @param generatedAutoMirroredApiFile location of the to-be-generated API file in the build
+ * directory, that we will write to and compare with [expectedAutoMirroredApiFile]. This way the
+ * generated file can be copied to overwrite the expected file, 'confirming' any API changes as a
+ * result of changing auto-mirrored icons in [iconDirectories]
  */
 class IconProcessor(
     private val iconDirectories: List<File>,
     private val expectedApiFile: File,
     private val generatedApiFile: File,
-    private val verifyApi: Boolean = true
+    private val expectedAutoMirroredApiFile: File,
+    private val generatedAutoMirroredApiFile: File,
 ) {
     /**
-     * @return a list of processed [Icon]s, from the given [iconDirectory].
+     * @return a list of processed [Icon]s, from the provided [iconDirectories].
      */
     fun process(): List<Icon> {
         val icons = loadIcons()
 
-        if (verifyApi) {
-            ensureIconsExistInAllThemes(icons)
-            writeApiFile(icons, generatedApiFile)
-            checkApi(expectedApiFile, generatedApiFile)
-        }
+        ensureIconsExistInAllThemes(icons)
+        val (regularIcons, autoMirroredIcons) = icons.partition { !it.autoMirrored }
+        writeApiFile(regularIcons, generatedApiFile)
+        writeApiFile(autoMirroredIcons, generatedAutoMirroredApiFile)
+        checkApi(expectedApiFile, generatedApiFile)
+        checkApi(expectedAutoMirroredApiFile, generatedAutoMirroredApiFile)
 
         return icons
     }
@@ -82,12 +90,13 @@ class IconProcessor(
                 // Prefix the icon name with a theme so we can ensure they will be unique when
                 // copied to res/drawable.
                 val xmlName = "${theme.themePackageName}_$filename"
-
+                val fileContent = file.readText()
                 Icon(
                     kotlinName = kotlinName,
                     xmlFileName = xmlName,
                     theme = theme,
-                    fileContent = processXmlFile(file.readText())
+                    fileContent = processXmlFile(fileContent),
+                    autoMirrored = isAutoMirrored(fileContent)
                 )
             }
 
@@ -118,15 +127,21 @@ class IconProcessor(
  */
 private fun processXmlFile(fileContent: String): String {
     // Remove any defined tint for paths that use theme attributes
-    val tintAttribute = Regex.escape("""android:tint="?attr/colorControlNormal">""")
+    val tintAttribute = Regex.escape("""android:tint="?attr/colorControlNormal"""")
     val tintRegex = """\n.*?$tintAttribute""".toRegex(RegexOption.MULTILINE)
 
     return fileContent
-        .replace(tintRegex, ">")
+        .replace(tintRegex, "")
         // The imported icons have white as the default path color, so let's change it to be
         // black as is typical on Android.
         .replace("@android:color/white", "@android:color/black")
 }
+
+/**
+ * Returns true if the given [fileContent] includes an `android:autoMirrored="true"` attribute.
+ */
+private fun isAutoMirrored(fileContent: String): Boolean =
+    fileContent.contains(Regex.fromLiteral("""android:autoMirrored="true""""))
 
 /**
  * Ensures that each icon in each theme is available in every other theme
@@ -184,6 +199,8 @@ private fun checkApi(expectedFile: File, generatedFile: File) {
                 |Please check the difference and copy over the changes if intended.
                 |expected file: ${expectedFile.canonicalPath}
                 |generated file: ${generatedFile.canonicalPath}
+                |Please manually un-ignore and run ExtendedIconComparisonTest locally before
+                |uploading.
             """.trimMargin()
     }
 }

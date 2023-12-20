@@ -17,34 +17,36 @@
 package androidx.compose.runtime
 
 /**
- * Remember the value produced by [calculation]. [calculation] will only be evaluated during the composition.
- * Recomposition will always return the value produced by composition.
+ * Remember the value produced by [calculation]. [calculation] will only be evaluated during the
+ * composition. Recomposition will always return the value produced by composition.
  */
 @Composable
-inline fun <T> remember(calculation: @DisallowComposableCalls () -> T): T =
+inline fun <T> remember(crossinline calculation: @DisallowComposableCalls () -> T): T =
     currentComposer.cache(false, calculation)
 
 /**
- * Remember the value returned by [calculation] if [key1] is equal to the previous composition,
- * otherwise produce and remember a new value by calling [calculation].
+ * Remember the value returned by [calculation] if [key1] compares equal (`==`) to the value it
+ * had in the previous composition, otherwise produce and remember a new value by calling
+ * [calculation].
  */
 @Composable
 inline fun <T> remember(
     key1: Any?,
-    calculation: @DisallowComposableCalls () -> T
+    crossinline calculation: @DisallowComposableCalls () -> T
 ): T {
     return currentComposer.cache(currentComposer.changed(key1), calculation)
 }
 
 /**
- * Remember the value returned by [calculation] if [key1] and [key2] are equal to the previous
- * composition, otherwise produce and remember a new value by calling [calculation].
+ * Remember the value returned by [calculation] if [key1] and [key2] are equal (`==`) to the
+ * values they had in the previous composition, otherwise produce and remember a new value by
+ * calling [calculation].
  */
 @Composable
 inline fun <T> remember(
     key1: Any?,
     key2: Any?,
-    calculation: @DisallowComposableCalls () -> T
+    crossinline calculation: @DisallowComposableCalls () -> T
 ): T {
     return currentComposer.cache(
         currentComposer.changed(key1) or currentComposer.changed(key2),
@@ -53,15 +55,16 @@ inline fun <T> remember(
 }
 
 /**
- * Remember the value returned by [calculation] if [key1], [key2] and [key3] are equal to the
- * previous composition, otherwise produce and remember a new value by calling [calculation].
+ * Remember the value returned by [calculation] if [key1], [key2] and [key3] are equal (`==`) to
+ * values they had in the previous composition, otherwise produce and remember a new value by
+ * calling [calculation].
  */
 @Composable
 inline fun <T> remember(
     key1: Any?,
     key2: Any?,
     key3: Any?,
-    calculation: @DisallowComposableCalls () -> T
+    crossinline calculation: @DisallowComposableCalls () -> T
 ): T {
     return currentComposer.cache(
         currentComposer.changed(key1) or
@@ -72,13 +75,14 @@ inline fun <T> remember(
 }
 
 /**
- * Remember the value returned by [calculation] if all values of [keys] are equal to the previous
- * composition, otherwise produce and remember a new value by calling [calculation].
+ * Remember the value returned by [calculation] if all values of [keys] are equal (`==`) to the
+ * values they had in the previous composition, otherwise produce and remember a new value by
+ * calling [calculation].
  */
 @Composable
 inline fun <T> remember(
     vararg keys: Any?,
-    calculation: @DisallowComposableCalls () -> T
+    crossinline calculation: @DisallowComposableCalls () -> T
 ): T {
     var invalid = false
     for (key in keys) invalid = invalid or currentComposer.changed(key)
@@ -290,9 +294,7 @@ val currentCompositeKeyHash: Int
     } else {
         currentComposer.useNode()
     }
-    currentComposer.disableReusing()
     Updater<T>(currentComposer).update()
-    currentComposer.enableReusing()
     currentComposer.endNode()
 }
 
@@ -371,9 +373,7 @@ inline fun <T : Any?, reified E : Applier<*>> ReusableComposeNode(
     } else {
         currentComposer.useNode()
     }
-    currentComposer.disableReusing()
     Updater<T>(currentComposer).update()
-    currentComposer.enableReusing()
     content()
     currentComposer.endNode()
 }
@@ -464,9 +464,7 @@ inline fun <T, reified E : Applier<*>> ReusableComposeNode(
     } else {
         currentComposer.useNode()
     }
-    currentComposer.disableReusing()
     Updater<T>(currentComposer).update()
-    currentComposer.enableReusing()
     SkippableUpdater<T>(currentComposer).skippableUpdate()
     currentComposer.startReplaceableGroup(0x7ab4aae9)
     content()

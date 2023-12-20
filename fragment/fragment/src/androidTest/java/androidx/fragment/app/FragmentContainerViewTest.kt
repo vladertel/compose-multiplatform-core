@@ -31,7 +31,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.fragment.app.test.FragmentTestActivity
+import androidx.fragment.app.test.EmptyFragmentTestActivity
 import androidx.fragment.test.R
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
@@ -39,20 +39,26 @@ import androidx.test.filters.SdkSuppress
 import androidx.testutils.waitForExecution
 import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import leakcanary.DetectLeaksAfterTestSuccess
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class FragmentContainerViewTest {
     @Suppress("DEPRECATION")
+    val activityRule = androidx.test.rule.ActivityTestRule(EmptyFragmentTestActivity::class.java)
+
     @get:Rule
-    var activityRule = androidx.test.rule.ActivityTestRule(FragmentTestActivity::class.java)
+    val ruleChain: RuleChain = RuleChain.outerRule(DetectLeaksAfterTestSuccess())
+        .around(activityRule)
+
     lateinit var context: Context
 
     @Before
@@ -79,7 +85,24 @@ class FragmentContainerViewTest {
         layoutInflater.inflate(R.layout.inflated_fragment_container_view_with_class, null)
     }
 
-    @SdkSuppress(minSdkVersion = 18) // androidx.transition needs setLayoutTransition for API < 18
+    @Test
+    fun inflatedNestedFragmentWithStates() {
+        val activity = activityRule.activity
+        val fm = activity.supportFragmentManager
+        val fragmentParent = StrictViewFragment(
+            contentLayoutId = R.layout.inflated_fragment_container_view_strict_view
+        )
+
+        fm.beginTransaction()
+            .add(R.id.fragment_container_view, fragmentParent)
+            .commit()
+        activityRule.runOnUiThread { fm.executePendingTransactions() }
+
+        // child frag should inflate properly with correct states
+        val childFrag = fragmentParent.childFragmentManager.findFragmentByTag("childFragment")
+        assertThat(childFrag).isNotNull()
+    }
+
     @Test
     fun setLayoutTransitionUnsupported() {
         val activity = activityRule.activity
@@ -96,20 +119,6 @@ class FragmentContainerViewTest {
                         "animateLayoutChanges=\"true\"."
                 )
         }
-    }
-
-    @SdkSuppress(maxSdkVersion = 17) // androidx.transition needs setLayoutTransition for API < 18
-    @Test
-    fun setLayoutTransitionAllowed() {
-        val emptyLayoutTransition = LayoutTransition()
-        emptyLayoutTransition.setAnimator(LayoutTransition.APPEARING, null)
-        emptyLayoutTransition.setAnimator(LayoutTransition.CHANGE_APPEARING, null)
-        emptyLayoutTransition.setAnimator(LayoutTransition.CHANGE_DISAPPEARING, null)
-        emptyLayoutTransition.setAnimator(LayoutTransition.DISAPPEARING, null)
-        emptyLayoutTransition.setAnimator(4 /*LayoutTransition.Changing*/, null)
-
-        val containerView = FragmentContainerView(context)
-        containerView.layoutTransition = emptyLayoutTransition
     }
 
     // If view sets animateLayoutChanges to true, throw UnsupportedOperationException
@@ -421,6 +430,8 @@ class FragmentContainerViewTest {
             .that(drawnFirstCountDownLatch.await(1, TimeUnit.SECONDS))
             .isTrue()
         assertThat(drawnFirst!!).isEqualTo(frag1View)
+
+        drawnFirst = null
     }
 
     // Disappearing child views should be drawn last if transaction is a pop.
@@ -479,6 +490,8 @@ class FragmentContainerViewTest {
             .isTrue()
         // The popped Fragment will be drawn last and therefore will be on top
         assertThat(drawnFirst!!).isNotEqualTo(frag2View)
+
+        drawnFirst = null
     }
 
     @Test
@@ -543,6 +556,8 @@ class FragmentContainerViewTest {
             .that(drawnFirstCountDownLatch.await(1, TimeUnit.SECONDS))
             .isTrue()
         assertThat(drawnFirst!!).isNotEqualTo(frag2View)
+
+        drawnFirst = null
     }
 
     @Test
@@ -610,6 +625,8 @@ class FragmentContainerViewTest {
             .that(drawnFirstCountDownLatch.await(1, TimeUnit.SECONDS))
             .isTrue()
         assertThat(drawnFirst!!).isNotEqualTo(frag2View)
+
+        drawnFirst = null
     }
 
     @Test
@@ -678,6 +695,8 @@ class FragmentContainerViewTest {
             .isTrue()
         // The view that was popped is drawn first which means it is on the bottom.
         assertThat(drawnFirst!!).isEqualTo(frag2View)
+
+        drawnFirst = null
     }
 
     @Test
@@ -753,7 +772,7 @@ class FragmentContainerViewTest {
         var onDetachFromWindowLatch = CountDownLatch(1)
         var onAnimationEndLatch = CountDownLatch(1)
 
-        override fun onDraw(canvas: Canvas?) {
+        override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             setDrawnFirstView(this)
         }

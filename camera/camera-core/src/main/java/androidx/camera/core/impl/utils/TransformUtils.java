@@ -21,9 +21,14 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.media.ExifInterface;
 import android.util.Size;
+import android.util.SizeF;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.camera.core.internal.utils.ImageUtil;
+import androidx.core.util.Preconditions;
+
+import java.util.Locale;
 
 /**
  * Utility class for transform.
@@ -33,7 +38,7 @@ import androidx.annotation.RequiresApi;
  * {@link RectF}, a rotation degrees integer and a boolean flag for the rotation-direction
  * (clockwise v.s. counter-clockwise).
  *
- * TODO(b/179827713): merge this with {@link androidx.camera.core.internal.utils.ImageUtil}.
+ * TODO(b/179827713): merge this with {@link ImageUtil}.
  */
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class TransformUtils {
@@ -50,6 +55,123 @@ public class TransformUtils {
     @NonNull
     public static Size rectToSize(@NonNull Rect rect) {
         return new Size(rect.width(), rect.height());
+    }
+
+    /** Returns a formatted string for a Rect. */
+    @NonNull
+    public static String rectToString(@NonNull Rect rect) {
+        return String.format(Locale.US, "%s(%dx%d)", rect, rect.width(), rect.height());
+    }
+
+    /**
+     * Transforms size to a {@link Rect} with zero left and top.
+     */
+    @NonNull
+    public static Rect sizeToRect(@NonNull Size size) {
+        return sizeToRect(size, 0, 0);
+    }
+
+    /**
+     * Transforms a size to a {@link Rect} with given left and top.
+     */
+    @NonNull
+    public static Rect sizeToRect(@NonNull Size size, int left, int top) {
+        return new Rect(left, top, left + size.getWidth(), top + size.getHeight());
+    }
+
+    /**
+     * Returns true if the crop rect does not match the size.
+     */
+    public static boolean hasCropping(@NonNull Rect cropRect, @NonNull Size size) {
+        return cropRect.left != 0 || cropRect.top != 0 || cropRect.width() != size.getWidth()
+                || cropRect.height() != size.getHeight();
+    }
+
+    /**
+     * Transforms size to a {@link RectF} with zero left and top.
+     */
+    @NonNull
+    public static RectF sizeToRectF(@NonNull Size size) {
+        return sizeToRectF(size, 0, 0);
+    }
+
+    /**
+     * Transforms a size to a {@link RectF} with given left and top.
+     */
+    @NonNull
+    public static RectF sizeToRectF(@NonNull Size size, int left, int top) {
+        return new RectF(left, top, left + size.getWidth(), top + size.getHeight());
+    }
+
+    /**
+     * Reverses width and height for a {@link Size}.
+     *
+     * @param size the size to reverse
+     * @return reversed size
+     */
+    @NonNull
+    public static Size reverseSize(@NonNull Size size) {
+        return new Size(size.getHeight(), size.getWidth());
+    }
+
+    /**
+     * Reverses width and height for a {@link SizeF}.
+     *
+     * @param sizeF the float size to reverse
+     * @return reversed float size
+     */
+    @NonNull
+    public static SizeF reverseSizeF(@NonNull SizeF sizeF) {
+        return new SizeF(sizeF.getHeight(), sizeF.getWidth());
+    }
+
+    /**
+     * Rotates a {@link Size} according to the rotation degrees.
+     *
+     * @param size            the size to rotate
+     * @param rotationDegrees the rotation degrees
+     * @return rotated size
+     * @throws IllegalArgumentException if the rotation degrees is not a multiple of 90
+     */
+    @NonNull
+    public static Size rotateSize(@NonNull Size size, int rotationDegrees) {
+        Preconditions.checkArgument(rotationDegrees % 90 == 0,
+                "Invalid rotation degrees: " + rotationDegrees);
+        return is90or270(within360(rotationDegrees)) ? reverseSize(size) : size;
+    }
+
+    /**
+     * Rotates {@link SizeF} according to the rotation degrees.
+     *
+     * <p> A 640, 480 rect rotated 90 degrees clockwise will become a 480, 640 rect.
+     */
+    @NonNull
+    public static RectF rotateRect(@NonNull RectF rect, int rotationDegrees) {
+        Preconditions.checkArgument(rotationDegrees % 90 == 0,
+                "Invalid rotation degrees: " + rotationDegrees);
+        if (is90or270(within360(rotationDegrees))) {
+            return new RectF(0, 0, /*right=*/rect.height(),  /*bottom=*/rect.width());
+        } else {
+            return rect;
+        }
+    }
+
+    /**
+     * Gets the size after cropping and rotating.
+     *
+     * @return rotated size
+     * @throws IllegalArgumentException if the rotation degrees is not a multiple of.
+     */
+    @NonNull
+    public static Size getRotatedSize(@NonNull Rect cropRect, int rotationDegrees) {
+        return rotateSize(rectToSize(cropRect), rotationDegrees);
+    }
+
+    /**
+     * Converts the degrees to within 360 degrees [0 - 359].
+     */
+    public static int within360(int degrees) {
+        return (degrees % 360 + 360) % 360;
     }
 
     /**
@@ -113,6 +235,17 @@ public class TransformUtils {
     /**
      * Checks if aspect ratio matches while tolerating rounding error.
      *
+     * @see #isAspectRatioMatchingWithRoundingError(Size, boolean, Size, boolean)
+     */
+    public static boolean isAspectRatioMatchingWithRoundingError(
+            @NonNull Size size1, @NonNull Size size2) {
+        return isAspectRatioMatchingWithRoundingError(
+                size1, /*isAccurate1=*/ false, size2, /*isAccurate2=*/ false);
+    }
+
+    /**
+     * Checks if aspect ratio matches while tolerating rounding error.
+     *
      * <p> One example of the usage is comparing the viewport-based crop rect from different use
      * cases. The crop rect is rounded because pixels are integers, which may introduce an error
      * when we check if the aspect ratio matches. For example, when
@@ -156,7 +289,7 @@ public class TransformUtils {
     }
 
     /**
-     * Gets the transform from one {@link Rect} to another with rotation degrees.
+     * Gets the transform from one {@link RectF} to another with rotation degrees.
      *
      * <p> Following is how the source is mapped to the target with a 90° rotation. The rect
      * <a, b, c, d> is mapped to <a', b', c', d'>.
@@ -172,11 +305,34 @@ public class TransformUtils {
     @NonNull
     public static Matrix getRectToRect(
             @NonNull RectF source, @NonNull RectF target, int rotationDegrees) {
+        return getRectToRect(source, target, rotationDegrees, /*mirroring=*/false);
+    }
+
+    /**
+     * Gets the transform from one {@link RectF} to another with rotation degrees and mirroring.
+     *
+     * <p> Following is how the source is mapped to the target with a 90° rotation and a mirroring.
+     * The rect <a, b, c, d> is mapped to <a', b', c', d'>.
+     *
+     * <pre>
+     *  a----------b                           a'-----------d'
+     *  |  source  |    -90° + mirroring ->    |            |
+     *  d----------c                           |   target   |
+     *                                         |            |
+     *                                         b'-----------c'
+     * </pre>
+     */
+    @NonNull
+    public static Matrix getRectToRect(
+            @NonNull RectF source, @NonNull RectF target, int rotationDegrees, boolean mirroring) {
         // Map source to normalized space.
         Matrix matrix = new Matrix();
         matrix.setRectToRect(source, NORMALIZED_RECT, Matrix.ScaleToFit.FILL);
         // Add rotation.
         matrix.postRotate(rotationDegrees);
+        if (mirroring) {
+            matrix.postScale(-1, 1);
+        }
         // Restore the normalized space to target's coordinates.
         matrix.postConcat(getNormalizedToBuffer(target));
         return matrix;
@@ -188,6 +344,18 @@ public class TransformUtils {
     @NonNull
     public static Matrix getNormalizedToBuffer(@NonNull Rect viewPortRect) {
         return getNormalizedToBuffer(new RectF(viewPortRect));
+    }
+
+    /**
+     * Updates sensor to buffer transform based on crop rect.
+     */
+    @NonNull
+    public static Matrix updateSensorToBufferTransform(
+            @NonNull Matrix original,
+            @NonNull Rect cropRect) {
+        Matrix matrix = new Matrix(original);
+        matrix.postTranslate(-cropRect.left, -cropRect.top);
+        return matrix;
     }
 
     /**
@@ -265,5 +433,21 @@ public class TransformUtils {
         matrix.postConcat(restore);
 
         return matrix;
+    }
+
+    /**
+     * Returns the rotation degrees of the matrix.
+     *
+     * <p>The returned degrees will be an integer between 0 and 359.
+     */
+    public static int getRotationDegrees(@NonNull Matrix matrix) {
+        float[] values = new float[9];
+        matrix.getValues(values);
+
+        // Calculate the degrees of rotation using the sin and cosine values from the matrix
+        float scaleX = values[Matrix.MSCALE_X];
+        float skewY = values[Matrix.MSKEW_Y];
+
+        return within360((int) Math.round(Math.atan2(skewY, scaleX) * (180 / Math.PI)));
     }
 }

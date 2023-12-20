@@ -19,6 +19,7 @@ package androidx.camera.integration.uiwidgets.rotations
 import android.os.Build
 import android.view.Surface
 import android.view.View
+import androidx.camera.testing.impl.CoreAppTestUtil
 import androidx.test.core.app.ActivityScenario
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
@@ -38,8 +39,9 @@ import org.junit.runners.Parameterized
 class ImageCaptureOrientationConfigChangesTest(
     private val lensFacing: Int,
     private val rotation: Int,
-    private val captureMode: Int
-) : ImageCaptureBaseTest<OrientationConfigChangesOverriddenActivity>() {
+    private val captureMode: Int,
+    private val cameraXConfig: String
+) : ImageCaptureBaseTest<OrientationConfigChangesOverriddenActivity>(cameraXConfig) {
 
     companion object {
         private val rotations = arrayOf(
@@ -50,12 +52,16 @@ class ImageCaptureOrientationConfigChangesTest(
         )
 
         @JvmStatic
-        @Parameterized.Parameters(name = "lensFacing={0}, rotation={1}, captureMode={2}")
+        @Parameterized.Parameters(
+            name = "lensFacing={0}, rotation={1}, captureMode={2}, cameraXConfig={3}"
+        )
         fun data() = mutableListOf<Array<Any?>>().apply {
-            lensFacing.forEach { lens ->
+            lensFacingList.forEach { lens ->
                 rotations.forEach { rotation ->
                     captureModes.forEach { mode ->
-                        add(arrayOf(lens, rotation, mode))
+                        cameraXConfigList.forEach { cameraXConfig ->
+                            add(arrayOf(lens, rotation, mode, cameraXConfig))
+                        }
                     }
                 }
             }
@@ -68,9 +74,13 @@ class ImageCaptureOrientationConfigChangesTest(
             "Known issue on this device. Please see b/198744779",
             listOf(
                 "redmi note 9s",
-                "redmi note 8"
+                "redmi note 8",
+                "m2003j15sc", // Redmi Note 9
+                "m2006c3lg", // Redmi 9A
+                "m2006c3mg" // Redmi 9C
             ).contains(Build.MODEL.lowercase(Locale.US)) && rotation == Surface.ROTATION_180
         )
+        CoreAppTestUtil.assumeCompatibleDevice()
         setUp(lensFacing)
     }
 
@@ -83,7 +93,8 @@ class ImageCaptureOrientationConfigChangesTest(
     fun verifyRotation() {
         verifyRotation<OrientationConfigChangesOverriddenActivity>(
             lensFacing,
-            captureMode
+            captureMode,
+            cameraXConfig
         ) {
             if (rotate(rotation)) {
 

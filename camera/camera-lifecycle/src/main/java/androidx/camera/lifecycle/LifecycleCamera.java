@@ -20,7 +20,6 @@ import android.os.Build;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraControl;
@@ -276,12 +275,8 @@ final class LifecycleCamera implements LifecycleObserver, Camera {
     }
 
     @Override
-    public void setExtendedConfig(@Nullable CameraConfig cameraConfig)  {
-        mCameraUseCaseAdapter.setExtendedConfig(cameraConfig);
-    }
-
-    @Override
-    public boolean isUseCasesCombinationSupported(@NonNull UseCase... useCases) {
-        return mCameraUseCaseAdapter.isUseCasesCombinationSupported(useCases);
+    public boolean isUseCasesCombinationSupported(boolean withStreamSharing,
+            @NonNull UseCase... useCases) {
+        return mCameraUseCaseAdapter.isUseCasesCombinationSupported(withStreamSharing, useCases);
     }
 }

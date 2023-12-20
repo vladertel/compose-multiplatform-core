@@ -16,11 +16,10 @@
 
 package androidx.compose.compiler.plugins.kotlin.lower.decoys
 
+import androidx.compose.compiler.plugins.kotlin.lower.DeepCopyPreservingMetadata
 import androidx.compose.compiler.plugins.kotlin.lower.hasAnnotationSafe
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContextImpl
-import org.jetbrains.kotlin.backend.common.ir.isTopLevel
-import org.jetbrains.kotlin.backend.common.ir.remapTypeParameters
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.ir.IrElement
@@ -33,7 +32,6 @@ import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrVararg
 import org.jetbrains.kotlin.ir.expressions.impl.IrVarargImpl
-import org.jetbrains.kotlin.ir.interpreter.toIrConst
 import org.jetbrains.kotlin.ir.linkage.IrDeserializer
 import org.jetbrains.kotlin.ir.linkage.IrDeserializer.TopLevelSymbolKind.FUNCTION_SYMBOL
 import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
@@ -42,14 +40,18 @@ import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.IrTypeArgument
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
-import org.jetbrains.kotlin.ir.util.DeepCopyIrTreeWithSymbols
 import org.jetbrains.kotlin.ir.util.DeepCopyTypeRemapper
 import org.jetbrains.kotlin.ir.util.IdSignature
+import org.jetbrains.kotlin.ir.util.SymbolRenamer
 import org.jetbrains.kotlin.ir.util.TypeRemapper
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.getAnnotation
+import org.jetbrains.kotlin.ir.util.isTopLevel
 import org.jetbrains.kotlin.ir.util.module
+import org.jetbrains.kotlin.ir.util.remapTypeParameters
+import org.jetbrains.kotlin.ir.util.toIrConst
 
+@JvmDefaultWithCompatibility
 internal interface DecoyTransformBase {
     val context: IrPluginContext
     val signatureBuilder: IdSignatureSerializer
@@ -87,7 +89,9 @@ internal interface DecoyTransformBase {
             UNDEFINED_OFFSET,
             type = stringArrayType,
             varargElementType = context.irBuiltIns.stringType,
-            elements = valueArguments.map { it.toIrConst(context.irBuiltIns.stringType) }
+            elements = valueArguments.map {
+                it.toIrConst(context.irBuiltIns.stringType)
+            }
         )
     }
 
@@ -115,7 +119,8 @@ internal interface DecoyTransformBase {
             packageFqName = signature[0],
             declarationFqName = signature[1],
             id = signature[2].toLongOrNull(),
-            mask = signature[3].toLong()
+            mask = signature[3].toLong(),
+            description = "Composable decoy signature"
         )
 
         val linker = (context as IrPluginContextImpl).linker
@@ -197,7 +202,7 @@ fun IrFunction.didDecoyHaveDefaultForValueParameter(paramIndex: Int): Boolean {
     } ?: false
 }
 
-inline fun <reified T : IrElement> T.copyWithNewTypeParams(
+internal inline fun <reified T : IrElement> T.copyWithNewTypeParams(
     source: IrFunction,
     target: IrFunction
 ): T {
@@ -207,8 +212,11 @@ inline fun <reified T : IrElement> T.copyWithNewTypeParams(
                 return typeRemapper.remapType(type.remapTypeParameters(source, target))
             }
         }
-
-        val deepCopy = DeepCopyIrTreeWithSymbols(symbolRemapper, typeParamRemapper)
+        val deepCopy = DeepCopyPreservingMetadata(
+            symbolRemapper,
+            typeParamRemapper,
+            SymbolRenamer.DEFAULT
+        )
         (typeRemapper as? DeepCopyTypeRemapper)?.deepCopy = deepCopy
         deepCopy
     }

@@ -16,16 +16,22 @@
 
 package androidx.room.compiler.processing
 
+import androidx.kruth.assertThat
+import androidx.kruth.assertWithMessage
+import androidx.room.compiler.codegen.XClassName
+import androidx.room.compiler.codegen.XTypeName
+import androidx.room.compiler.processing.javac.JavacBasicAnnotationProcessor
+import androidx.room.compiler.processing.ksp.KspBasicAnnotationProcessor
 import androidx.room.compiler.processing.testcode.OtherAnnotation
 import androidx.room.compiler.processing.util.Source
+import androidx.room.compiler.processing.util.compileFiles
 import androidx.room.compiler.processing.util.getDeclaredMethodByJvmName
-import androidx.room.compiler.processing.util.getField
-import androidx.room.compiler.processing.util.getMethodByJvmName
 import androidx.room.compiler.processing.util.runKspTest
 import androidx.room.compiler.processing.util.runProcessorTest
-import com.google.common.truth.Truth.assertThat
-import com.squareup.javapoet.ClassName
-import com.squareup.javapoet.TypeName
+import com.google.devtools.ksp.processing.SymbolProcessorProvider
+import com.squareup.kotlinpoet.INT
+import com.squareup.kotlinpoet.UNIT
+import com.squareup.kotlinpoet.javapoet.JTypeName
 import org.junit.Test
 
 class XRoundEnvTest {
@@ -35,7 +41,7 @@ class XRoundEnvTest {
         val source = Source.kotlin(
             "Baz.kt",
             """
-            import androidx.room.compiler.processing.testcode.OtherAnnotation;
+            import androidx.room.compiler.processing.testcode.OtherAnnotation
             @OtherAnnotation(value="xx")
             class Baz {
                 @OtherAnnotation(value="xx")
@@ -50,27 +56,24 @@ class XRoundEnvTest {
             val annotatedElementsByClass = testInvocation.roundEnv.getElementsAnnotatedWith(
                 OtherAnnotation::class
             )
-
             val annotatedElementsByName = testInvocation.roundEnv.getElementsAnnotatedWith(
                 OtherAnnotation::class.qualifiedName!!
             )
-
-            val targetElement = testInvocation.processingEnv.requireTypeElement("Baz")
-
-            assertThat(
-                annotatedElementsByClass
-            ).apply {
-                containsExactlyElementsIn(annotatedElementsByName)
-                hasSize(3)
-                contains(targetElement)
-                contains(targetElement.getMethodByJvmName("myFunction"))
-
-                if (testInvocation.isKsp) {
-                    contains(targetElement.getField("myProperty"))
-                } else {
-                    // Javac sees a property annotation on the synthetic function
-                    contains(targetElement.getDeclaredMethodByJvmName("getMyProperty\$annotations"))
-                }
+            assertThat(annotatedElementsByClass).containsExactlyElementsIn(annotatedElementsByName)
+            if (testInvocation.isKsp) {
+                assertThat(annotatedElementsByClass.map { it.name }).containsExactly(
+                    "Baz",
+                    "myProperty",
+                    "myFunction",
+                )
+            } else {
+                assertThat(annotatedElementsByClass.map { it.name }).containsExactly(
+                    "Baz",
+                    // TODO(b/290234031): Fix XRoundEnv to return the property rather than the
+                    //  synthetic "$annotations" method in KAPT
+                    "getMyProperty\$annotations",
+                    "myFunction",
+                )
             }
         }
     }
@@ -80,7 +83,7 @@ class XRoundEnvTest {
         val source = Source.kotlin(
             "Baz.kt",
             """
-            import androidx.room.compiler.processing.testcode.OtherAnnotation;
+            import androidx.room.compiler.processing.testcode.OtherAnnotation
             class Baz {
                 @get:OtherAnnotation(value="xx")
                 var myProperty1: Int = 0
@@ -88,6 +91,13 @@ class XRoundEnvTest {
                 var myProperty2: Int = 0
                 @field:OtherAnnotation(value="xx")
                 var myProperty3: Int = 0
+                companion object {
+                    @get:OtherAnnotation(value="xx")
+                    @JvmStatic
+                    val myProperty4: String = ""
+                    @get:OtherAnnotation(value="xx")
+                    const val myProperty5: String = ""
+                }
             }
             """.trimIndent()
         )
@@ -97,16 +107,75 @@ class XRoundEnvTest {
                 OtherAnnotation::class
             )
 
-            val targetElement = testInvocation.processingEnv.requireTypeElement("Baz")
+            val baz = testInvocation.processingEnv.requireTypeElement("Baz")
 
             assertThat(
-                annotatedElements
-            ).apply {
-                hasSize(3)
+                annotatedElements.map { it.name }
+            ).containsExactly(
+                "getMyProperty4",
+                "myProperty3",
+                "getMyProperty1",
+                "setMyProperty2",
+                "getMyProperty4"
+            )
+            baz.getDeclaredMethods().forEach { method ->
+              assertWithMessage("Enclosing element of method ${method.jvmName}")
+                .that(method.enclosingElement.name)
+                .isEqualTo("Baz")
+            }
+        }
+    }
 
-                contains(targetElement.getDeclaredMethodByJvmName("getMyProperty1"))
-                contains(targetElement.getDeclaredMethodByJvmName("setMyProperty2"))
-                contains(targetElement.getField("myProperty3"))
+    @Test
+    fun getAnnotatedPackageElements() {
+        val source = Source.java(
+            // Packages can be annotated in `package-info.java` files.
+            "foo.bar.foobar.package-info",
+            """
+            @OtherAnnotation(value = "xx")
+            package foo.bar.foobar;
+            import androidx.room.compiler.processing.testcode.OtherAnnotation;
+            """.trimIndent()
+        )
+
+        runProcessorTest(listOf(source)) { testInvocation ->
+            (testInvocation.roundEnv.getElementsAnnotatedWith(
+                OtherAnnotation::class
+            ).single() as XPackageElement).apply {
+                assertThat(name).isEqualTo("foobar")
+                assertThat(qualifiedName).isEqualTo("foo.bar.foobar")
+                assertThat(kindName()).isEqualTo("package")
+                assertThat(validate()).isTrue()
+            }.getAllAnnotations().single().apply {
+                assertThat(qualifiedName)
+                    .isEqualTo("androidx.room.compiler.processing.testcode.OtherAnnotation")
+            }.annotationValues.single().apply {
+                assertThat(name).isEqualTo("value")
+                assertThat(value).isEqualTo("xx")
+            }
+        }
+    }
+
+    @Test
+    fun defaultPackage() {
+        val javaSource = Source.java(
+            "FooBar",
+            """
+            class FooBar {}
+            """.trimIndent()
+        )
+        val kotlinSource = Source.kotlin(
+            "FooBarKt.kt",
+            """
+            class FooBarKt
+            """.trimIndent()
+        )
+        runProcessorTest(listOf(javaSource, kotlinSource)) { testInvocation ->
+            testInvocation.processingEnv.requireTypeElement("FooBar").apply {
+                assertThat(packageName).isEqualTo("")
+            }
+            testInvocation.processingEnv.requireTypeElement("FooBarKt").apply {
+                assertThat(packageName).isEqualTo("")
             }
         }
     }
@@ -116,7 +185,7 @@ class XRoundEnvTest {
         val source = Source.kotlin(
             "Baz.kt",
             """
-            import androidx.room.compiler.processing.XRoundEnvTest.PropertyAnnotation;
+            import androidx.room.compiler.processing.XRoundEnvTest.PropertyAnnotation
             class Baz {
                 @PropertyAnnotation
                 fun myFun(): Int = 0
@@ -147,8 +216,8 @@ class XRoundEnvTest {
             assertThat(annotatedElements).hasSize(1)
             val subject = annotatedElements.filterIsInstance<XMethodElement>().first()
             assertThat(subject.jvmName).isEqualTo("myFun")
-            assertThat(subject.enclosingElement.className).isEqualTo(
-                ClassName.get("", "BazKt")
+            assertThat(subject.enclosingElement.asClassName()).isEqualTo(
+                XClassName.get("", "BazKt")
             )
             assertThat(subject.isStatic()).isTrue()
         }
@@ -183,41 +252,38 @@ class XRoundEnvTest {
                     else -> error("unexpected type $it")
                 }
             }
-            val containerClassName = ClassName.get("foo.bar", "MyCustomClass")
+            val containerClassName = XClassName.get("foo.bar", "MyCustomClass")
             assertThat(byName.keys).containsExactly(
                 "getMyPropertyGetter",
                 "setMyPropertySetter",
                 "myProperty"
             )
             (byName["getMyPropertyGetter"] as XMethodElement).let {
-                assertThat(it.returnType.typeName).isEqualTo(TypeName.INT)
+                assertThat(it.returnType.asTypeName()).isEqualTo(XTypeName.PRIMITIVE_INT)
                 assertThat(it.parameters).hasSize(0)
-                assertThat(it.enclosingElement.className).isEqualTo(
-                    containerClassName
-                )
+                assertThat(it.enclosingElement.asClassName()).isEqualTo(containerClassName)
                 assertThat(it.isStatic()).isTrue()
             }
             (byName["setMyPropertySetter"] as XMethodElement).let {
-                assertThat(it.returnType.typeName).isEqualTo(TypeName.VOID)
+                assertThat(it.returnType.asTypeName().java).isEqualTo(JTypeName.VOID)
+                assertThat(it.returnType.asTypeName().kotlin).isEqualTo(UNIT)
                 assertThat(it.parameters).hasSize(1)
-                assertThat(it.parameters.first().type.typeName).isEqualTo(TypeName.INT)
-                assertThat(it.enclosingElement.className).isEqualTo(
-                    containerClassName
-                )
+                assertThat(it.parameters.first().type.asTypeName())
+                    .isEqualTo(XTypeName.PRIMITIVE_INT)
+                assertThat(it.enclosingElement.asClassName()).isEqualTo(containerClassName)
                 assertThat(it.isStatic()).isTrue()
             }
             (byName["myProperty"] as XFieldElement).let {
-                assertThat(it.type.typeName).isEqualTo(TypeName.INT)
-                assertThat(it.enclosingElement.className).isEqualTo(
-                    containerClassName
-                )
+                assertThat(it.type.asTypeName().java).isEqualTo(JTypeName.INT)
+                assertThat(it.type.asTypeName().kotlin).isEqualTo(INT)
+                assertThat(it.enclosingElement.asClassName()).isEqualTo(containerClassName)
                 assertThat(it.isStatic()).isTrue()
             }
         }
     }
 
     @Test
-    fun getElementsFromPackageIncludesSources() {
+    fun getTypeElementsFromPackageIncludesSources() {
         val source = Source.kotlin(
             "foo/Baz.kt",
             """
@@ -233,12 +299,12 @@ class XRoundEnvTest {
             )
             assertThat(
                 elements
-            ).contains(targetElement)
+            ).containsExactly(targetElement)
         }
     }
 
     @Test
-    fun getElementsFromPackageIncludesBinaries() {
+    fun getTypeElementsFromPackageIncludesBinaries() {
         runProcessorTest { testInvocation ->
             val kspElements = testInvocation.processingEnv.getTypeElementsFromPackage(
                 "com.google.devtools.ksp.processing"
@@ -255,13 +321,76 @@ class XRoundEnvTest {
     }
 
     @Test
-    fun getElementsFromPackageReturnsEmptyListForUnknownPackage() {
+    fun getTypeElementsFromPackageReturnsEmptyListForUnknownPackage() {
         runProcessorTest { testInvocation ->
             val kspElements = testInvocation.processingEnv.getTypeElementsFromPackage(
                 "com.example.unknown.package"
             )
 
             assertThat(kspElements).isEmpty()
+        }
+    }
+
+    @Test
+    fun getElementsFromPackageInSource() {
+        val source = Source.kotlin(
+            "Foo.kt",
+            """
+            package foo.bar
+            val p: Int = TODO()
+            fun f(): String = TODO()
+            """.trimIndent()
+        )
+        runProcessorTest(listOf(source)) { invocation ->
+            val elements = invocation.processingEnv.getElementsFromPackage(
+                "foo.bar"
+            )
+            if (invocation.isKsp) {
+                assertThat(
+                    elements.map { it.name }
+                ).containsExactly("p", "f")
+            } else {
+                assertThat(
+                    elements.map { it.name }
+                ).containsExactly("FooKt")
+            }
+        }
+    }
+
+    @Test
+    fun getElementsFromPackageInClass() {
+        val source = Source.kotlin(
+            "Foo.kt",
+            """
+            package foo.bar
+            val p: Int = TODO()
+            fun f(): String = TODO()
+            """.trimIndent()
+        )
+        runProcessorTest(classpath = compileFiles(listOf(source))) { invocation ->
+            val elements = invocation.processingEnv.getElementsFromPackage(
+                "foo.bar"
+            )
+            if (invocation.isKsp) {
+                assertThat(
+                    elements.map { it.name }
+                ).containsExactly("p", "f")
+            } else {
+                assertThat(
+                    elements.map { it.name }
+                ).containsExactly("FooKt")
+            }
+        }
+    }
+
+    @Test
+    fun getElementsFromPackageReturnsEmptyListForUnknownPackage() {
+        runProcessorTest { testInvocation ->
+            val elements = testInvocation.processingEnv.getElementsFromPackage(
+                "com.example.unknown.package"
+            )
+
+            assertThat(elements).isEmpty()
         }
     }
 
@@ -289,22 +418,24 @@ class XRoundEnvTest {
             val annotatedElements =
                 testInvocation.roundEnv.getElementsAnnotatedWith(TopLevelAnnotation::class)
             val annotatedParams = annotatedElements.filterIsInstance<XExecutableParameterElement>()
-            val ctorProperty = annotatedParams.first { it.name == "ctorProperty" }
-            assertThat(ctorProperty.enclosingElement).isEqualTo(
-                typeElement.findPrimaryConstructor()
-            )
-            val ctorParam = annotatedParams.first { it.name == "ctorParam" }
-            assertThat(ctorParam.enclosingElement).isEqualTo(
-                typeElement.findPrimaryConstructor()
-            )
-            val setterParam = annotatedParams.first { it.name == "p0" || it.name == "arg0" }
-            assertThat(setterParam.enclosingElement).isEqualTo(
-                typeElement.getDeclaredMethodByJvmName("setProperty")
-            )
-            val methodParam = annotatedParams.first { it.name == "methodParam" }
-            assertThat(methodParam.enclosingElement).isEqualTo(
-                typeElement.getDeclaredMethodByJvmName("method")
-            )
+            assertThat(annotatedParams.map { it.name }).containsExactly(
+                "ctorProperty",
+                "ctorParam",
+                "p0",
+                "methodParam",
+            ).inOrder()
+            assertThat(annotatedParams.map { it.jvmName }).containsExactly(
+                "ctorProperty",
+                "ctorParam",
+                "p0",
+                "methodParam",
+            ).inOrder()
+            assertThat(annotatedParams.map { it.enclosingElement }).containsExactly(
+                typeElement.findPrimaryConstructor(),
+                typeElement.findPrimaryConstructor(),
+                typeElement.getDeclaredMethodByJvmName("setProperty"),
+                typeElement.getDeclaredMethodByJvmName("method"),
+            ).inOrder()
         }
     }
 
@@ -327,6 +458,49 @@ class XRoundEnvTest {
                 testInvocation.roundEnv.getElementsAnnotatedWith("MissingTypeAnnotation")
             assertThat(annotatedElements).hasSize(0)
         }
+    }
+
+    @Test
+    fun getElementsAnnotatedOnLastRound() {
+        val step = object : XProcessingStep {
+            override fun annotations() = setOf(PublishedApi::class.java.canonicalName)
+        }
+        val javaProcessor = object : JavacBasicAnnotationProcessor() {
+            override fun processingSteps() = listOf(step)
+            override fun postRound(env: XProcessingEnv, round: XRoundEnv) {
+                val foundElements = round.getElementsAnnotatedWith(PublishedApi::class)
+                if (round.isProcessingOver) {
+                    assertThat(foundElements).isEmpty()
+                } else {
+                    assertThat(foundElements).hasSize(1)
+                }
+            }
+        }
+        val kspProcessorProvider = SymbolProcessorProvider { environment ->
+            object : KspBasicAnnotationProcessor(environment) {
+                override fun processingSteps() = listOf(step)
+                override fun postRound(env: XProcessingEnv, round: XRoundEnv) {
+                    val foundElements = round.getElementsAnnotatedWith(PublishedApi::class)
+                    if (round.isProcessingOver) {
+                        assertThat(foundElements).isEmpty()
+                    } else {
+                        assertThat(foundElements).hasSize(1)
+                    }
+                }
+            }
+        }
+        runProcessorTest(
+            sources = listOf(
+                Source.kotlin(
+                    "Foo.kt",
+                    """
+                    @PublishedApi internal class Foo {}
+                    """.trimIndent()
+                )
+            ),
+            javacProcessors = listOf(javaProcessor),
+            symbolProcessorProviders = listOf(kspProcessorProvider)
+        ) { }
     }
 
     annotation class TopLevelAnnotation

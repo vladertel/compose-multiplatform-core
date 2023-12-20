@@ -16,12 +16,11 @@
 
 package androidx.compose.material
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -65,13 +64,13 @@ fun IconButton(
 ) {
     Box(
         modifier = modifier
-            .minimumTouchTargetSize()
+            .minimumInteractiveComponentSize()
             .clickable(
                 onClick = onClick,
                 enabled = enabled,
                 role = Role.Button,
                 interactionSource = interactionSource,
-                indication = rememberRipple(bounded = false, radius = RippleRadius)
+                indication = rippleOrFallbackImplementation(bounded = false, radius = RippleRadius)
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -109,14 +108,14 @@ fun IconToggleButton(
 ) {
     Box(
         modifier = modifier
-            .minimumTouchTargetSize()
+            .minimumInteractiveComponentSize()
             .toggleable(
             value = checked,
             onValueChange = onCheckedChange,
             enabled = enabled,
             role = Role.Checkbox,
             interactionSource = interactionSource,
-            indication = rememberRipple(bounded = false, radius = RippleRadius)
+            indication = rippleOrFallbackImplementation(bounded = false, radius = RippleRadius)
         ),
         contentAlignment = Alignment.Center
     ) {

@@ -16,9 +16,10 @@
 
 package androidx.compose.ui.graphics.colorspace
 
-import kotlin.math.abs
-import kotlin.math.pow
-import kotlin.math.sign
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.util.fastCbrt
+import androidx.compose.ui.util.fastCoerceIn
+import androidx.compose.ui.util.packFloats
 
 /**
  * Implementation of the Oklab color space. Oklab uses
@@ -44,9 +45,9 @@ internal class Oklab(
     }
 
     override fun toXyz(v: FloatArray): FloatArray {
-        v[0] = v[0].coerceIn(0f, 1f)
-        v[1] = v[1].coerceIn(-0.5f, 0.5f)
-        v[2] = v[2].coerceIn(-0.5f, 0.5f)
+        v[0] = v[0].fastCoerceIn(0f, 1f)
+        v[1] = v[1].fastCoerceIn(-0.5f, 0.5f)
+        v[2] = v[2].fastCoerceIn(-0.5f, 0.5f)
 
         mul3x3Float3(InverseM2, v)
         v[0] = v[0] * v[0] * v[0]
@@ -57,12 +58,71 @@ internal class Oklab(
         return v
     }
 
+    override fun toXy(v0: Float, v1: Float, v2: Float): Long {
+        val v00 = v0.fastCoerceIn(0f, 1f)
+        val v10 = v1.fastCoerceIn(-0.5f, 0.5f)
+        val v20 = v2.fastCoerceIn(-0.5f, 0.5f)
+
+        val v01 = mul3x3Float3_0(InverseM2, v00, v10, v20)
+        val v11 = mul3x3Float3_1(InverseM2, v00, v10, v20)
+        val v21 = mul3x3Float3_2(InverseM2, v00, v10, v20)
+
+        val v02 = v01 * v01 * v01
+        val v12 = v11 * v11 * v11
+        val v22 = v21 * v21 * v21
+
+        val v03 = mul3x3Float3_0(InverseM1, v02, v12, v22)
+        val v13 = mul3x3Float3_1(InverseM1, v02, v12, v22)
+
+        return packFloats(v03, v13)
+    }
+
+    override fun toZ(v0: Float, v1: Float, v2: Float): Float {
+        val v00 = v0.fastCoerceIn(0f, 1f)
+        val v10 = v1.fastCoerceIn(-0.5f, 0.5f)
+        val v20 = v2.fastCoerceIn(-0.5f, 0.5f)
+
+        val v01 = mul3x3Float3_0(InverseM2, v00, v10, v20)
+        val v11 = mul3x3Float3_1(InverseM2, v00, v10, v20)
+        val v21 = mul3x3Float3_2(InverseM2, v00, v10, v20)
+
+        val v02 = v01 * v01 * v01
+        val v12 = v11 * v11 * v11
+        val v22 = v21 * v21 * v21
+
+        val v23 = mul3x3Float3_2(InverseM1, v02, v12, v22)
+
+        return v23
+    }
+
+    override fun xyzaToColor(
+        x: Float,
+        y: Float,
+        z: Float,
+        a: Float,
+        colorSpace: ColorSpace
+    ): Color {
+        var v0 = mul3x3Float3_0(M1, x, y, z)
+        var v1 = mul3x3Float3_1(M1, x, y, z)
+        var v2 = mul3x3Float3_2(M1, x, y, z)
+
+        v0 = fastCbrt(v0)
+        v1 = fastCbrt(v1)
+        v2 = fastCbrt(v2)
+
+        val v01 = mul3x3Float3_0(M2, v0, v1, v2)
+        val v11 = mul3x3Float3_1(M2, v0, v1, v2)
+        val v21 = mul3x3Float3_2(M2, v0, v1, v2)
+
+        return Color(v01, v11, v21, a, colorSpace)
+    }
+
     override fun fromXyz(v: FloatArray): FloatArray {
         mul3x3Float3(M1, v)
 
-        v[0] = sign(v[0]) * abs(v[0]).pow(1.0f / 3.0f)
-        v[1] = sign(v[1]) * abs(v[1]).pow(1.0f / 3.0f)
-        v[2] = sign(v[2]) * abs(v[2]).pow(1.0f / 3.0f)
+        v[0] = fastCbrt(v[0])
+        v[1] = fastCbrt(v[1])
+        v[2] = fastCbrt(v[2])
 
         mul3x3Float3(M2, v)
         return v

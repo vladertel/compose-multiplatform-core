@@ -15,7 +15,6 @@
  */
 package androidx.emoji2.viewsintegration;
 
-import android.os.Build;
 import android.text.method.KeyListener;
 import android.text.method.NumberKeyListener;
 import android.view.inputmethod.EditorInfo;
@@ -104,11 +103,7 @@ public final class EmojiEditTextHelper {
     public EmojiEditTextHelper(@NonNull EditText editText,
             boolean expectInitializedEmojiCompat) {
         Preconditions.checkNotNull(editText, "editText cannot be null");
-        if (Build.VERSION.SDK_INT < 19) {
-            mHelper = new HelperInternal();
-        } else {
-            mHelper = new HelperInternal19(editText, expectInitializedEmojiCompat);
-        }
+        mHelper = new HelperInternal19(editText, expectInitializedEmojiCompat);
     }
 
     /**
@@ -182,7 +177,6 @@ public final class EmojiEditTextHelper {
      *                        {@link EmojiCompat#REPLACE_STRATEGY_NON_EXISTENT},
      *                        {@link EmojiCompat#REPLACE_STRATEGY_ALL}
      *
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public void setEmojiReplaceStrategy(@EmojiCompat.ReplaceStrategy int replaceStrategy) {
@@ -197,7 +191,6 @@ public final class EmojiEditTextHelper {
      * @return one of {@link EmojiCompat#REPLACE_STRATEGY_DEFAULT},
      *                        {@link EmojiCompat#REPLACE_STRATEGY_NON_EXISTENT},
      *                        {@link EmojiCompat#REPLACE_STRATEGY_ALL}
-     * @hide
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public int getEmojiReplaceStrategy() {

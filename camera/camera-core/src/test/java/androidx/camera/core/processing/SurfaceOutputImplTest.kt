@@ -16,15 +16,19 @@
 
 package androidx.camera.core.processing
 
-import android.graphics.PixelFormat
 import android.graphics.SurfaceTexture
 import android.opengl.Matrix
 import android.os.Build
 import android.os.Looper
 import android.util.Size
 import android.view.Surface
-import androidx.camera.core.SurfaceEffect
+import androidx.camera.core.CameraEffect
+import androidx.camera.core.CameraSelector.LENS_FACING_FRONT
+import androidx.camera.core.impl.ImageFormatConstants.INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE
+import androidx.camera.core.impl.utils.TransformUtils.sizeToRect
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor
+import androidx.camera.testing.fakes.FakeCamera
+import androidx.camera.testing.fakes.FakeCameraInfoInternal
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Before
@@ -44,18 +48,14 @@ import org.robolectric.annotation.internal.DoNotInstrument
 class SurfaceOutputImplTest {
 
     companion object {
-        private val IDENTITY_MATRIX = FloatArray(16).apply {
-            Matrix.setIdentityM(this, 0)
-        }
-        private const val FLOAT_TOLERANCE = 1E-4
-        private const val TARGET = SurfaceEffect.PREVIEW
-        private const val FORMAT = PixelFormat.RGBA_8888
-        private val SIZE = Size(640, 480)
+        private const val TARGET = CameraEffect.PREVIEW
+        private val OUTPUT_SIZE = Size(640, 480)
+        private val INPUT_SIZE = Size(640, 480)
     }
 
     private lateinit var fakeSurface: Surface
     private lateinit var fakeSurfaceTexture: SurfaceTexture
-    private val surfacesToCleanup = mutableListOf<SettableSurface>()
+    private val surfacesToCleanup = mutableListOf<SurfaceEdge>()
     private val surfaceOutputsToCleanup = mutableListOf<SurfaceOutputImpl>()
 
     @Before
@@ -103,6 +103,63 @@ class SurfaceOutputImplTest {
     }
 
     @Test
+    fun updateMatrixWithFrontCamera_mirrored() {
+        // Arrange.
+        val cameraInfo = FakeCameraInfoInternal(180, LENS_FACING_FRONT)
+        val camera = FakeCamera(null, cameraInfo)
+        val surfaceOut = createFakeSurfaceOutputImpl(camera)
+        val input = FloatArray(16).also {
+            Matrix.setIdentityM(it, 0)
+        }
+
+        // Act.
+        val result = FloatArray(16)
+        surfaceOut.updateTransformMatrix(result, input)
+
+        // Assert: the result contains the flipping for OpenGL.
+        val expected =
+            floatArrayOf(-1F, 0F, 0F, 0F, 0F, 1F, 0F, 0F, 0F, 0F, 1F, 0F, 1F, 0F, 0F, 1F)
+        assertThat(result).usingTolerance(1E-4).containsExactly(expected)
+    }
+
+    @Test
+    fun updateMatrixWithoutCameraTransform_noCameraTransform() {
+        // Arrange.
+        val surfaceOut = createFakeSurfaceOutputImpl(null)
+        val input = FloatArray(16).also {
+            Matrix.setIdentityM(it, 0)
+        }
+
+        // Act.
+        val result = FloatArray(16)
+        surfaceOut.updateTransformMatrix(result, input)
+
+        // Assert: the result contains the flipping for OpenGL.
+        val expected =
+            floatArrayOf(-1F, 0F, 0F, 0F, 0F, -1F, 0F, 0F, 0F, 0F, 1F, 0F, 1F, 1F, 0F, 1F)
+        assertThat(result).usingTolerance(1E-4).containsExactly(expected)
+    }
+
+    @Test
+    fun updateMatrixOnNonIdentityTransform_transformAppliedOnTopOfInput() {
+        // Arrange.
+        val surfaceOut = createFakeSurfaceOutputImpl()
+        val input = FloatArray(16).also {
+            Matrix.setIdentityM(it, 0)
+            Matrix.rotateM(it, 0, 180F, 0F, 0F, 1F)
+        }
+
+        // Act.
+        val result = FloatArray(16)
+        surfaceOut.updateTransformMatrix(result, input)
+
+        // Assert: the result contains the flipping for OpenGL.
+        val expected =
+            floatArrayOf(1F, 0F, 0F, 0F, 0F, 1F, 0F, 0F, 0F, 0F, 1F, 0F, -1F, -1F, 0F, 1F)
+        assertThat(result).usingTolerance(1E-4).containsExactly(expected)
+    }
+
+    @Test
     fun closedSurface_noLongerReceivesCloseRequest() {
         // Arrange.
         val surfaceOutImpl = createFakeSurfaceOutputImpl()
@@ -120,43 +177,18 @@ class SurfaceOutputImplTest {
         assertThat(hasRequestedClose).isFalse()
     }
 
-    @Test
-    fun updateMatrix_multipliesMatrices() {
-        // Arrange.
-        // 2x scaling on the x axis.
-        val scale2x = FloatArray(16).apply {
-            Matrix.setIdentityM(this, 0)
-            Matrix.scaleM(this, 0, 2F, 1F, 1F)
-        }
-        val surfaceOut = createFakeSurfaceOutputImpl(transform = scale2x)
-
-        // Act: apply the 2x scaling on top of the 90° rotation.
-        // 90° clockwise rotation around (0, 0).
-        val rotate90 = FloatArray(16).apply {
-            Matrix.setRotateM(this, 0, 90F, 0F, 0F, -1F)
-        }
-        val result = FloatArray(16)
-        surfaceOut.updateTransformMatrix(result, rotate90)
-
-        // Assert.
-        // Assert the result is a multiplication of the two matrices.
-        val expectedMatrix = FloatArray(16).apply {
-            Matrix.multiplyMM(this, 0, scale2x, 0, rotate90, 0)
-        }
-        assertThat(result).usingTolerance(FLOAT_TOLERANCE).containsExactly(expectedMatrix)
-
-        // Assert coordinates mapping is correct.
-        //       90° rotation         2x scaling on the X axis
-        // (1,1) -------------> (1,-1) ----------------------> (2,-1)
-        val point = floatArrayOf(1F, 1F, 0F, 1F)
-        val expectedPoint = FloatArray(4)
-        Matrix.multiplyMV(expectedPoint, 0, result, 0, point, 0)
-        assertThat(expectedPoint).usingTolerance(FLOAT_TOLERANCE)
-            .containsExactly(floatArrayOf(2F, -1F, 0F, 1F))
+    private fun createFakeSurfaceOutputImpl(camera: FakeCamera? = FakeCamera()) = SurfaceOutputImpl(
+        fakeSurface,
+        TARGET,
+        INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE,
+        OUTPUT_SIZE,
+        INPUT_SIZE,
+        sizeToRect(INPUT_SIZE),
+        /*rotationDegrees=*/180,
+        /*mirroring=*/false,
+        camera,
+        android.graphics.Matrix()
+    ).apply {
+        surfaceOutputsToCleanup.add(this)
     }
-
-    private fun createFakeSurfaceOutputImpl(transform: FloatArray = IDENTITY_MATRIX) =
-        SurfaceOutputImpl(fakeSurface, TARGET, FORMAT, SIZE, transform).apply {
-            surfaceOutputsToCleanup.add(this)
-        }
 }

@@ -50,7 +50,6 @@ import java.lang.reflect.Method;
  * MenuPopupWindow is mostly same as ListPopupWindow, but it has customized
  * behaviors specific to menus,
  *
- * @hide
  */
 @RestrictTo(LIBRARY_GROUP_PREFIX)
 public class MenuPopupWindow extends ListPopupWindow implements MenuItemHoverListener {
@@ -135,7 +134,6 @@ public class MenuPopupWindow extends ListPopupWindow implements MenuItemHoverLis
     }
 
     /**
-     * @hide
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public static class MenuDropDownListView extends DropDownListView {
@@ -150,8 +148,7 @@ public class MenuPopupWindow extends ListPopupWindow implements MenuItemHoverLis
 
             final Resources res = context.getResources();
             final Configuration config = res.getConfiguration();
-            if (Build.VERSION.SDK_INT >= 17
-                    && ViewCompat.LAYOUT_DIRECTION_RTL == Api17Impl.getLayoutDirection(config)) {
+            if (ViewCompat.LAYOUT_DIRECTION_RTL == config.getLayoutDirection()) {
                 mAdvanceKey = KeyEvent.KEYCODE_DPAD_LEFT;
                 mRetreatKey = KeyEvent.KEYCODE_DPAD_RIGHT;
             } else {
@@ -242,19 +239,6 @@ public class MenuPopupWindow extends ListPopupWindow implements MenuItemHoverLis
             }
 
             return super.onHoverEvent(ev);
-        }
-
-        @RequiresApi(17)
-        static class Api17Impl {
-            private Api17Impl() {
-                // This class is not instantiable.
-            }
-
-            @DoNotInline
-            static int getLayoutDirection(Configuration configuration) {
-                return configuration.getLayoutDirection();
-            }
-
         }
     }
 

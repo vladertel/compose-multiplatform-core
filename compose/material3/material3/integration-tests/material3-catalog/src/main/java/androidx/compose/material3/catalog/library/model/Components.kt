@@ -18,6 +18,7 @@ package androidx.compose.material3.catalog.library.model
 
 import androidx.annotation.DrawableRes
 import androidx.compose.material3.catalog.library.R
+import androidx.compose.material3.catalog.library.util.AdaptiveNavigationSuiteMaterial3SourceUrl
 import androidx.compose.material3.catalog.library.util.ComponentGuidelinesUrl
 import androidx.compose.material3.catalog.library.util.DocsUrl
 import androidx.compose.material3.catalog.library.util.Material3SourceUrl
@@ -69,6 +70,18 @@ private val BottomAppBars = Component(
     examples = BottomAppBarsExamples
 )
 
+private val BottomSheets = Component(
+    id = nextId(),
+    name = "Bottom Sheet",
+    description = "Bottom sheets are surfaces containing supplementary content, anchored to the " +
+        "bottom of the screen.",
+    // No bottom sheet icon
+    guidelinesUrl = "$ComponentGuidelinesUrl/bottom-sheets",
+    docsUrl = "$DocsUrl#bottomsheet",
+    sourceUrl = "$Material3SourceUrl/ModalBottomSheet.android.kt",
+    examples = BottomSheetExamples
+)
+
 private val Buttons = Component(
     id = nextId(),
     name = "Buttons",
@@ -90,6 +103,18 @@ private val Card = Component(
     docsUrl = "$PackageSummaryUrl#card",
     sourceUrl = "$Material3SourceUrl/Card.kt",
     examples = CardExamples
+)
+
+private val Carousel = Component(
+    id = nextId(),
+    name = "Carousel",
+    description = "Carousels are stylized versions of lists that provide a unique viewing and " +
+        "behavior that suit large imagery and other visually rich content.",
+    // No carousel icon
+    guidelinesUrl = "$StyleGuidelinesUrl/carousel",
+    docsUrl = "$PackageSummaryUrl#carousel",
+    sourceUrl = "$Material3SourceUrl/Carousel.kt",
+    examples = CarouselExamples
 )
 
 private val Checkboxes = Component(
@@ -114,6 +139,17 @@ private val Chips = Component(
     docsUrl = "$DocsUrl#chips",
     sourceUrl = "$Material3SourceUrl/Chip.kt",
     examples = ChipsExamples
+)
+
+private val DatePickers = Component(
+    id = nextId(),
+    name = "Date pickers",
+    description = "Date pickers let users select a date or range of dates.",
+    // No date picker icon
+    guidelinesUrl = "$ComponentGuidelinesUrl/datepicker",
+    docsUrl = "$PackageSummaryUrl#datepicker",
+    sourceUrl = "$Material3SourceUrl/DatePicker.kt",
+    examples = DatePickerExamples
 )
 
 private val Dialogs = Component(
@@ -220,6 +256,20 @@ private val NavigationRail = Component(
     examples = NavigationRailExamples
 )
 
+private val NavigationSuiteScaffold = Component(
+    id = nextId(),
+    name = "Navigation Suite Scaffold",
+    description = "The Navigation Suite Scaffold wraps the provided content and places the " +
+        "adequate provided navigation component on the screen according to the current " +
+        "NavigationSuiteType. \n\n" +
+        "Note: this sample is better experienced in a resizable emulator or foldable device.",
+    // No navigation suite scaffold icon
+    guidelinesUrl = "", // TODO: Add guidelines url when available
+    docsUrl = "", // TODO: Add docs url when available
+    sourceUrl = "$AdaptiveNavigationSuiteMaterial3SourceUrl/NavigationSuiteScaffold.kt",
+    examples = NavigationSuiteScaffoldExamples
+)
+
 private val ProgressIndicators = Component(
     id = nextId(),
     name = "Progress indicators",
@@ -232,6 +282,19 @@ private val ProgressIndicators = Component(
     examples = ProgressIndicatorsExamples
 )
 
+private val PullToRefreshIndicators = Component(
+    id = nextId(),
+    name = "Pull-to-Refresh Indicator",
+    description = "Pull to refresh is a swipe gesture available at the beginning of lists, grid " +
+        "lists, and card collections where the most recent content appears ",
+    // No pull-to-refresh icon
+    // TODO: Request component guidelines documentation from design.
+    guidelinesUrl = "",
+    docsUrl = "$DocsUrl#pulltorefreshcontainer",
+    sourceUrl = "$Material3SourceUrl/PullToRefresh.kt",
+    examples = PullToRefreshExamples
+)
+
 private val RadioButtons = Component(
     id = nextId(),
     name = "Radio buttons",
@@ -241,6 +304,28 @@ private val RadioButtons = Component(
     docsUrl = "$DocsUrl#radiobutton",
     sourceUrl = "$Material3SourceUrl/RadioButton.kt",
     examples = RadioButtonsExamples
+)
+
+private val SearchBars = Component(
+    id = nextId(),
+    name = "Search bars",
+    description = "Search bars allow users to enter a keyword or phrase and get relevant " +
+        "information.",
+    // No search bar icon
+    guidelinesUrl = "", // No guidelines yet
+    docsUrl = "", // No docs yet
+    sourceUrl = "$Material3SourceUrl/SearchBar.kt",
+    examples = SearchBarExamples
+)
+
+private val SegmentedButtons = Component(
+    id = nextId(),
+    name = "Segmented Button",
+    description = "Segmented buttons help people select options, switch views, or sort elements.",
+    guidelinesUrl = "", // No guidelines yet
+    docsUrl = "", // No docs yet
+    sourceUrl = "$Material3SourceUrl/SegmentedButton.kt",
+    examples = SegmentedButtonExamples
 )
 
 private val Sliders = Component(
@@ -301,6 +386,28 @@ private val TextFields = Component(
     examples = TextFieldsExamples
 )
 
+private val Tooltips = Component(
+    id = nextId(),
+    name = "Tooltips",
+    description = "Tooltips call user attention to an anchor component.",
+    // no tooltips icon
+    guidelinesUrl = "$ComponentGuidelinesUrl/tooltips",
+    docsUrl = "$PackageSummaryUrl#tooltip",
+    sourceUrl = "$Material3SourceUrl/Tooltip.kt",
+    examples = TooltipsExamples
+)
+
+private val TimePickers = Component(
+    id = nextId(),
+    name = "Time Picker",
+    description = "Time picker allows the user to choose time of day.",
+    // No time picker icon
+    guidelinesUrl = "$ComponentGuidelinesUrl/time-picker",
+    docsUrl = "$DocsUrl#time-pickers",
+    sourceUrl = "$Material3SourceUrl/TimePicker.kt",
+    examples = TimePickerExamples
+)
+
 private val TopAppBar = Component(
     id = nextId(),
     name = "Top app bar",
@@ -316,10 +423,13 @@ private val TopAppBar = Component(
 val Components = listOf(
     Badge,
     BottomAppBars,
+    BottomSheets,
     Buttons,
     Card,
+    Carousel,
     Checkboxes,
     Chips,
+    DatePickers,
     Dialogs,
     ExtendedFloatingActionButton,
     FloatingActionButtons,
@@ -329,12 +439,18 @@ val Components = listOf(
     NavigationBar,
     NavigationDrawer,
     NavigationRail,
+    NavigationSuiteScaffold,
     ProgressIndicators,
+    PullToRefreshIndicators,
     RadioButtons,
+    SearchBars,
+    SegmentedButtons,
     Sliders,
     Snackbars,
     Switches,
     Tabs,
     TextFields,
+    TimePickers,
+    Tooltips,
     TopAppBar
 )

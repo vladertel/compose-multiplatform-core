@@ -25,7 +25,7 @@ import androidx.test.core.app.ApplicationProvider;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
-public class AppSearchSchemaMigrationLocalCtsTest extends AppSearchSchemaMigrationCtsTestBase{
+public class AppSearchSchemaMigrationLocalCtsTest extends AppSearchSchemaMigrationCtsTestBase {
     @Override
     protected ListenableFuture<AppSearchSession> createSearchSessionAsync(@NonNull String dbName) {
         Context context = ApplicationProvider.getApplicationContext();

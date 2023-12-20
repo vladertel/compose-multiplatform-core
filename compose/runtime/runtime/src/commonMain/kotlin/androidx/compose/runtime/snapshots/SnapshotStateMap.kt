@@ -31,7 +31,7 @@ import kotlin.jvm.JvmName
  * @see androidx.compose.runtime.mutableStateMapOf
  */
 @Stable
-class SnapshotStateMap<K, V> : MutableMap<K, V>, StateObject {
+class SnapshotStateMap<K, V> : StateObject, MutableMap<K, V> {
     override var firstStateRecord: StateRecord =
         StateMapStateRecord<K, V>(persistentHashMapOf())
         private set
@@ -41,6 +41,22 @@ class SnapshotStateMap<K, V> : MutableMap<K, V>, StateObject {
         firstStateRecord = value as StateMapStateRecord<K, V>
     }
 
+    /**
+     * Returns an immutable map containing all key-value pairs from the original map.
+     *
+     * The content of the map returned will not change even if the content of the map is changed in
+     * the same snapshot. It also will be the same instance until the content is changed. It is not,
+     * however, guaranteed to be the same instance for the same content as adding and removing the
+     * same item from the this map might produce a different instance with the same content.
+     *
+     * This operation is O(1) and does not involve a physically copying the map. It instead
+     * returns the underlying immutable map used internally to store the content of the map.
+     *
+     * It is recommended to use [toMap] when using returning the value of this map from
+     * [androidx.compose.runtime.snapshotFlow].
+     */
+    fun toMap(): Map<K, V> = readable.map
+
     override val size get() = readable.map.size
     override fun containsKey(key: K) = readable.map.containsKey(key)
     override fun containsValue(value: V) = readable.map.containsValue(value)
@@ -49,6 +65,10 @@ class SnapshotStateMap<K, V> : MutableMap<K, V>, StateObject {
     override val entries: MutableSet<MutableMap.MutableEntry<K, V>> = SnapshotMapEntrySet(this)
     override val keys: MutableSet<K> = SnapshotMapKeySet(this)
     override val values: MutableCollection<V> = SnapshotMapValueSet(this)
+    @Suppress("UNCHECKED_CAST")
+    override fun toString(): String = (firstStateRecord as StateMapStateRecord<K, V>).withCurrent {
+        "SnapshotStateMap(value=${it.map})@${hashCode()}"
+    }
 
     override fun clear() = update { persistentHashMapOf() }
     override fun put(key: K, value: V): V? = mutate { it.put(key, value) }
@@ -121,8 +141,8 @@ class SnapshotStateMap<K, V> : MutableMap<K, V>, StateObject {
             val builder = oldMap!!.builder()
             result = block(builder)
             val newMap = builder.build()
-            if (newMap == oldMap || synchronized(sync) {
-                writable {
+            if (newMap == oldMap || writable {
+                synchronized(sync) {
                     if (modification == currentModification) {
                         map = newMap
                         modification++
@@ -137,8 +157,8 @@ class SnapshotStateMap<K, V> : MutableMap<K, V>, StateObject {
 
     private inline fun update(block: (PersistentMap<K, V>) -> PersistentMap<K, V>) = withCurrent {
         val newMap = block(map)
-        if (newMap !== map) synchronized(sync) {
-            writable {
+        if (newMap !== map) writable {
+            synchronized(sync) {
                 map = newMap
                 modification++
             }

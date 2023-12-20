@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.IntSize
 internal class TvLazyGridMeasureResult(
     // properties defining the scroll position:
     /** The new first visible line of items.*/
-    val firstVisibleLine: LazyMeasuredLine?,
+    val firstVisibleLine: LazyGridMeasuredLine?,
     /** The new value for [TvLazyGridState.firstVisibleItemScrollOffset].*/
     val firstVisibleLineScrollOffset: Int,
     /** True if there is some space available to continue scrolling in the forward direction.*/
@@ -51,7 +51,9 @@ internal class TvLazyGridMeasureResult(
     /** see [TvLazyGridLayoutInfo.orientation] */
     override val orientation: Orientation,
     /** see [TvLazyGridLayoutInfo.afterContentPadding] */
-    override val afterContentPadding: Int
+    override val afterContentPadding: Int,
+    /** see [TvLazyGridLayoutInfo.mainAxisItemSpacing] */
+    override val mainAxisItemSpacing: Int
 ) : TvLazyGridLayoutInfo, MeasureResult by measureResult {
     override val viewportSize: IntSize
         get() = IntSize(width, height)

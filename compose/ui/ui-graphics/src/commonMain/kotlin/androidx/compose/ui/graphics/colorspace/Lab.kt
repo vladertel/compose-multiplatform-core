@@ -16,7 +16,10 @@
 
 package androidx.compose.ui.graphics.colorspace
 
-import kotlin.math.pow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.util.fastCoerceIn
+import androidx.compose.ui.util.packFloats
+import kotlin.math.cbrt
 
 /**
  * Implementation of the CIE L*a*b* color space. Its PCS is CIE XYZ
@@ -42,9 +45,9 @@ internal class Lab(
     }
 
     override fun toXyz(v: FloatArray): FloatArray {
-        v[0] = v[0].coerceIn(0.0f, 100.0f)
-        v[1] = v[1].coerceIn(-128.0f, 128.0f)
-        v[2] = v[2].coerceIn(-128.0f, 128.0f)
+        v[0] = v[0].fastCoerceIn(0.0f, 100.0f)
+        v[1] = v[1].fastCoerceIn(-128.0f, 128.0f)
+        v[2] = v[2].fastCoerceIn(-128.0f, 128.0f)
 
         val fy = (v[0] + 16.0f) / 116.0f
         val fx = fy + (v[1] * 0.002f)
@@ -60,22 +63,71 @@ internal class Lab(
         return v
     }
 
+    override fun toXy(v0: Float, v1: Float, v2: Float): Long {
+        val v00 = v0.fastCoerceIn(0.0f, 100.0f)
+        val v10 = v1.fastCoerceIn(-128.0f, 128.0f)
+
+        val fy = (v00 + 16.0f) / 116.0f
+        val fx = fy + (v10 * 0.002f)
+        val x = if (fx > D) fx * fx * fx else (1.0f / B) * (fx - C)
+        val y = if (fy > D) fy * fy * fy else (1.0f / B) * (fy - C)
+
+        return packFloats(x * Illuminant.D50Xyz[0], y * Illuminant.D50Xyz[1])
+    }
+
+    override fun toZ(v0: Float, v1: Float, v2: Float): Float {
+        val v00 = v0.fastCoerceIn(0.0f, 100.0f)
+        val v20 = v2.fastCoerceIn(-128.0f, 128.0f)
+        val fy = (v00 + 16.0f) / 116.0f
+        val fz = fy - (v20 * 0.005f)
+        val z = if (fz > D) fz * fz * fz else (1.0f / B) * (fz - C)
+        return z * Illuminant.D50Xyz[2]
+    }
+
+    override fun xyzaToColor(
+        x: Float,
+        y: Float,
+        z: Float,
+        a: Float,
+        colorSpace: ColorSpace
+    ): Color {
+        val x1 = x / Illuminant.D50Xyz[0]
+        val y1 = y / Illuminant.D50Xyz[1]
+        val z1 = z / Illuminant.D50Xyz[2]
+
+        val fx = if (x1 > A) cbrt(x1) else B * x1 + C
+        val fy = if (y1 > A) cbrt(y1) else B * y1 + C
+        val fz = if (z1 > A) cbrt(z1) else B * z1 + C
+
+        val l = 116.0f * fy - 16.0f
+        val a1 = 500.0f * (fx - fy)
+        val b = 200.0f * (fy - fz)
+
+        return Color(
+            l.fastCoerceIn(0.0f, 100.0f),
+            a1.fastCoerceIn(-128.0f, 128.0f),
+            b.fastCoerceIn(-128.0f, 128.0f),
+            a,
+            colorSpace
+        )
+    }
+
     override fun fromXyz(v: FloatArray): FloatArray {
         val x = v[0] / Illuminant.D50Xyz[0]
         val y = v[1] / Illuminant.D50Xyz[1]
         val z = v[2] / Illuminant.D50Xyz[2]
 
-        val fx = if (x > A) x.pow(1f / 3f) else B * x + C
-        val fy = if (y > A) y.pow(1f / 3f) else B * y + C
-        val fz = if (z > A) z.pow(1f / 3f) else B * z + C
+        val fx = if (x > A) cbrt(x) else B * x + C
+        val fy = if (y > A) cbrt(y) else B * y + C
+        val fz = if (z > A) cbrt(z) else B * z + C
 
         val l = 116.0f * fy - 16.0f
         val a = 500.0f * (fx - fy)
         val b = 200.0f * (fy - fz)
 
-        v[0] = l.coerceIn(0.0f, 100.0f)
-        v[1] = a.coerceIn(-128.0f, 128.0f)
-        v[2] = b.coerceIn(-128.0f, 128.0f)
+        v[0] = l.fastCoerceIn(0.0f, 100.0f)
+        v[1] = a.fastCoerceIn(-128.0f, 128.0f)
+        v[2] = b.fastCoerceIn(-128.0f, 128.0f)
 
         return v
     }

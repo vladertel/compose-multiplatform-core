@@ -22,13 +22,12 @@ import androidx.work.impl.utils.taskexecutor.TaskExecutor
 
 /**
  * A singleton class to hold an instance of each [ConstraintTracker].
- * @hide
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class Trackers
 @JvmOverloads
 constructor(
-    context: Context,
+    val context: Context,
     taskExecutor: TaskExecutor,
     /**
      * The tracker used to track the battery charging status.

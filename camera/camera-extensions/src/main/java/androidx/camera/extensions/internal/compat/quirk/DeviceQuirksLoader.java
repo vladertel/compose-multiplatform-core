@@ -44,6 +44,22 @@ public class DeviceQuirksLoader {
             quirks.add(new ExtensionDisabledQuirk());
         }
 
+        if (CrashWhenOnDisableTooSoon.load()) {
+            quirks.add(new CrashWhenOnDisableTooSoon());
+        }
+
+        if (GetAvailableKeysNeedsOnInit.load()) {
+            quirks.add(new GetAvailableKeysNeedsOnInit());
+        }
+
+        if (ImageAnalysisUnavailableQuirk.load()) {
+            quirks.add(new ImageAnalysisUnavailableQuirk());
+        }
+
+        if (ExtraSupportedSurfaceCombinationsQuirk.load()) {
+            quirks.add(new ExtraSupportedSurfaceCombinationsQuirk());
+        }
+
         return quirks;
     }
 }

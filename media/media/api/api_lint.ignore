@@ -67,6 +67,30 @@ IntentName: android.support.v4.media.MediaBrowserCompat#CUSTOM_ACTION_DOWNLOAD:
     Intent action constant name must be ACTION_FOO: CUSTOM_ACTION_DOWNLOAD
 IntentName: android.support.v4.media.MediaBrowserCompat#CUSTOM_ACTION_REMOVE_DOWNLOADED_FILE:
     Intent action constant name must be ACTION_FOO: CUSTOM_ACTION_REMOVE_DOWNLOADED_FILE
+IntentName: androidx.media.utils.MediaConstants#BROWSER_ROOT_HINTS_KEY_CUSTOM_BROWSER_ACTION_LIMIT:
+    Intent action constant name must be ACTION_FOO: BROWSER_ROOT_HINTS_KEY_CUSTOM_BROWSER_ACTION_LIMIT
+IntentName: androidx.media.utils.MediaConstants#BROWSER_SERVICE_EXTRAS_KEY_CUSTOM_BROWSER_ACTION_ROOT_LIST:
+    Intent action constant name must be ACTION_FOO: BROWSER_SERVICE_EXTRAS_KEY_CUSTOM_BROWSER_ACTION_ROOT_LIST
+IntentName: androidx.media.utils.MediaConstants#DESCRIPTION_EXTRAS_KEY_CUSTOM_BROWSER_ACTION_ID_LIST:
+    Intent action constant name must be ACTION_FOO: DESCRIPTION_EXTRAS_KEY_CUSTOM_BROWSER_ACTION_ID_LIST
+IntentName: androidx.media.utils.MediaConstants#EXTRAS_KEY_CUSTOM_BROWSER_ACTION_EXTRAS:
+    Intent action constant name must be ACTION_FOO: EXTRAS_KEY_CUSTOM_BROWSER_ACTION_EXTRAS
+IntentName: androidx.media.utils.MediaConstants#EXTRAS_KEY_CUSTOM_BROWSER_ACTION_ICON_URI:
+    Intent action constant name must be ACTION_FOO: EXTRAS_KEY_CUSTOM_BROWSER_ACTION_ICON_URI
+IntentName: androidx.media.utils.MediaConstants#EXTRAS_KEY_CUSTOM_BROWSER_ACTION_ID:
+    Intent action constant name must be ACTION_FOO: EXTRAS_KEY_CUSTOM_BROWSER_ACTION_ID
+IntentName: androidx.media.utils.MediaConstants#EXTRAS_KEY_CUSTOM_BROWSER_ACTION_LABEL:
+    Intent action constant name must be ACTION_FOO: EXTRAS_KEY_CUSTOM_BROWSER_ACTION_LABEL
+IntentName: androidx.media.utils.MediaConstants#EXTRAS_KEY_CUSTOM_BROWSER_ACTION_MEDIA_ITEM_ID:
+    Intent action constant name must be ACTION_FOO: EXTRAS_KEY_CUSTOM_BROWSER_ACTION_MEDIA_ITEM_ID
+IntentName: androidx.media.utils.MediaConstants#EXTRAS_KEY_CUSTOM_BROWSER_ACTION_RESULT_BROWSE_NODE:
+    Intent action constant name must be ACTION_FOO: EXTRAS_KEY_CUSTOM_BROWSER_ACTION_RESULT_BROWSE_NODE
+IntentName: androidx.media.utils.MediaConstants#EXTRAS_KEY_CUSTOM_BROWSER_ACTION_RESULT_MESSAGE:
+    Intent action constant name must be ACTION_FOO: EXTRAS_KEY_CUSTOM_BROWSER_ACTION_RESULT_MESSAGE
+IntentName: androidx.media.utils.MediaConstants#EXTRAS_KEY_CUSTOM_BROWSER_ACTION_RESULT_REFRESH_ITEM:
+    Intent action constant name must be ACTION_FOO: EXTRAS_KEY_CUSTOM_BROWSER_ACTION_RESULT_REFRESH_ITEM
+IntentName: androidx.media.utils.MediaConstants#EXTRAS_KEY_CUSTOM_BROWSER_ACTION_RESULT_SHOW_PLAYING_ITEM:
+    Intent action constant name must be ACTION_FOO: EXTRAS_KEY_CUSTOM_BROWSER_ACTION_RESULT_SHOW_PLAYING_ITEM
 
 
 InterfaceConstant: androidx.media.MediaBrowserServiceCompat#SERVICE_INTERFACE:
@@ -635,6 +659,14 @@ MutableBareField: android.support.v4.media.session.ParcelableVolumeInfo#maxVolum
     Bare field maxVolume must be marked final, or moved behind accessors if mutable
 MutableBareField: android.support.v4.media.session.ParcelableVolumeInfo#volumeType:
     Bare field volumeType must be marked final, or moved behind accessors if mutable
+
+
+NotCloseable: android.support.v4.media.MediaBrowserCompat:
+    Classes that release resources (disconnect()) should implement AutoCloseable and CloseGuard: class android.support.v4.media.MediaBrowserCompat
+NotCloseable: android.support.v4.media.session.MediaControllerCompat.TransportControls:
+    Classes that release resources (stop()) should implement AutoCloseable and CloseGuard: class android.support.v4.media.session.MediaControllerCompat.TransportControls
+NotCloseable: android.support.v4.media.session.MediaSessionCompat:
+    Classes that release resources (release()) should implement AutoCloseable and CloseGuard: class android.support.v4.media.session.MediaSessionCompat
 
 
 NullableCollection: android.support.v4.media.MediaBrowserCompat#getExtras():

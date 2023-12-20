@@ -24,11 +24,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.camera.core.impl.CaptureConfig;
+import androidx.camera.core.impl.DeferrableSurface;
 import androidx.camera.core.impl.SessionConfig;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * An interface for manipulating the session to capture images from the camera which is tied to a
@@ -56,11 +58,16 @@ interface CaptureSessionInterface {
      * @param opener        The opener to open the {@link SynchronizedCaptureSession}.
      * @return A {@link ListenableFuture} that will be completed once the
      * {@link CameraCaptureSession} has been configured.
+     * It may be set to a {@link java.util.concurrent.CancellationException} if a CaptureSession
+     * is closed while it is opening.
+     * It may be set to a {@link DeferrableSurface.SurfaceClosedException} if any of the supplied
+     * DeferrableSurface is closed that cannot be used to configure the
+     * {@link CameraCaptureSession}.
      */
     @NonNull
     ListenableFuture<Void> open(@NonNull SessionConfig sessionConfig,
             @NonNull CameraDevice cameraDevice,
-            @NonNull SynchronizedCaptureSessionOpener opener);
+            @NonNull SynchronizedCaptureSession.Opener opener);
 
 
     /**
@@ -120,4 +127,13 @@ interface CaptureSessionInterface {
      */
     @NonNull
     ListenableFuture<Void> release(boolean abortInFlightCaptures);
+
+    /**
+     * Sets the mapping relations between surfaces and the streamUseCases of their associated
+     * streams
+     *
+     * @param streamUseCaseMap the mapping between surfaces and the streamUseCase flag of the
+     *                         associated streams
+     */
+    void setStreamUseCaseMap(@NonNull Map<DeferrableSurface, Long> streamUseCaseMap);
 }

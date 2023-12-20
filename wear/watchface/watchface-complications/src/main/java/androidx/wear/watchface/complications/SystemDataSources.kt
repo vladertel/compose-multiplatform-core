@@ -15,7 +15,9 @@
  */
 package androidx.wear.watchface.complications
 
+import android.os.Build
 import androidx.annotation.IntDef
+import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 import androidx.wear.watchface.complications.data.ComplicationType
 
@@ -27,16 +29,15 @@ public class SystemDataSources private constructor() {
     public companion object {
         // NEXT AVAILABLE DATA SOURCE ID: 17
 
-        /** Specifies that no complication data source should be used.  */
+        /** Specifies that no complication data source should be used. */
         public const val NO_DATA_SOURCE: Int = -1
 
         /**
-         * Id for the 'watch battery' complication complication data source.
+         * Id for the 'watch battery' complication data source.
          *
          * This is a safe complication data source, so if a watch face uses this as a default it
-         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA
-         * permission has been
-         * granted.
+         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA permission
+         * has been granted.
          *
          * This complication data source supports the following types:
          * [ComplicationType.MONOCHROMATIC_IMAGE], [ComplicationType.SHORT_TEXT],
@@ -45,55 +46,57 @@ public class SystemDataSources private constructor() {
         public const val DATA_SOURCE_WATCH_BATTERY: Int = 1
 
         /**
-         * Id for the 'date' complication complication data source.
+         * Id for the 'date' complication data source.
          *
          * This is a safe complication data source, so if a watch face uses this as a default it
-         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA
-         * permission has been granted.
+         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA permission
+         * has been granted.
          *
          * This complication data source supports only [ComplicationType.SHORT_TEXT].
          */
         public const val DATA_SOURCE_DATE: Int = 2
 
         /**
-         * Id for the 'time and date' complication complication data source.
+         * Id for the 'time and date' complication data source.
          *
          * This is a safe complication data source, so if a watch face uses this as a default it
-         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA
-         * permission has been granted.
+         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA permission
+         * has been granted.
          *
          * This complication data source supports only [ComplicationType.SHORT_TEXT].
          */
         public const val DATA_SOURCE_TIME_AND_DATE: Int = 3
 
         /**
-         * Id for the 'step count' complication complication data source.
+         * Id for the 'step count' complication data source.
          *
          * This is a safe complication data source (because it only shows a daily total), so if a
          * watch face uses this as a default it will be able to receive data from it even before the
          * RECEIVE_COMPLICATION_DATA permission has been granted.
          *
-         * This complication data source supports only [ComplicationType.SHORT_TEXT].
+         * This complication data source is only guaranteed to support [ComplicationType.SHORT_TEXT]
+         * although it's a good idea for the slot to support [ComplicationType.SMALL_IMAGE] too
+         * since OEMs may choose to serve a shortcut to their health app instead of the live value.
          */
         public const val DATA_SOURCE_STEP_COUNT: Int = 4
 
         /**
-         * Id for the 'world clock' complication complication data source.
+         * Id for the 'world clock' complication data source.
          *
          * This is a safe complication data source, so if a watch face uses this as a default it
-         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA
-         * permission has been granted.
+         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA permission
+         * has been granted.
          *
          * This complication data source supports only [ComplicationType.SHORT_TEXT].
          */
         public const val DATA_SOURCE_WORLD_CLOCK: Int = 5
 
         /**
-         * Id for the 'app shortcut' complication complication data source.
+         * Id for the 'app shortcut' complication data source.
          *
          * This is a safe complication data source, so if a watch face uses this as a default it
-         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA
-         * permission has been granted.
+         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA permission
+         * has been granted.
          *
          * This complication data source supports the following types:
          * [ComplicationType.SMALL_IMAGE], [ComplicationType.LONG_TEXT].
@@ -101,11 +104,11 @@ public class SystemDataSources private constructor() {
         public const val DATA_SOURCE_APP_SHORTCUT: Int = 6
 
         /**
-         * Id for the 'unread notification count' complication complication data source.
+         * Id for the 'unread notification count' complication data source.
          *
          * This is a safe complication data source, so if a watch face uses this as a default it
-         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA
-         * permission has been granted.
+         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA permission
+         * has been granted.
          *
          * This complication data source supports the following types:
          * [ComplicationType.MONOCHROMATIC_IMAGE], [ComplicationType.SHORT_TEXT].
@@ -116,7 +119,7 @@ public class SystemDataSources private constructor() {
         internal const val DATA_SOURCE_DEPRECATED8: Int = 8
 
         /**
-         * Id for the 'next event' complication complication data source.
+         * Id for the 'next event' complication data source.
          *
          * This is not a safe complication data source, so if a watch face uses this as a default it
          * will receive data of TYPE_NO_PERMISSION until the user has granted the
@@ -134,7 +137,7 @@ public class SystemDataSources private constructor() {
         internal const val DATA_SOURCE_DEPRECATED11: Int = 11
 
         /**
-         * Id for the 'sunrise sunset' complication complication data source.
+         * Id for the 'sunrise sunset' complication data source.
          *
          * This complication data source shows next sunrise or sunset time according to current
          * timezone and location.
@@ -144,18 +147,18 @@ public class SystemDataSources private constructor() {
         public const val DATA_SOURCE_SUNRISE_SUNSET: Int = 12
 
         /**
-         * Id for the 'day of week' complication complication data source.
+         * Id for the 'day of week' complication data source.
          *
          * This is a safe complication data source, so if a watch face uses this as a default it
-         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA
-         * permission has been granted.
+         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA permission
+         * has been granted.
          *
          * This complication data source supports only [ComplicationType.SHORT_TEXT].
          */
         public const val DATA_SOURCE_DAY_OF_WEEK: Int = 13
 
         /**
-         * Id for the 'favorite contact' complication complication data source.
+         * Id for the 'favorite contact' complication data source.
          *
          * This is not a safe complication data source, so if a watch face uses this as a default it
          * will receive data of TYPE_NO_PERMISSION until the user has granted the
@@ -169,22 +172,29 @@ public class SystemDataSources private constructor() {
         internal const val DATA_SOURCE_DEPRECATED15: Int = 15
 
         /**
-         * Id for the 'day and date' complication complication data source.
+         * Id for the 'day and date' complication data source.
          *
          * This is a safe complication data source, so if a watch face uses this as a default it
-         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA
-         * permission has been granted.
+         * will be able to receive data from it even before the RECEIVE_COMPLICATION_DATA permission
+         * has been granted.
          *
          * This complication data source supports only [ComplicationType.SHORT_TEXT].
          */
         public const val DATA_SOURCE_DAY_AND_DATE: Int = 16
+
+        /**
+         * Id for the 'heart rate' complication data source. Note implementations are free to return
+         * a
+         *
+         * This complication data source is only guaranteed to support [ComplicationType.SHORT_TEXT]
+         * although it's a good idea for the slot to support [ComplicationType.SMALL_IMAGE] too
+         * since OEMs may choose to serve a shortcut to their health app instead of the live value.
+         */
+        @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        public const val DATA_SOURCE_HEART_RATE: Int = 17
     }
 
-    /**
-     * System complication data source id as defined in [SystemDataSources].
-     *
-     * @hide
-     */
+    /** System complication data source id as defined in [SystemDataSources]. */
     @IntDef(
         NO_DATA_SOURCE,
         DATA_SOURCE_WATCH_BATTERY,
@@ -198,11 +208,10 @@ public class SystemDataSources private constructor() {
         DATA_SOURCE_SUNRISE_SUNSET,
         DATA_SOURCE_DAY_OF_WEEK,
         DATA_SOURCE_FAVORITE_CONTACT,
-        DATA_SOURCE_DAY_AND_DATE
+        DATA_SOURCE_DAY_AND_DATE,
+        DATA_SOURCE_HEART_RATE
     )
-    @RestrictTo(
-        RestrictTo.Scope.LIBRARY_GROUP
-    )
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @Retention(AnnotationRetention.SOURCE)
     public annotation class DataSourceId
 }

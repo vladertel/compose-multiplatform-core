@@ -18,11 +18,14 @@ package androidx.navigation.compose
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -41,6 +44,9 @@ public fun DialogHost(dialogNavigator: DialogNavigator) {
     val visibleBackStack = rememberVisibleList(dialogBackStack)
     visibleBackStack.PopulateVisibleList(dialogBackStack)
 
+    val transitionInProgress by dialogNavigator.transitionInProgress.collectAsState()
+    val dialogsToDispose = remember { mutableStateListOf<NavBackStackEntry>() }
+
     visibleBackStack.forEach { backStackEntry ->
         val destination = backStackEntry.destination as Destination
         Dialog(
@@ -48,8 +54,10 @@ public fun DialogHost(dialogNavigator: DialogNavigator) {
             properties = destination.dialogProperties
         ) {
             DisposableEffect(backStackEntry) {
+                dialogsToDispose.add(backStackEntry)
                 onDispose {
                     dialogNavigator.onTransitionComplete(backStackEntry)
+                    dialogsToDispose.remove(backStackEntry)
                 }
             }
 
@@ -60,15 +68,31 @@ public fun DialogHost(dialogNavigator: DialogNavigator) {
             }
         }
     }
+    // Dialogs may have been popped before it was composed. To prevent leakage, we need to
+    // mark popped entries as complete here. Check that we don't accidentally complete popped
+    // entries that were composed, unless they were disposed of already.
+    LaunchedEffect(transitionInProgress, dialogsToDispose) {
+        transitionInProgress.forEach { entry ->
+            if (!dialogNavigator.backStack.value.contains(entry) &&
+                !dialogsToDispose.contains(entry)) {
+                dialogNavigator.onTransitionComplete(entry)
+            }
+        }
+    }
 }
 
 @Composable
 internal fun MutableList<NavBackStackEntry>.PopulateVisibleList(
-    transitionsInProgress: Collection<NavBackStackEntry>
+    backStack: Collection<NavBackStackEntry>
 ) {
-    transitionsInProgress.forEach { entry ->
+    val isInspecting = LocalInspectionMode.current
+    backStack.forEach { entry ->
         DisposableEffect(entry.lifecycle) {
             val observer = LifecycleEventObserver { _, event ->
+                // show dialog in preview
+                if (isInspecting && !contains(entry)) {
+                    add(entry)
+                }
                 // ON_START -> add to visibleBackStack, ON_STOP -> remove from visibleBackStack
                 if (event == Lifecycle.Event.ON_START) {
                     // We want to treat the visible lists as Sets but we want to keep
@@ -91,13 +115,22 @@ internal fun MutableList<NavBackStackEntry>.PopulateVisibleList(
 }
 
 @Composable
-internal fun rememberVisibleList(transitionsInProgress: Collection<NavBackStackEntry>) =
-    remember(transitionsInProgress) {
+internal fun rememberVisibleList(
+    backStack: Collection<NavBackStackEntry>
+): SnapshotStateList<NavBackStackEntry> {
+    // show dialog in preview
+    val isInspecting = LocalInspectionMode.current
+    return remember(backStack) {
         mutableStateListOf<NavBackStackEntry>().also {
             it.addAll(
-                transitionsInProgress.filter { entry ->
-                    entry.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                backStack.filter { entry ->
+                    if (isInspecting) {
+                        true
+                    } else {
+                        entry.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                    }
                 }
             )
         }
     }
+}

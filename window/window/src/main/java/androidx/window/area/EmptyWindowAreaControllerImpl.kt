@@ -17,26 +17,38 @@
 package androidx.window.area
 
 import android.app.Activity
+import android.os.Binder
 import androidx.window.core.ExperimentalWindowApi
+import java.util.concurrent.Executor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import java.util.concurrent.Executor
 
 /**
- * Empty Implementation for devices that do not
- * support the [WindowAreaController] functionality
+ * Empty Implementation for devices that do not support the [WindowAreaController] functionality
  */
 @ExperimentalWindowApi
 internal class EmptyWindowAreaControllerImpl : WindowAreaController {
-    override fun rearDisplayStatus(): Flow<WindowAreaStatus> {
-        return flowOf(WindowAreaStatus.UNSUPPORTED)
-    }
 
-    override fun rearDisplayMode(
+    override val windowAreaInfos: Flow<List<WindowAreaInfo>>
+        get() = flowOf(listOf())
+
+    override fun transferActivityToWindowArea(
+        token: Binder,
         activity: Activity,
         executor: Executor,
         windowAreaSessionCallback: WindowAreaSessionCallback
     ) {
-        throw WindowAreaController.REAR_DISPLAY_ERROR
+        windowAreaSessionCallback.onSessionEnded(
+            IllegalStateException("There are no WindowAreas"))
+    }
+
+    override fun presentContentOnWindowArea(
+        token: Binder,
+        activity: Activity,
+        executor: Executor,
+        windowAreaPresentationSessionCallback: WindowAreaPresentationSessionCallback
+    ) {
+        windowAreaPresentationSessionCallback.onSessionEnded(
+            IllegalStateException("There are no WindowAreas"))
     }
 }

@@ -45,7 +45,6 @@ public open class NavGraph(navGraphNavigator: Navigator<out NavGraph>) :
     NavDestination(navGraphNavigator), Iterable<NavDestination> {
 
     public val nodes: SparseArrayCompat<NavDestination> = SparseArrayCompat<NavDestination>()
-        /** @suppress */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         get
     private var startDestId = 0
@@ -62,7 +61,6 @@ public open class NavGraph(navGraphNavigator: Navigator<out NavGraph>) :
         }
     }
 
-    /** @suppress */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public override fun matchDeepLink(navDeepLinkRequest: NavDeepLinkRequest): DeepLinkMatch? {
         // First search through any deep links directly added to this NavGraph
@@ -74,6 +72,14 @@ public open class NavGraph(navGraphNavigator: Navigator<out NavGraph>) :
 
         return listOfNotNull(bestMatch, bestChildMatch).maxOrNull()
     }
+
+    /**
+     * Only searches through deep links added directly to this graph. Does not recursively search
+     * through its children as [matchDeepLink] does.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public fun matchDeepLinkExcludingChildren(request: NavDeepLinkRequest): DeepLinkMatch? =
+        super.matchDeepLink(request)
 
     /**
      * Adds a destination to this NavGraph. The destination must have an
@@ -172,9 +178,6 @@ public open class NavGraph(navGraphNavigator: Navigator<out NavGraph>) :
         return if (!route.isNullOrBlank()) findNode(route, true) else null
     }
 
-    /**
-     * @hide
-     */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public fun findNode(@IdRes resId: Int, searchParents: Boolean): NavDestination? {
         val destination = nodes[resId]
@@ -184,13 +187,15 @@ public open class NavGraph(navGraphNavigator: Navigator<out NavGraph>) :
             ?: if (searchParents && parent != null) parent!!.findNode(resId) else null
     }
 
-    /**
-     * @hide
-     */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public fun findNode(route: String, searchParents: Boolean): NavDestination? {
+        // first try matching with routePattern
         val id = createRoute(route).hashCode()
-        val destination = nodes[id]
+        val destination = nodes[id] ?: nodes.valueIterator().asSequence().firstOrNull {
+            // if not found with routePattern, try matching with route args
+            it.matchDeepLink(route) != null
+        }
+
         // Search the parent for the NavDestination if it is not a child of this navigation graph
         // and searchParents is true
         return destination
@@ -268,11 +273,8 @@ public open class NavGraph(navGraphNavigator: Navigator<out NavGraph>) :
         }
     }
 
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     override val displayName: String
-        /**
-         * @hide
-         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         get() = if (id != 0) super.displayName else "the root navigation"
 
     /**
@@ -349,7 +351,6 @@ public open class NavGraph(navGraphNavigator: Navigator<out NavGraph>) :
         }
 
     public val startDestDisplayName: String
-        /** @suppress */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         get() {
             if (startDestIdName == null) {
@@ -378,13 +379,12 @@ public open class NavGraph(navGraphNavigator: Navigator<out NavGraph>) :
     }
 
     override fun equals(other: Any?): Boolean {
+        if (this === other) return true
         if (other == null || other !is NavGraph) return false
-        val copy = nodes.valueIterator().asSequence().toMutableList()
-        other.nodes.valueIterator().forEach { copy.remove(it) }
         return super.equals(other) &&
             nodes.size == other.nodes.size &&
             startDestinationId == other.startDestinationId &&
-            copy.isEmpty()
+            nodes.valueIterator().asSequence().all { it == other.nodes.get(it.id) }
     }
 
     override fun hashCode(): Int {

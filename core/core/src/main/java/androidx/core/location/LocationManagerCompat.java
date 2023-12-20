@@ -38,6 +38,7 @@ import android.location.LocationRequest;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -52,7 +53,6 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.RequiresPermission;
 import androidx.collection.SimpleArrayMap;
-import androidx.core.os.CancellationSignal;
 import androidx.core.os.ExecutorCompat;
 import androidx.core.util.Consumer;
 import androidx.core.util.ObjectsCompat;
@@ -179,6 +179,39 @@ public final class LocationManagerCompat {
      * <p>Clients calling this method from the background may notice that the method fails to
      * determine a valid location fix more often than while in the foreground. Background
      * applications may be throttled in their location accesses to some degree.
+     *
+     * @deprecated Use
+     * {@link #getCurrentLocation(LocationManager, String, CancellationSignal, Executor, Consumer)}
+     */
+    @Deprecated
+    @RequiresPermission(anyOf = {ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION})
+    public static void getCurrentLocation(@NonNull LocationManager locationManager,
+            @NonNull String provider,
+            @Nullable androidx.core.os.CancellationSignal cancellationSignal,
+            @NonNull Executor executor, @NonNull final Consumer<Location> consumer) {
+        getCurrentLocation(locationManager, provider, cancellationSignal != null
+                        ? (CancellationSignal) cancellationSignal.getCancellationSignalObject() :
+                        null,
+                executor, consumer);
+    }
+
+    /**
+     * Asynchronously returns a single current location fix from the given provider. This may
+     * activate sensors in order to compute a new location. The given callback will be invoked once
+     * and only once, either with a valid location or with a null location if the provider was
+     * unable to generate a valid location.
+     *
+     * <p>A client may supply an optional {@link CancellationSignal}. If this is used to cancel the
+     * operation, no callback should be expected after the cancellation.
+     *
+     * <p>This method may return locations from the very recent past (on the order of several
+     * seconds), but will never return older locations (for example, several minutes old or older).
+     * Clients may rely upon the guarantee that if this method returns a location, it will represent
+     * the best estimation of the location of the device in the present moment.
+     *
+     * <p>Clients calling this method from the background may notice that the method fails to
+     * determine a valid location fix more often than while in the foreground. Background
+     * applications may be throttled in their location accesses to some degree.
      */
     @RequiresPermission(anyOf = {ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION})
     public static void getCurrentLocation(@NonNull LocationManager locationManager,
@@ -248,7 +281,7 @@ public final class LocationManagerCompat {
         LocationListenerTransport transport = new LocationListenerTransport(
                 new LocationListenerKey(provider, listener), executor);
 
-        if (VERSION.SDK_INT >= 19 && Api19Impl.tryRequestLocationUpdates(
+        if (Api19Impl.tryRequestLocationUpdates(
                 locationManager, provider, locationRequest, transport)) {
             return;
         }
@@ -295,7 +328,7 @@ public final class LocationManagerCompat {
             return;
         }
 
-        if (VERSION.SDK_INT >= 19 && Api19Impl.tryRequestLocationUpdates(
+        if (Api19Impl.tryRequestLocationUpdates(
                     locationManager, provider, locationRequest, listener, looper)) {
             return;
         }
@@ -346,7 +379,7 @@ public final class LocationManagerCompat {
      * Returns the model name (including vendor and hardware/software version) of the GNSS
      * hardware driver, or null if this information is not available.
      *
-     * No device-specific serial number or ID is returned from this API.
+     * <p>No device-specific serial number or ID is returned from this API.
      */
     @Nullable
     public static String getGnssHardwareModelName(@NonNull LocationManager locationManager) {
@@ -374,6 +407,9 @@ public final class LocationManagerCompat {
         @GuardedBy("sGnssStatusListeners")
         static final SimpleArrayMap<Object, Object> sGnssStatusListeners =
                 new SimpleArrayMap<>();
+        @GuardedBy("sGnssMeasurementListeners")
+        static final SimpleArrayMap<GnssMeasurementsEvent.Callback, GnssMeasurementsEvent.Callback>
+                sGnssMeasurementListeners = new SimpleArrayMap<>();
     }
 
     /**
@@ -389,12 +425,23 @@ public final class LocationManagerCompat {
     @RequiresPermission(ACCESS_FINE_LOCATION)
     public static boolean registerGnssMeasurementsCallback(@NonNull LocationManager locationManager,
             @NonNull GnssMeasurementsEvent.Callback callback, @NonNull Handler handler) {
-        if (VERSION.SDK_INT != VERSION_CODES.R) {
+        if (VERSION.SDK_INT > VERSION_CODES.R) {
             return Api24Impl.registerGnssMeasurementsCallback(locationManager, callback, handler);
-        } else {
+        } else if (VERSION.SDK_INT == VERSION_CODES.R) {
             return registerGnssMeasurementsCallbackOnR(locationManager,
                     ExecutorCompat.create(handler),
                     callback);
+        } else {
+            synchronized (GnssListenersHolder.sGnssMeasurementListeners) {
+                unregisterGnssMeasurementsCallback(locationManager, callback);
+                if (Api24Impl.registerGnssMeasurementsCallback(locationManager, callback,
+                        handler)) {
+                    GnssListenersHolder.sGnssMeasurementListeners.put(callback, callback);
+                    return true;
+                } else {
+                    return false;
+                }
+            }
         }
     }
 
@@ -402,21 +449,34 @@ public final class LocationManagerCompat {
      * Registers a GNSS measurement callback. See
      * {@link LocationManager#registerGnssMeasurementsCallback(Executor, GnssMeasurementsEvent.Callback)}.
      *
-     * <p>The primary purpose for this compatibility method is to help avoid crashes when delivering
-     * GNSS measurements to client on Android R. This bug was fixed in Android R QPR1, but since
-     * it's possible not all Android R devices have upgraded to QPR1, this compatibility method is
-     * provided to ensure GNSS measurements can be delivered successfully on all platforms.
+     * <p>In addition to allowing the use of Executors on older platforms, this compatibility method
+     * also helps avoid crashes when delivering GNSS measurements to clients on Android R. This
+     * bug was fixed in Android R QPR1, but since it's possible not all Android R devices have
+     * upgraded to QPR1, this compatibility method is provided to ensure GNSS measurements can be
+     * delivered successfully on all platforms.
      */
-    @RequiresApi(VERSION_CODES.R)
+    @RequiresApi(VERSION_CODES.N)
     @RequiresPermission(ACCESS_FINE_LOCATION)
     public static boolean registerGnssMeasurementsCallback(@NonNull LocationManager locationManager,
             @NonNull Executor executor, @NonNull GnssMeasurementsEvent.Callback callback) {
         if (VERSION.SDK_INT > VERSION_CODES.R) {
             return Api31Impl.registerGnssMeasurementsCallback(locationManager, executor, callback);
-        } else {
+        } else if (VERSION.SDK_INT == VERSION_CODES.R) {
             return registerGnssMeasurementsCallbackOnR(locationManager,
                     executor,
                     callback);
+        } else {
+            synchronized (GnssListenersHolder.sGnssMeasurementListeners) {
+                GnssMeasurementsTransport newTransport = new GnssMeasurementsTransport(callback,
+                        executor);
+                unregisterGnssMeasurementsCallback(locationManager, callback);
+                if (Api24Impl.registerGnssMeasurementsCallback(locationManager, newTransport)) {
+                    GnssListenersHolder.sGnssMeasurementListeners.put(callback, newTransport);
+                    return true;
+                } else {
+                    return false;
+                }
+            }
         }
     }
 
@@ -427,7 +487,20 @@ public final class LocationManagerCompat {
     @RequiresApi(VERSION_CODES.N)
     public static void unregisterGnssMeasurementsCallback(@NonNull LocationManager locationManager,
             @NonNull GnssMeasurementsEvent.Callback callback) {
-        Api24Impl.unregisterGnssMeasurementsCallback(locationManager, callback);
+        if (VERSION.SDK_INT >= VERSION_CODES.R) {
+            Api24Impl.unregisterGnssMeasurementsCallback(locationManager, callback);
+        } else {
+            synchronized (GnssListenersHolder.sGnssMeasurementListeners) {
+                GnssMeasurementsEvent.Callback transport =
+                        GnssListenersHolder.sGnssMeasurementListeners.remove(callback);
+                if (transport != null) {
+                    if (transport instanceof GnssMeasurementsTransport) {
+                        ((GnssMeasurementsTransport) transport).unregister();
+                    }
+                    Api24Impl.unregisterGnssMeasurementsCallback(locationManager, transport);
+                }
+            }
+        }
     }
 
     // Android R without QPR1 has a bug where the default version of this method will always
@@ -752,6 +825,53 @@ public final class LocationManagerCompat {
                     return;
                 }
                 key.mListener.onProviderDisabled(provider);
+            });
+        }
+    }
+
+    @RequiresApi(24)
+    private static class GnssMeasurementsTransport extends GnssMeasurementsEvent.Callback {
+
+        final GnssMeasurementsEvent.Callback mCallback;
+        @Nullable volatile Executor mExecutor;
+
+        GnssMeasurementsTransport(@NonNull GnssMeasurementsEvent.Callback callback,
+                @NonNull Executor executor) {
+            mCallback = callback;
+            mExecutor = executor;
+        }
+
+        public void unregister() {
+            mExecutor = null;
+        }
+
+        @Override
+        public void onGnssMeasurementsReceived(GnssMeasurementsEvent gnssMeasurementsEvent) {
+            final Executor executor = mExecutor;
+            if (executor == null) {
+                return;
+            }
+
+            executor.execute(() -> {
+                if (mExecutor != executor) {
+                    return;
+                }
+                mCallback.onGnssMeasurementsReceived(gnssMeasurementsEvent);
+            });
+        }
+
+        @Override
+        public void onStatusChanged(int status) {
+            final Executor executor = mExecutor;
+            if (executor == null) {
+                return;
+            }
+
+            executor.execute(() -> {
+                if (mExecutor != executor) {
+                    return;
+                }
+                mCallback.onStatusChanged(status);
             });
         }
     }
@@ -1111,10 +1231,7 @@ public final class LocationManagerCompat {
                 @Nullable CancellationSignal cancellationSignal,
                 @NonNull Executor executor, final @NonNull Consumer<Location> consumer) {
             locationManager.getCurrentLocation(provider,
-                    cancellationSignal != null
-                            ? (android.os.CancellationSignal)
-                            cancellationSignal.getCancellationSignalObject()
-                            : null,
+                    cancellationSignal,
                     executor,
                     consumer::accept);
         }
@@ -1199,7 +1316,6 @@ public final class LocationManagerCompat {
         }
     }
 
-    @RequiresApi(19)
     static class Api19Impl {
         private static Class<?> sLocationRequestClass;
         private static Method sRequestLocationUpdatesLooperMethod;
@@ -1208,79 +1324,79 @@ public final class LocationManagerCompat {
             // This class is not instantiable.
         }
 
+        @SuppressLint("BanUncheckedReflection")
         @SuppressWarnings("JavaReflectionMemberAccess")
         @RequiresPermission(anyOf = {ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION})
         @DoNotInline
         static boolean tryRequestLocationUpdates(LocationManager locationManager,
                 String provider, LocationRequestCompat locationRequest,
                 LocationListenerTransport transport) {
-            if (VERSION.SDK_INT >= 19) { // Satisfy reflection lint check
-                try {
-                    if (sLocationRequestClass == null) {
-                        sLocationRequestClass = Class.forName("android.location.LocationRequest");
-                    }
-                    if (sRequestLocationUpdatesLooperMethod == null) {
-                        sRequestLocationUpdatesLooperMethod =
-                                LocationManager.class.getDeclaredMethod(
-                                        "requestLocationUpdates",
-                                        sLocationRequestClass, LocationListener.class,
-                                        Looper.class);
-                        sRequestLocationUpdatesLooperMethod.setAccessible(true);
-                    }
-
-                    LocationRequest request = locationRequest.toLocationRequest(provider);
-                    if (request != null) {
-                        synchronized (sLocationListeners) {
-                            sRequestLocationUpdatesLooperMethod.invoke(locationManager, request,
-                                    transport, Looper.getMainLooper());
-                            registerLocationListenerTransport(locationManager, transport);
-                            return true;
-                        }
-                    }
-                } catch (NoSuchMethodException
-                        | InvocationTargetException
-                        | IllegalAccessException
-                        | ClassNotFoundException
-                        | UnsupportedOperationException e) {
-                    // ignored
+            // Satisfy reflection lint check
+            try {
+                if (sLocationRequestClass == null) {
+                    sLocationRequestClass = Class.forName("android.location.LocationRequest");
                 }
+                if (sRequestLocationUpdatesLooperMethod == null) {
+                    sRequestLocationUpdatesLooperMethod =
+                            LocationManager.class.getDeclaredMethod(
+                                    "requestLocationUpdates",
+                                    sLocationRequestClass, LocationListener.class,
+                                    Looper.class);
+                    sRequestLocationUpdatesLooperMethod.setAccessible(true);
+                }
+
+                LocationRequest request = locationRequest.toLocationRequest(provider);
+                if (request != null) {
+                    synchronized (sLocationListeners) {
+                        sRequestLocationUpdatesLooperMethod.invoke(locationManager, request,
+                                transport, Looper.getMainLooper());
+                        registerLocationListenerTransport(locationManager, transport);
+                        return true;
+                    }
+                }
+            } catch (NoSuchMethodException
+                    | InvocationTargetException
+                    | IllegalAccessException
+                    | ClassNotFoundException
+                    | UnsupportedOperationException e) {
+                // ignored
             }
             return false;
         }
 
+        @SuppressLint("BanUncheckedReflection")
         @SuppressWarnings("JavaReflectionMemberAccess")
         @DoNotInline
         static boolean tryRequestLocationUpdates(LocationManager locationManager, String provider,
                 LocationRequestCompat locationRequest, LocationListenerCompat listener,
                 Looper looper) {
-            if (VERSION.SDK_INT >= 19) { // Satisfy reflection lint check
-                try {
-                    if (sLocationRequestClass == null) {
-                        sLocationRequestClass = Class.forName("android.location.LocationRequest");
-                    }
-
-                    if (sRequestLocationUpdatesLooperMethod == null) {
-                        sRequestLocationUpdatesLooperMethod =
-                                LocationManager.class.getDeclaredMethod(
-                                        "requestLocationUpdates",
-                                        sLocationRequestClass, LocationListener.class,
-                                        Looper.class);
-                        sRequestLocationUpdatesLooperMethod.setAccessible(true);
-                    }
-
-                    LocationRequest request = locationRequest.toLocationRequest(provider);
-                    if (request != null) {
-                        sRequestLocationUpdatesLooperMethod.invoke(
-                                locationManager, request, listener, looper);
-                        return true;
-                    }
-                } catch (NoSuchMethodException
-                        | InvocationTargetException
-                        | IllegalAccessException
-                        | ClassNotFoundException
-                        | UnsupportedOperationException e) {
-                    // ignored
+            // Satisfy reflection lint check
+            try {
+                if (sLocationRequestClass == null) {
+                    sLocationRequestClass = Class.forName("android.location.LocationRequest");
                 }
+
+                if (sRequestLocationUpdatesLooperMethod == null) {
+                    sRequestLocationUpdatesLooperMethod =
+                            LocationManager.class.getDeclaredMethod(
+                                    "requestLocationUpdates",
+                                    sLocationRequestClass, LocationListener.class,
+                                    Looper.class);
+                    sRequestLocationUpdatesLooperMethod.setAccessible(true);
+                }
+
+                LocationRequest request = locationRequest.toLocationRequest(provider);
+                if (request != null) {
+                    sRequestLocationUpdatesLooperMethod.invoke(
+                            locationManager, request, listener, looper);
+                    return true;
+                }
+            } catch (NoSuchMethodException
+                    | InvocationTargetException
+                    | IllegalAccessException
+                    | ClassNotFoundException
+                    | UnsupportedOperationException e) {
+                // ignored
             }
             return false;
         }
@@ -1290,6 +1406,13 @@ public final class LocationManagerCompat {
     static class Api24Impl {
         private Api24Impl() {
             // This class is not instantiable.
+        }
+
+        @RequiresPermission(ACCESS_FINE_LOCATION)
+        @DoNotInline
+        static boolean registerGnssMeasurementsCallback(@NonNull LocationManager locationManager,
+                @NonNull GnssMeasurementsEvent.Callback callback) {
+            return locationManager.registerGnssMeasurementsCallback(callback);
         }
 
         @RequiresPermission(ACCESS_FINE_LOCATION)

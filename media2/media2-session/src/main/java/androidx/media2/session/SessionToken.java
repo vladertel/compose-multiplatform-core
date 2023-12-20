@@ -23,7 +23,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -38,7 +37,6 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.media.MediaBrowserServiceCompat;
 import androidx.media.MediaSessionManager;
-import androidx.media2.common.ClassVerificationHelper;
 import androidx.versionedparcelable.ParcelField;
 import androidx.versionedparcelable.VersionedParcelable;
 import androidx.versionedparcelable.VersionedParcelize;
@@ -48,13 +46,16 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.List;
 
 /**
- * Represents an ongoing {@link MediaSession} or a {@link MediaSessionService}.
- * If it's representing a session service, it may not be ongoing.
- * <p>
- * This may be passed to apps by the session owner to allow them to create a
- * {@link MediaController} to communicate with the session.
- * <p>
- * It can be also obtained by {@link MediaSessionManager}.
+ * Represents an ongoing {@link MediaSession} or a {@link MediaSessionService}. If it's representing
+ * a session service, it may not be ongoing.
+ *
+ * <p>This may be passed to apps by the session owner to allow them to create a {@link
+ * MediaController} to communicate with the session.
+ *
+ * <p>It can be also obtained by {@link MediaSessionManager}.
+ *
+ * @deprecated androidx.media2 is deprecated. Please migrate to <a
+ *     href="https://developer.android.com/guide/topics/media/media3">androidx.media3</a>.
  */
 // New version of MediaSession.Token for following reasons
 //   - Stop implementing Parcelable for updatable support
@@ -63,6 +64,7 @@ import java.util.List;
 //     This helps controller apps to keep target of dispatching media key events in uniform way.
 //     For details about the reason, see following. (Android O+)
 //         android.media.session.MediaSessionManager.Callback#onAddressedPlayerChanged
+@Deprecated
 @VersionedParcelize
 public final class SessionToken implements VersionedParcelable {
     private static final String TAG = "SessionToken";
@@ -71,7 +73,6 @@ public final class SessionToken implements VersionedParcelable {
     private static final int MSG_SEND_TOKEN2_FOR_LEGACY_SESSION = 1000;
 
     /**
-     * @hide
      */
     @RestrictTo(LIBRARY)
     @Retention(RetentionPolicy.SOURCE)
@@ -203,7 +204,6 @@ public final class SessionToken implements VersionedParcelable {
     }
 
     /**
-     * @hide
      * @return component name of the session. Can be {@code null} for {@link #TYPE_SESSION}.
      */
     @RestrictTo(LIBRARY)
@@ -236,7 +236,6 @@ public final class SessionToken implements VersionedParcelable {
     }
 
     /**
-     * @hide
      */
     @RestrictTo(LIBRARY)
     public boolean isLegacySession() {
@@ -244,7 +243,6 @@ public final class SessionToken implements VersionedParcelable {
     }
 
     /**
-     * @hide
      */
     @RestrictTo(LIBRARY)
     public Object getBinder() {
@@ -254,7 +252,6 @@ public final class SessionToken implements VersionedParcelable {
     /**
      * Creates SessionToken object from MediaSessionCompat.Token.
      * When the SessionToken is ready, OnSessionTokenCreateListener will be called.
-     * @hide
      */
     @RestrictTo(LIBRARY)
     public static void createSessionToken(@NonNull final Context context,
@@ -346,11 +343,7 @@ public final class SessionToken implements VersionedParcelable {
 
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     static void quitHandlerThread(HandlerThread thread) {
-        if (Build.VERSION.SDK_INT >= 18) {
-            ClassVerificationHelper.HandlerThread.Api18.quitSafely(thread);
-        } else {
-            thread.quit();
-        }
+        thread.quitSafely();
     }
 
     @SuppressWarnings("deprecation")
@@ -394,7 +387,6 @@ public final class SessionToken implements VersionedParcelable {
     }
 
     /**
-     * @hide
      * Interface definition of a listener to be invoked when a {@link SessionToken token2} object
      * is created from a {@link MediaSessionCompat.Token compat token}.
      *

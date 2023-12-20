@@ -353,7 +353,6 @@ public class ListPopupWindow implements ShowableListMenu {
      * false, we allow outside touch to dismiss the dropdown. If this is set to true, then we
      * ignore outside touch even when the drop down is not set to always visible.
      *
-     * @hide Used only by AutoCompleteTextView to handle some internal special cases.
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public void setForceIgnoreOutsideTouch(boolean forceIgnoreOutsideTouch) {
@@ -369,7 +368,6 @@ public class ListPopupWindow implements ShowableListMenu {
      *
      * @param dropDownAlwaysVisible Whether to keep the drop-down visible.
      *
-     * @hide Only used by AutoCompleteTextView under special conditions.
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public void setDropDownAlwaysVisible(boolean dropDownAlwaysVisible) {
@@ -379,7 +377,6 @@ public class ListPopupWindow implements ShowableListMenu {
     /**
      * @return Whether the drop-down is visible under special conditions.
      *
-     * @hide Only used by AutoCompleteTextView under special conditions.
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     public boolean isDropDownAlwaysVisible() {
@@ -1161,7 +1158,7 @@ public class ListPopupWindow implements ShowableListMenu {
         if (mDropDownList == null) {
             Context context = mContext;
 
-            /**
+            /*
              * This Runnable exists for the sole purpose of checking if the view layout has got
              * completed and if so call showDropDown to display the drop down. This is used to show
              * the drop down as soon as possible after user opens up the search dialog, without
@@ -1333,7 +1330,6 @@ public class ListPopupWindow implements ShowableListMenu {
     }
 
     /**
-     * @hide Only used by {@link androidx.appcompat.view.menu.CascadingMenuPopup} to position
      * a submenu correctly.
      */
     @RestrictTo(LIBRARY_GROUP_PREFIX)

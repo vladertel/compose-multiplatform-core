@@ -20,10 +20,13 @@ import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.camera.core.EffectBundle;
+import androidx.camera.core.CameraEffect;
 import androidx.camera.core.UseCase;
 import androidx.camera.core.ViewPort;
+import androidx.camera.core.concurrent.CameraCoordinator;
+import androidx.camera.core.impl.CameraConfig;
 import androidx.camera.core.impl.CameraInternal;
+import androidx.camera.core.impl.Identifier;
 import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.core.util.Preconditions;
 import androidx.lifecycle.Lifecycle;
@@ -39,6 +42,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -80,6 +84,9 @@ final class LifecycleCameraRepository {
     @GuardedBy("mLock")
     private final ArrayDeque<LifecycleOwner> mActiveLifecycleOwners = new ArrayDeque<>();
 
+    @GuardedBy("mLock")
+    @Nullable CameraCoordinator mCameraCoordinator;
+
     /**
      * Create a new {@link LifecycleCamera} associated with the given {@link LifecycleOwner}.
      *
@@ -98,7 +105,10 @@ final class LifecycleCameraRepository {
             @NonNull CameraUseCaseAdapter cameraUseCaseAdaptor) {
         LifecycleCamera lifecycleCamera;
         synchronized (mLock) {
-            Key key = Key.create(lifecycleOwner, cameraUseCaseAdaptor.getCameraId());
+            Key key = Key.create(lifecycleOwner,
+                    cameraUseCaseAdaptor.getCameraId(),
+                    cameraUseCaseAdaptor.getExtendedConfig().getCompatibilityId()
+                    );
             Preconditions.checkArgument(mCameraMap.get(key) == null, "LifecycleCamera already "
                     + "exists for the given LifecycleOwner and set of cameras");
 
@@ -127,9 +137,11 @@ final class LifecycleCameraRepository {
      */
     @Nullable
     LifecycleCamera getLifecycleCamera(LifecycleOwner lifecycleOwner,
-            CameraUseCaseAdapter.CameraId cameraId) {
+            @NonNull CameraUseCaseAdapter.CameraId cameraId,
+            @NonNull CameraConfig cameraConfig) {
         synchronized (mLock) {
-            return mCameraMap.get(Key.create(lifecycleOwner, cameraId));
+            return mCameraMap.get(Key.create(lifecycleOwner, cameraId,
+                    cameraConfig.getCompatibilityId()));
         }
     }
 
@@ -169,7 +181,10 @@ final class LifecycleCameraRepository {
         synchronized (mLock) {
             LifecycleOwner lifecycleOwner = lifecycleCamera.getLifecycleOwner();
             Key key = Key.create(lifecycleOwner,
-                    lifecycleCamera.getCameraUseCaseAdapter().getCameraId());
+                    lifecycleCamera.getCameraUseCaseAdapter().getCameraId(),
+                    lifecycleCamera.getCameraUseCaseAdapter()
+                            .getExtendedConfig().getCompatibilityId());
+
             LifecycleCameraRepositoryObserver observer =
                     getLifecycleCameraRepositoryObserver(lifecycleOwner);
             Set<Key> lifecycleCameraKeySet;
@@ -250,17 +265,23 @@ final class LifecycleCameraRepository {
      *
      * @param lifecycleCamera The LifecycleCamera which the use cases will be bound to.
      * @param viewPort The viewport which represents the visible camera sensor rect.
-     * @param effectBundle The effects applied to the camera outputs.
+     * @param effects The effects applied to the camera outputs.
      * @param useCases The use cases to bind to a lifecycle.
+     * @param cameraCoordinator The {@link CameraCoordinator} for concurrent camera mode.
+     *
      * @throws IllegalArgumentException If multiple LifecycleCameras with use cases are
      * registered to the same LifecycleOwner. Or all use cases will exceed the capability of the
      * camera after binding them to the LifecycleCamera.
      */
-    void bindToLifecycleCamera(@NonNull LifecycleCamera lifecycleCamera,
-            @Nullable ViewPort viewPort, @Nullable EffectBundle effectBundle,
-            @NonNull Collection<UseCase> useCases) {
+    void bindToLifecycleCamera(
+            @NonNull LifecycleCamera lifecycleCamera,
+            @Nullable ViewPort viewPort,
+            @NonNull List<CameraEffect> effects,
+            @NonNull Collection<UseCase> useCases,
+            @Nullable CameraCoordinator cameraCoordinator) {
         synchronized (mLock) {
             Preconditions.checkArgument(!useCases.isEmpty());
+            mCameraCoordinator = cameraCoordinator;
             LifecycleOwner lifecycleOwner = lifecycleCamera.getLifecycleOwner();
             // Disallow multiple LifecycleCameras with use cases to be registered to the same
             // LifecycleOwner.
@@ -268,17 +289,24 @@ final class LifecycleCameraRepository {
                     getLifecycleCameraRepositoryObserver(lifecycleOwner);
             Set<Key> lifecycleCameraKeySet = mLifecycleObserverMap.get(observer);
 
-            for (Key key : lifecycleCameraKeySet) {
-                LifecycleCamera camera = Preconditions.checkNotNull(mCameraMap.get(key));
-                if (!camera.equals(lifecycleCamera) && !camera.getUseCases().isEmpty()) {
-                    throw new IllegalArgumentException("Multiple LifecycleCameras with use cases "
-                            + "are registered to the same LifecycleOwner.");
+            // Bypass the use cases lifecycle owner validation when concurrent camera mode is on.
+            // In concurrent camera mode, we allow multiple cameras registered to the same
+            // lifecycle owner.
+            if (mCameraCoordinator == null || (mCameraCoordinator.getCameraOperatingMode()
+                    != CameraCoordinator.CAMERA_OPERATING_MODE_CONCURRENT)) {
+                for (Key key : lifecycleCameraKeySet) {
+                    LifecycleCamera camera = Preconditions.checkNotNull(mCameraMap.get(key));
+                    if (!camera.equals(lifecycleCamera) && !camera.getUseCases().isEmpty()) {
+                        throw new IllegalArgumentException(
+                                "Multiple LifecycleCameras with use cases "
+                                        + "are registered to the same LifecycleOwner.");
+                    }
                 }
             }
 
             try {
                 lifecycleCamera.getCameraUseCaseAdapter().setViewPort(viewPort);
-                lifecycleCamera.getCameraUseCaseAdapter().setEffectBundle(effectBundle);
+                lifecycleCamera.getCameraUseCaseAdapter().setEffects(effects);
                 lifecycleCamera.bind(useCases);
             } catch (CameraUseCaseAdapter.CameraException e) {
                 throw new IllegalArgumentException(e.getMessage());
@@ -365,12 +393,18 @@ final class LifecycleCameraRepository {
             if (mActiveLifecycleOwners.isEmpty()) {
                 mActiveLifecycleOwners.push(lifecycleOwner);
             } else {
-                LifecycleOwner currentActiveLifecycleOwner = mActiveLifecycleOwners.peek();
-                if (!lifecycleOwner.equals(currentActiveLifecycleOwner)) {
-                    suspendUseCases(currentActiveLifecycleOwner);
+                // Bypass the use cases suspending when concurrent camera mode is on.
+                // In concurrent camera mode, we allow multiple cameras registered to the same
+                // lifecycle owner.
+                if (mCameraCoordinator == null || (mCameraCoordinator.getCameraOperatingMode()
+                        != CameraCoordinator.CAMERA_OPERATING_MODE_CONCURRENT)) {
+                    LifecycleOwner currentActiveLifecycleOwner = mActiveLifecycleOwners.peek();
+                    if (!lifecycleOwner.equals(currentActiveLifecycleOwner)) {
+                        suspendUseCases(currentActiveLifecycleOwner);
 
-                    mActiveLifecycleOwners.remove(lifecycleOwner);
-                    mActiveLifecycleOwners.push(lifecycleOwner);
+                        mActiveLifecycleOwners.remove(lifecycleOwner);
+                        mActiveLifecycleOwners.push(lifecycleOwner);
+                    }
                 }
             }
 
@@ -477,8 +511,10 @@ final class LifecycleCameraRepository {
     @AutoValue
     abstract static class Key {
         static Key create(@NonNull LifecycleOwner lifecycleOwner,
-                @NonNull CameraUseCaseAdapter.CameraId cameraId) {
-            return new AutoValue_LifecycleCameraRepository_Key(lifecycleOwner, cameraId);
+                @NonNull CameraUseCaseAdapter.CameraId cameraId,
+                @NonNull Identifier cameraConfigId) {
+            return new AutoValue_LifecycleCameraRepository_Key(
+                    lifecycleOwner, cameraId, cameraConfigId);
         }
 
         @NonNull
@@ -486,6 +522,9 @@ final class LifecycleCameraRepository {
 
         @NonNull
         public abstract CameraUseCaseAdapter.CameraId getCameraId();
+
+        @NonNull
+        public abstract Identifier getCameraConfigId();
     }
 
     private static class LifecycleCameraRepositoryObserver implements LifecycleObserver {
