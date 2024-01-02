@@ -25,13 +25,11 @@ import androidx.paging.LoadStates
 import androidx.paging.NullPaddedList
 import androidx.paging.Pager
 import androidx.paging.PagingData
+import androidx.paging.PagingDataEvent
 import androidx.paging.PagingDataPresenter
 import androidx.paging.testing.ErrorRecovery.RETRY
 import androidx.paging.testing.ErrorRecovery.RETURN_CURRENT_SNAPSHOT
 import androidx.paging.testing.ErrorRecovery.THROW
-import androidx.paging.testing.LoaderCallback.CallbackType.ON_CHANGED
-import androidx.paging.testing.LoaderCallback.CallbackType.ON_INSERTED
-import androidx.paging.testing.LoaderCallback.CallbackType.ON_REMOVED
 import kotlin.coroutines.CoroutineContext
 import kotlin.jvm.JvmSuppressWildcards
 import kotlinx.coroutines.cancelAndJoin
@@ -63,25 +61,11 @@ public suspend fun <Value : Any> Flow<PagingData<Value>>.asSnapshot(
 
     lateinit var loader: SnapshotLoader<Value>
 
+    // TODO to be removed when all load types have switched to presentPagingDataEvent callback
     val callback = object : DifferCallback {
-        override fun onChanged(position: Int, count: Int) {
-            loader.onDataSetChanged(
-                loader.generations.value,
-                LoaderCallback(ON_CHANGED, position, count)
-            )
-        }
-        override fun onInserted(position: Int, count: Int) {
-            loader.onDataSetChanged(
-                loader.generations.value,
-                LoaderCallback(ON_INSERTED, position, count)
-            )
-        }
-        override fun onRemoved(position: Int, count: Int) {
-            loader.onDataSetChanged(
-                loader.generations.value,
-                LoaderCallback(ON_REMOVED, position, count)
-            )
-        }
+        override fun onChanged(position: Int, count: Int) { }
+        override fun onInserted(position: Int, count: Int) { }
+        override fun onRemoved(position: Int, count: Int) { }
     }
 
     // PagingDataPresenter will collect from coroutineContext instead of main dispatcher
@@ -93,24 +77,51 @@ public suspend fun <Value : Any> Flow<PagingData<Value>>.asSnapshot(
             newList: NullPaddedList<Value>,
             lastAccessedIndex: Int,
             onListPresentable: () -> Unit
-        ): Int? {
+        ) {
             onListPresentable()
             /**
              * On new generation, SnapshotLoader needs the latest [ItemSnapshotList]
              * state so that it can initialize lastAccessedIndex to prepend/append from onwards.
              *
              * This initial lastAccessedIndex is necessary because initial load
-             * key may not be 0, for example when [Pager].initialKey != 0. It is calculated
-             * based on [ItemSnapshotList.placeholdersBefore] + [1/2 initial load size] to match
-             * the initial ViewportHint that [PagingDataPresenter.presentNewList] sends on
-             * first generation to auto-trigger prefetches on either direction.
+             * key may not be 0, for example when [Pager].initialKey != 0. We don't know which
+             * items are immediately displayed so we can only best-effort estimate that the middle
+             * item has been presented.
+             *
+             * Therefore we calculate the actual index based on
+             * [ItemSnapshotList.placeholdersBefore] + [1/2 initial load size].
              *
              * Any subsequent SnapshotLoader loads are based on the index tracked by
              * [SnapshotLoader] internally.
              */
-            val lastLoadedIndex = snapshot().placeholdersBefore + (snapshot().items.size / 2)
-            loader.generations.value.lastAccessedIndex.set(lastLoadedIndex)
-            return null
+            val lastLoadedIndex = newList.placeholdersBefore + (newList.dataCount / 2)
+            loader.onDataSetChanged(
+                loader.generations.value,
+                LoaderCallback(LoadType.REFRESH, lastLoadedIndex, newList.size),
+                this@coroutineScope
+            )
+        }
+
+        override suspend fun presentPagingDataEvent(event: PagingDataEvent<Value>) {
+            /**
+             * We only care about callbacks for prepend inserts so that we can adjust
+             * the lastAccessedIndex. For more detail, refer to docs on method
+             * #computeIndexOffset in SnapshotLoader.
+             */
+            if (event is PagingDataEvent.Prepend) {
+                val insertSize = event.inserted.size
+                val placeholdersChangedCount = minOf(event.oldPlaceholdersBefore, insertSize)
+                val itemsInsertedCount = insertSize - placeholdersChangedCount
+                val itemsInsertedPos = 0
+
+                if (itemsInsertedCount > 0) {
+                    loader.onDataSetChanged(
+                        loader.generations.value,
+                        LoaderCallback(LoadType.PREPEND, itemsInsertedPos, itemsInsertedCount),
+                        null
+                    )
+                }
+            }
         }
     }
 

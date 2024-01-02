@@ -161,36 +161,112 @@ constructor(
     @Suppress("MemberVisibilityCanBePrivate") // synthetic access
     internal var inGetItem: Boolean = false
 
-    private val presenter = object : PagingDataPresenter<T>(differCallback, mainDispatcher) {
+    internal val presenter = object : PagingDataPresenter<T>(differCallback, mainDispatcher) {
+        // TODO("To be removed when all PageEvent types have moved to presentPagingDataEvent")
         override suspend fun presentNewList(
             previousList: NullPaddedList<T>,
             newList: NullPaddedList<T>,
             lastAccessedIndex: Int,
             onListPresentable: () -> Unit,
-        ) = when {
-            // fast path for no items -> some items
-            previousList.size == 0 -> {
-                onListPresentable()
-                differCallback.onInserted(0, newList.size)
-                null
-            }
-            // fast path for some items -> no items
-            newList.size == 0 -> {
-                onListPresentable()
-                differCallback.onRemoved(0, previousList.size)
-                null
-            }
-            else -> {
-                val diffResult = withContext(workerDispatcher) {
-                    previousList.computeDiff(newList, diffCallback)
+        ) {
+            when {
+                // fast path for no items -> some items
+                previousList.size == 0 -> {
+                    onListPresentable()
+                    differCallback.onInserted(0, newList.size)
                 }
-                onListPresentable()
-                previousList.dispatchDiff(updateCallback, newList, diffResult)
-                previousList.transformAnchorIndex(
-                    diffResult = diffResult,
-                    newList = newList,
-                    oldPosition = lastAccessedIndex
-                )
+                // fast path for some items -> no items
+                newList.size == 0 -> {
+                    onListPresentable()
+                    differCallback.onRemoved(0, previousList.size)
+                }
+
+                else -> {
+                    val diffResult = withContext(workerDispatcher) {
+                        previousList.computeDiff(newList, diffCallback)
+                    }
+                    onListPresentable()
+                    previousList.dispatchDiff(updateCallback, newList, diffResult)
+                }
+            }
+        }
+
+        /**
+         * Insert the event's page to the storage, and dispatch associated callbacks for
+         * change (placeholder becomes real item) or insert (real item is appended).
+         *
+         * For each insert (or removal) there are three potential events:
+         *
+         * 1) change
+         *     this covers any placeholder/item conversions, and is done first
+         *
+         * 2) item insert/remove
+         *     this covers any remaining items that are inserted/removed, but aren't swapping with
+         *     placeholders
+         *
+         * 3) placeholder insert/remove
+         *     after the above, placeholder count can be wrong for a number of reasons - approximate
+         *     counting or filtering are the most common. In either case, we adjust placeholders at
+         *     the far end of the list, so that they don't trigger animations near the user.
+         */
+        override suspend fun presentPagingDataEvent(event: PagingDataEvent<T>) {
+            when (event) {
+                is PagingDataEvent.Prepend -> event.apply {
+                    val insertSize = inserted.size
+
+                    val placeholdersChangedCount =
+                        minOf(oldPlaceholdersBefore, insertSize)
+                    val placeholdersChangedPos = oldPlaceholdersBefore - placeholdersChangedCount
+                    val itemsInsertedCount = insertSize - placeholdersChangedCount
+                    val itemsInsertedPos = 0
+
+                    // ... then trigger callbacks, so callbacks won't see inconsistent state
+                    if (placeholdersChangedCount > 0) {
+                        updateCallback.onChanged(
+                            placeholdersChangedPos, placeholdersChangedCount, null
+                        )
+                    }
+                    if (itemsInsertedCount > 0) {
+                        updateCallback.onInserted(itemsInsertedPos, itemsInsertedCount)
+                    }
+                    val placeholderInsertedCount =
+                        newPlaceholdersBefore - oldPlaceholdersBefore + placeholdersChangedCount
+                    if (placeholderInsertedCount > 0) {
+                        updateCallback.onInserted(0, placeholderInsertedCount)
+                    } else if (placeholderInsertedCount < 0) {
+                        updateCallback.onRemoved(0, -placeholderInsertedCount)
+                    }
+                }
+                is PagingDataEvent.Append -> event.apply {
+                    val insertSize = inserted.size
+                    val placeholdersChangedCount = minOf(oldPlaceholdersAfter, insertSize)
+                    val placeholdersChangedPos = startIndex
+                    val itemsInsertedCount = insertSize - placeholdersChangedCount
+                    val itemsInsertedPos = placeholdersChangedPos + placeholdersChangedCount
+
+                    if (placeholdersChangedCount > 0) {
+                        updateCallback.onChanged(
+                            placeholdersChangedPos, placeholdersChangedCount, null
+                        )
+                    }
+                    if (itemsInsertedCount > 0) {
+                        updateCallback.onInserted(itemsInsertedPos, itemsInsertedCount)
+                    }
+                    val placeholderInsertedCount =
+                        newPlaceholdersAfter - oldPlaceholdersAfter + placeholdersChangedCount
+                    val newTotalSize = startIndex + insertSize + newPlaceholdersAfter
+                    if (placeholderInsertedCount > 0) {
+                        updateCallback.onInserted(
+                            newTotalSize - placeholderInsertedCount,
+                            placeholderInsertedCount
+                        )
+                    } else if (placeholderInsertedCount < 0) {
+                        updateCallback.onRemoved(newTotalSize, -placeholderInsertedCount)
+                    }
+                }
+                else -> {
+                    // to implement
+                }
             }
         }
 

@@ -20,16 +20,20 @@ import androidx.kruth.assertThat
 import androidx.room.Room.databaseBuilder
 import androidx.room.Room.inMemoryDatabaseBuilder
 import androidx.room.migration.Migration
+import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import instantiateImpl
 import java.io.File
 import java.util.concurrent.Executor
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 @RunWith(JUnit4::class)
 class BuilderTest {
@@ -45,6 +49,17 @@ class BuilderTest {
                     "in memory database, use Room.inMemoryDatabaseBuilder"
             )
         }
+    }
+
+    @Test
+    fun databaseBuilderWithFactory() {
+        val db = databaseBuilder(
+            context = mock(),
+            name = "TestDatabase",
+            factory = { TestDatabase::class.instantiateImpl() }
+        ).build()
+        // Assert that the db is built successfully.
+        assertThat(db).isInstanceOf<TestDatabase>()
     }
 
     @Test
@@ -374,6 +389,7 @@ class BuilderTest {
     fun createWithFactoryAndVersion() {
         val context: Context = mock()
         val factory: SupportSQLiteOpenHelper.Factory = mock()
+        whenever(factory.create(any())).thenReturn(mock())
         val db = inMemoryDatabaseBuilder(context, TestDatabase::class.java)
             .openHelperFactory(factory)
             .build()
@@ -442,6 +458,33 @@ class BuilderTest {
         assertThat(exception).hasMessageThat().contains(
             "Cannot create from asset or file for an in-memory"
         )
+    }
+
+    @Test
+    fun driverProvided() {
+        val driver: SQLiteDriver = mock()
+        val db = inMemoryDatabaseBuilder(mock(), TestDatabase::class.java)
+            .setDriver(driver)
+            .build()
+        assertThat(db).isInstanceOf<BuilderTest_TestDatabase_Impl>()
+        val config: DatabaseConfiguration = (db as BuilderTest_TestDatabase_Impl).mConfig
+        assertThat(config.sqliteDriver).isEqualTo(driver)
+        assertThat(config.sqliteOpenHelperFactory).isNull()
+    }
+
+    @Test
+    fun bothDriverAndFactoryProvided() {
+        try {
+            inMemoryDatabaseBuilder(mock(), RoomDatabase::class.java)
+                .setDriver(mock())
+                .openHelperFactory(mock())
+                .build()
+        } catch (e: IllegalArgumentException) {
+            assertThat(e.message).isEqualTo(
+                "A RoomDatabase cannot be configured with both a SQLiteDriver and a " +
+                    "SupportOpenHelper.Factory."
+            )
+        }
     }
 
     internal abstract class TestDatabase : RoomDatabase() {
