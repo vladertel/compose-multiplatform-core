@@ -29,9 +29,8 @@ class TestPagingDataPresenter<T : Any>(mainContext: CoroutineContext = Dispatche
         newList: NullPaddedList<T>,
         lastAccessedIndex: Int,
         onListPresentable: () -> Unit,
-    ): Int? {
+    ) {
         onListPresentable()
-        return null
     }
 
     companion object {
@@ -41,4 +40,6 @@ class TestPagingDataPresenter<T : Any>(mainContext: CoroutineContext = Dispatche
             override fun onRemoved(position: Int, count: Int) {}
         }
     }
+
+    override suspend fun presentPagingDataEvent(event: PagingDataEvent<T>) { }
 }

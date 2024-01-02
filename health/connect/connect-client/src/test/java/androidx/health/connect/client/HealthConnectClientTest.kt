@@ -15,7 +15,6 @@
  */
 package androidx.health.connect.client
 
-import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.IntentFilter
@@ -28,8 +27,6 @@ import androidx.health.platform.client.HealthDataService
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import kotlin.test.assertFailsWith
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Ignore
@@ -38,6 +35,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowUserManager
 
 private const val PROVIDER_PACKAGE_NAME = "com.example.fake.provider"
 
@@ -194,7 +192,6 @@ class HealthConnectClientTest {
             .isEqualTo("android.health.connect.action.MANAGE_HEALTH_DATA")
     }
 
-    // TODO(b/306157011): Add tests for work profile in Android U.
     @Test
     @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
     fun getSdkStatus_withProfileInT_isAvailable() {
@@ -205,9 +202,7 @@ class HealthConnectClientTest {
             enabled = true
         )
         installService(context, HealthConnectClient.DEFAULT_PROVIDER_PACKAGE_NAME)
-
-        val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
-        shadowOf(userManager).setManagedProfile(true)
+        addProfile()
 
         assertThat(
                 HealthConnectClient.getSdkStatus(
@@ -226,8 +221,8 @@ class HealthConnectClientTest {
     }
 
     @Test
-    @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
-    fun unbindableService_callThrowsIllegalStateException() {
+    @Config(sdk = [Build.VERSION_CODES.UPSIDE_DOWN_CAKE])
+    fun getSdkStatus_withProfileInU_isNotAvailable() {
         installPackage(
             context,
             HealthConnectClient.DEFAULT_PROVIDER_PACKAGE_NAME,
@@ -235,17 +230,32 @@ class HealthConnectClientTest {
             enabled = true
         )
         installService(context, HealthConnectClient.DEFAULT_PROVIDER_PACKAGE_NAME)
-        shadowOf(context.applicationContext as Application)
-            .declareActionUnbindable(HealthDataService.ANDROID_HEALTH_PLATFORM_SERVICE_BIND_ACTION)
+        addProfile()
 
-        val permissionController =
-            HealthConnectClient.getOrCreate(context).permissionController
-        assertFailsWith<IllegalStateException> {
-            runBlocking {
-                // Simplest API call that requires no parameters
-                permissionController.getGrantedPermissions()
-            }
+        assertThat(
+                HealthConnectClient.getSdkStatus(
+                    context,
+                    HealthConnectClient.DEFAULT_PROVIDER_PACKAGE_NAME
+                )
+            )
+            .isEqualTo(HealthConnectClient.SDK_UNAVAILABLE)
+
+        assertThrows(UnsupportedOperationException::class.java) {
+            HealthConnectClient.getOrCreate(
+                context,
+                HealthConnectClient.DEFAULT_PROVIDER_PACKAGE_NAME
+            )
         }
+    }
+
+    private fun addProfile() {
+        shadowOf(context.getSystemService(Context.USER_SERVICE) as UserManager)
+            .addProfile(
+                /* userHandle= */ 1,
+                /* profileUserHandle= */ 0,
+                "Profile Name",
+                ShadowUserManager.FLAG_PROFILE
+            )
     }
 
     private fun installPackage(

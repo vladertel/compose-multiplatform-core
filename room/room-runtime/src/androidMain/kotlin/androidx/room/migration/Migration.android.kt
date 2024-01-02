@@ -15,12 +15,12 @@
  */
 package androidx.room.migration
 
+import androidx.room.driver.SupportSQLiteConnection
+import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Base class for a database migration.
- *
- * Creates a new migration between [startVersion] and [endVersion].
  *
  * Each migration can move between 2 versions that are defined by [startVersion] and
  * [endVersion].
@@ -31,14 +31,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * 3 to 5 instead of 3 to 4 and 4 to 5.
  *
  * If there are not enough migrations provided to move from the current version to the latest
- * version, Room will clear the database and recreate so even if you have no changes between 2
- * versions, you should still provide a Migration object to the builder.
+ * version, Room will might clear the database and recreate if destructive migrations are enabled.
+ *
+ * @constructor Creates a new migration between [startVersion] and [endVersion] inclusive.
  */
-abstract class Migration(
+actual abstract class Migration(
     @JvmField
-    val startVersion: Int,
+    actual val startVersion: Int,
     @JvmField
-    val endVersion: Int
+    actual val endVersion: Int
 ) {
     /**
      * Should run the necessary migrations.
@@ -51,4 +52,21 @@ abstract class Migration(
      * @param db The database instance
      */
     abstract fun migrate(db: SupportSQLiteDatabase)
+
+    /**
+     * Should run the necessary migrations.
+     *
+     * This function is already called inside a transaction and that transaction might actually be a
+     * composite transaction of all necessary `Migration`s.
+     *
+     * @param connection The database connection
+     */
+    actual open fun migrate(connection: SQLiteConnection) {
+        // TODO(b/314338741): Signal users this non-abstract overload should be implemented
+        if (connection is SupportSQLiteConnection) {
+            migrate(connection.db)
+        } else {
+            TODO("Not yet migrated to use SQLiteDriver")
+        }
+    }
 }

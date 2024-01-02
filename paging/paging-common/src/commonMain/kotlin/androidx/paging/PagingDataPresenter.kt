@@ -104,7 +104,7 @@ public abstract class PagingDataPresenter<T : Any>(
         }
     }
 
-    internal fun dispatchLoadStates(source: LoadStates, mediator: LoadStates?) {
+    private fun dispatchLoadStates(source: LoadStates, mediator: LoadStates?) {
         // CombinedLoadStates is de-duplicated within set()
         combinedLoadStatesCollection.set(
             sourceLoadStates = source,
@@ -124,12 +124,22 @@ public abstract class PagingDataPresenter<T : Any>(
      * result between [previousList] and [newList]. Null if [newList] or [previousList] lists are
      * empty, where it does not make sense to transform [lastAccessedIndex].
      */
+    // TODO("To be removed when all PageEvent types have moved to presentPagingDataEvent")
     public abstract suspend fun presentNewList(
         previousList: NullPaddedList<T>,
         newList: NullPaddedList<T>,
         lastAccessedIndex: Int,
         onListPresentable: () -> Unit,
-    ): Int?
+    )
+
+    /**
+     * Handler for [PagingDataEvent] emitted by a [PagingData] that was submitted to
+     * this [PagingDataPresenter]
+     *
+     */
+    public abstract suspend fun presentPagingDataEvent(
+        event: PagingDataEvent<T>,
+    )
 
     public open fun postEvents(): Boolean = false
 
@@ -188,8 +198,14 @@ public abstract class PagingDataPresenter<T : Any>(
                                 yield()
                             }
 
-                            // Process APPEND/PREPEND to be shown to the UI
-                            pageStore.processEvent(event, processPageEventCallback)
+                            // Process APPEND/PREPEND and send to presenter
+                            presentPagingDataEvent(pageStore.processEvent(event))
+
+                            // dispatch load states
+                            dispatchLoadStates(
+                                source = event.sourceLoadStates,
+                                mediator = event.mediatorLoadStates,
+                            )
 
                             // If index points to a placeholder after transformations, resend it unless
                             // there are no more items to load.
@@ -221,7 +237,7 @@ public abstract class PagingDataPresenter<T : Any>(
                                 val shouldResendHint = emptyInsert ||
                                     lastAccessedIndex < pageStore.placeholdersBefore ||
                                     lastAccessedIndex > pageStore.placeholdersBefore +
-                                    pageStore.storageCount
+                                        pageStore.dataCount
 
                                 if (shouldResendHint) {
                                     hintReceiver?.accessHint(
@@ -468,7 +484,7 @@ public abstract class PagingDataPresenter<T : Any>(
             placeholdersAfter = placeholdersAfter,
         )
         var onListPresentableCalled = false
-        val transformedLastAccessedIndex = presentNewList(
+        presentNewList(
             previousList = pageStore,
             newList = newPresenter,
             lastAccessedIndex = lastAccessedIndex,
@@ -505,25 +521,12 @@ public abstract class PagingDataPresenter<T : Any>(
             dispatchLoadStates(sourceLoadStates!!, mediatorLoadStates)
         }
 
-        if (transformedLastAccessedIndex == null) {
-            // Send an initialize hint in case the new list is empty, which would
-            // prevent a ViewportHint.Access from ever getting sent since there are
-            // no items to bind from initial load.
+        if (newPresenter.size == 0) {
+            // Send an initialize hint in case the new list is empty (no items or placeholders),
+            // which would prevent a ViewportHint.Access from ever getting sent since there are
+            // no items to bind from initial load. Without this hint, paging would stall on
+            // an empty list because prepend/append would be not triggered.
             hintReceiver?.accessHint(newPresenter.initializeHint())
-        } else {
-            // Transform the last loadAround index from the old list to the new list
-            // by passing it through the DiffResult, and pass it forward as a
-            // ViewportHint within the new list to the next generation of Pager.
-            // This ensures prefetch distance for the last ViewportHint from the old
-            // list is respected in the new list, even if invalidation interrupts
-            // the prepend / append load that would have fulfilled it in the old
-            // list.
-            lastAccessedIndex = transformedLastAccessedIndex
-            hintReceiver?.accessHint(
-                newPresenter.accessHintForPresenterIndex(
-                    transformedLastAccessedIndex
-                )
-            )
         }
     }
 }

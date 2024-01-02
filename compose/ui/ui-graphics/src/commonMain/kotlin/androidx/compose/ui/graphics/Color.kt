@@ -77,25 +77,25 @@ import kotlin.math.min
  * ```
  * | Component | Name        | Size    | Range                 |
  * |-----------|-------------|---------|-----------------------|
- * | [RGB][ColorSpace.Model.Rgb] color model |
+ * | [RGB][ColorSpace.Model.Rgb] color model                   |
  * | R         | Red         | 16 bits | `[-65504.0, 65504.0]` |
  * | G         | Green       | 16 bits | `[-65504.0, 65504.0]` |
  * | B         | Blue        | 16 bits | `[-65504.0, 65504.0]` |
  * | A         | Alpha       | 10 bits | `[0..1023]`           |
  * |           | Color space | 6 bits  | `[0..63]`             |
- * | [SRGB][ColorSpaces.Srgb] color space |
+ * | [SRGB][ColorSpaces.Srgb] color space                      |
  * | R         | Red         | 8 bits  | `[0..255]`            |
  * | G         | Green       | 8 bits  | `[0..255]`            |
  * | B         | Blue        | 8 bits  | `[0..255]`            |
  * | A         | Alpha       | 8 bits  | `[0..255]`            |
  * | X         | Unused      | 32 bits | `[0]`                 |
- * | [XYZ][ColorSpace.Model.Xyz] color model |
+ * | [XYZ][ColorSpace.Model.Xyz] color model                   |
  * | X         | X           | 16 bits | `[-65504.0, 65504.0]` |
  * | Y         | Y           | 16 bits | `[-65504.0, 65504.0]` |
  * | Z         | Z           | 16 bits | `[-65504.0, 65504.0]` |
  * | A         | Alpha       | 10 bits | `[0..1023]`           |
  * |           | Color space | 6 bits  | `[0..63]`             |
- * | [Lab][ColorSpace.Model.Lab] color model |
+ * | [Lab][ColorSpace.Model.Lab] color model                   |
  * | L         | L           | 16 bits | `[-65504.0, 65504.0]` |
  * | a         | a           | 16 bits | `[-65504.0, 65504.0]` |
  * | b         | b           | 16 bits | `[-65504.0, 65504.0]` |
@@ -137,12 +137,10 @@ value class Color(val value: ULong) {
      * @return A non-null color instance in the specified color space
      */
     fun convert(colorSpace: ColorSpace): Color {
-        val thisColorSpace = this.colorSpace
-        if (colorSpace == thisColorSpace) {
-            return this // nothing to convert
-        }
-        val connector = thisColorSpace.connect(colorSpace)
-        return connector.transformToColor(red, green, blue, alpha)
+        // If the destination color space is the same as this color's color space,
+        // the connector we get will be the identity connector
+        val connector = this.colorSpace.connect(colorSpace)
+        return connector.transformToColor(this)
     }
 
     /**
@@ -228,20 +226,25 @@ value class Color(val value: ULong) {
             }
         }
 
+    @Suppress("NOTHING_TO_INLINE")
     @Stable
-    operator fun component1(): Float = red
+    inline operator fun component1(): Float = red
 
+    @Suppress("NOTHING_TO_INLINE")
     @Stable
-    operator fun component2(): Float = green
+    inline operator fun component2(): Float = green
 
+    @Suppress("NOTHING_TO_INLINE")
     @Stable
-    operator fun component3(): Float = blue
+    inline operator fun component3(): Float = blue
 
+    @Suppress("NOTHING_TO_INLINE")
     @Stable
-    operator fun component4(): Float = alpha
+    inline operator fun component4(): Float = alpha
 
+    @Suppress("NOTHING_TO_INLINE")
     @Stable
-    operator fun component5(): ColorSpace = colorSpace
+    inline operator fun component5(): ColorSpace = colorSpace
 
     /**
      * Copies the existing color, changing only the provided values. The [ColorSpace][colorSpace]
