@@ -36,3 +36,7 @@ internal actual fun isCopyKeyEvent(keyEvent: KeyEvent): Boolean =
  */
 internal actual fun Modifier.selectionMagnifier(manager: SelectionManager): Modifier =
     TODO("implement js selectionMagnifier")
+
+internal actual fun Modifier.additionalTouchSelectionModifier(manager: SelectionManager, releaseAction: () -> Unit): Modifier {
+    return Modifier.defaultAdditionalTouchSelectionModifier(manager) { releaseAction() }
+}

@@ -65,3 +65,7 @@ internal actual fun Modifier.selectionMagnifier(manager: SelectionManager): Modi
         )
     }
 }
+
+internal actual fun Modifier.additionalTouchSelectionModifier(manager: SelectionManager, releaseAction: () -> Unit): Modifier {
+    return Modifier.defaultAdditionalTouchSelectionModifier(manager) { releaseAction() }
+}

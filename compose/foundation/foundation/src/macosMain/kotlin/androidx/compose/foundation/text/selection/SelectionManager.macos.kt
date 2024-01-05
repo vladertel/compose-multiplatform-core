@@ -35,3 +35,6 @@ internal actual fun isCopyKeyEvent(keyEvent: KeyEvent): Boolean =
  * Magnification is not supported on desktop.
  */
 internal actual fun Modifier.selectionMagnifier(manager: SelectionManager): Modifier = this
+internal actual fun Modifier.additionalTouchSelectionModifier(manager: SelectionManager, releaseAction: () -> Unit): Modifier {
+    return Modifier.defaultAdditionalTouchSelectionModifier(manager) { releaseAction() }
+}

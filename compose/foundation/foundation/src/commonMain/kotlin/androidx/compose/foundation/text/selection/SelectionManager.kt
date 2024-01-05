@@ -116,7 +116,7 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
      */
     val modifier
         get() = Modifier
-            .onClearSelectionRequested { onRelease() }
+            .additionalTouchSelectionModifier(this) { onRelease() }
             .onGloballyPositioned { containerLayoutCoordinates = it }
             .focusRequester(focusRequester)
             .onFocusChanged { focusState ->
@@ -639,21 +639,6 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
         }
     }
 
-    /**
-     * Detect tap without consuming the up event.
-     */
-    private suspend fun PointerInputScope.detectNonConsumingTap(onTap: (Offset) -> Unit) {
-        awaitEachGesture {
-            waitForUpOrCancellation()?.let {
-                onTap(it.position)
-            }
-        }
-    }
-
-    private fun Modifier.onClearSelectionRequested(block: () -> Unit): Modifier {
-        return if (hasFocus) pointerInput(Unit) { detectNonConsumingTap { block() } } else this
-    }
-
     private fun convertToContainerCoordinates(
         layoutCoordinates: LayoutCoordinates,
         offset: Offset
@@ -811,6 +796,22 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
 internal expect fun isCopyKeyEvent(keyEvent: KeyEvent): Boolean
 
 internal expect fun Modifier.selectionMagnifier(manager: SelectionManager): Modifier
+
+internal expect fun Modifier.additionalTouchSelectionModifier(manager: SelectionManager, releaseAction: () -> Unit): Modifier
+internal fun Modifier.defaultAdditionalTouchSelectionModifier(manager: SelectionManager, releaseAction: () -> Unit): Modifier {
+    /**
+     * Detect tap without consuming the up event.
+     */ //it was private method in SelectionManager, moved here to support different behavior for other platforms
+    suspend fun PointerInputScope.detectNonConsumingTap(onTap: (Offset) -> Unit) {
+        awaitEachGesture {
+            waitForUpOrCancellation()?.let {
+                onTap(it.position)
+            }
+        }
+    }
+    // it was private method in SelectionManager called 'onClearSelectionRequested', moved here to support different behavior for other platforms
+    return if (manager.hasFocus) pointerInput(Unit) { detectNonConsumingTap { releaseAction() } } else this
+}
 
 internal fun calculateSelectionMagnifierCenterAndroid(
     manager: SelectionManager,
