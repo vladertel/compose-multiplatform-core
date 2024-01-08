@@ -98,7 +98,6 @@ import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.core.util.keyIterator
 import androidx.core.view.AccessibilityDelegateCompat
-import androidx.core.view.ViewCompat
 import androidx.core.view.ViewCompat.ACCESSIBILITY_LIVE_REGION_ASSERTIVE
 import androidx.core.view.ViewCompat.ACCESSIBILITY_LIVE_REGION_POLITE
 import androidx.core.view.accessibility.AccessibilityEventCompat
@@ -495,7 +494,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
         val semanticsNodeWithAdjustedBounds = currentSemanticsNodes[virtualViewId] ?: return null
         val semanticsNode: SemanticsNode = semanticsNodeWithAdjustedBounds.semanticsNode
         if (virtualViewId == AccessibilityNodeProviderCompat.HOST_VIEW_ID) {
-            info.setParent(ViewCompat.getParentForAccessibility(view) as? View)
+            info.setParent(view.getParentForAccessibility() as? View)
         } else {
             var parentId = checkNotNull(semanticsNode.parent?.id) {
                 "semanticsNode $virtualViewId has null parent"
@@ -1318,7 +1317,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                     // Unfortunately, talkback has a bug of using "checked", so we set state
                     // description here
                     if (role == Role.Switch && stateDescription == null) {
-                        stateDescription = view.context.resources.getString(R.string.on)
+                        stateDescription = view.context.resources.getString(R.string.state_on)
                     }
                 }
 
@@ -1326,7 +1325,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                     // Unfortunately, talkback has a bug of using "not checked", so we set state
                     // description here
                     if (role == Role.Switch && stateDescription == null) {
-                        stateDescription = view.context.resources.getString(R.string.off)
+                        stateDescription = view.context.resources.getString(R.string.state_off)
                     }
                 }
 
@@ -3544,6 +3543,20 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                 return
             }
 
+            // This callback can be invoked from non UI thread.
+            if (Looper.getMainLooper().thread == Thread.currentThread()) {
+                doTranslation(accessibilityDelegateCompat, response)
+            } else {
+                accessibilityDelegateCompat.view.post {
+                    doTranslation(accessibilityDelegateCompat, response)
+                }
+            }
+        }
+
+        private fun doTranslation(
+            accessibilityDelegateCompat: AndroidComposeViewAccessibilityDelegateCompat,
+            response: LongSparseArray<ViewTranslationResponse?>
+        ) {
             for (key in response.keyIterator()) {
                 response.get(key)?.getValue(ViewTranslationRequest.ID_TEXT)?.text?.let {
                     accessibilityDelegateCompat.currentSemanticsNodes[key.toInt()]
