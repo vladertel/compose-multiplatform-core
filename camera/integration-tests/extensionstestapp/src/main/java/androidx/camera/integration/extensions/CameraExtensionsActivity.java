@@ -44,6 +44,7 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.graphics.Bitmap;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CaptureRequest;
 import android.net.Uri;
@@ -80,7 +81,6 @@ import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.FocusMeteringResult;
-import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.MeteringPoint;
@@ -160,6 +160,9 @@ public class CameraExtensionsActivity extends AppCompatActivity
 
     private final CountingIdlingResource mTakePictureIdlingResource = new CountingIdlingResource(
             "TakePicture");
+
+    private final CountingIdlingResource mPostviewIdlingResource = new CountingIdlingResource(
+            "Postview");
 
     private final CountingIdlingResource mPreviewViewStreamingStateIdlingResource =
             new CountingIdlingResource("PreviewView-Streaming");
@@ -271,11 +274,22 @@ public class CameraExtensionsActivity extends AppCompatActivity
             return false;
         }
 
+        mCameraProvider.unbindAll();
+
+        CameraSelector cameraSelector = mExtensionsManager.getExtensionEnabledCameraSelector(
+                mCurrentCameraSelector, mCurrentExtensionMode);
+
+        mCamera = mCameraProvider.bindToLifecycle(this, cameraSelector);
+
+        final boolean isPostviewSupported = ImageCapture.getImageCaptureCapabilities(
+                mCamera.getCameraInfo()).isPostviewSupported();
+
         resetPreviewViewStreamingStateIdlingResource();
         resetPreviewViewIdleStateIdlingResource();
 
-        ImageCapture.Builder imageCaptureBuilder = new ImageCapture.Builder().setTargetName(
-                "ImageCapture");
+        ImageCapture.Builder imageCaptureBuilder = new ImageCapture.Builder()
+                .setTargetName("ImageCapture")
+                .setPostviewEnabled(isPostviewSupported);
         mImageCapture = imageCaptureBuilder.build();
 
         mFrameTimestampMap.clear();
@@ -325,11 +339,6 @@ public class CameraExtensionsActivity extends AppCompatActivity
             updateInfoBlock();
         });
 
-        CameraSelector cameraSelector = mExtensionsManager.getExtensionEnabledCameraSelector(
-                mCurrentCameraSelector, mCurrentExtensionMode);
-
-        mCameraProvider.unbindAll();
-
         UseCaseGroup.Builder useCaseGroupBuilder =
                 new UseCaseGroup.Builder()
                         .addUseCase(mPreview)
@@ -342,15 +351,6 @@ public class CameraExtensionsActivity extends AppCompatActivity
             Recorder recorder = new Recorder.Builder().build();
             mVideoCapture = VideoCapture.withOutput(recorder);
             useCaseGroupBuilder.addUseCase(checkNotNull(mVideoCapture));
-        }
-
-        if (mExtensionsManager.isImageAnalysisSupported(cameraSelector,
-                mCurrentExtensionMode)) {
-            ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().build();
-            imageAnalysis.setAnalyzer(CameraXExecutors.ioExecutor(), img -> {
-                img.close();
-            });
-            useCaseGroupBuilder.addUseCase(imageAnalysis);
         }
 
         mCamera = mCameraProvider.bindToLifecycle(this, cameraSelector,
@@ -371,6 +371,12 @@ public class CameraExtensionsActivity extends AppCompatActivity
 
         captureButton.setOnClickListener((view) -> {
             resetTakePictureIdlingResource();
+            resetPostviewIdlingResource();
+
+            // Makes the postview idling resource idle when it is not supported.
+            if (!isPostviewSupported && !mPostviewIdlingResource.isIdleNow()) {
+                mPostviewIdlingResource.decrement();
+            }
 
             String fileName = "[" + formatter.format(Calendar.getInstance().getTime())
                     + "][CameraX]" + extensionModeString + ".jpg";
@@ -447,6 +453,13 @@ public class CameraExtensionsActivity extends AppCompatActivity
                             mLastTakePictureErrorMessage = getImageCaptureErrorMessage(exception);
                             if (!mTakePictureIdlingResource.isIdleNow()) {
                                 mTakePictureIdlingResource.decrement();
+                            }
+                        }
+
+                        @Override
+                        public void onPostviewBitmapAvailable(@NonNull Bitmap bitmap) {
+                            if (!mPostviewIdlingResource.isIdleNow()) {
+                                mPostviewIdlingResource.decrement();
                             }
                         }
                     });
@@ -964,6 +977,12 @@ public class CameraExtensionsActivity extends AppCompatActivity
     }
 
     @VisibleForTesting
+    @NonNull
+    public CountingIdlingResource getPostviewIdlingResource() {
+        return mPostviewIdlingResource;
+    }
+
+    @VisibleForTesting
     public void resetPreviewViewStreamingStateIdlingResource() {
         if (mPreviewViewStreamingStateIdlingResource.isIdleNow()) {
             mPreviewViewStreamingStateIdlingResource.increment();
@@ -981,6 +1000,13 @@ public class CameraExtensionsActivity extends AppCompatActivity
     void resetTakePictureIdlingResource() {
         if (mTakePictureIdlingResource.isIdleNow()) {
             mTakePictureIdlingResource.increment();
+        }
+    }
+
+    @VisibleForTesting
+    void resetPostviewIdlingResource() {
+        if (mPostviewIdlingResource.isIdleNow()) {
+            mPostviewIdlingResource.increment();
         }
     }
 

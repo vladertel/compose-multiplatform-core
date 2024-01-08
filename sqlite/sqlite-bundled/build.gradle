@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.AndroidXConfig
 import androidx.build.KmpPlatformsKt
 import androidx.build.PlatformIdentifier
@@ -132,8 +139,8 @@ androidXMultiplatform {
             nativeCompilation.sources.from(
                     fileTree("src/androidJvmCommonMain/jni").matching { include "**/*.cpp" }
             )
-            // dynamically link with the output of SQLite
-            nativeCompilation.linkWith(sqliteCompilation)
+            // statically include the output of SQLite compilation
+            nativeCompilation.include(sqliteCompilation)
             if (nativeCompilation.konanTarget.family == Family.OSX) {
                 // KT-57848
                 nativeCompilation.freeArgs.addAll("-Dat_quick_exit=atexit", "-Dquick_exit=exit")
@@ -143,13 +150,11 @@ androidXMultiplatform {
     }
 
     android() {
-        addNativeLibrariesToJniLibs(it, sqliteCompilation)
         addNativeLibrariesToJniLibs(it, jvmArtJniImplementation)
     }
     androidNative()
     ios()
     jvm() {
-        addNativeLibrariesToResources(it, sqliteCompilation)
         addNativeLibrariesToResources(it, jvmArtJniImplementation)
     }
     linux()

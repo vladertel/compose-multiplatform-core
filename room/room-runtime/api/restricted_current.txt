@@ -1,6 +1,19 @@
 // Signature format: 4.0
 package androidx.room {
 
+  @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public final class CoroutinesRoom {
+    method public static <R> kotlinx.coroutines.flow.Flow<R> createFlow(androidx.room.RoomDatabase db, boolean inTransaction, String[] tableNames, java.util.concurrent.Callable<R> callable);
+    method public static suspend <R> Object? execute(androidx.room.RoomDatabase db, boolean inTransaction, android.os.CancellationSignal? cancellationSignal, java.util.concurrent.Callable<R> callable, kotlin.coroutines.Continuation<? super R>);
+    method public static suspend <R> Object? execute(androidx.room.RoomDatabase db, boolean inTransaction, java.util.concurrent.Callable<R> callable, kotlin.coroutines.Continuation<? super R>);
+    field public static final androidx.room.CoroutinesRoom.Companion Companion;
+  }
+
+  public static final class CoroutinesRoom.Companion {
+    method public <R> kotlinx.coroutines.flow.Flow<R> createFlow(androidx.room.RoomDatabase db, boolean inTransaction, String[] tableNames, java.util.concurrent.Callable<R> callable);
+    method public suspend <R> Object? execute(androidx.room.RoomDatabase db, boolean inTransaction, android.os.CancellationSignal? cancellationSignal, java.util.concurrent.Callable<R> callable, kotlin.coroutines.Continuation<? super R>);
+    method public suspend <R> Object? execute(androidx.room.RoomDatabase db, boolean inTransaction, java.util.concurrent.Callable<R> callable, kotlin.coroutines.Continuation<? super R>);
+  }
+
   public class DatabaseConfiguration {
     ctor @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public DatabaseConfiguration(android.content.Context context, String? name, androidx.sqlite.db.SupportSQLiteOpenHelper.Factory sqliteOpenHelperFactory, androidx.room.RoomDatabase.MigrationContainer migrationContainer, java.util.List<? extends androidx.room.RoomDatabase.Callback>? callbacks, boolean allowMainThreadQueries, androidx.room.RoomDatabase.JournalMode journalMode, java.util.concurrent.Executor queryExecutor, boolean requireMigration, java.util.Set<java.lang.Integer>? migrationNotRequiredFrom);
     ctor @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) public DatabaseConfiguration(android.content.Context context, String? name, androidx.sqlite.db.SupportSQLiteOpenHelper.Factory sqliteOpenHelperFactory, androidx.room.RoomDatabase.MigrationContainer migrationContainer, java.util.List<? extends androidx.room.RoomDatabase.Callback>? callbacks, boolean allowMainThreadQueries, androidx.room.RoomDatabase.JournalMode journalMode, java.util.concurrent.Executor queryExecutor, java.util.concurrent.Executor transactionExecutor, android.content.Intent? multiInstanceInvalidationServiceIntent, boolean requireMigration, boolean allowDestructiveMigrationOnDowngrade, java.util.Set<java.lang.Integer>? migrationNotRequiredFrom, String? copyFromAssetPath, java.io.File? copyFromFile, java.util.concurrent.Callable<java.io.InputStream>? copyFromInputStream, androidx.room.RoomDatabase.PrepackagedDatabaseCallback? prepackagedDatabaseCallback, java.util.List<?> typeConverters, java.util.List<? extends androidx.room.migration.AutoMigrationSpec> autoMigrationSpecs);
@@ -74,7 +87,7 @@ package androidx.room {
     method public java.util.List<java.lang.Long> upsertAndReturnIdsList(T[] entities);
   }
 
-  @SuppressCompatibility @RequiresOptIn @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) @kotlin.annotation.Target(allowedTargets={kotlin.annotation.AnnotationTarget.CLASS, kotlin.annotation.AnnotationTarget.FUNCTION}) public @interface ExperimentalRoomApi {
+  @SuppressCompatibility @kotlin.RequiresOptIn @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) @kotlin.annotation.Target(allowedTargets={kotlin.annotation.AnnotationTarget.CLASS, kotlin.annotation.AnnotationTarget.FUNCTION}) public @interface ExperimentalRoomApi {
   }
 
   public class InvalidationTracker {
@@ -125,6 +138,8 @@ package androidx.room {
     method @Deprecated protected androidx.sqlite.db.SupportSQLiteOpenHelper createOpenHelper(androidx.room.DatabaseConfiguration config);
     method @Deprecated public void endTransaction();
     method public androidx.room.InvalidationTracker getInvalidationTracker();
+    method @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) protected java.util.List<androidx.room.RoomDatabase.Callback>? getMCallbacks();
+    method @Deprecated @kotlin.jvm.Volatile protected androidx.sqlite.db.SupportSQLiteDatabase? getMDatabase();
     method public androidx.sqlite.db.SupportSQLiteOpenHelper getOpenHelper();
     method public java.util.concurrent.Executor getQueryExecutor();
     method public java.util.concurrent.Executor getTransactionExecutor();
@@ -139,9 +154,13 @@ package androidx.room {
     method public android.database.Cursor query(String query, Object?[]? args);
     method public void runInTransaction(Runnable body);
     method public <V> V runInTransaction(java.util.concurrent.Callable<V> body);
+    method @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) protected void setMCallbacks(java.util.List<androidx.room.RoomDatabase.Callback>?);
+    method @Deprecated @kotlin.jvm.Volatile protected void setMDatabase(androidx.sqlite.db.SupportSQLiteDatabase?);
     method @Deprecated public void setTransactionSuccessful();
     property public androidx.room.InvalidationTracker invalidationTracker;
     property public boolean isOpen;
+    property @Deprecated @RestrictTo(androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP_PREFIX) protected java.util.List<androidx.room.RoomDatabase.Callback>? mCallbacks;
+    property @Deprecated @kotlin.jvm.Volatile protected androidx.sqlite.db.SupportSQLiteDatabase? mDatabase;
     property public androidx.sqlite.db.SupportSQLiteOpenHelper openHelper;
     property public java.util.concurrent.Executor queryExecutor;
     property public java.util.concurrent.Executor transactionExecutor;
@@ -216,6 +235,11 @@ package androidx.room {
 
   public static fun interface RoomDatabase.QueryCallback {
     method public void onQuery(String sqlQuery, java.util.List<?> bindArgs);
+  }
+
+  public final class RoomDatabaseKt {
+    method public static kotlinx.coroutines.flow.Flow<java.util.Set<java.lang.String>> invalidationTrackerFlow(androidx.room.RoomDatabase, String[] tables, optional boolean emitInitialState);
+    method public static suspend <R> Object? withTransaction(androidx.room.RoomDatabase, kotlin.jvm.functions.Function1<? super kotlin.coroutines.Continuation<? super R>,?> block, kotlin.coroutines.Continuation<? super R>);
   }
 
   public interface RoomOpenDelegateMarker {
@@ -309,6 +333,10 @@ package androidx.room.migration {
     method public void migrate(androidx.sqlite.SQLiteConnection connection);
     field public final int endVersion;
     field public final int startVersion;
+  }
+
+  public final class MigrationKt {
+    method public static androidx.room.migration.Migration Migration(int startVersion, int endVersion, kotlin.jvm.functions.Function1<? super androidx.sqlite.db.SupportSQLiteDatabase,kotlin.Unit> migrate);
   }
 
 }

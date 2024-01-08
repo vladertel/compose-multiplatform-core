@@ -162,35 +162,6 @@ constructor(
     internal var inGetItem: Boolean = false
 
     internal val presenter = object : PagingDataPresenter<T>(differCallback, mainDispatcher) {
-        // TODO("To be removed when all PageEvent types have moved to presentPagingDataEvent")
-        override suspend fun presentNewList(
-            previousList: NullPaddedList<T>,
-            newList: NullPaddedList<T>,
-            lastAccessedIndex: Int,
-            onListPresentable: () -> Unit,
-        ) {
-            when {
-                // fast path for no items -> some items
-                previousList.size == 0 -> {
-                    onListPresentable()
-                    differCallback.onInserted(0, newList.size)
-                }
-                // fast path for some items -> no items
-                newList.size == 0 -> {
-                    onListPresentable()
-                    differCallback.onRemoved(0, previousList.size)
-                }
-
-                else -> {
-                    val diffResult = withContext(workerDispatcher) {
-                        previousList.computeDiff(newList, diffCallback)
-                    }
-                    onListPresentable()
-                    previousList.dispatchDiff(updateCallback, newList, diffResult)
-                }
-            }
-        }
-
         /**
          * Insert the event's page to the storage, and dispatch associated callbacks for
          * change (placeholder becomes real item) or insert (real item is appended).
@@ -211,6 +182,24 @@ constructor(
          */
         override suspend fun presentPagingDataEvent(event: PagingDataEvent<T>) {
             when (event) {
+                is PagingDataEvent.Refresh -> event.apply {
+                    when {
+                        // fast path for no items -> some items
+                        previousList.size == 0 -> {
+                            differCallback.onInserted(0, newList.size)
+                        }
+                        // fast path for some items -> no items
+                        newList.size == 0 -> {
+                            differCallback.onRemoved(0, previousList.size)
+                        }
+                        else -> {
+                            val diffResult = withContext(workerDispatcher) {
+                                previousList.computeDiff(newList, diffCallback)
+                            }
+                            previousList.dispatchDiff(updateCallback, newList, diffResult)
+                        }
+                    }
+                }
                 is PagingDataEvent.Prepend -> event.apply {
                     val insertSize = inserted.size
 
@@ -264,8 +253,65 @@ constructor(
                         updateCallback.onRemoved(newTotalSize, -placeholderInsertedCount)
                     }
                 }
-                else -> {
-                    // to implement
+                is PagingDataEvent.DropPrepend -> event.apply {
+                    // Trim or insert placeholders to match expected newSize.
+                    val placeholdersToInsert = newPlaceholdersBefore - dropCount -
+                        oldPlaceholdersBefore
+                    if (placeholdersToInsert > 0) {
+                        updateCallback.onInserted(0, placeholdersToInsert)
+                    } else if (placeholdersToInsert < 0) {
+                        updateCallback.onRemoved(0, -placeholdersToInsert)
+                    }
+                    // Compute the index of the first item that must be rebound as a placeholder.
+                    // If any placeholders were inserted above, we only need to send onChanged for the next
+                    // n = (newPlaceholdersBefore - placeholdersToInsert) items. E.g., if two nulls
+                    // were inserted above, then the onChanged event can start from index = 2.
+                    // Note: In cases where more items were dropped than there were previously placeholders,
+                    // we can simply rebind n = newPlaceholdersBefore items starting from position = 0.
+                    val firstItemIndex = maxOf(
+                        0,
+                        oldPlaceholdersBefore + placeholdersToInsert
+                    )
+                    // Compute the number of previously loaded items that were dropped and now need to be
+                    // updated to null. This computes the distance between firstItemIndex (inclusive),
+                    // and index of the last leading placeholder (inclusive) in the final list.
+                    val changeCount = newPlaceholdersBefore - firstItemIndex
+                    if (changeCount > 0) {
+                        updateCallback.onChanged(firstItemIndex, changeCount, null)
+                    }
+                }
+                is PagingDataEvent.DropAppend -> event.apply {
+                    val placeholdersToInsert = newPlaceholdersAfter - dropCount -
+                        oldPlaceholdersAfter
+                    val newSize = startIndex + newPlaceholdersAfter
+                    if (placeholdersToInsert > 0) {
+                        updateCallback.onInserted(
+                            newSize - placeholdersToInsert, placeholdersToInsert
+                        )
+                    } else if (placeholdersToInsert < 0) {
+                        updateCallback.onRemoved(newSize, -placeholdersToInsert)
+                    }
+
+                    // Number of trailing placeholders in the list, before dropping, that were
+                    // removed above during size adjustment.
+                    val oldPlaceholdersRemoved = when {
+                        placeholdersToInsert < 0 ->
+                            minOf(oldPlaceholdersAfter, -placeholdersToInsert)
+                        else -> 0
+                    }
+                    // Compute the number of previously loaded items that were dropped and now need
+                    // to be updated to null. This subtracts the total number of existing
+                    // placeholders in the list, before dropping, that were not removed above
+                    // during size adjustment, from the total number of expected placeholders.
+                    val changeCount = newPlaceholdersAfter - oldPlaceholdersAfter +
+                        oldPlaceholdersRemoved
+                    if (changeCount > 0) {
+                        updateCallback.onChanged(
+                            startIndex,
+                            changeCount,
+                            null
+                        )
+                    }
                 }
             }
         }

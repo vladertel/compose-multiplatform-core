@@ -25,7 +25,6 @@ import androidx.paging.PageEvent.Drop
 import androidx.paging.PageEvent.Insert
 import androidx.paging.PageEvent.StaticList
 import androidx.paging.PageStore.ProcessPageEventCallback
-import androidx.paging.internal.BUGANIZER_URL
 import androidx.paging.internal.CopyOnWriteArrayList
 import androidx.paging.internal.appendMediatorStatesIfNotNull
 import kotlin.coroutines.CoroutineContext
@@ -90,7 +89,7 @@ public abstract class PagingDataPresenter<T : Any>(
 
         // for state updates from LoadStateUpdate events
         override fun onStateUpdate(source: LoadStates, mediator: LoadStates?) {
-            dispatchLoadStates(source, mediator)
+            combinedLoadStatesCollection.set(source, mediator)
         }
 
         // for state updates from Drop events
@@ -104,38 +103,9 @@ public abstract class PagingDataPresenter<T : Any>(
         }
     }
 
-    private fun dispatchLoadStates(source: LoadStates, mediator: LoadStates?) {
-        // CombinedLoadStates is de-duplicated within set()
-        combinedLoadStatesCollection.set(
-            sourceLoadStates = source,
-            remoteLoadStates = mediator
-        )
-    }
-
-    /**
-     * @param onListPresentable Call this synchronously right before dispatching updates to signal
-     * that this [PagingDataPresenter] should now consider [newList] as the presented list for
-     * presenter-level APIs such as [snapshot] and [peek]. This should be called before notifying
-     * any callbacks that the user would expect to be synchronous with pageStore updates, such as
-     * `ListUpdateCallback`, in case it's desirable to inspect pageStore state within those
-     * callbacks.
-     *
-     * @return Transformed result of [lastAccessedIndex] as an index of [newList] using the diff
-     * result between [previousList] and [newList]. Null if [newList] or [previousList] lists are
-     * empty, where it does not make sense to transform [lastAccessedIndex].
-     */
-    // TODO("To be removed when all PageEvent types have moved to presentPagingDataEvent")
-    public abstract suspend fun presentNewList(
-        previousList: NullPaddedList<T>,
-        newList: NullPaddedList<T>,
-        lastAccessedIndex: Int,
-        onListPresentable: () -> Unit,
-    )
-
     /**
      * Handler for [PagingDataEvent] emitted by a [PagingData] that was submitted to
      * this [PagingDataPresenter]
-     *
      */
     public abstract suspend fun presentPagingDataEvent(
         event: PagingDataEvent<T>,
@@ -202,9 +172,9 @@ public abstract class PagingDataPresenter<T : Any>(
                             presentPagingDataEvent(pageStore.processEvent(event))
 
                             // dispatch load states
-                            dispatchLoadStates(
-                                source = event.sourceLoadStates,
-                                mediator = event.mediatorLoadStates,
+                            combinedLoadStatesCollection.set(
+                                sourceLoadStates = event.sourceLoadStates,
+                                remoteLoadStates = event.mediatorLoadStates,
                             )
 
                             // If index points to a placeholder after transformations, resend it unless
@@ -254,17 +224,24 @@ public abstract class PagingDataPresenter<T : Any>(
                                 yield()
                             }
 
-                            // Process DROP to be shown to the UI
-                            pageStore.processEvent(event, processPageEventCallback)
+                            // Process DROP and send to presenter
+                            pageStore.processEvent(event)
+
+                            // dispatch load states
+                            combinedLoadStatesCollection.set(
+                                type = event.loadType,
+                                remote = false,
+                                state = LoadState.NotLoading.Incomplete
+                            )
 
                             // Reset lastAccessedIndexUnfulfilled if a page is dropped, to avoid
                             // infinite loops when maxSize is insufficiently large.
                             lastAccessedIndexUnfulfilled = false
                         }
                         event is PageEvent.LoadStateUpdate ->
-                            processPageEventCallback.onStateUpdate(
-                                source = event.source,
-                                mediator = event.mediator,
+                            combinedLoadStatesCollection.set(
+                                sourceLoadStates = event.source,
+                                remoteLoadStates = event.mediator,
                             )
                     }
                     // Notify page updates after pageStore processes them.
@@ -478,23 +455,29 @@ public abstract class PagingDataPresenter<T : Any>(
 
         lastAccessedIndexUnfulfilled = false
 
-        val newPresenter = PageStore(
+        val newPageStore = PageStore(
             pages = pages,
             placeholdersBefore = placeholdersBefore,
             placeholdersAfter = placeholdersAfter,
         )
-        var onListPresentableCalled = false
-        presentNewList(
-            previousList = pageStore,
-            newList = newPresenter,
-            lastAccessedIndex = lastAccessedIndex,
-            onListPresentable = {
-                pageStore = newPresenter
-                onListPresentableCalled = true
-                hintReceiver = newHintReceiver
-                log(DEBUG) {
-                    appendMediatorStatesIfNotNull(mediatorLoadStates) {
-                        """Presenting data:
+        // must capture previousList states here before we update pageStore
+        val previousList = pageStore as NullPaddedList<T>
+
+        // update the store here before event is sent to ensure that snapshot() returned in
+        // UI update callbacks (onChanged, onInsert etc) reflects the new list
+        pageStore = newPageStore
+        hintReceiver = newHintReceiver
+
+        // send event to UI
+        presentPagingDataEvent(
+            PagingDataEvent.Refresh(
+                newList = newPageStore as NullPaddedList<T>,
+                previousList = previousList,
+            )
+        )
+        log(DEBUG) {
+            appendMediatorStatesIfNotNull(mediatorLoadStates) {
+                """Presenting data:
                             |   first item: ${pages.firstOrNull()?.data?.firstOrNull()}
                             |   last item: ${pages.lastOrNull()?.data?.lastOrNull()}
                             |   placeholdersBefore: $placeholdersBefore
@@ -502,31 +485,21 @@ public abstract class PagingDataPresenter<T : Any>(
                             |   hintReceiver: $newHintReceiver
                             |   sourceLoadStates: $sourceLoadStates
                         """
-                    }
-                }
             }
-        )
-        check(onListPresentableCalled) {
-            """Missing call to onListPresentable after new list was presented. If you are seeing
-                | this exception, it is generally an indication of an issue with Paging.
-                | Please file a bug so we can fix it at:
-                | $BUGANIZER_URL""".trimMargin()
         }
-
         // We may want to skip dispatching load states if triggered by a static list which wants to
         // preserve the previous state.
         if (dispatchLoadStates) {
             // Dispatch LoadState updates as soon as we are done diffing, but after
             // setting new pageStore.
-            dispatchLoadStates(sourceLoadStates!!, mediatorLoadStates)
+            combinedLoadStatesCollection.set(sourceLoadStates!!, mediatorLoadStates)
         }
-
-        if (newPresenter.size == 0) {
+        if (newPageStore.size == 0) {
             // Send an initialize hint in case the new list is empty (no items or placeholders),
             // which would prevent a ViewportHint.Access from ever getting sent since there are
             // no items to bind from initial load. Without this hint, paging would stall on
             // an empty list because prepend/append would be not triggered.
-            hintReceiver?.accessHint(newPresenter.initializeHint())
+            hintReceiver?.accessHint(newPageStore.initializeHint())
         }
     }
 }

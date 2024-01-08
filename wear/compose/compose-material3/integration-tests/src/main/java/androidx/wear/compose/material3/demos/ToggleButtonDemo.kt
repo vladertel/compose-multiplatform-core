@@ -30,7 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.integration.demos.common.ScalingLazyColumnWithRSB
 import androidx.wear.compose.material3.Checkbox
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListHeader
@@ -40,7 +40,7 @@ import androidx.wear.compose.material3.ToggleButton
 
 @Composable
 fun ToggleButtonDemo() {
-    ScalingLazyColumn(
+    ScalingLazyColumnWithRSB(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -110,7 +110,7 @@ fun ToggleButtonDemo() {
                 enabled = true,
                 initiallyChecked = true,
                 primary = "8:15AM",
-                secondary = "Mon, Tue, Wed"
+                secondary = "Monday"
             )
         }
         item {
@@ -141,6 +141,7 @@ private fun DemoToggleCheckbox(
 ) {
     var checked by remember { mutableStateOf(initiallyChecked) }
     ToggleButton(
+        modifier = Modifier.fillMaxWidth(),
         label = {
             Text(
                 primary,
@@ -173,6 +174,7 @@ private fun DemoToggleCheckbox(
 private fun DemoToggleSwitch(enabled: Boolean, initiallyChecked: Boolean) {
     var checked by remember { mutableStateOf(initiallyChecked) }
     ToggleButton(
+        modifier = Modifier.fillMaxWidth(),
         label = {
             Text(
                 "Primary label",

@@ -56,6 +56,7 @@ import androidx.compose.foundation.text2.input.internal.syncTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,6 +81,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 
 /**
  * Basic text composable that provides an interactive box that accepts text input through software
@@ -506,7 +509,7 @@ internal fun TextFieldCursorHandle(selectionState: TextFieldSelectionState) {
                 .pointerInput(selectionState) {
                     with(selectionState) { cursorHandleGestures() }
                 },
-            content = null
+            minTouchTargetSize = MinTouchTargetSizeForHandles,
         )
     }
 }
@@ -515,32 +518,63 @@ internal fun TextFieldCursorHandle(selectionState: TextFieldSelectionState) {
 internal fun TextFieldSelectionHandles(
     selectionState: TextFieldSelectionState
 ) {
-    val startHandleState = selectionState.startSelectionHandle
+    // Does not recompose if only position of the handle changes.
+    val startHandleState by remember {
+        derivedStateOf {
+            selectionState.getSelectionHandleState(isStartHandle = true, includePosition = false)
+        }
+    }
     if (startHandleState.visible) {
         SelectionHandle(
-            offsetProvider = { selectionState.startSelectionHandle.position },
+            offsetProvider = {
+                selectionState
+                    .getSelectionHandleState(isStartHandle = true, includePosition = true)
+                    .position
+            },
             isStartHandle = true,
             direction = startHandleState.direction,
             handlesCrossed = startHandleState.handlesCrossed,
             modifier = Modifier.pointerInput(selectionState) {
                 with(selectionState) { selectionHandleGestures(true) }
-            }
+            },
+            minTouchTargetSize = MinTouchTargetSizeForHandles,
         )
     }
 
-    val endHandleState = selectionState.endSelectionHandle
+    // Does not recompose if only position of the handle changes.
+    val endHandleState by remember {
+        derivedStateOf {
+            selectionState.getSelectionHandleState(isStartHandle = false, includePosition = false)
+        }
+    }
     if (endHandleState.visible) {
         SelectionHandle(
-            offsetProvider = { selectionState.endSelectionHandle.position },
+            offsetProvider = {
+                selectionState
+                    .getSelectionHandleState(isStartHandle = false, includePosition = true)
+                    .position
+            },
             isStartHandle = false,
             direction = endHandleState.direction,
             handlesCrossed = endHandleState.handlesCrossed,
             modifier = Modifier.pointerInput(selectionState) {
                 with(selectionState) { selectionHandleGestures(false) }
-            }
+            },
+            minTouchTargetSize = MinTouchTargetSizeForHandles,
         )
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 private val DefaultTextFieldDecorator = TextFieldDecorator { it() }
+
+/**
+ * Defines a minimum touch target area size for Selection and Cursor handles.
+ *
+ * Although BasicTextField is not part of Material spec, this accessibility feature is important
+ * enough to be included at foundation layer, and also TextField cannot change selection handles
+ * provided by BasicTextField to somehow achieve this accessibility requirement.
+ *
+ * This value is adopted from Android platform's TextView implementation.
+ */
+private val MinTouchTargetSizeForHandles = DpSize(40.dp, 40.dp)

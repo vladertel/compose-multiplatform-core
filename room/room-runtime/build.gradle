@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.KmpPlatformsKt
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
@@ -83,11 +90,13 @@ androidXMultiplatform {
                 api(project(":room:room-common"))
                 api(project(":sqlite:sqlite"))
                 api(projectOrArtifact(":annotation:annotation"))
+                api(libs.kotlinCoroutinesCore)
             }
         }
         commonTest {
             dependencies {
                 implementation(libs.kotlinTest)
+                implementation(libs.kotlinCoroutinesTest)
                 implementation(project(":kruth:kruth"))
             }
         }
@@ -95,11 +104,12 @@ androidXMultiplatform {
             dependsOn(commonMain)
             dependencies {
                 api(project(":sqlite:sqlite-framework"))
+                api(libs.kotlinCoroutinesAndroid)
                 implementation("androidx.arch.core:core-runtime:2.2.0")
                 compileOnly("androidx.collection:collection:1.2.0")
                 compileOnly("androidx.lifecycle:lifecycle-livedata-core:2.0.0")
                 compileOnly("androidx.paging:paging-common:2.0.0")
-                implementation("androidx.annotation:annotation-experimental:1.1.0-rc01")
+                implementation(projectOrArtifact(":annotation:annotation-experimental"))
             }
         }
         androidUnitTest {
