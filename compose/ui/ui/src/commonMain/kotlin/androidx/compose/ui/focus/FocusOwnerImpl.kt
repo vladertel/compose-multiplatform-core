@@ -33,21 +33,36 @@ import androidx.compose.ui.focus.FocusStateImpl.ActiveParent
 import androidx.compose.ui.focus.FocusStateImpl.Captured
 import androidx.compose.ui.focus.FocusStateImpl.Inactive
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.ActionScope
+import androidx.compose.ui.input.Command
+import androidx.compose.ui.input.key.DefaultKeyboardShortcutMatcher
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyboardShortcutMatcher
+import androidx.compose.ui.input.key.keyCombination
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.KeyEventType.Companion.KeyDown
 import androidx.compose.ui.input.key.KeyEventType.Companion.KeyUp
-import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyInputModifierNode
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.rotary.RotaryScrollEvent
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.NodeKind
 import androidx.compose.ui.node.Nodes
+import androidx.compose.ui.node.SemanticsModifierNode
 import androidx.compose.ui.node.ancestors
 import androidx.compose.ui.node.dispatchForKind
+import androidx.compose.ui.node.dispatchForMask
 import androidx.compose.ui.node.nearestAncestor
+import androidx.compose.ui.node.or
+import androidx.compose.ui.node.requireLayoutNode
+import androidx.compose.ui.node.visitAncestors
 import androidx.compose.ui.node.visitLocalDescendants
 import androidx.compose.ui.platform.InspectorInfo
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachReversed
@@ -66,6 +81,8 @@ internal class FocusOwnerImpl(
     private val focusInvalidationManager = FocusInvalidationManager(onRequestApplyChangesListener)
 
     override val focusTransactionManager: FocusTransactionManager = FocusTransactionManager()
+
+    private val keyboardShortcutMatcher: KeyboardShortcutMatcher = DefaultKeyboardShortcutMatcher()
 
     /**
      * A [Modifier] that can be added to the [Owners][androidx.compose.ui.node.Owner] modifier
@@ -213,13 +230,37 @@ internal class FocusOwnerImpl(
         checkNotNull(activeFocusTarget) {
             "Event can't be processed because we do not have an active focus target."
         }
-        val focusedKeyInputNode = activeFocusTarget.lastLocalKeyInputNode()
-            ?: activeFocusTarget.nearestAncestor(Nodes.KeyInput)?.node
+        val focusedKeyInputOrSemanticsNode = activeFocusTarget.lastLocalKeyInputOrSemanticsNode()
+            ?: activeFocusTarget.nearestAncestor(Nodes.KeyInput or Nodes.Semantics)?.node
 
-        focusedKeyInputNode?.traverseAncestors(
-            type = Nodes.KeyInput,
-            onPreVisit = { if (it.onPreKeyEvent(keyEvent)) return true },
-            onVisit = { if (it.onKeyEvent(keyEvent)) return true }
+        val commands =
+            if (keyEvent.type == KeyEventType.KeyDown) keyboardShortcutMatcher.processInput(keyEvent.keyCombination) else emptyList()
+        var mergingAncestorFound = false
+        focusedKeyInputOrSemanticsNode?.traverseAncestors(
+            mask = Nodes.KeyInput or Nodes.Semantics,
+            onPreVisit = {
+                when (it) {
+                    is KeyInputModifierNode -> if (it.onPreKeyEvent(keyEvent)) return true
+                    is SemanticsModifierNode -> {
+                        if (it.shouldMergeDescendantSemantics) mergingAncestorFound = true
+                        it.invokeOwnActionsForCommands(
+                            commands,
+                            isPreVisit = true,
+                            mergingAncestorFound
+                        )
+                    }
+                }
+            },
+            onVisit = {
+                when (it) {
+                    is KeyInputModifierNode -> if (it.onKeyEvent(keyEvent)) return true
+                    is SemanticsModifierNode -> it.invokeOwnActionsForCommands(
+                        commands,
+                        isPreVisit = true,
+                        mergingAncestorFound
+                    )
+                }
+            }
         )
         return false
     }
@@ -277,6 +318,25 @@ internal class FocusOwnerImpl(
         ancestors?.fastForEach(onVisit)
     }
 
+    private inline fun DelegatableNode.traverseAncestors(
+        mask: Int,
+        onPreVisit: (Modifier.Node) -> Unit,
+        onVisit: (Modifier.Node) -> Unit
+    ) {
+        val ancestors = run {
+            var result: MutableList<Modifier.Node>? = null
+            visitAncestors(mask) {
+                if (result == null) result = mutableListOf()
+                result?.add(it)
+            }
+            result
+        }
+        ancestors?.fastForEachReversed(onPreVisit)
+        node.dispatchForMask(mask, onPreVisit)
+        node.dispatchForMask(mask, onVisit)
+        ancestors?.fastForEach(onVisit)
+    }
+
     /**
      * Searches for the currently focused item, and returns its coordinates as a rect.
      */
@@ -284,15 +344,6 @@ internal class FocusOwnerImpl(
         return rootFocusNode.findActiveFocusNode()?.focusRect()
     }
 
-    private fun DelegatableNode.lastLocalKeyInputNode(): Modifier.Node? {
-        var focusedKeyInputNode: Modifier.Node? = null
-        visitLocalDescendants(Nodes.FocusTarget or Nodes.KeyInput) { modifierNode ->
-            if (modifierNode.isKind(Nodes.FocusTarget)) return focusedKeyInputNode
-
-            focusedKeyInputNode = modifierNode
-        }
-        return focusedKeyInputNode
-    }
 
     // TODO(b/144116848): This is a hack to make Next/Previous wrap around. This must be
     //  replaced by code that sends the move request back to the view system. The view system
@@ -337,5 +388,52 @@ internal class FocusOwnerImpl(
             // Always process Unknown event types.
         }
         return true
+    }
+}
+
+private fun SemanticsModifierNode.invokeOwnActionsForCommands(
+    commands: List<Command>,
+    isPreVisit: Boolean,
+    mergingAncestorFound: Boolean
+): Boolean {
+    return if (commands.isNotEmpty() && (!mergingAncestorFound || shouldMergeDescendantSemantics)) {
+        val semanticsNode = SemanticsNode(
+            requireLayoutNode(),
+            mergingEnabled = true
+        )
+        commands.any { command ->
+            semanticsNode.config
+                .getOrNull(command.actionSemanticsPropertyKey)
+                ?.takeIf { !it.overridable == isPreVisit }
+                ?.let { action ->
+                    action(RecursiveActionScope(semanticsNode))
+                }
+                ?: false
+        }
+    } else {
+        false
+    }
+}
+
+private fun DelegatableNode.lastLocalKeyInputOrSemanticsNode(): Modifier.Node? {
+    var localKeyInputOrSemanticsNode: Modifier.Node? = null
+    visitLocalDescendants(Nodes.FocusTarget or Nodes.KeyInput or Nodes.Semantics) { modifierNode ->
+        if (modifierNode.isKind(Nodes.FocusTarget)) return localKeyInputOrSemanticsNode
+
+        localKeyInputOrSemanticsNode = modifierNode
+    }
+    return localKeyInputOrSemanticsNode
+}
+
+private data class RecursiveActionScope(val startSemanticsNode: SemanticsNode) : ActionScope {
+    override fun <T> get(semanticsPropertyKey: SemanticsPropertyKey<T>): T? {
+        var semanticsNode: SemanticsNode? = startSemanticsNode
+        while (semanticsNode != null) {
+            semanticsNode.config.getOrNull(semanticsPropertyKey)?.let {
+                return it
+            }
+            semanticsNode = semanticsNode.parent
+        }
+        return null
     }
 }

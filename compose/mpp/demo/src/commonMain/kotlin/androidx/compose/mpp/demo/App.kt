@@ -52,6 +52,7 @@ val MainScreen = Screen.Selection(
     Screen.FullscreenExample("ApplicationLayouts") { ApplicationLayouts(it) },
     Screen.Example("GraphicsLayerSettings") { GraphicsLayerSettings() },
     Screen.Example("Blending") { Blending() },
+    Screen.Example("Keymap & Commands") { KeymapCommands() },
     AndroidTextFieldSamples,
 )
 
