@@ -27,7 +27,7 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 internal class DesktopSelectionTests(keyboardActions: KeyboardActions, keyMapping: KeyMapping) :
     CommonSelectionTests(
-        DefaultKeyboardActions, defaultSkikoKeyMapping
+        keyboardActions, keyMapping
     ) {
 
     companion object {
