@@ -19,6 +19,7 @@ package androidx.compose.compiler.plugins.kotlin
 import androidx.compose.compiler.plugins.kotlin.analysis.FqNameMatcher
 import androidx.compose.compiler.plugins.kotlin.analysis.StabilityInferencer
 import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityTransformer
+import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityInferredCollection
 import androidx.compose.compiler.plugins.kotlin.lower.ComposableFunInterfaceLowering
 import androidx.compose.compiler.plugins.kotlin.lower.ComposableFunctionBodyTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.ComposableLambdaAnnotator
@@ -69,6 +70,7 @@ class ComposeIrGenerationExtension(
     private val stableTypeMatchers: Set<FqNameMatcher> = emptySet(),
     private val moduleMetricsFactory: ((StabilityInferencer) -> ModuleMetrics)? = null,
     private val hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet? = null,
+    private val classStabilityInferredCollection: ClassStabilityInferredCollection? = null
 ) : IrGenerationExtension {
     var metrics: ModuleMetrics = EmptyModuleMetrics
         private set
@@ -120,7 +122,10 @@ class ComposeIrGenerationExtension(
             pluginContext,
             symbolRemapper,
             metrics,
-            stabilityInferencer
+            stabilityInferencer,
+            classStabilityInferredCollection = classStabilityInferredCollection?.takeIf {
+                pluginContext.platform?.isJvm() == false
+            }
         ).lower(moduleFragment)
 
         LiveLiteralTransformer(
