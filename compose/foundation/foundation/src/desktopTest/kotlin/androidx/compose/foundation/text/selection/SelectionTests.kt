@@ -16,11 +16,16 @@
 
 package androidx.compose.foundation.text.selection
 
-import androidx.compose.foundation.DesktopPlatform
+import androidx.compose.foundation.assertThat
+import androidx.compose.foundation.isEqualTo
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyMapping
-import androidx.compose.foundation.text.createPlatformDefaultKeyMapping
+import androidx.compose.foundation.text.createMacosDefaultKeyMapping
+import androidx.compose.foundation.text.defaultSkikoKeyMapping
 import androidx.compose.foundation.text.overriddenDefaultKeyMapping
+import androidx.compose.foundation.text.selection.config.DefaultKeyboardActions
+import androidx.compose.foundation.text.selection.config.KeyboardActions
+import androidx.compose.foundation.text.selection.config.MacosKeyboardActions
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
@@ -28,264 +33,155 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import com.google.common.truth.Truth
-import kotlinx.coroutines.runBlocking
-import org.junit.After
-import org.junit.Rule
-import org.junit.Test
+import kotlin.test.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
 
-class SelectionTests {
+@RunWith(Parameterized::class)
+internal class SelectionTests(private val keyboardActions: KeyboardActions, private val keyMapping: KeyMapping): KeyboardActions by keyboardActions {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @ExperimentalTestApi
+    private val composeTest = SkikoComposeUiTest()
 
-    @After
-    fun restoreRealDesktopPlatform() {
-        overriddenDefaultKeyMapping = null
+    companion object {
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0} shortcuts")
+        fun initParams() = arrayOf(
+            arrayOf(DefaultKeyboardActions, defaultSkikoKeyMapping),
+            arrayOf(MacosKeyboardActions, createMacosDefaultKeyMapping())
+        )
     }
 
     private fun setPlatformDefaultKeyMapping(value: KeyMapping) {
         overriddenDefaultKeyMapping = value
     }
 
-    suspend fun SemanticsNodeInteraction.waitAndCheck(check: () -> Unit): SemanticsNodeInteraction {
-        rule.awaitIdle()
+    @ExperimentalTestApi
+    fun SemanticsNodeInteraction.waitAndCheck(check: () -> Unit): SemanticsNodeInteraction {
+        composeTest.waitForIdle()
         check()
         return this
     }
 
     @OptIn(ExperimentalTestApi::class)
-    private fun DesktopPlatform.textFieldSemanticInteraction(initialValue: String = "", semanticNodeContext: suspend SemanticsNodeInteraction.(state: MutableState<TextFieldValue>) -> SemanticsNodeInteraction) =
-        runBlocking {
-            setPlatformDefaultKeyMapping(createPlatformDefaultKeyMapping(this@textFieldSemanticInteraction))
-            val state = mutableStateOf(TextFieldValue(initialValue))
+    private fun textFieldSemanticInteraction(initialValue: String = "", semanticNodeContext: SemanticsNodeInteraction.(state: MutableState<TextFieldValue>) -> SemanticsNodeInteraction) =
+    composeTest.runTest {
+        setPlatformDefaultKeyMapping(keyMapping)
+        val state = mutableStateOf(TextFieldValue(initialValue))
 
-            rule.setContent {
-                BasicTextField(
-                    value = state.value,
-                    onValueChange = { state.value = it },
-                    modifier = Modifier.testTag("textField")
-                )
-            }
-            rule.awaitIdle()
-            val textField = rule.onNodeWithTag("textField")
-            textField.performMouseInput {
-                click(Offset(0f, 0f))
-            }
-
-            rule.awaitIdle()
-            textField.assertIsFocused()
-
-            Truth.assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
-
-            semanticNodeContext.invoke(textField, state)
+        composeTest.setContent {
+            BasicTextField(
+                value = state.value,
+                onValueChange = { state.value = it },
+                modifier = Modifier.testTag("textField")
+            )
         }
+        composeTest.waitForIdle()
+        val textField = composeTest.onNodeWithTag("textField")
+        textField.performMouseInput {
+            click(Offset(0f, 0f))
+        }
+
+        composeTest.waitForIdle()
+        textField.assertIsFocused()
+
+        assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
+
+        semanticNodeContext.invoke(textField, state)
+    }
 
 
     @OptIn(ExperimentalTestApi::class)
-    private fun DesktopPlatform.selectLineStart(keyboardInteraction: KeyInjectionScope.() -> Unit) {
+    @Test
+    fun selectLineStart() {
         textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { state ->
             performKeyInput {
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
             }
             .waitAndCheck {
-                Truth.assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
+                assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
             }
-            .performKeyInput(keyboardInteraction)
+            .performKeyInput { this.selectLineStart() }
             .waitAndCheck {
-                Truth.assertThat(state.value.selection).isEqualTo(TextRange(8, 7))
+                assertThat(state.value.selection).isEqualTo(TextRange(8, 7))
             }
         }
     }
 
     @OptIn(ExperimentalTestApi::class)
-    private fun DesktopPlatform.selectTextStart(keyboardInteraction: KeyInjectionScope.() -> Unit) {
+    @Test
+    fun selectTextStart() {
         textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { state ->
             performKeyInput {
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
             }.waitAndCheck {
-                Truth.assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
+                assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
             }
-            performKeyInput(keyboardInteraction)
-            .waitAndCheck { Truth.assertThat(state.value.selection).isEqualTo(TextRange(8, 0)) }
+            performKeyInput { this.selectTextStart() }
+            .waitAndCheck { assertThat(state.value.selection).isEqualTo(TextRange(8, 0)) }
         }
     }
 
     @OptIn(ExperimentalTestApi::class)
-    private fun DesktopPlatform.selectTextEnd(keyboardInteraction: KeyInjectionScope.() -> Unit) {
+    @Test
+    fun selectTextEnd() {
         textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { state ->
             performKeyInput {
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
             }
             .waitAndCheck {
-                Truth.assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
+                assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
             }
-            .performKeyInput(keyboardInteraction)
+            .performKeyInput { this.selectTextEnd() }
             .waitAndCheck {
-                Truth.assertThat(state.value.selection).isEqualTo(TextRange(8, 34))
+                assertThat(state.value.selection).isEqualTo(TextRange(8, 34))
              }
         }
     }
     @OptIn(ExperimentalTestApi::class)
-    private fun DesktopPlatform.selectLineEnd(keyboardInteraction: KeyInjectionScope.() -> Unit) {
+    @Test
+    fun selectLineEnd() {
         textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { state ->
             performKeyInput {
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
             }.waitAndCheck {
-                Truth.assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
+                assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
             }
-            .performKeyInput(keyboardInteraction)
+            .performKeyInput { this.selectLineEnd() }
             .waitAndCheck {
-                Truth.assertThat(state.value.selection).isEqualTo(TextRange(8, 13))
+                assertThat(state.value.selection).isEqualTo(TextRange(8, 13))
             }
         }
     }
 
+    @OptIn(ExperimentalTestApi::class)
     @Test
-    fun `Select till line start with DesktopPlatform-Windows`() = runBlocking {
-        DesktopPlatform.Windows.selectLineStart {
-            keyDown(Key.ShiftLeft)
-            pressKey(Key.MoveHome)
-            keyUp(Key.ShiftLeft)
-        }
-    }
-
-    @Test
-    fun `Select till text start with DesktopPlatform-Windows`() = runBlocking {
-        DesktopPlatform.Windows.selectTextStart {
-            keyDown(Key.CtrlLeft)
-            keyDown(Key.ShiftLeft)
-            pressKey(Key.MoveHome)
-            keyUp(Key.ShiftLeft)
-            keyUp(Key.CtrlLeft)
-        }
-    }
-
-    @Test
-    fun `Select till line end with DesktopPlatform-Windows`() = runBlocking {
-        DesktopPlatform.Windows.selectLineEnd {
-            keyDown(Key.ShiftLeft)
-            pressKey(Key.MoveEnd)
-            keyUp(Key.ShiftLeft)
-        }
-    }
-
-    @Test
-    fun `Select till text end with DesktopPlatform-Windows`() = runBlocking {
-        DesktopPlatform.Windows.selectTextEnd {
-            keyDown(Key.CtrlLeft)
-            keyDown(Key.ShiftLeft)
-            pressKey(Key.MoveEnd)
-            keyUp(Key.ShiftLeft)
-            keyUp(Key.CtrlLeft)
-        }
-    }
-
-
-    @Test
-    fun `Select till line start with DesktopPlatform-MacOs`() = runBlocking {
-        DesktopPlatform.MacOS.selectLineStart() {
-            keyDown(Key.ShiftLeft)
-            keyDown(Key.MetaLeft)
-            pressKey(Key.DirectionLeft)
-            keyUp(Key.ShiftLeft)
-            keyUp(Key.MetaLeft)
-        }
-    }
-
-    @Test
-    fun `Select till text start with DesktopPlatform-MacOs`() = runBlocking {
-        DesktopPlatform.MacOS.selectTextStart {
-            keyDown(Key.ShiftLeft)
-            pressKey(Key.Home)
-            keyUp(Key.ShiftLeft)
-        }
-    }
-
-    @Test
-    fun `Select till line end with DesktopPlatform-Macos`() = runBlocking {
-        DesktopPlatform.MacOS.selectLineEnd {
-            keyDown(Key.ShiftLeft)
-            keyDown(Key.MetaLeft)
-            pressKey(Key.DirectionRight)
-            keyUp(Key.ShiftLeft)
-            keyUp(Key.MetaLeft)
-        }
-    }
-
-    @Test
-    fun `Select till text end with DesktopPlatform-Macos`() = runBlocking {
-        DesktopPlatform.MacOS.selectTextEnd {
-            keyDown(Key.ShiftLeft)
-            pressKey(Key.MoveEnd)
-            keyUp(Key.ShiftLeft)
+    fun deleteAll() {
+        textFieldSemanticInteraction("") { state ->
+            performKeyInput{ this.deleteAll() }.waitAndCheck { assertThat(state.value.text).isEqualTo("") }
         }
     }
 
     @OptIn(ExperimentalTestApi::class)
-    private fun DesktopPlatform.deleteAllFromKeyBoard(
-        initialText: String, deleteAllInteraction: KeyInjectionScope.() -> Unit
-    ) {
-        textFieldSemanticInteraction(initialText) { state ->
-            performKeyInput(deleteAllInteraction).waitAndCheck { Truth.assertThat(state.value.text).isEqualTo("") }
-        }
-    }
-
-
     @Test
-    fun `Delete backwards on an empty line with DesktopPlatform-Windows`() {
-        DesktopPlatform.Windows.deleteAllFromKeyBoard("") {
-            keyDown(Key.CtrlLeft)
-            keyDown(Key.Backspace)
-        }
-    }
-
-    @Test
-    fun `Delete backwards on an empty line with DesktopPlatform-Macos`() {
-        DesktopPlatform.MacOS.deleteAllFromKeyBoard("") {
-            keyDown(Key.MetaLeft)
-            keyDown(Key.Delete)
-        }
-    }
-
-    @OptIn(ExperimentalTestApi::class)
-    private fun DesktopPlatform.selectAllTest(selectAllInteraction: KeyInjectionScope.() -> Unit) {
+    fun selectAll() {
         textFieldSemanticInteraction("Select this text") { state ->
-            performKeyInput(selectAllInteraction)
+            performKeyInput { this.selectAll() }
             .waitAndCheck {
-                Truth.assertThat(state.value.selection).isEqualTo(TextRange(0, 16))
+                assertThat(state.value.selection).isEqualTo(TextRange(0, 16))
             }
             .performKeyInput { keyDown(Key.Delete) }
             .waitAndCheck {
-                Truth.assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
-                Truth.assertThat(state.value.text).isEqualTo("")
+                assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
+                assertThat(state.value.text).isEqualTo("")
             }
-        }
-    }
-
-    @Test
-    fun `Select all with DesktopPlatform-Windows`() = runBlocking {
-        DesktopPlatform.Windows.selectAllTest {
-            keyDown(Key.CtrlLeft)
-            pressKey(Key.A)
-            keyUp(Key.CtrlLeft)
-        }
-    }
-
-    @Test
-    fun `Select all with DesktopPlatform-Macos`() = runBlocking {
-        DesktopPlatform.MacOS.selectAllTest {
-            keyDown(Key.MetaLeft)
-            pressKey(Key.A)
-            keyUp(Key.MetaLeft)
         }
     }
 }
