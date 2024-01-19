@@ -26,6 +26,7 @@ import androidx.compose.compiler.plugins.kotlin.k1.ComposeDiagnosticSuppressor
 import androidx.compose.compiler.plugins.kotlin.k1.ComposeTypeResolutionInterceptorExtension
 import androidx.compose.compiler.plugins.kotlin.k2.ComposeFirExtensionRegistrar
 import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityFieldSerializationPlugin
+import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityInferredCollection
 import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.AddHiddenFromObjCSerializationPlugin
 import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.HideFromObjCDeclarationsSet
 import com.intellij.mock.MockProject
@@ -301,10 +302,15 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
             } else {
                 null
             }
-            registerCommonExtensions(project, hideFromObjCDeclarationsSet)
+            val classStabilityInferredCollection = ClassStabilityInferredCollection()
+            registerCommonExtensions(project, hideFromObjCDeclarationsSet, classStabilityInferredCollection)
             IrGenerationExtension.registerExtension(
                 project,
-                createComposeIrExtension(configuration, hideFromObjCDeclarationsSet = hideFromObjCDeclarationsSet)
+                createComposeIrExtension(
+                    configuration,
+                    hideFromObjCDeclarationsSet = hideFromObjCDeclarationsSet,
+                    classStabilityInferredCollection = classStabilityInferredCollection
+                )
             )
         }
     }
@@ -389,7 +395,8 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
 
         fun registerCommonExtensions(
             project: Project,
-            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet?
+            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet?,
+            classStabilityInferredCollection: ClassStabilityInferredCollection?
         ) {
             StorageComponentContainerContributor.registerExtension(
                 project,
@@ -411,7 +418,7 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
             )
             DescriptorSerializerPlugin.registerExtension(
                 project,
-                ClassStabilityFieldSerializationPlugin()
+                ClassStabilityFieldSerializationPlugin(classStabilityInferredCollection)
             )
             FirExtensionRegistrarAdapter.registerExtension(project, ComposeFirExtensionRegistrar())
             if (hideFromObjCDeclarationsSet != null) {
@@ -425,7 +432,8 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
         fun createComposeIrExtension(
             configuration: CompilerConfiguration,
             moduleMetricsFactory: ((StabilityInferencer) -> ModuleMetrics)? = null,
-            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet?
+            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet?,
+            classStabilityInferredCollection: ClassStabilityInferredCollection?
         ): ComposeIrGenerationExtension {
             val liveLiteralsEnabled = configuration.getBoolean(
                 ComposeConfiguration.LIVE_LITERALS_ENABLED_KEY,
@@ -514,6 +522,7 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
                 stableTypeMatchers = stableTypeMatchers,
                 moduleMetricsFactory = moduleMetricsFactory,
                 hideFromObjCDeclarationsSet = hideFromObjCDeclarationsSet,
+                classStabilityInferredCollection = classStabilityInferredCollection,
             )
         }
     }
