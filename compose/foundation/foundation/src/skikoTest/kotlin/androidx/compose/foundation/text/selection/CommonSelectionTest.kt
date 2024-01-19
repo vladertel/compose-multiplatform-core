@@ -35,109 +35,111 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.runSkikoComposeUiTest
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 
 internal abstract class CommonSelectionTests(val keyboardActions: KeyboardActions, private val keyMapping: KeyMapping): KeyboardActions by keyboardActions {
 
-    @ExperimentalTestApi
-    private val composeTest = SkikoComposeUiTest()
-
     abstract fun setPlatformDefaultKeyMapping(value: KeyMapping)
 
     @ExperimentalTestApi
-    fun SemanticsNodeInteraction.waitAndCheck(check: () -> Unit): SemanticsNodeInteraction {
-        composeTest.waitForIdle()
+    fun SkikoComposeUiTest.waitAndCheck(check: () -> Unit) {
+        waitForIdle()
         check()
-        return this
     }
 
     @OptIn(ExperimentalTestApi::class)
-    private fun textFieldSemanticInteraction(initialValue: String = "", semanticNodeContext: SemanticsNodeInteraction.(state: MutableState<TextFieldValue>) -> SemanticsNodeInteraction) =
-        composeTest.runTest {
+    private fun textFieldSemanticInteraction(initialValue: String = "", semanticNodeContext: SkikoComposeUiTest.(node: SemanticsNodeInteraction, state: MutableState<TextFieldValue>) -> Unit) =
+        runSkikoComposeUiTest {
             setPlatformDefaultKeyMapping(keyMapping)
             val state = mutableStateOf(TextFieldValue(initialValue))
 
-            composeTest.setContent {
+            setContent {
                 BasicTextField(
                     value = state.value,
                     onValueChange = { state.value = it },
                     modifier = Modifier.testTag("textField")
                 )
             }
-            composeTest.waitForIdle()
-            val textField = composeTest.onNodeWithTag("textField")
+            waitForIdle()
+            val textField = onNodeWithTag("textField")
             textField.performMouseInput {
                 click(Offset(0f, 0f))
             }
 
-            composeTest.waitForIdle()
+            waitForIdle()
             textField.assertIsFocused()
 
             assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
 
-            semanticNodeContext.invoke(textField, state)
+            semanticNodeContext.invoke(this, textField, state)
         }
 
 
     @OptIn(ExperimentalTestApi::class)
     fun selectLineStart() {
-        textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { state ->
-            performKeyInput {
+        textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { node, state ->
+            node.performKeyInput {
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
             }
-                .waitAndCheck {
-                    assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
-                }
-                .performKeyInput { this.selectLineStart() }
-                .waitAndCheck {
-                    assertThat(state.value.selection).isEqualTo(TextRange(8, 7))
-                }
+            waitAndCheck {
+                assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
+            }
+            node.performKeyInput { this.selectLineStart() }
+            waitAndCheck {
+                assertThat(state.value.selection).isEqualTo(TextRange(8, 7))
+            }
         }
     }
 
     @OptIn(ExperimentalTestApi::class)
     fun selectTextStart() {
-        textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { state ->
-            performKeyInput {
+        textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { node, state ->
+            node.performKeyInput {
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
-            }.waitAndCheck {
+            }
+
+            waitAndCheck {
                 assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
             }
-            performKeyInput { this.selectTextStart() }
-                .waitAndCheck { assertThat(state.value.selection).isEqualTo(TextRange(8, 0)) }
+
+            node.performKeyInput { this.selectTextStart() }
+
+            waitAndCheck { assertThat(state.value.selection).isEqualTo(TextRange(8, 0)) }
         }
     }
 
     @OptIn(ExperimentalTestApi::class)
     fun selectTextEnd() {
-        textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { state ->
-            performKeyInput {
+        textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { node, state ->
+            node.performKeyInput {
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
             }
-                .waitAndCheck {
+                waitAndCheck {
                     assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
                 }
-                .performKeyInput { this.selectTextEnd() }
-                .waitAndCheck {
+                node.performKeyInput { this.selectTextEnd() }
+                waitAndCheck {
                     assertThat(state.value.selection).isEqualTo(TextRange(8, 34))
                 }
         }
     }
     @OptIn(ExperimentalTestApi::class)
     fun selectLineEnd() {
-        textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { state ->
-            performKeyInput {
+        textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { node, state ->
+            node.performKeyInput {
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
-            }.waitAndCheck {
+            }
+            waitAndCheck {
                 assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
             }
-                .performKeyInput { this.selectLineEnd() }
-                .waitAndCheck {
+                node.performKeyInput { this.selectLineEnd() }
+                waitAndCheck {
                     assertThat(state.value.selection).isEqualTo(TextRange(8, 13))
                 }
         }
@@ -145,23 +147,24 @@ internal abstract class CommonSelectionTests(val keyboardActions: KeyboardAction
 
     @OptIn(ExperimentalTestApi::class)
     fun deleteAll() {
-        textFieldSemanticInteraction("") { state ->
-            performKeyInput{ this.deleteAll() }.waitAndCheck { assertThat(state.value.text).isEqualTo("") }
+        textFieldSemanticInteraction("") { node, state ->
+            node.performKeyInput { this.deleteAll() }
+            waitAndCheck { assertThat(state.value.text).isEqualTo("") }
         }
     }
 
     @OptIn(ExperimentalTestApi::class)
     fun selectAll() {
-        textFieldSemanticInteraction("Select this text") { state ->
-            performKeyInput { this.selectAll() }
-                .waitAndCheck {
-                    assertThat(state.value.selection).isEqualTo(TextRange(0, 16))
-                }
-                .performKeyInput { keyDown(Key.Delete) }
-                .waitAndCheck {
-                    assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
-                    assertThat(state.value.text).isEqualTo("")
-                }
+        textFieldSemanticInteraction("Select this text") { node, state ->
+            node.performKeyInput { this.selectAll() }
+            waitAndCheck {
+                assertThat(state.value.selection).isEqualTo(TextRange(0, 16))
+            }
+            node.performKeyInput { keyDown(Key.Delete) }
+            waitAndCheck {
+                assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
+                assertThat(state.value.text).isEqualTo("")
+            }
         }
     }
 
