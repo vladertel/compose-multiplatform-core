@@ -478,7 +478,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
         }
         if (plugin is KotlinMultiplatformPluginWrapper) {
-           // KonanPrebuiltsSetup.configureKonanDirectory(project)
+            KonanPrebuiltsSetup.configureKonanDirectory(project)
             KmpLinkTaskWorkaround.serializeLinkTasks(project)
             project.afterEvaluate {
                 val libraryExtension = project.extensions.findByType<LibraryExtension>()
