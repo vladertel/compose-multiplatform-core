@@ -30,7 +30,7 @@ jobs:
       - name: install Android SDK
         run: ./jbdeps/android-sdk/downloadAndroidSdk
       - name: Run Wasm tests
-        run: ./gradlew :compose:foundation:foundation:wasmJsBrowserTest --info
+        run: ./gradlew :mpp:testWeb --info
       - name: Generate report (Test Reporter)
         uses: dorny/test-reporter@v1
         if: always()
