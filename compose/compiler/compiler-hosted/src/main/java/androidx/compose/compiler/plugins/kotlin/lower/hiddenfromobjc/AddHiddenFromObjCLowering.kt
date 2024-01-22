@@ -22,6 +22,7 @@ import androidx.compose.compiler.plugins.kotlin.lower.AbstractComposeLowering
 import androidx.compose.compiler.plugins.kotlin.lower.ComposableSymbolRemapper
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.fir.resolve.dfa.stackOf
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
@@ -64,6 +65,27 @@ class AddHiddenFromObjCLowering(
         module.transformChildrenVoid(this)
     }
 
+    private val shouldAnnotateClass = stackOf<Boolean>()
+    private var currentShouldAnnotateClass = false
+
+    override fun visitClass(declaration: IrClass): IrStatement {
+        shouldAnnotateClass.push(currentShouldAnnotateClass)
+        currentShouldAnnotateClass = false
+
+        val cls = super.visitClass(declaration) as IrClass
+
+        // We see an issue only with data classes containing something Composable.
+        // Adding an annotation to all classes makes the FirNativeHiddenFromObjCInheritanceChecker (kotlin) complain.
+        // data classes can't be open, so it should work.
+        if (currentShouldAnnotateClass && cls.isData) {
+            cls.addHiddenFromObjCAnnotation()
+            hideFromObjCDeclarationsSet.addToHide(cls)
+        }
+
+        currentShouldAnnotateClass = shouldAnnotateClass.pop()
+        return cls
+    }
+
     override fun visitFunction(declaration: IrFunction): IrStatement {
         val f = super.visitFunction(declaration) as IrFunction
         if (f.isLocal || !(f.visibility == DescriptorVisibilities.PUBLIC || f.visibility == DescriptorVisibilities.PROTECTED)) return f
@@ -76,6 +98,7 @@ class AddHiddenFromObjCLowering(
         if (shouldAdd) {
             f.addHiddenFromObjCAnnotation()
             hideFromObjCDeclarationsSet.addToHide(f)
+            currentShouldAnnotateClass = true
         }
 
         return f
@@ -94,6 +117,7 @@ class AddHiddenFromObjCLowering(
         if (shouldAdd) {
             p.addHiddenFromObjCAnnotation()
             hideFromObjCDeclarationsSet.addToHide(p)
+            currentShouldAnnotateClass = true
         }
 
         return p
