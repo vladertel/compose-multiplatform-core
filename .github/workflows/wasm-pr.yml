@@ -1,4 +1,4 @@
-name: Skiko Unit tests
+name: WASM and JS Unit tests
 on:
   workflow_dispatch:
   pull_request:
