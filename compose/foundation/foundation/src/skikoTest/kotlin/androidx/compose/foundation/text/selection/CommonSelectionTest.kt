@@ -26,32 +26,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.test.runSkikoComposeUiTest
+import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 
-internal abstract class CommonSelectionTests(val keyboardActions: KeyboardActions, private val keyMapping: KeyMapping): KeyboardActions by keyboardActions {
+internal abstract class CommonSelectionTests(
+    val keyboardActions: KeyboardActions,
+    private val keyMapping: KeyMapping
+) : KeyboardActions by keyboardActions {
 
     abstract fun setPlatformDefaultKeyMapping(value: KeyMapping)
 
-    @ExperimentalTestApi
-    fun SkikoComposeUiTest.waitAndCheck(check: () -> Unit) {
-        waitForIdle()
-        check()
-    }
-
     @OptIn(ExperimentalTestApi::class)
-    private fun textFieldSemanticInteraction(initialValue: String = "", semanticNodeContext: SkikoComposeUiTest.(node: SemanticsNodeInteraction, state: MutableState<TextFieldValue>) -> Unit) =
-        runSkikoComposeUiTest {
+    private fun textFieldSemanticInteraction(
+        initialValue: String = "",
+        semanticNodeContext: ComposeUiTest.(node: SemanticsNodeInteraction, state: MutableState<TextFieldValue>) -> Unit
+    ) =
+        runComposeUiTest {
             setPlatformDefaultKeyMapping(keyMapping)
             val state = mutableStateOf(TextFieldValue(initialValue))
 
@@ -62,18 +62,18 @@ internal abstract class CommonSelectionTests(val keyboardActions: KeyboardAction
                     modifier = Modifier.testTag("textField")
                 )
             }
-            waitForIdle()
-            val textField = onNodeWithTag("textField")
-            textField.performMouseInput {
-                click(Offset(0f, 0f))
+
+            onNodeWithTag("textField").apply {
+                performMouseInput {
+                    click(Offset(0f, 0f))
+                }
+
+                assertIsFocused()
+
+                assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
+
+                semanticNodeContext(this, state)
             }
-
-            waitForIdle()
-            textField.assertIsFocused()
-
-            assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
-
-            semanticNodeContext.invoke(this, textField, state)
         }
 
 
@@ -84,13 +84,11 @@ internal abstract class CommonSelectionTests(val keyboardActions: KeyboardAction
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
             }
-            waitAndCheck {
-                assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
-            }
+            assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
+
             node.performKeyInput { this.selectLineStart() }
-            waitAndCheck {
-                assertThat(state.value.selection).isEqualTo(TextRange(8, 7))
-            }
+
+            assertThat(state.value.selection).isEqualTo(TextRange(8, 7))
         }
     }
 
@@ -102,13 +100,11 @@ internal abstract class CommonSelectionTests(val keyboardActions: KeyboardAction
                 pressKey(Key.DirectionDown)
             }
 
-            waitAndCheck {
-                assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
-            }
+            assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
 
             node.performKeyInput { this.selectTextStart() }
 
-            waitAndCheck { assertThat(state.value.selection).isEqualTo(TextRange(8, 0)) }
+            assertThat(state.value.selection).isEqualTo(TextRange(8, 0))
         }
     }
 
@@ -119,15 +115,13 @@ internal abstract class CommonSelectionTests(val keyboardActions: KeyboardAction
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
             }
-                waitAndCheck {
-                    assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
-                }
-                node.performKeyInput { this.selectTextEnd() }
-                waitAndCheck {
-                    assertThat(state.value.selection).isEqualTo(TextRange(8, 34))
-                }
+            assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
+
+            node.performKeyInput { this.selectTextEnd() }
+            assertThat(state.value.selection).isEqualTo(TextRange(8, 34))
         }
     }
+
     @OptIn(ExperimentalTestApi::class)
     fun selectLineEnd() {
         textFieldSemanticInteraction("line 1\nline 2\nline 3\nline 4\nline 5") { node, state ->
@@ -135,13 +129,11 @@ internal abstract class CommonSelectionTests(val keyboardActions: KeyboardAction
                 pressKey(Key.DirectionRight)
                 pressKey(Key.DirectionDown)
             }
-            waitAndCheck {
-                assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
-            }
-                node.performKeyInput { this.selectLineEnd() }
-                waitAndCheck {
-                    assertThat(state.value.selection).isEqualTo(TextRange(8, 13))
-                }
+
+            assertThat(state.value.selection).isEqualTo(TextRange(8, 8))
+
+            node.performKeyInput { this.selectLineEnd() }
+            assertThat(state.value.selection).isEqualTo(TextRange(8, 13))
         }
     }
 
@@ -149,7 +141,7 @@ internal abstract class CommonSelectionTests(val keyboardActions: KeyboardAction
     fun deleteAll() {
         textFieldSemanticInteraction("") { node, state ->
             node.performKeyInput { this.deleteAll() }
-            waitAndCheck { assertThat(state.value.text).isEqualTo("") }
+            assertThat(state.value.text).isEqualTo("")
         }
     }
 
@@ -157,14 +149,11 @@ internal abstract class CommonSelectionTests(val keyboardActions: KeyboardAction
     fun selectAll() {
         textFieldSemanticInteraction("Select this text") { node, state ->
             node.performKeyInput { this.selectAll() }
-            waitAndCheck {
-                assertThat(state.value.selection).isEqualTo(TextRange(0, 16))
-            }
+            assertThat(state.value.selection).isEqualTo(TextRange(0, 16))
+
             node.performKeyInput { keyDown(Key.Delete) }
-            waitAndCheck {
-                assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
-                assertThat(state.value.text).isEqualTo("")
-            }
+            assertThat(state.value.selection).isEqualTo(TextRange(0, 0))
+            assertThat(state.value.text).isEqualTo("")
         }
     }
 
