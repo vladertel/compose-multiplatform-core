@@ -22,6 +22,7 @@ jobs:
     name: Wasm Unit tests on Ubuntu
     steps:
       - uses: actions/checkout@v3
+      - name: Set up Node 18
       - uses: actions/setup-node@v4
         with:
           node-version: 18
@@ -38,6 +39,6 @@ jobs:
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Skiko Unit tests results
+          name: Wasm Unit tests results
           path: out/androidx/compose/**/**/build/test-results/**/TEST*.xml
           reporter: java-junit
