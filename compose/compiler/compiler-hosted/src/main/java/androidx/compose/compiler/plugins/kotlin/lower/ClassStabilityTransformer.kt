@@ -67,8 +67,7 @@ class ClassStabilityTransformer(
     context: IrPluginContext,
     symbolRemapper: DeepCopySymbolRemapper,
     metrics: ModuleMetrics,
-    stabilityInferencer: StabilityInferencer,
-    private val classStabilityInferredCollection: ClassStabilityInferredCollection?
+    stabilityInferencer: StabilityInferencer
 ) : AbstractComposeLowering(context, symbolRemapper, metrics, stabilityInferencer),
     ClassLoweringPass,
     ModuleLoweringPass {
@@ -186,7 +185,6 @@ class ClassStabilityTransformer(
             context.annotationsRegistrar.addMetadataVisibleAnnotationsToElement(cls, annotation)
         } else {
             cls.annotations += annotation
-            classStabilityInferredCollection?.addClass(cls, parameterMask)
         }
 
         cls.addStabilityMarkerField(stableExpr)
