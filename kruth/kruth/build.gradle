@@ -14,27 +14,27 @@
  * limitations under the License.
  */
 
-
-import androidx.build.AndroidXComposePlugin
+import androidx.build.KmpPlatformsKt
 import androidx.build.LibraryType
+import androidx.build.PlatformIdentifier
+import androidx.build.Publish
+import androidx.build.RunApiTasks
 
 plugins {
     id("AndroidXPlugin")
-    id("AndroidXComposePlugin")
 }
 
-AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
+def macEnabled = KmpPlatformsKt.enableMac(project)
+def linuxEnabled = KmpPlatformsKt.enableLinux(project)
 
-androidXComposeMultiplatform {
-    desktop()
-    darwin()
-    js()
-    wasm()
+androidXMultiplatform {
+    jvm {}
+    mac()
+    linux()
+    ios()
 
-    configureDarwinFlags()
-}
+    defaultPlatform(PlatformIdentifier.JVM)
 
-kotlin {
     sourceSets {
         commonMain {
             dependencies {
@@ -51,16 +51,11 @@ kotlin {
         }
 
         jvmMain {
+            dependsOn(commonMain)
             dependencies {
                 api(libs.kotlinStdlib)
                 api(libs.kotlinTest)
-            }
-        }
-
-        wasmJsMain {
-            dependencies {
-                api(libs.kotlinStdlib)
-                api(libs.kotlinTest)
+                implementation(libs.guavaAndroid)
             }
         }
 
@@ -70,16 +65,36 @@ kotlin {
                 implementation(libs.kotlinTest)
             }
         }
+
+        if (macEnabled || linuxEnabled) {
+            nativeMain {
+                dependsOn(commonMain)
+            }
+        }
+
+        targets.all { target ->
+            if (target.platformType == org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native) {
+                target.compilations["main"].defaultSourceSet {
+                    dependsOn(nativeMain)
+                }
+            }
+        }
+
+        // Workaround for https://youtrack.jetbrains.com/issue/KT-51763
+        // Make sure commonization runs before any compilation task.
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile).configureEach {
+            it.dependsOn(tasks.named("commonize"))
+        }
     }
 }
 
 androidx {
+    legacyDisableKotlinStrictApiMode = true // Temporarily enabled to allow API tracking
+    publish = Publish.SNAPSHOT_ONLY
+    runApiTasks = new RunApiTasks.Yes() // Used to diff against Google Truth
     type = LibraryType.INTERNAL_TEST_LIBRARY
 }
 
-androidxCompose {
-    composeCompilerPluginEnabled = false
-}
 
 tasks.withType(AbstractArchiveTask) {
     destinationDirectory.set(new File(buildDir, "repackaged"))
