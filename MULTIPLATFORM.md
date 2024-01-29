@@ -122,11 +122,14 @@ Run native macos Arm64 sample:
 ./gradlew :compose:mpp:demo:runDebugExecutableMacosArm64
 ```
 
-#### Run mpp/demo-uikit sample on iOS
+#### Run iosApp
  - Install plugin **Kotlin Multiplatform Mobile** for AppCode
- - Disable Android Plugin in IDE preferences
  - Open root of repository with AppCode
  - Increase AppCode IDE memory more that 10GB
+ - Run script if project was opened in IDE before
+```bash
+./cleanTempFiles.sh
+ ```
  - Restart AppCode
  - Wait while project synchronization with Gradle
  - [Optional] To run on real iOS device 
@@ -135,10 +138,10 @@ Run native macos Arm64 sample:
    - Create file project.properties in the root of repository. Add property `TEAM_ID=[your team id]` without double quotes, for example `TEAM_ID=ABC123ABC1`.
  - Choose run configuration **iOS App**
 
-#### Run mpp/demo sample on iOS with Xcode
+#### Run iosApp with Xcode
 Run script:
 ```bash 
-./compose/mpp/demo/regenerate_xcode_project.sh
+open iosApp/iosApp.xcodeproj
  ```
 Wait while Xcode is opening, and press run button.
 
