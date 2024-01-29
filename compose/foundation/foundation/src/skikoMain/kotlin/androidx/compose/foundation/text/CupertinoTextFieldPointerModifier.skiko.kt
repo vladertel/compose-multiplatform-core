@@ -21,8 +21,9 @@ import androidx.compose.foundation.gestures.detectRepeatingTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.selection.SelectionAdjustment
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
-import androidx.compose.foundation.text.selection.getTextFieldSelection
+import androidx.compose.foundation.text.selection.getTextFieldSelectionLayout
 import androidx.compose.foundation.text.selection.isSelectionHandleInVisibleBound
+import androidx.compose.foundation.text.selection.selectionGestureInput
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -47,6 +48,7 @@ internal fun Modifier.cupertinoTextFieldPointer(
     readOnly: Boolean,
     offsetMapping: OffsetMapping
 ): Modifier = if (enabled) {
+    // TODO switch to ".updateSelectionTouchMode { state.isInTouchMode = it }" as in defaultTextFieldPointer
     if (isInTouchMode) {
         val longPressHandlerModifier = getLongPressHandlerModifier(state, offsetMapping)
         val tapHandlerModifier = getTapHandlerModifier(
@@ -63,9 +65,9 @@ internal fun Modifier.cupertinoTextFieldPointer(
             .pointerHoverIcon(textPointerIcon)
     } else {
         this
-            .mouseDragGestureDetector(
-                observer = manager.mouseSelectionObserver,
-                enabled = enabled
+            .selectionGestureInput(
+                mouseSelectionObserver = manager.mouseSelectionObserver,
+                textDragObserver = manager.touchSelectionObserver,
             )
             .pointerHoverIcon(textPointerIcon)
     }
@@ -98,6 +100,12 @@ private fun getTapHandlerModifier(
         detectRepeatingTapGestures(
             onTap = { touchPointOffset ->
                 if (currentState.hasFocus) {
+                    // To show keyboard if it was hidden. Even in selection mode (like native)
+                    requestFocusAndShowKeyboardIfNeeded(
+                        currentState,
+                        currentFocusRequester,
+                        !currentReadOnly
+                    )
                     if (currentState.handleState != HandleState.Selection) {
                         currentState.layoutResult?.let { layoutResult ->
                             TextFieldDelegate.cupertinoSetCursorOffsetFocused(
@@ -113,7 +121,7 @@ private fun getTapHandlerModifier(
                         currentManager.deselect(touchPointOffset)
                     }
                 } else {
-                    tapTextFieldToFocus(
+                    requestFocusAndShowKeyboardIfNeeded(
                         currentState,
                         currentFocusRequester,
                         !currentReadOnly
@@ -217,11 +225,10 @@ private fun TextFieldSelectionManager.doRepeatingTapSelection(
     if (value.text.isEmpty()) return
     enterSelectionMode()
     state?.layoutResult?.let { layoutResult ->
-        val offset = layoutResult.getOffsetForPosition(touchPointOffset)
         updateSelection(
             value = value,
-            transformedStartOffset = offset,
-            transformedEndOffset = offset,
+            currentPosition = touchPointOffset,
+            isStartOfSelection = true,
             isStartHandle = false,
             adjustment = selectionAdjustment
         )
@@ -233,30 +240,62 @@ private fun TextFieldSelectionManager.doRepeatingTapSelection(
  */
 private fun TextFieldSelectionManager.updateSelection(
     value: TextFieldValue,
-    transformedStartOffset: Int,
-    transformedEndOffset: Int,
+    currentPosition: Offset,
+    isStartOfSelection: Boolean,
     isStartHandle: Boolean,
     adjustment: SelectionAdjustment
 ) {
-    val transformedSelection = TextRange(
+    val layoutResult = state?.layoutResult ?: return
+    val previousTransformedSelection = TextRange(
         offsetMapping.originalToTransformed(value.selection.start),
         offsetMapping.originalToTransformed(value.selection.end)
     )
 
-    val newTransformedSelection = getTextFieldSelection(
-        textLayoutResult = state?.layoutResult?.value,
-        rawStartOffset = transformedStartOffset,
-        rawEndOffset = transformedEndOffset,
-        previousSelection = if (transformedSelection.collapsed) null else transformedSelection,
-        isStartHandle = isStartHandle,
-        adjustment = adjustment
+    val currentOffset = layoutResult.getOffsetForPosition(
+        position = currentPosition,
+        coerceInVisibleBounds = false
     )
+
+    val rawStartHandleOffset = if (isStartHandle || isStartOfSelection) currentOffset else
+        previousTransformedSelection.start
+
+    val rawEndHandleOffset = if (!isStartHandle || isStartOfSelection) currentOffset else
+        previousTransformedSelection.end
+
+    val previousSelectionLayout = previousSelectionLayout // for smart cast
+    val rawPreviousHandleOffset = if (
+        isStartOfSelection ||
+        previousSelectionLayout == null ||
+        previousRawDragOffset == -1
+    ) {
+        -1
+    } else {
+        previousRawDragOffset
+    }
+
+    val selectionLayout = getTextFieldSelectionLayout(
+        layoutResult = layoutResult.value,
+        rawStartHandleOffset = rawStartHandleOffset,
+        rawEndHandleOffset = rawEndHandleOffset,
+        rawPreviousHandleOffset = rawPreviousHandleOffset,
+        previousSelectionRange = previousTransformedSelection,
+        isStartOfSelection = isStartOfSelection,
+        isStartHandle = isStartHandle,
+    )
+
+    if (!selectionLayout.shouldRecomputeSelection(previousSelectionLayout)) {
+        return
+    }
+
+    this.previousSelectionLayout = selectionLayout
+    previousRawDragOffset = currentOffset
+
+    val newTransformedSelection = adjustment.adjust(selectionLayout)
 
     val originalSelection = TextRange(
-        start = offsetMapping.transformedToOriginal(newTransformedSelection.start),
-        end = offsetMapping.transformedToOriginal(newTransformedSelection.end)
+        start = offsetMapping.transformedToOriginal(newTransformedSelection.start.offset),
+        end = offsetMapping.transformedToOriginal(newTransformedSelection.end.offset)
     )
-
     if (originalSelection == value.selection) return
 
     hapticFeedBack?.performHapticFeedback(HapticFeedbackType.TextHandleMove)
