@@ -94,7 +94,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.horizontalScrollAxisRange
-import androidx.compose.ui.semantics.isContainer
+import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.role
@@ -1020,7 +1020,7 @@ internal fun DateEntryContainer(
     Column(
         modifier = modifier
             .sizeIn(minWidth = DatePickerModalTokens.ContainerWidth)
-            .semantics { isContainer = true }
+            .semantics { isTraversalGroup = true }
     ) {
         DatePickerHeader(
             modifier = Modifier,
@@ -1100,7 +1100,7 @@ private fun SwitchableDateEntryContent(
     Crossfade(
         targetState = state.displayMode,
         animationSpec = spring(),
-        modifier = Modifier.semantics { isContainer = true }) { mode ->
+        modifier = Modifier.semantics { isTraversalGroup = true }) { mode ->
         when (mode) {
             DisplayMode.Picker -> DatePickerContent(
                 stateData = state.stateData,
