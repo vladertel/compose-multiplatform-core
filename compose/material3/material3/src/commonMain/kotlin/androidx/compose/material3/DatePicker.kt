@@ -53,11 +53,11 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.tokens.DatePickerModalTokens
 import androidx.compose.material3.tokens.MotionTokens
 import androidx.compose.runtime.Composable
@@ -1798,24 +1798,15 @@ private fun MonthsNavigation(
         // Show arrows for traversing months (only visible when the year selection is off)
         if (!yearPickerVisible) {
             Row {
-                val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
                 IconButton(onClick = onPreviousClicked, enabled = previousAvailable) {
                     Icon(
-                        if (rtl) {
-                            Icons.Filled.KeyboardArrowRight
-                        } else {
-                            Icons.Filled.KeyboardArrowLeft
-                        },
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                         contentDescription = getString(Strings.DatePickerSwitchToPreviousMonth)
                     )
                 }
                 IconButton(onClick = onNextClicked, enabled = nextAvailable) {
                     Icon(
-                        if (rtl) {
-                            Icons.Filled.KeyboardArrowLeft
-                        } else {
-                            Icons.Filled.KeyboardArrowRight
-                        },
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = getString(Strings.DatePickerSwitchToNextMonth)
                     )
                 }
