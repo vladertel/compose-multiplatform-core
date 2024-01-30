@@ -85,7 +85,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -105,7 +104,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlinx.coroutines.CoroutineScope
@@ -520,17 +518,20 @@ object DatePickerDefaults {
      * A date format skeleton used to format the date picker's year selection menu button (e.g.
      * "March 2021")
      */
+    @Suppress("ConstPropertyName")
     const val YearMonthSkeleton: String = "yMMMM"
 
     /**
      * A date format skeleton used to format a selected date (e.g. "Mar 27, 2021")
      */
+    @Suppress("ConstPropertyName")
     const val YearAbbrMonthDaySkeleton: String = "yMMMd"
 
     /**
      * A date format skeleton used to format a selected date to be used as content description for
      * screen readers (e.g. "Saturday, March 27, 2021")
      */
+    @Suppress("ConstPropertyName")
     const val YearMonthWeekdayDaySkeleton: String = "yMMMMEEEEd"
 }
 
@@ -735,7 +736,7 @@ class DatePickerColors internal constructor(
  */
 @ExperimentalMaterial3Api
 @Immutable
-class DatePickerFormatter constructor(
+class DatePickerFormatter(
     internal val yearSelectionSkeleton: String = DatePickerDefaults.YearMonthSkeleton,
     internal val selectedDateSkeleton: String = DatePickerDefaults.YearAbbrMonthDaySkeleton,
     internal val selectedDateDescriptionSkeleton: String =
@@ -830,7 +831,7 @@ value class DisplayMode internal constructor(internal val value: Int) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Stable
-internal class StateData constructor(
+internal class StateData(
     initialSelectedStartDateMillis: Long?,
     initialSelectedEndDateMillis: Long?,
     initialDisplayedMonthMillis: Long?,
