@@ -19,10 +19,12 @@ package androidx.compose.ui.scene
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.ui.ComposeFeatureFlags
 import androidx.compose.ui.LayerType
 import androidx.compose.ui.awt.LocalLayerContainer
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.platform.GlobalSaveableStateRegistry
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.scene.skia.SkiaLayerComponent
@@ -67,7 +69,7 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
 internal class ComposeContainer(
     val container: JLayeredPane,
     private val skiaLayerAnalytics: SkiaLayerAnalytics,
-
+    saveableId: String? = null,
     window: Window? = null,
     windowContainer: JLayeredPane = container,
 
@@ -107,6 +109,9 @@ internal class ComposeContainer(
 
     private val coroutineExceptionHandler = DesktopCoroutineExceptionHandler()
     private val coroutineContext = MainUIDispatcher + coroutineExceptionHandler
+    private val saveableStateRegistry = GlobalSaveableStateRegistry(
+        saveableId ?: container.constantComposeSaveableId()
+    )
 
     private val mediator = ComposeSceneMediator(
         container = container,
@@ -142,6 +147,7 @@ internal class ComposeContainer(
     }
 
     fun dispose() {
+        saveableStateRegistry.save()
         mediator.dispose()
         layers.fastForEach(DesktopComposeSceneLayer::close)
     }
@@ -227,9 +233,10 @@ internal class ComposeContainer(
 
     fun setContent(content: @Composable () -> Unit) {
         mediator.setContent {
-            ProvideContainerCompositionLocals(this) {
-                content()
-            }
+            ProvideContainerCompositionLocals(
+                composeContainer = this,
+                content = content
+            )
         }
     }
 
@@ -326,13 +333,20 @@ internal class ComposeContainer(
             exceptionHandler?.onException(exception) ?: throw exception
         }
     }
+
+    companion object {
+
+        @Composable
+        private fun ProvideContainerCompositionLocals(
+            composeContainer: ComposeContainer,
+            content: @Composable () -> Unit,
+        ) = CompositionLocalProvider(
+            LocalLayerContainer provides composeContainer.container,
+            LocalSaveableStateRegistry provides composeContainer.saveableStateRegistry,
+            content = content
+        )
+    }
 }
 
-@Composable
-private fun ProvideContainerCompositionLocals(
-    composeContainer: ComposeContainer,
-    content: @Composable () -> Unit,
-) = CompositionLocalProvider(
-    LocalLayerContainer provides composeContainer.container,
-    content = content
-)
+private fun Component.constantComposeSaveableId(): String =
+    this::class.qualifiedName ?: "ComposeContainer"

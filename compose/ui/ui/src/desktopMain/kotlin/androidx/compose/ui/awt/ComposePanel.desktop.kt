@@ -44,7 +44,8 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
  * Implementation usually uses third-party solution to send info to some centralized analytics gatherer.
  */
 class ComposePanel @ExperimentalComposeUiApi constructor(
-    private val skiaLayerAnalytics: SkiaLayerAnalytics,
+    private val skiaLayerAnalytics: SkiaLayerAnalytics = SkiaLayerAnalytics.Empty,
+    private val saveableId: String? = null,
 ) : JLayeredPane() {
     constructor() : this(SkiaLayerAnalytics.Empty)
 
@@ -198,7 +199,8 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
         return ComposeContainer(
             container = this,
             skiaLayerAnalytics = skiaLayerAnalytics,
-            windowContainer = windowContainer
+            saveableId = saveableId,
+            windowContainer = windowContainer,
         ).apply {
             focusManager.releaseFocus()
             setBounds(0, 0, width, height)

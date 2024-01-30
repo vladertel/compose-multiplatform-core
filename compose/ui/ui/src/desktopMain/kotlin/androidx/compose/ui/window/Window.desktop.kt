@@ -19,17 +19,20 @@ package androidx.compose.ui.window
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.currentCompositeKeyHash
 import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.platform.GlobalSaveableStateRegistry
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.scene.BaseComposeScene
 import androidx.compose.ui.scene.LocalComposeScene
 import androidx.compose.ui.scene.platformContext
 import androidx.compose.ui.unit.DpSize
@@ -172,6 +175,7 @@ fun Window(
             }
         }
     }
+    val saveableId = rememberComposeSaveableId()
 
     Window(
         visible = visible,
@@ -179,7 +183,10 @@ fun Window(
         onKeyEvent = onKeyEvent,
         create = {
             val graphicsConfiguration = WindowLocationTracker.lastActiveGraphicsConfiguration
-            ComposeWindow(graphicsConfiguration = graphicsConfiguration).apply {
+            ComposeWindow(
+                graphicsConfiguration = graphicsConfiguration,
+                saveableId = saveableId,
+            ).apply {
                 // close state is controlled by WindowState.isOpen
                 defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
                 listeners.windowListenerRef.registerWithAndSet(
@@ -468,3 +475,21 @@ fun FrameWindowScope.MenuBar(content: @Composable MenuBarScope.() -> Unit) {
         }
     }
 }
+
+@Composable
+internal fun rememberComposeSaveableId(): String {
+    val registry = LocalSaveableStateRegistry.current as? GlobalSaveableStateRegistry
+    val compositeKey = currentCompositeKeyHash.toString(MaxSupportedRadix)
+    return rememberSaveable {
+        if (registry != null) {
+            "${registry.saveableId}:$compositeKey"
+        } else {
+            compositeKey
+        }
+    }
+}
+
+/**
+ * The maximum radix available for conversion to and from strings.
+ */
+private const val MaxSupportedRadix = 36

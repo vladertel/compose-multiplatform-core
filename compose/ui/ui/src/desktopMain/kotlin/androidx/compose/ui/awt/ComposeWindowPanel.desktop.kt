@@ -44,6 +44,7 @@ internal class ComposeWindowPanel(
     private val window: Window,
     private val isUndecorated: () -> Boolean,
     skiaLayerAnalytics: SkiaLayerAnalytics,
+    saveableId: String? = null,
 ) : JLayeredPane() {
     private var isDisposed = false
 
@@ -54,6 +55,7 @@ internal class ComposeWindowPanel(
     private var _composeContainer: ComposeContainer? = ComposeContainer(
         container = this,
         skiaLayerAnalytics = skiaLayerAnalytics,
+        saveableId = saveableId,
         window = window,
         useSwingGraphics = false
     )

@@ -140,9 +140,10 @@ internal class UIViewComposeSceneLayer(
 
     override fun setContent(content: @Composable () -> Unit) {
         mediator.setContent {
-            ProvideContainerCompositionLocals(composeContainer) {
-                content()
-            }
+            ComposeContainer.ProvideContainerCompositionLocals(
+                composeContainer = composeContainer,
+                content = content
+            )
         }
     }
 

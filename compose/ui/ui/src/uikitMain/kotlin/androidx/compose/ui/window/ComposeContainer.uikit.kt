@@ -23,9 +23,11 @@ import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.SystemTheme
 import androidx.compose.ui.interop.LocalUIViewController
+import androidx.compose.ui.platform.GlobalSaveableStateRegistry
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformWindowContext
 import androidx.compose.ui.scene.ComposeScene
@@ -104,14 +106,19 @@ internal class ComposeContainer(
             "ComposeUIViewController.view should be attached to window"
         } else view
 
+    @OptIn(ExperimentalComposeApi::class)
+    private val saveableStateRegistry = GlobalSaveableStateRegistry(
+        configuration.saveableId ?: "ComposeContainer"
+    )
+
     /*
      * Initial value is arbitrarily chosen to avoid propagating invalid value logic
      * It's never the case in real usage scenario to reflect that in type system
      */
-    val interfaceOrientationState: MutableState<InterfaceOrientation> = mutableStateOf(
+    private val interfaceOrientationState: MutableState<InterfaceOrientation> = mutableStateOf(
         InterfaceOrientation.Portrait
     )
-    val systemThemeState: MutableState<SystemTheme> = mutableStateOf(SystemTheme.Unknown)
+    private val systemThemeState: MutableState<SystemTheme> = mutableStateOf(SystemTheme.Unknown)
     private val focusStack: FocusStack<UIView> = FocusStackImpl()
     private val windowContext = PlatformWindowContext().apply {
         setWindowFocused(true)
@@ -319,14 +326,16 @@ internal class ComposeContainer(
             this.mediator = it
         }
         mediator.setContent {
-            ProvideContainerCompositionLocals(this) {
-                content()
-            }
+            ProvideContainerCompositionLocals(
+                composeContainer = this,
+                content = content
+            )
         }
         mediator.setLayout(SceneLayout.UseConstraintsToFillContainer)
     }
 
     private fun dispose() {
+        saveableStateRegistry.save()
         mediator?.dispose()
         mediator = null
         layers.fastForEach {
@@ -364,6 +373,21 @@ internal class ComposeContainer(
             )
     }
 
+    companion object {
+
+        @OptIn(InternalComposeApi::class)
+        @Composable
+        fun ProvideContainerCompositionLocals(
+            composeContainer: ComposeContainer,
+            content: @Composable () -> Unit,
+        ) = CompositionLocalProvider(
+            LocalUIViewController provides composeContainer,
+            LocalInterfaceOrientation provides composeContainer.interfaceOrientationState.value,
+            LocalSystemTheme provides composeContainer.systemThemeState.value,
+            LocalSaveableStateRegistry provides composeContainer.saveableStateRegistry,
+            content = content
+        )
+    }
 }
 
 private fun UIViewController.checkIfInsideSwiftUI(): Boolean {
@@ -400,20 +424,6 @@ private fun getLayoutDirection() =
         UIUserInterfaceLayoutDirection.UIUserInterfaceLayoutDirectionRightToLeft -> LayoutDirection.Rtl
         else -> LayoutDirection.Ltr
     }
-
-@OptIn(InternalComposeApi::class)
-@Composable
-internal fun ProvideContainerCompositionLocals(
-    composeContainer: ComposeContainer,
-    content: @Composable () -> Unit,
-) = with(composeContainer) {
-    CompositionLocalProvider(
-        LocalUIViewController provides this,
-        LocalInterfaceOrientation provides interfaceOrientationState.value,
-        LocalSystemTheme provides systemThemeState.value,
-        content = content
-    )
-}
 
 internal val uiContentSizeCategoryToFontScaleMap = mapOf(
     UIContentSizeCategoryExtraSmall to 0.8f,

@@ -27,7 +27,6 @@ import androidx.compose.ui.awt.ComposeDialog
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.scene.BaseComposeScene
 import androidx.compose.ui.scene.LocalComposeScene
 import androidx.compose.ui.scene.platformContext
 import androidx.compose.ui.unit.DpSize
@@ -188,18 +187,21 @@ fun DialogWindow(
             }
         }
     }
+    val saveableId = rememberComposeSaveableId()
 
     DialogWindow(
         visible = visible,
         onPreviewKeyEvent = onPreviewKeyEvent,
         onKeyEvent = onKeyEvent,
         create = {
+            val modalityType = if (owner != null) ModalityType.DOCUMENT_MODAL else ModalityType.MODELESS
             val graphicsConfiguration = WindowLocationTracker.lastActiveGraphicsConfiguration
-            val dialog = if (owner != null) {
-                ComposeDialog(owner, ModalityType.DOCUMENT_MODAL, graphicsConfiguration = graphicsConfiguration)
-            } else {
-                ComposeDialog(graphicsConfiguration = graphicsConfiguration)
-            }
+            val dialog = ComposeDialog(
+                owner = owner,
+                modalityType = modalityType,
+                graphicsConfiguration = graphicsConfiguration,
+                saveableId = saveableId
+            )
             dialog.apply {
                 // close state is controlled by DialogState.isOpen
                 defaultCloseOperation = JDialog.DO_NOTHING_ON_CLOSE

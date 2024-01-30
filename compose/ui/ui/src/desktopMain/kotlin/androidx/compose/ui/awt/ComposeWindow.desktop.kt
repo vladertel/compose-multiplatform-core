@@ -50,6 +50,7 @@ import org.jetbrains.skiko.SkiaLayerAnalytics
 class ComposeWindow @ExperimentalComposeUiApi constructor(
     graphicsConfiguration: GraphicsConfiguration? = null,
     skiaLayerAnalytics: SkiaLayerAnalytics = SkiaLayerAnalytics.Empty,
+    saveableId: String? = null,
 ) : JFrame(graphicsConfiguration) {
     /**
      * ComposeWindow is a window for building UI using Compose for Desktop.
@@ -65,7 +66,8 @@ class ComposeWindow @ExperimentalComposeUiApi constructor(
     private val composePanel = ComposeWindowPanel(
         window = this,
         isUndecorated = ::isUndecorated,
-        skiaLayerAnalytics = skiaLayerAnalytics
+        skiaLayerAnalytics = skiaLayerAnalytics,
+        saveableId = saveableId,
     )
     private val undecoratedWindowResizer = UndecoratedWindowResizer(this)
 

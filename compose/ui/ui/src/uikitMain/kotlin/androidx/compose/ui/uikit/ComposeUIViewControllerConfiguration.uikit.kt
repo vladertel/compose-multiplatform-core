@@ -35,6 +35,9 @@ class ComposeUIViewControllerConfiguration {
 
     @ExperimentalComposeApi
     var platformLayers: Boolean = true
+
+    @ExperimentalComposeApi
+    var saveableId: String? = null
 }
 
 /**

@@ -20,11 +20,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.input.pointer.BrowserCursor
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.native.ComposeLayer
+import androidx.compose.ui.platform.GlobalSaveableStateRegistry
 import androidx.compose.ui.platform.JSTextInputService
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.ViewConfiguration
@@ -80,6 +82,7 @@ private class ComposeWindow(
         input = jsTextInputService.input
     )
     private val systemThemeObserver = getSystemThemeObserver(window)
+    private val saveableStateRegistry = GlobalSaveableStateRegistry(canvasId)
 
     var canvas = document.getElementById(canvasId) as HTMLCanvasElement
         private set
@@ -96,6 +99,7 @@ private class ComposeWindow(
         layer.setContent {
             CompositionLocalProvider(
                 LocalSystemTheme provides systemThemeObserver.currentSystemTheme.value,
+                LocalSaveableStateRegistry provides saveableStateRegistry,
                 content = content
             )
         }
@@ -116,8 +120,9 @@ private class ComposeWindow(
         layer.layer.needRedraw()
     }
 
-    // TODO: need to call .dispose() on window close.
+    // TODO: need to call .dispose() on window close or removing element.
     fun dispose() {
+        saveableStateRegistry.save()
         layer.dispose()
         systemThemeObserver.dispose()
     }

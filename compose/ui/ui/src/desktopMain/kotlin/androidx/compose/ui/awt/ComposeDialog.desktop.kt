@@ -51,10 +51,11 @@ class ComposeDialog : JDialog {
         get() = composePanel.rootForTestListener
         set(value) { composePanel.rootForTestListener = value }
 
-    private fun createComposePanel() = ComposeWindowPanel(
+    private fun createComposePanel(saveableId: String? = null) = ComposeWindowPanel(
         window = this,
         isUndecorated = ::isUndecorated,
         skiaLayerAnalytics = skiaLayerAnalytics,
+        saveableId = saveableId,
     )
 
     constructor(
@@ -80,7 +81,8 @@ class ComposeDialog : JDialog {
         owner: Window?,
         modalityType: ModalityType = ModalityType.MODELESS,
         graphicsConfiguration: GraphicsConfiguration? = null,
-        skiaLayerAnalytics: SkiaLayerAnalytics = SkiaLayerAnalytics.Empty
+        skiaLayerAnalytics: SkiaLayerAnalytics = SkiaLayerAnalytics.Empty,
+        saveableId: String? = null,
     ) : super(owner, "", modalityType, graphicsConfiguration) {
         this.skiaLayerAnalytics = skiaLayerAnalytics
         composePanel = createComposePanel()
