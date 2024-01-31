@@ -58,7 +58,6 @@ import platform.Foundation.NSNumberFormatterCurrencyStyle
 val TextFieldCrashVisualTransformation = Screen.Example(
     "TextFieldCrashVisualTransformation"
 ) {
-    val vs = rememberStyleNumberVisualTransformation("USD")
     val focusRequester = remember { FocusRequester() }
 
     Column {
@@ -76,29 +75,10 @@ val TextFieldCrashVisualTransformation = Screen.Example(
     }
 }
 
-
-@Composable
-internal fun rememberStyleNumberVisualTransformation(
-    currencyCode: String,
-    decimalFormat: DecimalFormat = rememberCurrencyDecimalFormat(currencyCode = currencyCode),
-    transformText: StyleNumberVisualTransformation.StyleNumberVisualTransformationScope.(formattedText: String) -> AnnotatedString = {
-        AnnotatedString(it)
-    }
-): StyleNumberVisualTransformation {
-    return remember(decimalFormat) {
-        StyleNumberVisualTransformation(
-            decimalFormat = decimalFormat,
-            transformText = transformText
-        )
-    }
-}
-
-@Composable
-internal fun rememberCurrencyDecimalFormat(
-    currencyCode: String
-): DecimalFormat = remember(currencyCode) {
-    getDefaultLocaleDecimalFormatByCurrencyCode(currencyCode)
-}
+private val vs = StyleNumberVisualTransformation(
+    decimalFormat = getDefaultLocaleDecimalFormatByCurrencyCode("USD"),
+    transformText =  { AnnotatedString(it) },
+)
 
 @Stable
 internal class StyleNumberVisualTransformation(
