@@ -40,7 +40,6 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
-import androidx.camera.core.UseCase
 import androidx.camera.core.impl.utils.AspectRatioUtil.ASPECT_RATIO_16_9
 import androidx.camera.core.impl.utils.AspectRatioUtil.ASPECT_RATIO_3_4
 import androidx.camera.core.impl.utils.AspectRatioUtil.ASPECT_RATIO_4_3
@@ -1230,11 +1229,6 @@ class VideoRecordingTest(
         assumeExtraCroppingQuirk(implName)
     }
 
-    private fun isStreamSharingEnabled(useCase: UseCase) = !useCase.camera!!.hasTransform
-
-    private fun isSurfaceProcessingEnabled(videoCapture: VideoCapture<*>) =
-        videoCapture.node != null || isStreamSharingEnabled(videoCapture)
-
     private class ImageSavedCallback :
         ImageCapture.OnImageSavedCallback {
 
@@ -1297,8 +1291,8 @@ private class VideoCaptureMonitor : Consumer<VideoRecordEvent> {
         }!!.await(timeoutMillis, TimeUnit.MILLISECONDS)).isTrue()
     }
 
-    override fun accept(event: VideoRecordEvent?) {
-        when (event) {
+    override fun accept(value: VideoRecordEvent) {
+        when (value) {
             is VideoRecordEvent.Status -> {
                 synchronized(this) {
                     countDown?.countDown()

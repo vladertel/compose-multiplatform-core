@@ -61,6 +61,7 @@ androidXMultiplatform {
             dependsOn(jvmMain)
             dependencies {
                 implementation(libs.kotlinStdlib)
+                api("androidx.annotation:annotation-experimental:1.4.0")
             }
         }
 

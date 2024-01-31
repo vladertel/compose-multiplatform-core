@@ -450,7 +450,7 @@ class ControlFlowTransformTests(useFir: Boolean) : AbstractControlFlowTransformT
                     }
                 }
                 Text("Some more text")
-            } 
+            }
         """
     )
 
@@ -2115,7 +2115,6 @@ class ControlFlowTransformTests(useFir: Boolean) : AbstractControlFlowTransformT
             import androidx.compose.runtime.*
             import androidx.compose.foundation.layout.*
             import androidx.compose.foundation.text.KeyboardActions
-            import androidx.compose.material.*
 
             object Ui {}
 
@@ -2131,6 +2130,17 @@ class ControlFlowTransformTests(useFir: Boolean) : AbstractControlFlowTransformT
                     Text("${'$'}keyboardActions2")
                 }
             }
+        """.trimIndent(),
+        extra = """
+            import androidx.compose.runtime.Composable
+
+            @Composable
+            fun Text(
+                text: String,
+                softWrap: Boolean = true,
+                maxLines: Int = Int.MAX_VALUE,
+                minLines: Int = 1,
+            ) {}
         """.trimIndent()
     )
 
@@ -2424,6 +2434,46 @@ class ControlFlowTransformTests(useFir: Boolean) : AbstractControlFlowTransformT
                         return@run
                     }
                 }
+            }
+        """
+    )
+
+    @Test
+    fun testLambdaWithNonUnitResult() = verifyGoldenComposeIrTransform(
+        """
+            import androidx.compose.runtime.*
+
+            @Composable
+            fun Test() {
+                val factory = createFactory {
+                    10
+                }
+                factory()
+            }
+        """,
+        extra = """
+            import androidx.compose.runtime.*
+
+            fun createFactory(factory: @Composable () -> Int) = factory
+        """
+    )
+
+    @Test
+    fun testOverrideWithNonUnitResult() = verifyGoldenComposeIrTransform(
+        """
+            import androidx.compose.runtime.*
+
+            class SomeClassImpl: SomeClass() {
+                @Composable
+                override fun SomeFunction(): Int = 10
+            }
+        """,
+        """
+            import androidx.compose.runtime.*
+
+            abstract class SomeClass {
+                @Composable
+                abstract fun SomeFunction(): Int
             }
         """
     )

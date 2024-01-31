@@ -20,11 +20,33 @@
 package androidx.room.util
 
 import androidx.annotation.RestrictTo
+import androidx.room.RoomDatabase
 import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.execSQL
 import androidx.sqlite.use
 import kotlin.jvm.JvmMultifileClass
 import kotlin.jvm.JvmName
+
+/**
+ * Performs a single database read operation.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+expect suspend fun <R> performReadSuspending(
+    db: RoomDatabase,
+    sql: String,
+    block: (SQLiteStatement) -> R
+): R
+
+/**
+ * Performs a single database read transaction operation.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+expect suspend fun <R> performReadTransactionSuspending(
+    db: RoomDatabase,
+    sql: String,
+    block: (SQLiteStatement) -> R
+): R
 
 /**
  * Drops all FTS content sync triggers created by Room.

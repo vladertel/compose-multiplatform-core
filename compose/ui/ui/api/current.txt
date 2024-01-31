@@ -251,6 +251,20 @@ package androidx.compose.ui.autofill {
 
 }
 
+package androidx.compose.ui.contentcapture {
+
+  @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public sealed interface ContentCaptureManager {
+    field public static final androidx.compose.ui.contentcapture.ContentCaptureManager.Companion Companion;
+  }
+
+  public static final class ContentCaptureManager.Companion {
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public boolean isEnabled();
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public void setEnabled(boolean);
+    property @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public final boolean isEnabled;
+  }
+
+}
+
 package androidx.compose.ui.draganddrop {
 
   public final class DragAndDropEvent {
@@ -1745,11 +1759,8 @@ package androidx.compose.ui.input.pointer {
     method @Deprecated public static void consumeAllChanges(androidx.compose.ui.input.pointer.PointerInputChange);
     method @Deprecated public static void consumeDownChange(androidx.compose.ui.input.pointer.PointerInputChange);
     method @Deprecated public static void consumePositionChange(androidx.compose.ui.input.pointer.PointerInputChange);
-    method public static int indexOfFirstPressed(int);
-    method public static int indexOfLastPressed(int);
     method @Deprecated public static boolean isOutOfBounds(androidx.compose.ui.input.pointer.PointerInputChange, long size);
     method public static boolean isOutOfBounds(androidx.compose.ui.input.pointer.PointerInputChange, long size, long extendedTouchPadding);
-    method public static boolean isPressed(int, int buttonIndex);
     method public static long positionChange(androidx.compose.ui.input.pointer.PointerInputChange);
     method @Deprecated public static boolean positionChangeConsumed(androidx.compose.ui.input.pointer.PointerInputChange);
     method public static long positionChangeIgnoreConsumed(androidx.compose.ui.input.pointer.PointerInputChange);
@@ -1847,12 +1858,12 @@ package androidx.compose.ui.input.pointer {
     ctor @Deprecated public PointerInputChange(long id, long uptimeMillis, long position, boolean pressed, long previousUptimeMillis, long previousPosition, boolean previousPressed, androidx.compose.ui.input.pointer.ConsumedData consumed, optional int type);
     ctor public PointerInputChange(long id, long uptimeMillis, long position, boolean pressed, long previousUptimeMillis, long previousPosition, boolean previousPressed, boolean isInitiallyConsumed, optional int type, optional long scrollDelta);
     method public void consume();
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public androidx.compose.ui.input.pointer.PointerInputChange copy(optional long id, optional long currentTime, optional long currentPosition, optional boolean currentPressed, optional float pressure, optional long previousTime, optional long previousPosition, optional boolean previousPressed, optional int type, optional java.util.List<androidx.compose.ui.input.pointer.HistoricalChange> historical, optional long scrollDelta);
     method public androidx.compose.ui.input.pointer.PointerInputChange copy(optional long id, optional long currentTime, optional long currentPosition, optional boolean currentPressed, optional float pressure, optional long previousTime, optional long previousPosition, optional boolean previousPressed, optional int type, optional long scrollDelta);
     method @Deprecated public androidx.compose.ui.input.pointer.PointerInputChange copy(optional long id, optional long currentTime, optional long currentPosition, optional boolean currentPressed, optional long previousTime, optional long previousPosition, optional boolean previousPressed, optional androidx.compose.ui.input.pointer.ConsumedData consumed, optional int type);
     method @Deprecated public androidx.compose.ui.input.pointer.PointerInputChange copy(optional long id, optional long currentTime, optional long currentPosition, optional boolean currentPressed, optional long previousTime, optional long previousPosition, optional boolean previousPressed, androidx.compose.ui.input.pointer.ConsumedData consumed, optional int type, optional long scrollDelta);
     method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public androidx.compose.ui.input.pointer.PointerInputChange copy(optional long id, optional long currentTime, optional long currentPosition, optional boolean currentPressed, optional long previousTime, optional long previousPosition, optional boolean previousPressed, optional int type, java.util.List<androidx.compose.ui.input.pointer.HistoricalChange> historical, optional long scrollDelta);
     method public androidx.compose.ui.input.pointer.PointerInputChange copy(optional long id, optional long currentTime, optional long currentPosition, optional boolean currentPressed, optional long previousTime, optional long previousPosition, optional boolean previousPressed, optional int type, optional long scrollDelta);
-    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public androidx.compose.ui.input.pointer.PointerInputChange copy(optional long id, optional long currentTime, optional long currentPosition, optional long originalEventPosition, optional boolean currentPressed, optional float pressure, optional long previousTime, optional long previousPosition, optional boolean previousPressed, optional int type, optional java.util.List<androidx.compose.ui.input.pointer.HistoricalChange> historical, optional long scrollDelta);
     method @Deprecated public androidx.compose.ui.input.pointer.ConsumedData getConsumed();
     method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public java.util.List<androidx.compose.ui.input.pointer.HistoricalChange> getHistorical();
     method public long getId();
@@ -2107,6 +2118,10 @@ package androidx.compose.ui.layout {
     ctor public HorizontalAlignmentLine(kotlin.jvm.functions.Function2<? super java.lang.Integer,? super java.lang.Integer,java.lang.Integer> merger);
   }
 
+  public final class HorizontalRuler extends androidx.compose.ui.layout.Ruler {
+    ctor public HorizontalRuler();
+  }
+
   @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public sealed interface IntermediateMeasureScope extends androidx.compose.ui.layout.LookaheadScope kotlinx.coroutines.CoroutineScope androidx.compose.ui.layout.MeasureScope {
     method public long getLookaheadSize();
     property public abstract long lookaheadSize;
@@ -2243,15 +2258,21 @@ package androidx.compose.ui.layout {
   public interface MeasureResult {
     method public java.util.Map<androidx.compose.ui.layout.AlignmentLine,java.lang.Integer> getAlignmentLines();
     method public int getHeight();
+    method public default kotlin.jvm.functions.Function1<androidx.compose.ui.layout.RulerScope,kotlin.Unit>? getRulers();
     method public int getWidth();
     method public void placeChildren();
     property public abstract java.util.Map<androidx.compose.ui.layout.AlignmentLine,java.lang.Integer> alignmentLines;
     property public abstract int height;
+    property public default kotlin.jvm.functions.Function1<androidx.compose.ui.layout.RulerScope,kotlin.Unit>? rulers;
     property public abstract int width;
   }
 
-  @kotlin.jvm.JvmDefaultWithCompatibility public interface MeasureScope extends androidx.compose.ui.layout.IntrinsicMeasureScope {
+  @androidx.compose.ui.layout.MeasureScopeMarker @kotlin.jvm.JvmDefaultWithCompatibility public interface MeasureScope extends androidx.compose.ui.layout.IntrinsicMeasureScope {
     method public default androidx.compose.ui.layout.MeasureResult layout(int width, int height, optional java.util.Map<androidx.compose.ui.layout.AlignmentLine,java.lang.Integer> alignmentLines, kotlin.jvm.functions.Function1<? super androidx.compose.ui.layout.Placeable.PlacementScope,kotlin.Unit> placementBlock);
+    method public default androidx.compose.ui.layout.MeasureResult layout(int width, int height, optional java.util.Map<androidx.compose.ui.layout.AlignmentLine,java.lang.Integer> alignmentLines, optional kotlin.jvm.functions.Function1<? super androidx.compose.ui.layout.RulerScope,kotlin.Unit>? rulers, kotlin.jvm.functions.Function1<? super androidx.compose.ui.layout.Placeable.PlacementScope,kotlin.Unit> placementBlock);
+  }
+
+  @kotlin.DslMarker public @interface MeasureScopeMarker {
   }
 
   public interface Measured {
@@ -2346,6 +2367,7 @@ package androidx.compose.ui.layout {
 
   @androidx.compose.ui.layout.PlacementScopeMarker public abstract static class Placeable.PlacementScope {
     ctor public Placeable.PlacementScope();
+    method public float current(androidx.compose.ui.layout.Ruler, float defaultValue);
     method public androidx.compose.ui.layout.LayoutCoordinates? getCoordinates();
     method protected abstract androidx.compose.ui.unit.LayoutDirection getParentLayoutDirection();
     method protected abstract int getParentWidth();
@@ -2371,6 +2393,16 @@ package androidx.compose.ui.layout {
 
   @kotlin.jvm.JvmDefaultWithCompatibility public interface RemeasurementModifier extends androidx.compose.ui.Modifier.Element {
     method public void onRemeasurementAvailable(androidx.compose.ui.layout.Remeasurement remeasurement);
+  }
+
+  public abstract sealed class Ruler {
+  }
+
+  @androidx.compose.ui.layout.MeasureScopeMarker public interface RulerScope extends androidx.compose.ui.unit.Density {
+    method public androidx.compose.ui.layout.LayoutCoordinates getCoordinates();
+    method public infix void provides(androidx.compose.ui.layout.Ruler, float value);
+    method public infix void providesRelative(androidx.compose.ui.layout.VerticalRuler, float value);
+    property public abstract androidx.compose.ui.layout.LayoutCoordinates coordinates;
   }
 
   @androidx.compose.runtime.Immutable @kotlin.jvm.JvmInline public final value class ScaleFactor {
@@ -2443,6 +2475,10 @@ package androidx.compose.ui.layout {
 
   public final class VerticalAlignmentLine extends androidx.compose.ui.layout.AlignmentLine {
     ctor public VerticalAlignmentLine(kotlin.jvm.functions.Function2<? super java.lang.Integer,? super java.lang.Integer,java.lang.Integer> merger);
+  }
+
+  public final class VerticalRuler extends androidx.compose.ui.layout.Ruler {
+    ctor public VerticalRuler();
   }
 
 }
@@ -2697,10 +2733,15 @@ package androidx.compose.ui.platform {
     method public long calculateRecommendedTimeoutMillis(long originalTimeoutMillis, optional boolean containsIcons, optional boolean containsText, optional boolean containsControls);
   }
 
+  public final class AndroidClipboardManager_androidKt {
+    method public static androidx.compose.ui.platform.ClipEntry toClipEntry(android.content.ClipData);
+    method public static androidx.compose.ui.platform.ClipMetadata toClipMetadata(android.content.ClipDescription);
+  }
+
   public final class AndroidComposeViewAccessibilityDelegateCompat_androidKt {
-    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static boolean getDisableContentCapture();
-    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static void setDisableContentCapture(boolean);
-    property @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static final boolean DisableContentCapture;
+    method @Deprecated @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static boolean getDisableContentCapture();
+    method @Deprecated @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static void setDisableContentCapture(boolean);
+    property @Deprecated @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static final boolean DisableContentCapture;
   }
 
   public final class AndroidCompositionLocals_androidKt {
@@ -2757,10 +2798,32 @@ package androidx.compose.ui.platform {
     property public float touchSlop;
   }
 
+  public final class ClipEntry {
+    ctor public ClipEntry(android.content.ClipData clipData);
+    method public android.content.ClipData getClipData();
+    property public final android.content.ClipData clipData;
+  }
+
+  public final class ClipMetadata {
+    ctor public ClipMetadata(android.content.ClipDescription clipDescription);
+    method public android.content.ClipDescription getClipDescription();
+    property public final android.content.ClipDescription clipDescription;
+  }
+
+  public final class ClipboardExtensions_androidKt {
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static android.net.Uri? firstUriOrNull(androidx.compose.ui.platform.ClipEntry);
+  }
+
   public interface ClipboardManager {
+    method public default androidx.compose.ui.platform.ClipEntry? getClip();
+    method public default androidx.compose.ui.platform.ClipMetadata? getClipMetadata();
+    method public default android.content.ClipboardManager getNativeClipboard();
     method public androidx.compose.ui.text.AnnotatedString? getText();
+    method public default boolean hasClip();
     method public default boolean hasText();
+    method public default void setClip(androidx.compose.ui.platform.ClipEntry clipEntry);
     method public void setText(androidx.compose.ui.text.AnnotatedString annotatedString);
+    property public default android.content.ClipboardManager nativeClipboard;
   }
 
   public final class ComposeView extends androidx.compose.ui.platform.AbstractComposeView {
@@ -3248,6 +3311,7 @@ package androidx.compose.ui.semantics {
     method public <T> void set(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key, T value);
     method public void setClearingSemantics(boolean);
     method public void setMergingSemanticsOfDescendants(boolean);
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public <T> void unset(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key);
     property public final boolean isClearingSemantics;
     property public final boolean isMergingSemanticsOfDescendants;
   }
@@ -3330,6 +3394,7 @@ package androidx.compose.ui.semantics {
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getInvisibleToUser();
     method @Deprecated public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> getIsContainer();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getIsDialog();
+    method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getIsOpaque();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> getIsPopup();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> getIsShowingTextSubstitution();
     method public androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> getIsTraversalGroup();
@@ -3363,6 +3428,7 @@ package androidx.compose.ui.semantics {
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> InvisibleToUser;
     property @Deprecated public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> IsContainer;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> IsDialog;
+    property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> IsOpaque;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<kotlin.Unit> IsPopup;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> IsShowingTextSubstitution;
     property public final androidx.compose.ui.semantics.SemanticsPropertyKey<java.lang.Boolean> IsTraversalGroup;
@@ -3428,6 +3494,7 @@ package androidx.compose.ui.semantics {
     method public static void insertTextAtCursor(androidx.compose.ui.semantics.SemanticsPropertyReceiver, optional String? label, kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.AnnotatedString,java.lang.Boolean>? action);
     method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public static void invisibleToUser(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method @Deprecated public static boolean isContainer(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
+    method public static void isOpaque(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method public static boolean isShowingTextSubstitution(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method public static boolean isTraversalGroup(androidx.compose.ui.semantics.SemanticsPropertyReceiver);
     method public static void onClick(androidx.compose.ui.semantics.SemanticsPropertyReceiver, optional String? label, kotlin.jvm.functions.Function0<java.lang.Boolean>? action);
@@ -3491,6 +3558,7 @@ package androidx.compose.ui.semantics {
 
   public interface SemanticsPropertyReceiver {
     method public operator <T> void set(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key, T value);
+    method @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public <T> void unset(androidx.compose.ui.semantics.SemanticsPropertyKey<T> key);
   }
 
 }
@@ -3543,8 +3611,9 @@ package androidx.compose.ui.window {
   }
 
   @androidx.compose.runtime.Immutable public final class DialogProperties {
-    ctor public DialogProperties(optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional androidx.compose.ui.window.SecureFlagPolicy securePolicy);
+    ctor @Deprecated public DialogProperties(optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional androidx.compose.ui.window.SecureFlagPolicy securePolicy);
     ctor public DialogProperties(optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional androidx.compose.ui.window.SecureFlagPolicy securePolicy, optional boolean usePlatformDefaultWidth, optional boolean decorFitsSystemWindows);
+    ctor public DialogProperties(optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional boolean usePlatformDefaultWidth);
     method public boolean getDecorFitsSystemWindows();
     method public boolean getDismissOnBackPress();
     method public boolean getDismissOnClickOutside();
@@ -3568,7 +3637,8 @@ package androidx.compose.ui.window {
 
   @androidx.compose.runtime.Immutable public final class PopupProperties {
     ctor public PopupProperties(optional boolean focusable, optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional androidx.compose.ui.window.SecureFlagPolicy securePolicy, optional boolean excludeFromSystemGesture, optional boolean clippingEnabled);
-    ctor @SuppressCompatibility @androidx.compose.ui.ExperimentalComposeUiApi public PopupProperties(optional boolean focusable, optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional androidx.compose.ui.window.SecureFlagPolicy securePolicy, optional boolean excludeFromSystemGesture, optional boolean clippingEnabled, optional boolean usePlatformDefaultWidth);
+    ctor public PopupProperties(optional boolean focusable, optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional androidx.compose.ui.window.SecureFlagPolicy securePolicy, optional boolean excludeFromSystemGesture, optional boolean clippingEnabled, optional boolean usePlatformDefaultWidth);
+    ctor public PopupProperties(optional boolean focusable, optional boolean dismissOnBackPress, optional boolean dismissOnClickOutside, optional boolean clippingEnabled);
     method public boolean getClippingEnabled();
     method public boolean getDismissOnBackPress();
     method public boolean getDismissOnClickOutside();

@@ -18,6 +18,7 @@ package androidx.compose.animation.core
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathIterator
 import androidx.compose.ui.graphics.PathSegment
 
 /**
@@ -67,8 +68,16 @@ class PathEasing(private val path: Path) : Easing {
             // The interval tree allows us to quickly query for the correct segment inside
             // the transform() function.
             val segmentIntervals = IntervalTree<PathSegment>().apply {
-                for (segment in path) {
-                    require(segment.type != PathSegment.Type.Close) {
+                // A path easing curve is defined in the domain 0..1, use an error
+                // appropriate for this domain (the default is 0.25). Conic segments
+                // should be unlikely in path easing curves, but just in case...
+                val iterator = path.iterator(
+                    PathIterator.ConicEvaluation.AsQuadratics,
+                    2e-4f
+                )
+                while (iterator.hasNext()) {
+                    val segment = iterator.next()
+                    requirePrecondition(segment.type != PathSegment.Type.Close) {
                         "The path cannot contain a close() command."
                     }
                     if (segment.type != PathSegment.Type.Move &&
@@ -80,24 +89,20 @@ class PathEasing(private val path: Path) : Easing {
                 }
             }
 
-            require(0.0f in segmentIntervals) {
-                "The easing path must start at 0.0f."
-            }
-
-            require(1.0f in segmentIntervals) {
-                "The easing path must end at 1.0f."
+            requirePrecondition(0.0f in segmentIntervals && 1.0f in segmentIntervals) {
+                "The easing path must start at 0.0f and end at 1.0f."
             }
 
             intervals = segmentIntervals
         }
 
         val result = intervals.findFirstOverlap(fraction)
-        val segment = checkNotNull(result.data) {
+        val segment = checkPreconditionNotNull(result.data) {
             "The easing path is invalid. Make sure it is continuous on the x axis."
         }
 
         val t = findFirstRoot(segment, fraction)
-        check(!t.isNaN()) {
+        checkPrecondition(!t.isNaN()) {
             "The easing path is invalid. Make sure it does not contain NaN/Infinity values."
         }
 

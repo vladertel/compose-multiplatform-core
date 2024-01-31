@@ -10,6 +10,7 @@ package androidx.compose.ui.text {
     ctor public AnnotatedString(String text, optional java.util.List<androidx.compose.ui.text.AnnotatedString.Range<androidx.compose.ui.text.SpanStyle>> spanStyles, optional java.util.List<androidx.compose.ui.text.AnnotatedString.Range<androidx.compose.ui.text.ParagraphStyle>> paragraphStyles);
     method public operator char get(int index);
     method public int getLength();
+    method public java.util.List<androidx.compose.ui.text.AnnotatedString.Range<androidx.compose.ui.text.LinkAnnotation>> getLinkAnnotations(int start, int end);
     method public java.util.List<androidx.compose.ui.text.AnnotatedString.Range<androidx.compose.ui.text.ParagraphStyle>> getParagraphStyles();
     method public java.util.List<androidx.compose.ui.text.AnnotatedString.Range<androidx.compose.ui.text.SpanStyle>> getSpanStyles();
     method public java.util.List<androidx.compose.ui.text.AnnotatedString.Range<java.lang.String>> getStringAnnotations(int start, int end);
@@ -17,6 +18,7 @@ package androidx.compose.ui.text {
     method public String getText();
     method public java.util.List<androidx.compose.ui.text.AnnotatedString.Range<androidx.compose.ui.text.TtsAnnotation>> getTtsAnnotations(int start, int end);
     method @SuppressCompatibility @androidx.compose.ui.text.ExperimentalTextApi public java.util.List<androidx.compose.ui.text.AnnotatedString.Range<androidx.compose.ui.text.UrlAnnotation>> getUrlAnnotations(int start, int end);
+    method public boolean hasLinkAnnotations(int start, int end);
     method public boolean hasStringAnnotations(String tag, int start, int end);
     method @androidx.compose.runtime.Stable public operator androidx.compose.ui.text.AnnotatedString plus(androidx.compose.ui.text.AnnotatedString other);
     method public androidx.compose.ui.text.AnnotatedString subSequence(int startIndex, int endIndex);
@@ -32,6 +34,8 @@ package androidx.compose.ui.text {
     ctor public AnnotatedString.Builder(androidx.compose.ui.text.AnnotatedString text);
     ctor public AnnotatedString.Builder(optional int capacity);
     ctor public AnnotatedString.Builder(String text);
+    method public void addLink(androidx.compose.ui.text.LinkAnnotation.Clickable clickable, int start, int end);
+    method public void addLink(androidx.compose.ui.text.LinkAnnotation.Url url, int start, int end);
     method public void addStringAnnotation(String tag, String annotation, int start, int end);
     method public void addStyle(androidx.compose.ui.text.ParagraphStyle style, int start, int end);
     method public void addStyle(androidx.compose.ui.text.SpanStyle style, int start, int end);
@@ -47,6 +51,7 @@ package androidx.compose.ui.text {
     method public int getLength();
     method public void pop();
     method public void pop(int index);
+    method public int pushLink(androidx.compose.ui.text.LinkAnnotation link);
     method public int pushStringAnnotation(String tag, String annotation);
     method public int pushStyle(androidx.compose.ui.text.ParagraphStyle style);
     method public int pushStyle(androidx.compose.ui.text.SpanStyle style);
@@ -87,6 +92,7 @@ package androidx.compose.ui.text {
     method public static androidx.compose.ui.text.AnnotatedString decapitalize(androidx.compose.ui.text.AnnotatedString, optional androidx.compose.ui.text.intl.LocaleList localeList);
     method public static androidx.compose.ui.text.AnnotatedString toLowerCase(androidx.compose.ui.text.AnnotatedString, optional androidx.compose.ui.text.intl.LocaleList localeList);
     method public static androidx.compose.ui.text.AnnotatedString toUpperCase(androidx.compose.ui.text.AnnotatedString, optional androidx.compose.ui.text.intl.LocaleList localeList);
+    method public static inline <R> R withAnnotation(androidx.compose.ui.text.AnnotatedString.Builder, androidx.compose.ui.text.LinkAnnotation link, kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.AnnotatedString.Builder,? extends R> block);
     method @SuppressCompatibility @androidx.compose.ui.text.ExperimentalTextApi public static inline <R> R withAnnotation(androidx.compose.ui.text.AnnotatedString.Builder, androidx.compose.ui.text.TtsAnnotation ttsAnnotation, kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.AnnotatedString.Builder,? extends R> block);
     method @SuppressCompatibility @androidx.compose.ui.text.ExperimentalTextApi public static inline <R> R withAnnotation(androidx.compose.ui.text.AnnotatedString.Builder, androidx.compose.ui.text.UrlAnnotation urlAnnotation, kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.AnnotatedString.Builder,? extends R> block);
     method @SuppressCompatibility @androidx.compose.ui.text.ExperimentalTextApi public static inline <R> R withAnnotation(androidx.compose.ui.text.AnnotatedString.Builder, String tag, String annotation, kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.AnnotatedString.Builder,? extends R> block);
@@ -99,8 +105,10 @@ package androidx.compose.ui.text {
   }
 
   public static final class EmojiSupportMatch.Companion {
+    method public int getAll();
     method public int getDefault();
     method public int getNone();
+    property public final int All;
     property public final int Default;
     property public final int None;
   }
@@ -109,6 +117,21 @@ package androidx.compose.ui.text {
   }
 
   @SuppressCompatibility @kotlin.RequiresOptIn(level=kotlin.RequiresOptIn.Level.ERROR, message="This is internal API that may change frequently and without warning.") @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) @kotlin.annotation.Target(allowedTargets={kotlin.annotation.AnnotationTarget.CLASS, kotlin.annotation.AnnotationTarget.FUNCTION, kotlin.annotation.AnnotationTarget.PROPERTY}) public @interface InternalTextApi {
+  }
+
+  public abstract class LinkAnnotation {
+  }
+
+  public static final class LinkAnnotation.Clickable extends androidx.compose.ui.text.LinkAnnotation {
+    ctor public LinkAnnotation.Clickable(String tag);
+    method public String getTag();
+    property public final String tag;
+  }
+
+  public static final class LinkAnnotation.Url extends androidx.compose.ui.text.LinkAnnotation {
+    ctor public LinkAnnotation.Url(String url);
+    method public String getUrl();
+    property public final String url;
   }
 
   public final class MultiParagraph {
@@ -255,17 +278,17 @@ package androidx.compose.ui.text {
     method @Deprecated public androidx.compose.ui.text.ParagraphStyle copy(optional androidx.compose.ui.text.style.TextAlign? textAlign, optional androidx.compose.ui.text.style.TextDirection? textDirection, optional long lineHeight, optional androidx.compose.ui.text.style.TextIndent? textIndent, optional androidx.compose.ui.text.PlatformParagraphStyle? platformStyle, optional androidx.compose.ui.text.style.LineHeightStyle? lineHeightStyle, optional androidx.compose.ui.text.style.LineBreak? lineBreak, optional androidx.compose.ui.text.style.Hyphens? hyphens);
     method @Deprecated public androidx.compose.ui.text.ParagraphStyle copy(optional androidx.compose.ui.text.style.TextAlign? textAlign, optional androidx.compose.ui.text.style.TextDirection? textDirection, optional long lineHeight, optional androidx.compose.ui.text.style.TextIndent? textIndent, optional androidx.compose.ui.text.PlatformParagraphStyle? platformStyle, optional androidx.compose.ui.text.style.LineHeightStyle? lineHeightStyle, optional androidx.compose.ui.text.style.LineBreak? lineBreak, optional androidx.compose.ui.text.style.Hyphens? hyphens, optional androidx.compose.ui.text.style.TextMotion? textMotion);
     method public androidx.compose.ui.text.ParagraphStyle copy(optional int textAlign, optional int textDirection, optional long lineHeight, optional androidx.compose.ui.text.style.TextIndent? textIndent, optional androidx.compose.ui.text.PlatformParagraphStyle? platformStyle, optional androidx.compose.ui.text.style.LineHeightStyle? lineHeightStyle, optional int lineBreak, optional int hyphens, optional androidx.compose.ui.text.style.TextMotion? textMotion);
-    method @Deprecated public androidx.compose.ui.text.style.Hyphens? getHyphens();
     method public int getHyphens();
-    method @Deprecated public androidx.compose.ui.text.style.LineBreak? getLineBreak();
+    method @Deprecated public androidx.compose.ui.text.style.Hyphens? getHyphens-EaSxIns();
     method public int getLineBreak();
+    method @Deprecated public androidx.compose.ui.text.style.LineBreak? getLineBreak-LgCVezo();
     method public long getLineHeight();
     method public androidx.compose.ui.text.style.LineHeightStyle? getLineHeightStyle();
     method public androidx.compose.ui.text.PlatformParagraphStyle? getPlatformStyle();
-    method @Deprecated public androidx.compose.ui.text.style.TextAlign? getTextAlign();
     method public int getTextAlign();
-    method @Deprecated public androidx.compose.ui.text.style.TextDirection? getTextDirection();
+    method @Deprecated public androidx.compose.ui.text.style.TextAlign? getTextAlign-buA522U();
     method public int getTextDirection();
+    method @Deprecated public androidx.compose.ui.text.style.TextDirection? getTextDirection-mmuk1to();
     method public androidx.compose.ui.text.style.TextIndent? getTextIndent();
     method public androidx.compose.ui.text.style.TextMotion? getTextMotion();
     method @androidx.compose.runtime.Stable public androidx.compose.ui.text.ParagraphStyle merge(optional androidx.compose.ui.text.ParagraphStyle? other);
@@ -572,20 +595,20 @@ package androidx.compose.ui.text {
     method public androidx.compose.ui.text.font.FontSynthesis? getFontSynthesis();
     method public androidx.compose.ui.text.font.FontWeight? getFontWeight();
     method public int getHyphens();
-    method @Deprecated public androidx.compose.ui.text.style.Hyphens? getHyphens();
+    method @Deprecated public androidx.compose.ui.text.style.Hyphens? getHyphens-EaSxIns();
     method public long getLetterSpacing();
     method public int getLineBreak();
-    method @Deprecated public androidx.compose.ui.text.style.LineBreak? getLineBreak();
+    method @Deprecated public androidx.compose.ui.text.style.LineBreak? getLineBreak-LgCVezo();
     method public long getLineHeight();
     method public androidx.compose.ui.text.style.LineHeightStyle? getLineHeightStyle();
     method public androidx.compose.ui.text.intl.LocaleList? getLocaleList();
     method public androidx.compose.ui.text.PlatformTextStyle? getPlatformStyle();
     method public androidx.compose.ui.graphics.Shadow? getShadow();
     method public int getTextAlign();
-    method @Deprecated public androidx.compose.ui.text.style.TextAlign? getTextAlign();
+    method @Deprecated public androidx.compose.ui.text.style.TextAlign? getTextAlign-buA522U();
     method public androidx.compose.ui.text.style.TextDecoration? getTextDecoration();
     method public int getTextDirection();
-    method @Deprecated public androidx.compose.ui.text.style.TextDirection? getTextDirection();
+    method @Deprecated public androidx.compose.ui.text.style.TextDirection? getTextDirection-mmuk1to();
     method public androidx.compose.ui.text.style.TextGeometricTransform? getTextGeometricTransform();
     method public androidx.compose.ui.text.style.TextIndent? getTextIndent();
     method public androidx.compose.ui.text.style.TextMotion? getTextMotion();
@@ -1293,15 +1316,6 @@ package androidx.compose.ui.text.intl {
   public static final class LocaleList.Companion {
     method public androidx.compose.ui.text.intl.LocaleList getCurrent();
     property public final androidx.compose.ui.text.intl.LocaleList current;
-  }
-
-}
-
-package androidx.compose.ui.text.platform {
-
-  @SuppressCompatibility @androidx.compose.ui.text.InternalTextApi public final class URLSpanCache {
-    ctor public URLSpanCache();
-    method public android.text.style.URLSpan toURLSpan(androidx.compose.ui.text.UrlAnnotation urlAnnotation);
   }
 
 }

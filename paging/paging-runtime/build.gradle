@@ -53,6 +53,7 @@ dependencies {
     androidTestImplementation(project(":internal-testutils-common"))
     androidTestImplementation(project(":internal-testutils-ktx"))
     androidTestImplementation(project(":internal-testutils-paging"))
+    androidTestImplementation(project(":paging:paging-testing"))
     androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-runtime-testing"))
     androidTestImplementation(libs.testCore)
     androidTestImplementation(libs.testExtJunit)
@@ -63,8 +64,6 @@ dependencies {
     androidTestImplementation(libs.kotlinCoroutinesTest)
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.multidex)
-
-    samples(project(":paging:paging-samples"))
 }
 
 androidx {
@@ -74,4 +73,5 @@ androidx {
     description = "Android Paging-Runtime"
     legacyDisableKotlinStrictApiMode = true
     metalavaK2UastEnabled = true
+    samples(project(":paging:paging-samples"))
 }

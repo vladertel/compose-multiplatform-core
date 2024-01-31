@@ -20,11 +20,14 @@ package androidx.camera.camera2.pipe.integration.impl
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.params.SessionConfiguration.SESSION_HIGH_SPEED
+import android.hardware.camera2.params.SessionConfiguration.SESSION_REGULAR
 import android.media.MediaCodec
 import android.os.Build
 import androidx.annotation.GuardedBy
 import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraGraph
+import androidx.camera.camera2.pipe.CameraGraph.OperatingMode
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraPipe
 import androidx.camera.camera2.pipe.CameraStream
@@ -56,6 +59,7 @@ import androidx.camera.core.impl.CameraMode
 import androidx.camera.core.impl.DeferrableSurface
 import androidx.camera.core.impl.PreviewConfig
 import androidx.camera.core.impl.SessionConfig
+import androidx.camera.core.impl.SessionConfig.OutputConfig.SURFACE_GROUP_ID_NONE
 import androidx.camera.core.impl.SessionConfig.ValidatingBuilder
 import androidx.camera.core.impl.SessionProcessor
 import androidx.camera.core.impl.SessionProcessorSurface
@@ -160,7 +164,7 @@ class UseCaseManager @Inject constructor(
         SupportedSurfaceCombination(
             context,
             cameraProperties.metadata,
-            EncoderProfilesProviderAdapter(cameraConfig.cameraId.value)
+            EncoderProfilesProviderAdapter(cameraConfig.cameraId.value, cameraQuirks.quirks)
         )
     }
 
@@ -614,12 +618,29 @@ class UseCaseManager @Inject constructor(
             defaultParameters: Map<*, Any?> = emptyMap<Any, Any?>(),
         ): CameraGraph.Config {
             var containsVideo = false
-            // TODO: b/314207980 - Translate [SessionConfig.getSessionType], including highspeed
-            //     sessions and custom session types.
-            // TODO: b/314412743 - Translate [SessionConfig.OutputConfig] and handle stream sharing.
+            var operatingMode = OperatingMode.NORMAL
+            val streamGroupMap = mutableMapOf<Int, MutableList<CameraStream.Config>>()
             sessionConfigAdapter.getValidSessionConfigOrNull()?.let { sessionConfig ->
-                sessionConfig.surfaces.forEach { deferrableSurface ->
-                    val outputConfig = CameraStream.Config.create(
+                operatingMode = when (sessionConfig.sessionType) {
+                    SESSION_REGULAR -> OperatingMode.NORMAL
+                    SESSION_HIGH_SPEED -> OperatingMode.HIGH_SPEED
+                    else -> OperatingMode.custom(sessionConfig.sessionType)
+                }
+
+                val physicalCameraIdForAllStreams =
+                    sessionConfig.toCamera2ImplConfig().getPhysicalCameraId(null)
+                for (outputConfig in sessionConfig.outputConfigs) {
+                    val deferrableSurface = outputConfig.surface
+                    val physicalCameraId =
+                        physicalCameraIdForAllStreams ?: outputConfig.physicalCameraId
+                    val outputStreamConfig = OutputStream.Config.create(
+                        size = deferrableSurface.prescribedSize,
+                        format = StreamFormat(deferrableSurface.prescribedStreamFormat),
+                        camera = if (physicalCameraId == null) {
+                            null
+                        } else {
+                            CameraId.fromCamera2Id(physicalCameraId)
+                        },
                         streamUseCase = getStreamUseCase(
                             deferrableSurface,
                             sessionConfigAdapter.surfaceToStreamUseCaseMap
@@ -628,22 +649,23 @@ class UseCaseManager @Inject constructor(
                             deferrableSurface,
                             sessionConfigAdapter.surfaceToStreamUseHintMap
                         ),
-                        size = deferrableSurface.prescribedSize,
-                        format = StreamFormat(deferrableSurface.prescribedStreamFormat),
-                        camera = CameraId(
-                            sessionConfig.toCamera2ImplConfig().getPhysicalCameraId(
-                                cameraConfig.cameraId.value
-                            )!!
-                        )
                     )
-                    streamConfigMap[outputConfig] = deferrableSurface
-                    Log.debug {
-                        "Prepare config for: $deferrableSurface (" +
-                            "${deferrableSurface.prescribedSize}," +
-                            " ${deferrableSurface.prescribedStreamFormat})"
-                    }
-                    if (deferrableSurface.containerClass == MediaCodec::class.java) {
-                        containsVideo = true
+                    val surfaces = outputConfig.sharedSurfaces + deferrableSurface
+                    for (surface in surfaces) {
+                        val stream = CameraStream.Config.create(outputStreamConfig)
+                        streamConfigMap[stream] = surface
+                        if (outputConfig.surfaceGroupId != SURFACE_GROUP_ID_NONE) {
+                            val streamList = streamGroupMap[outputConfig.surfaceGroupId]
+                            if (streamList == null) {
+                                streamGroupMap[outputConfig.surfaceGroupId] =
+                                    mutableListOf(stream)
+                            } else {
+                                streamList.add(stream)
+                            }
+                        }
+                        if (surface.containerClass == MediaCodec::class.java) {
+                            containsVideo = true
+                        }
                     }
                 }
             }
@@ -699,6 +721,8 @@ class UseCaseManager @Inject constructor(
             return CameraGraph.Config(
                 camera = cameraConfig.cameraId,
                 streams = streamConfigMap.keys.toList(),
+                exclusiveStreamGroups = streamGroupMap.values.toList(),
+                sessionMode = operatingMode,
                 defaultListeners = listOf(callbackMap, requestListener),
                 defaultParameters = defaultParameters + mapOf(
                     CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE to videoStabilizationMode

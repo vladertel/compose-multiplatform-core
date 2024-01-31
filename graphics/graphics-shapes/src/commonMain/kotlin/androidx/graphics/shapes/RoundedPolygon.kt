@@ -38,10 +38,25 @@ class RoundedPolygon internal constructor(
      * A flattened version of the [Feature]s, as a List<Cubic>.
      */
     val cubics = buildList {
-        // Equivalent to `features.flatMap { it.cubics }` but without Iterator allocation.
+        // The first/last mechanism here ensures that the final anchor point in the shape
+        // exactly matches the first anchor point. There can be rendering artifacts introduced
+        // by those points being slightly off, even by much less than a pixel
+        var firstCubic: Cubic? = null
+        var lastCubic: Cubic? = null
         for (i in features.indices) {
-            addAll(features[i].cubics)
+            val featureCubics = features[i].cubics
+            for (j in featureCubics.indices) {
+                // Skip zero-length curves; they add nothing and can trigger rendering artifacts
+                if (!featureCubics[j].zeroLength()) {
+                    if (lastCubic != null) add(lastCubic)
+                    lastCubic = featureCubics[j]
+                    if (firstCubic == null) firstCubic = featureCubics[j]
+                }
+            }
         }
+        if (lastCubic != null && firstCubic != null) add(Cubic(
+            lastCubic.anchor0X, lastCubic.anchor0Y, lastCubic.control0X, lastCubic.control0Y,
+            lastCubic.control1X, lastCubic.control1Y, firstCubic.anchor0X, firstCubic.anchor0Y))
     }
 
     init {
@@ -109,34 +124,64 @@ class RoundedPolygon internal constructor(
         " || Center = ($centerX, $centerY)]"
 
     /**
-     * Calculates estimated bounds of the object, using the min/max bounding box of
-     * all points in the cubics that make up the shape.
-     * This is a library-internal API, prefer the appropriate wrapper in your platform.
+     * Like [calculateBounds], this function calculates the axis-aligned bounds of the
+     * object and returns that rectangle. But this function determines the max dimension of
+     * the shape (by calculating the distance from its center to the start and midpoint of
+     * each curve) and returns a square which can be used to hold the object in any rotation.
+     * This function can be used, for example, to calculate the max size of a UI element meant
+     * to hold this shape in any rotation.
+     * @param bounds a buffer to hold the results. If not supplied, a temporary buffer will be
+     * created.
+     * @return The axis-aligned max bounding box for this object, where the rectangles left,
+     * top, right, and bottom values will be stored in entries 0, 1, 2, and 3, in that order.
      */
-    fun calculateBounds(bounds: FloatArray = FloatArray(4)): FloatArray {
+    fun calculateMaxBounds(bounds: FloatArray = FloatArray(4)): FloatArray {
+        require(bounds.size >= 4) { "Required bounds size of 4" }
+        var maxDistSquared = 0f
+        for (i in cubics.indices) {
+            val cubic = cubics[i]
+            val anchorDistance = distanceSquared(cubic.anchor0X - centerX,
+                cubic.anchor0Y - centerY)
+            val middlePoint = cubic.pointOnCurve(.5f)
+            val middleDistance = distanceSquared(middlePoint.x - centerX,
+                middlePoint.y - centerY)
+            maxDistSquared = max(maxDistSquared, max(anchorDistance, middleDistance))
+        }
+        val distance = sqrt(maxDistSquared)
+        bounds[0] = centerX - distance
+        bounds[1] = centerY - distance
+        bounds[2] = centerX + distance
+        bounds[3] = centerY + distance
+        return bounds
+    }
+
+    /**
+     * Calculates the axis-aligned bounds of the object.
+     * @param approximate when true, uses a faster calculation to create the bounding
+     * box based on the min/max values of all anchor and control points that make up the shape.
+     * Default value is true.
+     * @param bounds a buffer to hold the results. If not supplied, a temporary buffer will be
+     * created.
+     * @return The axis-aligned bounding box for this object, where the rectangles left,
+     * top, right, and bottom values will be stored in entries 0, 1, 2, and 3, in that order.
+     */
+    @JvmOverloads
+    fun calculateBounds(
+        bounds: FloatArray = FloatArray(4),
+        approximate: Boolean = true
+    ): FloatArray {
         require(bounds.size >= 4) { "Required bounds size of 4" }
         var minX = Float.MAX_VALUE
         var minY = Float.MAX_VALUE
         var maxX = Float.MIN_VALUE
         var maxY = Float.MIN_VALUE
         for (i in cubics.indices) {
-            val bezier = cubics[i]
-            if (bezier.anchor0X < minX) minX = bezier.anchor0X
-            if (bezier.anchor0Y < minY) minY = bezier.anchor0Y
-            if (bezier.anchor0X > maxX) maxX = bezier.anchor0X
-            if (bezier.anchor0Y > maxY) maxY = bezier.anchor0Y
-
-            if (bezier.control0X < minX) minX = bezier.control0X
-            if (bezier.control0Y < minY) minY = bezier.control0Y
-            if (bezier.control0X > maxX) maxX = bezier.control0X
-            if (bezier.control0Y > maxY) maxY = bezier.control0Y
-
-            if (bezier.control1X < minX) minX = bezier.control1X
-            if (bezier.control1Y < minY) minY = bezier.control1Y
-            if (bezier.control1X > maxX) maxX = bezier.control1X
-            if (bezier.control1Y > maxY) maxY = bezier.control1Y
-            // No need to use x3/y3, since it is already taken into account in the next
-            // curve's x0/y0 point.
+            val cubic = cubics[i]
+            cubic.calculateBounds(bounds, approximate = approximate)
+            minX = min(minX, bounds[0])
+            minY = min(minY, bounds[1])
+            maxX = max(maxX, bounds[2])
+            maxY = max(maxY, bounds[3])
         }
         bounds[0] = minX
         bounds[1] = minY

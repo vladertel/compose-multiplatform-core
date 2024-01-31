@@ -75,7 +75,7 @@ class VirtualCameraAdapterTest {
         private val CROP_RECT = Rect(0, 0, 800, 600)
 
         // Arbitrary transform to test that the transform is propagated.
-        private val SENSOR_TO_BUFFER = Matrix().apply { setScale(1f, -1f) }
+        private val SENSOR_TO_BUFFER = Matrix().apply { setRotate(90F) }
         private var receivedSessionConfigError: SessionConfig.SessionError? = null
         private val SESSION_CONFIG_WITH_SURFACE = SessionConfig.Builder()
             .addSurface(FakeDeferrableSurface(INPUT_SIZE, ImageFormat.PRIVATE))
@@ -87,9 +87,8 @@ class VirtualCameraAdapterTest {
     private val surfaceEdgesToClose = mutableListOf<SurfaceEdge>()
     private val parentCamera = FakeCamera()
     private val child1 = FakeUseCaseConfig.Builder().setTargetRotation(Surface.ROTATION_0).build()
-    private val child2 = FakeUseCaseConfig.Builder()
-        .setMirrorMode(MIRROR_MODE_ON)
-        .build()
+    private val child2 = FakeUseCaseConfig.Builder().setMirrorMode(MIRROR_MODE_ON).build()
+
     private val childrenEdges = mapOf(
         Pair(child1 as UseCase, createSurfaceEdge()),
         Pair(child2 as UseCase, createSurfaceEdge())
@@ -249,6 +248,20 @@ class VirtualCameraAdapterTest {
     }
 
     @Test
+    fun parentHasMirroring_clientDoNotApplyMirroring() {
+        // Arrange: create an edge that has mirrored the input in the past.
+        val inputEdge = createSurfaceEdge(matrix = Matrix().apply { setScale(-1f, 1f) })
+        // Act: get the children's out configs.
+        val outConfigs = adapter.getChildrenOutConfigs(inputEdge, Surface.ROTATION_90, true)
+        // Assert: child1 needs additional mirroring because the parent mirrors the input while the
+        // child doesn't mirror.
+        assertThat(outConfigs[child1]!!.isMirroring).isTrue()
+        // Assert: child2 does not need additional mirroring because both the parent and the child
+        // mirrors the input.
+        assertThat(outConfigs[child2]!!.isMirroring).isFalse()
+    }
+
+    @Test
     fun getChildrenOutConfigs() {
         // Arrange.
         val cropRect = Rect(10, 10, 410, 310)
@@ -274,7 +287,7 @@ class VirtualCameraAdapterTest {
         // Preview's target rotation matches the parent's, so it only applies the 90° rotation.
         assertThat(previewOutConfig.size).isEqualTo(Size(300, 400))
         assertThat(previewOutConfig.rotationDegrees).isEqualTo(90)
-        assertThat(previewOutConfig.mirroring).isFalse()
+        assertThat(previewOutConfig.isMirroring).isFalse()
         // Assert: ImageCapture config
         val imageOutConfig = outConfigs[imageCapture]!!
         assertThat(imageOutConfig.format).isEqualTo(ImageFormat.JPEG)
@@ -288,7 +301,7 @@ class VirtualCameraAdapterTest {
         assertThat(outConfig2.format).isEqualTo(INTERNAL_DEFINED_IMAGE_FORMAT_PRIVATE)
         assertThat(outConfig2.targets).isEqualTo(VIDEO_CAPTURE)
         assertThat(outConfig2.cropRect).isEqualTo(cropRect)
-        assertThat(outConfig2.mirroring).isTrue()
+        assertThat(outConfig2.isMirroring).isTrue()
     }
 
     @Test

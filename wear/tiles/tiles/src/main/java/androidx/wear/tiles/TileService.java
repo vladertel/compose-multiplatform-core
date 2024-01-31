@@ -24,6 +24,7 @@ import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.os.StrictMode;
 import android.util.Log;
 
 import androidx.annotation.MainThread;
@@ -77,7 +78,7 @@ public abstract class TileService extends Service {
     static final VersionInfo DEFAULT_VERSION =
             VersionInfo.newBuilder().setMajor(1).setMinor(0).build();
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings("deprecation") // For backward compatibility
     private static final ListenableFuture<androidx.wear.tiles.ResourceBuilders.Resources>
             ON_RESOURCES_REQUEST_NOT_IMPLEMENTED =
                     createFailedFuture(
@@ -130,7 +131,7 @@ public abstract class TileService extends Service {
      */
     private static final long INACTIVE_TILE_PERIOD_MS = Duration.ofDays(60).toMillis();
 
-    private static TimeSourceClockImpl sTimeSourceClock = new TimeSourceClockImpl();
+    private static final TimeSourceClockImpl sTimeSourceClock = new TimeSourceClockImpl();
 
     /**
      * Called when the system is requesting a new timeline from this Tile Provider. The returned
@@ -265,35 +266,35 @@ public abstract class TileService extends Service {
     }
 
     /**
-     * Returns the list of active tiles belonging to the passed {@param context}'s package name. A
+     * Returns the list of active tiles belonging to the passed {@code context}'s package name. A
      * tile is considered to be active if it is present in the carousel.
      *
      * <p>The result reflects the state of carousel at the time the call was made, which might've
      * changed by the time the result is received. {@link TileService#onTileAddEvent} and {@link
      * TileService#onTileRemoveEvent} should be used instead for live updates.
      *
-     * <p>This method may not always return all tiles present in the carousel. The possibly
-     * omitted tiles being the pre-installed tiles, all tiles if the user has cleared the app
-     * data, or the tiles a user hasn't visited in the last 60 days, while tiles removed by an
-     * app update may be shown as active for 60 days afterwards.
+     * <p>This method may not always return all tiles present in the carousel. The possibly omitted
+     * tiles being the pre-installed tiles, all tiles if the user has cleared the app data, or the
+     * tiles a user hasn't visited in the last 60 days, while tiles removed by an app update may be
+     * shown as active for 60 days afterwards.
      *
      * @param context The application context.
      * @param executor The executor on which methods should be invoked. To dispatch events through
      *     the main thread of your application, you can use {@link
      *     android.content.Context#getMainExecutor()}.
-     * @return A list of {@link ActiveTileIdentifier} for the tiles belonging to the passed {@param
+     * @return A list of {@link ActiveTileIdentifier} for the tiles belonging to the passed {@code
      *     context} present in the carousel, or a value based on platform-specific fallback
      *     behavior.
      */
     @NonNull
-    public static ListenableFuture<List<ActiveTileIdentifier>> getActiveTilesSnapshotAsync(
+    public static ListenableFuture<List<ActiveTileIdentifier>> getActiveTilesAsync(
             @NonNull Context context, @NonNull Executor executor) {
-        return getActiveTilesSnapshotAsync(context, executor, sTimeSourceClock);
+        return getActiveTilesAsync(context, executor, sTimeSourceClock);
     }
 
     @VisibleForTesting
     @NonNull
-    static ListenableFuture<List<ActiveTileIdentifier>> getActiveTilesSnapshotAsync(
+    static ListenableFuture<List<ActiveTileIdentifier>> getActiveTilesAsync(
             @NonNull Context context,
             @NonNull Executor executor,
             @NonNull TimeSourceClock timeSourceClock) {
@@ -352,12 +353,7 @@ public abstract class TileService extends Service {
                                                 + requestParams.getVersion());
                                 return;
                             }
-
-                            tileService.markTileAsActive(
-                                    tileId,
-                                    new ComponentName(
-                                            tileService, tileService.getClass().getName()),
-                                    tileService.getTimeSourceClock());
+                            tileService.markTileAsActive(tileId);
                             TileRequest tileRequest;
 
                             try {
@@ -438,12 +434,8 @@ public abstract class TileService extends Service {
                                                 + requestParams.getVersion());
                                 return;
                             }
+                            tileService.markTileAsActive(tileId);
 
-                            tileService.markTileAsActive(
-                                    tileId,
-                                    new ComponentName(
-                                            tileService, tileService.getClass().getName()),
-                                    tileService.getTimeSourceClock());
                             ResourcesRequest req;
 
                             try {
@@ -534,11 +526,7 @@ public abstract class TileService extends Service {
                                         TileAddEvent.fromProto(
                                                 EventProto.TileAddEvent.parseFrom(
                                                         data.getContents()));
-                                tileService.markTileAsActive(
-                                        evt.getTileId(),
-                                        new ComponentName(
-                                                tileService, tileService.getClass().getName()),
-                                        tileService.getTimeSourceClock());
+                                tileService.markTileAsActive(evt.getTileId());
                                 tileService.onTileAddEvent(evt);
                             } catch (InvalidProtocolBufferException ex) {
                                 Log.e(TAG, "Error deserializing TileAddEvent payload.", ex);
@@ -567,10 +555,8 @@ public abstract class TileService extends Service {
                                         TileRemoveEvent.fromProto(
                                                 EventProto.TileRemoveEvent.parseFrom(
                                                         data.getContents()));
-                                tileService.markTileAsInactive(
-                                        evt.getTileId(),
-                                        new ComponentName(
-                                                tileService, tileService.getClass().getName()));
+
+                                tileService.markTileAsInactive(evt.getTileId());
                                 tileService.onTileRemoveEvent(evt);
                             } catch (InvalidProtocolBufferException ex) {
                                 Log.e(TAG, "Error deserializing TileRemoveEvent payload.", ex);
@@ -599,11 +585,7 @@ public abstract class TileService extends Service {
                                         TileEnterEvent.fromProto(
                                                 EventProto.TileEnterEvent.parseFrom(
                                                         data.getContents()));
-                                tileService.markTileAsActive(
-                                        evt.getTileId(),
-                                        new ComponentName(
-                                                tileService, tileService.getClass().getName()),
-                                        tileService.getTimeSourceClock());
+                                tileService.markTileAsActive(evt.getTileId());
                                 tileService.onTileEnterEvent(evt);
                             } catch (InvalidProtocolBufferException ex) {
                                 Log.e(TAG, "Error deserializing TileEnterEvent payload.", ex);
@@ -632,11 +614,7 @@ public abstract class TileService extends Service {
                                         TileLeaveEvent.fromProto(
                                                 EventProto.TileLeaveEvent.parseFrom(
                                                         data.getContents()));
-                                tileService.markTileAsActive(
-                                        evt.getTileId(),
-                                        new ComponentName(
-                                                tileService, tileService.getClass().getName()),
-                                        tileService.getTimeSourceClock());
+                                tileService.markTileAsActive(evt.getTileId());
                                 tileService.onTileLeaveEvent(evt);
                             } catch (InvalidProtocolBufferException ex) {
                                 Log.e(TAG, "Error deserializing TileLeaveEvent payload.", ex);
@@ -664,18 +642,16 @@ public abstract class TileService extends Service {
      * TileService#onTileRequest}, {@link TileService#onTileResourcesRequest} when an interaction
      * with the tile is observed, indicating its presence in the carousel.
      */
-    private void markTileAsActive(
-            @NonNull Integer tileId,
-            @NonNull ComponentName componentName,
-            @NonNull TimeSourceClock timeSourceClock) {
+    private void markTileAsActive(int tileId) {
+        ComponentName componentName = new ComponentName(this, this.getClass().getName());
         SharedPreferences sharedPref = getActiveTilesSharedPreferences(this);
-        cleanupActiveTilesSharedPref(sharedPref, timeSourceClock);
+        cleanupActiveTilesSharedPref(sharedPref, getTimeSourceClock());
         String key = new ActiveTileIdentifier(componentName, tileId).flattenToString();
         if (sharedPref.contains(key)
-                && !timestampNeedsUpdate(sharedPref.getLong(key, -1L), timeSourceClock)) {
+                && !timestampNeedsUpdate(sharedPref.getLong(key, -1L), getTimeSourceClock())) {
             return;
         }
-        sharedPref.edit().putLong(key, timeSourceClock.getCurrentTimestampMillis()).apply();
+        sharedPref.edit().putLong(key, getTimeSourceClock().getCurrentTimestampMillis()).apply();
     }
 
     /**
@@ -685,9 +661,11 @@ public abstract class TileService extends Service {
      * <p>This method is called from {@link TileService#onTileRemoveEvent} when a tile instance is
      * removed from the carousel.
      */
-    private void markTileAsInactive(@NonNull Integer tileId, @NonNull ComponentName componentName) {
+    private void markTileAsInactive(int tileId) {
         SharedPreferences sharedPref = getActiveTilesSharedPreferences(this);
-        String key = new ActiveTileIdentifier(componentName, tileId).flattenToString();
+        String key =
+                new ActiveTileIdentifier(new ComponentName(this, this.getClass().getName()), tileId)
+                        .flattenToString();
         if (!sharedPref.contains(key)) {
             return;
         }
@@ -707,10 +685,15 @@ public abstract class TileService extends Service {
     private static void cleanupActiveTilesSharedPref(
             @NonNull SharedPreferences activeTilesSharedPref,
             @NonNull TimeSourceClock timeSourceClock) {
-        for (String key : activeTilesSharedPref.getAll().keySet()) {
-            if (isTileInactive(activeTilesSharedPref.getLong(key, -1L), timeSourceClock)) {
-                activeTilesSharedPref.edit().remove(key).apply();
+        StrictMode.ThreadPolicy oldPolicy = StrictMode.allowThreadDiskReads();
+        try {
+            for (String key : activeTilesSharedPref.getAll().keySet()) {
+                if (isTileInactive(activeTilesSharedPref.getLong(key, -1L), timeSourceClock)) {
+                    activeTilesSharedPref.edit().remove(key).apply();
+                }
             }
+        } finally {
+            StrictMode.setThreadPolicy(oldPolicy);
         }
     }
 
@@ -755,7 +738,12 @@ public abstract class TileService extends Service {
     }
 
     private static SharedPreferences getActiveTilesSharedPreferences(@NonNull Context context) {
-        return context.getSharedPreferences(ACTIVE_TILES_SHARED_PREF_NAME, MODE_PRIVATE);
+        StrictMode.ThreadPolicy oldPolicy = StrictMode.allowThreadDiskReads();
+        try {
+            return context.getSharedPreferences(ACTIVE_TILES_SHARED_PREF_NAME, MODE_PRIVATE);
+        } finally {
+            StrictMode.setThreadPolicy(oldPolicy);
+        }
     }
 
     /**
@@ -786,9 +774,7 @@ public abstract class TileService extends Service {
     }
 
     interface TimeSourceClock {
-        /**
-         * @return Time agnostic timestamp with the current time.
-         */
+        /** Returns time agnostic timestamp with the current time. */
         long getCurrentTimestampMillis();
     }
 

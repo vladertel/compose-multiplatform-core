@@ -16,6 +16,8 @@
 
 package androidx.paging
 
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.IntRange
 import androidx.annotation.MainThread
 import androidx.lifecycle.Lifecycle
@@ -23,14 +25,24 @@ import androidx.lifecycle.coroutineScope
 import androidx.paging.LoadType.REFRESH
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListUpdateCallback
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 
 /**
  * Helper class for mapping a [PagingData] into a
@@ -132,65 +144,25 @@ constructor(
         workerDispatcher = workerDispatcher
     )
 
-    @Suppress("MemberVisibilityCanBePrivate") // synthetic access
-    internal val differCallback = object : DifferCallback {
-        override fun onInserted(position: Int, count: Int) {
-            // Ignore if count == 0 as it makes this event a no-op.
-            if (count > 0) {
-                updateCallback.onInserted(position, count)
-            }
-        }
-
-        override fun onRemoved(position: Int, count: Int) {
-            // Ignore if count == 0 as it makes this event a no-op.
-            if (count > 0) {
-                updateCallback.onRemoved(position, count)
-            }
-        }
-
-        override fun onChanged(position: Int, count: Int) {
-            // Ignore if count == 0 as it makes this event a no-op.
-            if (count > 0) {
-                // NOTE: pass a null payload to convey null -> item, or item -> null
-                updateCallback.onChanged(position, count, null)
-            }
-        }
-    }
-
     /** True if we're currently executing [getItem] */
-    @Suppress("MemberVisibilityCanBePrivate") // synthetic access
-    internal var inGetItem: Boolean = false
+    internal val inGetItem = MutableStateFlow(false)
 
-    internal val presenter = object : PagingDataPresenter<T>(differCallback, mainDispatcher) {
-        /**
-         * Insert the event's page to the storage, and dispatch associated callbacks for
-         * change (placeholder becomes real item) or insert (real item is appended).
-         *
-         * For each insert (or removal) there are three potential events:
-         *
-         * 1) change
-         *     this covers any placeholder/item conversions, and is done first
-         *
-         * 2) item insert/remove
-         *     this covers any remaining items that are inserted/removed, but aren't swapping with
-         *     placeholders
-         *
-         * 3) placeholder insert/remove
-         *     after the above, placeholder count can be wrong for a number of reasons - approximate
-         *     counting or filtering are the most common. In either case, we adjust placeholders at
-         *     the far end of the list, so that they don't trigger animations near the user.
-         */
+    internal val presenter = object : PagingDataPresenter<T>(mainDispatcher) {
         override suspend fun presentPagingDataEvent(event: PagingDataEvent<T>) {
             when (event) {
                 is PagingDataEvent.Refresh -> event.apply {
                     when {
                         // fast path for no items -> some items
                         previousList.size == 0 -> {
-                            differCallback.onInserted(0, newList.size)
+                            if (newList.size > 0) {
+                                updateCallback.onInserted(0, newList.size)
+                            }
                         }
                         // fast path for some items -> no items
                         newList.size == 0 -> {
-                            differCallback.onRemoved(0, previousList.size)
+                            if (previousList.size > 0) {
+                                updateCallback.onRemoved(0, previousList.size)
+                            }
                         }
                         else -> {
                             val diffResult = withContext(workerDispatcher) {
@@ -200,6 +172,20 @@ constructor(
                         }
                     }
                 }
+                /**
+                 * For each [PagingDataEvent.Prepend] or [PagingDataEvent.Append] there are
+                 * three potential events handled in the following order:
+                 *
+                 * 1) change
+                 *     this covers any placeholder/item conversions, and is done first
+                 * 2) item insert/remove
+                 *     this covers any remaining items that are inserted/removed, but aren't swapping with
+                 *     placeholders
+                 * 3) placeholder insert/remove
+                 *     after the above, placeholder count can be wrong for a number of reasons - approximate
+                 *     counting or filtering are the most common. In either case, we adjust placeholders at
+                 *     the far end of the list, so that they don't trigger animations near the user.
+                 */
                 is PagingDataEvent.Prepend -> event.apply {
                     val insertSize = inserted.size
 
@@ -253,6 +239,23 @@ constructor(
                         updateCallback.onRemoved(newTotalSize, -placeholderInsertedCount)
                     }
                 }
+                /**
+                 * For [PagingDataEvent.DropPrepend] or [PagingDataEvent.DropAppend] events
+                 * there are two potential events handled in the following order
+                 *
+                 * 1) placeholder insert/remove
+                 *     We first adjust placeholders at the far end of the list, so that they
+                 *     don't trigger animations near the user.
+                 * 2) change
+                 *     this covers any placeholder/item conversions, and is done after placeholders
+                 *     are trimmed/inserted to match new expected size
+                 *
+                 * Note: For drops we never run DiffUtil because it is safe to assume
+                 * that empty pages can never become non-empty no matter what transformations they
+                 * go through. [ListUpdateCallback] events generated by this helper always
+                 * drop contiguous sets of items because pages that depend on multiple
+                 * originalPageOffsets will always be the next closest page that's non-empty.
+                 */
                 is PagingDataEvent.DropPrepend -> event.apply {
                     // Trim or insert placeholders to match expected newSize.
                     val placeholdersToInsert = newPlaceholdersBefore - dropCount -
@@ -314,16 +317,6 @@ constructor(
                     }
                 }
             }
-        }
-
-        /**
-         * Return if [getItem] is running to post any data modifications.
-         *
-         * This must be done because RecyclerView can't be modified during an onBind, when
-         * [getItem] is generally called.
-         */
-        override fun postEvents(): Boolean {
-            return inGetItem
         }
     }
 
@@ -419,10 +412,10 @@ constructor(
     @MainThread
     fun getItem(@IntRange(from = 0) index: Int): T? {
         try {
-            inGetItem = true
+            inGetItem.update { true }
             return presenter[index]
         } finally {
-            inGetItem = false
+            inGetItem.update { false }
         }
     }
 
@@ -458,11 +451,22 @@ constructor(
      * current [PagingData] changes.
      *
      * This flow is conflated, so it buffers the last update to [CombinedLoadStates] and
-     * immediately delivers the current load states on collection.
+     * delivers the current load states on collection when RecyclerView is not dispatching layout.
      *
      * @sample androidx.paging.samples.loadStateFlowSample
      */
-    val loadStateFlow: Flow<CombinedLoadStates> = presenter.loadStateFlow.filterNotNull()
+    val loadStateFlow: Flow<CombinedLoadStates> = presenter.loadStateFlow
+        .filterNotNull()
+        .buffer(CONFLATED)
+        .transform { it ->
+            if (inGetItem.value) {
+                yield()
+                inGetItem.firstOrNull { isGettingItem ->
+                    !isGettingItem
+                }
+            }
+            emit(it)
+        }.flowOn(Dispatchers.Main)
 
     /**
      * A hot [Flow] that emits after the pages presented to the UI are updated, even if the
@@ -515,6 +519,22 @@ constructor(
     }
 
     /**
+     * The loadStateListener registered internally with [PagingDataPresenter.addLoadStateListener]
+     * when there are [childLoadStateListeners].
+     *
+     * LoadStateUpdates are dispatched to this single internal listener, which will further
+     * dispatch the loadState to [childLoadStateListeners] when [inGetItem] is false.
+     */
+    private val parentLoadStateListener: AtomicReference<((CombinedLoadStates) -> Unit)?> =
+        AtomicReference(null)
+
+    /**
+     * Stores the list of listeners added through [addLoadStateListener]. Invoked
+     * when inGetItem is false.
+     */
+    private val childLoadStateListeners = CopyOnWriteArrayList<(CombinedLoadStates) -> Unit>()
+
+    /**
      * Add a [CombinedLoadStates] listener to observe the loading state of the current [PagingData].
      *
      * As new [PagingData] generations are submitted and displayed, the listener will be notified to
@@ -527,7 +547,10 @@ constructor(
      * @sample androidx.paging.samples.addLoadStateListenerSample
      */
     fun addLoadStateListener(listener: (CombinedLoadStates) -> Unit) {
-        presenter.addLoadStateListener(listener)
+        if (parentLoadStateListener.get() == null) {
+            addLoadStateListenerInternal(internalLoadStateListener)
+        }
+        childLoadStateListeners.add(listener)
     }
 
     /**
@@ -537,6 +560,42 @@ constructor(
      * @see addLoadStateListener
      */
     fun removeLoadStateListener(listener: (CombinedLoadStates) -> Unit) {
-        presenter.removeLoadStateListener(listener)
+        childLoadStateListeners.remove(listener)
+        if (childLoadStateListeners.isEmpty()) {
+            val parent = parentLoadStateListener.get()
+            parent?.let { presenter.removeLoadStateListener(it) }
+        }
+    }
+
+    internal fun addLoadStateListenerInternal(listener: (CombinedLoadStates) -> Unit) {
+        parentLoadStateListener.set(listener)
+        presenter.addLoadStateListener(listener)
+    }
+
+    internal val internalLoadStateListener: (CombinedLoadStates) -> Unit = { loadState ->
+        if (!inGetItem.value) {
+            childLoadStateListeners.forEach { it(loadState) }
+        } else {
+            LoadStateListenerHandler.apply {
+                // we only want to send the latest LoadState
+                removeCallbacks(LoadStateListenerRunnable)
+                // enqueue child listeners
+                LoadStateListenerRunnable.loadState.set(loadState)
+                post(LoadStateListenerRunnable)
+            }
+        }
+    }
+
+    private val LoadStateListenerHandler by lazy { Handler(Looper.getMainLooper()) }
+
+    private val LoadStateListenerRunnable = object : Runnable {
+        var loadState = AtomicReference<CombinedLoadStates>(null)
+
+        override fun run() {
+            loadState.get()
+                ?.let { state ->
+                    childLoadStateListeners.forEach { it(state) }
+                }
+        }
     }
 }

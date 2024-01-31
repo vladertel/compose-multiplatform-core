@@ -22,6 +22,8 @@ import android.util.Log
 import android.view.KeyEvent
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.content.TransferableContent
+import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
 import androidx.compose.foundation.text.input.internal.update
 import androidx.compose.foundation.text2.input.TextFieldCharSequence
 import androidx.compose.ui.platform.PlatformTextInputSession
@@ -41,12 +43,14 @@ internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSe
     state: TransformedTextFieldState,
     layoutState: TextLayoutState,
     imeOptions: ImeOptions,
+    receiveContentConfiguration: ReceiveContentConfiguration?,
     onImeAction: ((ImeAction) -> Unit)?
 ): Nothing {
     platformSpecificTextInputSession(
         state = state,
         layoutState = layoutState,
         imeOptions = imeOptions,
+        receiveContentConfiguration = receiveContentConfiguration,
         onImeAction = onImeAction,
         composeImm = ComposeInputMethodManager(view)
     )
@@ -57,6 +61,7 @@ internal suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
     state: TransformedTextFieldState,
     layoutState: TextLayoutState,
     imeOptions: ImeOptions,
+    receiveContentConfiguration: ReceiveContentConfiguration?,
     onImeAction: ((ImeAction) -> Unit)?,
     composeImm: ComposeInputMethodManager
 ): Nothing {
@@ -97,9 +102,12 @@ internal suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
                 override val text: TextFieldCharSequence
                     get() = state.visualText
 
-                override fun requestEdit(block: EditingBuffer.() -> Unit) {
+                override fun requestEdit(
+                    notifyImeOfChanges: Boolean,
+                    block: EditingBuffer.() -> Unit
+                ) {
                     state.editUntransformedTextAsUser(
-                        notifyImeOfChanges = false,
+                        notifyImeOfChanges = notifyImeOfChanges,
                         block = block
                     )
                 }
@@ -112,12 +120,35 @@ internal suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
                     onImeAction?.invoke(imeAction)
                 }
 
+                override fun onCommitContent(transferableContent: TransferableContent): Boolean {
+                    return receiveContentConfiguration?.onCommitContent(transferableContent)
+                        ?: false
+                }
+
                 override fun requestCursorUpdates(cursorUpdateMode: Int) {
                     cursorUpdatesController.requestUpdates(cursorUpdateMode)
                 }
             }
-            outAttrs.update(state.visualText, state.visualText.selectionInChars, imeOptions)
-            StatelessInputConnection(textInputSession)
+
+            val hintMediaTypes = receiveContentConfiguration?.hintMediaTypes
+            val contentMimeTypes: Array<String>? =
+                if (!hintMediaTypes.isNullOrEmpty()) {
+                    val arr = Array(hintMediaTypes.size) { "" }
+                    hintMediaTypes.forEachIndexed { i, mediaType ->
+                        arr[i] = mediaType.representation
+                    }
+                    arr
+                } else {
+                    null
+                }
+
+            outAttrs.update(
+                text = state.visualText,
+                selection = state.visualText.selectionInChars,
+                imeOptions = imeOptions,
+                contentMimeTypes = contentMimeTypes
+            )
+            StatelessInputConnection(textInputSession, outAttrs)
         }
     }
 }

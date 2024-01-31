@@ -21,9 +21,12 @@ package androidx.compose.material3.catalog.library.model
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.material3.adaptive.navigation.suite.samples.NavigationSuiteScaffoldCustomConfigSample
-import androidx.compose.material3.adaptive.navigation.suite.samples.NavigationSuiteScaffoldSample
+import androidx.compose.material3.adaptive.navigationsuite.samples.NavigationSuiteScaffoldCustomConfigSample
+import androidx.compose.material3.adaptive.navigationsuite.samples.NavigationSuiteScaffoldSample
+import androidx.compose.material3.adaptive.samples.ListDetailPaneScaffoldSample
+import androidx.compose.material3.adaptive.samples.ListDetailPaneScaffoldSampleWithExtraPane
 import androidx.compose.material3.catalog.library.util.AdaptiveNavigationSuiteSampleSourceUrl
+import androidx.compose.material3.catalog.library.util.AdaptiveSampleSourceUrl
 import androidx.compose.material3.catalog.library.util.SampleSourceUrl
 import androidx.compose.material3.samples.AlertDialogSample
 import androidx.compose.material3.samples.AlertDialogWithIconSample
@@ -105,6 +108,7 @@ import androidx.compose.material3.samples.PermanentNavigationDrawerSample
 import androidx.compose.material3.samples.PinnedTopAppBar
 import androidx.compose.material3.samples.PlainTooltipSample
 import androidx.compose.material3.samples.PlainTooltipWithCaret
+import androidx.compose.material3.samples.PlainTooltipWithCustomCaret
 import androidx.compose.material3.samples.PlainTooltipWithManualInvocationSample
 import androidx.compose.material3.samples.PrimaryIconTabs
 import androidx.compose.material3.samples.PrimaryTextTabs
@@ -116,6 +120,8 @@ import androidx.compose.material3.samples.RadioGroupSample
 import androidx.compose.material3.samples.RangeSliderSample
 import androidx.compose.material3.samples.RangeSliderWithCustomComponents
 import androidx.compose.material3.samples.RichTooltipSample
+import androidx.compose.material3.samples.RichTooltipWithCaretSample
+import androidx.compose.material3.samples.RichTooltipWithCustomCaretSample
 import androidx.compose.material3.samples.RichTooltipWithManualInvocationSample
 import androidx.compose.material3.samples.ScaffoldWithCoroutinesSnackbar
 import androidx.compose.material3.samples.ScaffoldWithCustomSnackbar
@@ -172,6 +178,22 @@ data class Example(
     val sourceUrl: String,
     val content: @Composable () -> Unit
 )
+
+private const val AdaptiveExampleDescription = "Adaptive examples"
+private const val AdaptiveExampleSourceUrl = "$AdaptiveSampleSourceUrl/ThreePaneScaffoldSamples.kt"
+val AdaptiveExamples =
+    listOf(
+        Example(
+            name = ::ListDetailPaneScaffoldSample.name,
+            description = AdaptiveExampleDescription,
+            sourceUrl = AdaptiveExampleSourceUrl
+        ) { ListDetailPaneScaffoldSample() },
+        Example(
+            name = ::ListDetailPaneScaffoldSampleWithExtraPane.name,
+            description = AdaptiveExampleDescription,
+            sourceUrl = AdaptiveExampleSourceUrl
+        ) { ListDetailPaneScaffoldSampleWithExtraPane() }
+    )
 
 private const val BadgeExampleDescription = "Badge examples"
 private const val BadgeExampleSourceUrl = "$SampleSourceUrl/BadgeSamples.kt"
@@ -1231,6 +1253,13 @@ val TooltipsExamples = listOf(
         PlainTooltipWithCaret()
     },
     Example(
+        name = ::PlainTooltipWithCustomCaret.name,
+        description = TooltipsExampleDescription,
+        sourceUrl = TooltipsExampleSourceUrl
+    ) {
+        PlainTooltipWithCustomCaret()
+    },
+    Example(
         name = ::RichTooltipSample.name,
         description = TooltipsExampleDescription,
         sourceUrl = TooltipsExampleSourceUrl
@@ -1243,5 +1272,19 @@ val TooltipsExamples = listOf(
         sourceUrl = TooltipsExampleSourceUrl
     ) {
         RichTooltipWithManualInvocationSample()
+    },
+    Example(
+        name = ::RichTooltipWithCaretSample.name,
+        description = TooltipsExampleDescription,
+        sourceUrl = TooltipsExampleSourceUrl
+    ) {
+        RichTooltipWithCaretSample()
+    },
+    Example(
+        name = ::RichTooltipWithCustomCaretSample.name,
+        description = TooltipsExampleDescription,
+        sourceUrl = TooltipsExampleSourceUrl
+    ) {
+        RichTooltipWithCustomCaretSample()
     }
 )

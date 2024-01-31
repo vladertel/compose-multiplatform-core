@@ -44,7 +44,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.computeSizeForDefaultText
 import androidx.compose.foundation.text.selection.isSelectionHandle
-import androidx.compose.foundation.text2.InputMethodInterceptor
+import androidx.compose.foundation.text2.input.InputMethodInterceptor
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -1412,14 +1412,25 @@ class TextFieldTest : FocusedWindowTest {
         val shortText = "Text".repeat(2)
 
         var tfv by mutableStateOf(TextFieldValue(shortText))
-        lateinit var clipboardManager: ClipboardManager
+        val clipboardManager = object : ClipboardManager {
+            var contents: AnnotatedString? = null
+
+            override fun setText(annotatedString: AnnotatedString) {
+                contents = annotatedString
+            }
+
+            override fun getText(): AnnotatedString? {
+                return contents
+            }
+        }
         rule.setTextFieldTestContent {
-            clipboardManager = LocalClipboardManager.current
-            BasicTextField(
-                value = tfv,
-                onValueChange = { tfv = it },
-                modifier = Modifier.testTag(Tag)
-            )
+            CompositionLocalProvider(LocalClipboardManager provides clipboardManager) {
+                BasicTextField(
+                    value = tfv,
+                    onValueChange = { tfv = it },
+                    modifier = Modifier.testTag(Tag)
+                )
+            }
         }
         clipboardManager.setText(AnnotatedString(longText))
         rule.waitForIdle()

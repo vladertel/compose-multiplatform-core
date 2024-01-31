@@ -28,7 +28,9 @@ import java.io.File
 import kotlin.test.assertFailsWith
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -38,6 +40,14 @@ class BaselineProfileRuleTest {
 
     @get:Rule
     val baselineRule = BaselineProfileRule()
+
+    @Before
+    fun setup() {
+        // Mokey devices seem to behave differently (b/319515652) and the generated profile
+        // doesn't output the class symbol line. This makes the test fail. While we investigate
+        // the scope of the failure, suppress the test on this device
+        assumeFalse(isMokeyDevice())
+    }
 
     @Test
     fun appNotInstalled() {
@@ -76,7 +86,7 @@ class BaselineProfileRuleTest {
         // reflected here in order for the test to succeed.
         File(Outputs.outputDirectory, "BaselineProfileRuleTest_filter-baseline-prof.txt")
             .readLines()
-            .assertContainsInOrder(
+            .assertInOrder(
                 PROFILE_LINE_EMPTY_ACTIVITY,
                 "$PROFILE_LINE_EMPTY_ACTIVITY-><init>()V",
                 "$PROFILE_LINE_EMPTY_ACTIVITY->onCreate(Landroid/os/Bundle;)V",
@@ -103,8 +113,7 @@ class BaselineProfileRuleTest {
 
         File(Outputs.outputDirectory, "BaselineProfileRuleTest_startupProfile-startup-prof.txt")
             .readLines()
-            .sorted()
-            .assertContainsInOrder(
+            .assertInOrder(
                 PROFILE_LINE_EMPTY_ACTIVITY,
                 "$PROFILE_LINE_EMPTY_ACTIVITY-><init>()V",
                 "$PROFILE_LINE_EMPTY_ACTIVITY->onCreate(Landroid/os/Bundle;)V",
@@ -118,14 +127,13 @@ class BaselineProfileRuleTest {
             "androidx/benchmark/integration/macrobenchmark/target/EmptyActivity;"
     }
 
-    private fun List<String>.assertContainsInOrder(
+    private fun List<String>.assertInOrder(
         vararg toFind: String,
-        predicate: (String, String) -> (Boolean) = { line, nextToFind -> line.contains(nextToFind) }
+        predicate: (String, String) -> (Boolean) = { line, nextToFind -> line.endsWith(nextToFind) }
     ) {
         val remaining = toFind.filter { it.isNotBlank() }.toMutableList()
         for (line in this) {
             val next = remaining.firstOrNull() ?: return
-            println("MAAL: Next: $next, Line: $line")
             if (predicate(line, next)) remaining.removeFirst()
         }
         if (remaining.size > 0) {
@@ -140,4 +148,6 @@ class BaselineProfileRuleTest {
             )
         }
     }
+
+    private fun isMokeyDevice() = Build.MODEL.contains("mokey")
 }

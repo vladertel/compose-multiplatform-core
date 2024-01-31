@@ -19,6 +19,7 @@ package androidx.room.compiler.processing
 import androidx.room.compiler.processing.javac.JavacElement
 import androidx.room.compiler.processing.ksp.KSFileAsOriginatingElement
 import androidx.room.compiler.processing.ksp.KspElement
+import androidx.room.compiler.processing.ksp.KspFileMemberContainer
 import androidx.room.compiler.processing.ksp.KspMemberContainer
 import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticPropertyMethodElement
 import androidx.room.compiler.processing.ksp.wrapAsOriginatingElement
@@ -154,7 +155,7 @@ fun XElement.isConstructor(): Boolean {
  * that allows us to pass originating elements to JavaPoet and KotlinPoet, and later extract
  * the KSP file when writing with [XFiler].
  */
-internal fun XElement.originatingElementForPoet(): Element? {
+internal fun XElement.originatingElementForPoet(): Element {
     return when (this) {
         is JavacElement -> element
         is KspElement -> {
@@ -163,8 +164,11 @@ internal fun XElement.originatingElementForPoet(): Element? {
         is KspSyntheticPropertyMethodElement -> {
             field.declaration.wrapAsOriginatingElement()
         }
+        is KspFileMemberContainer -> {
+            KSFileAsOriginatingElement(ksFile)
+        }
         is KspMemberContainer -> {
-            declaration?.wrapAsOriginatingElement()
+            declaration!!.wrapAsOriginatingElement()
         }
         else -> error("Originating element is not implemented for ${this.javaClass}")
     }

@@ -55,6 +55,7 @@ package androidx.camera.core {
     method public default boolean isFocusMeteringSupported(androidx.camera.core.FocusMeteringAction);
     method @SuppressCompatibility @androidx.camera.core.ExperimentalZeroShutterLag public default boolean isZslSupported();
     method public static boolean mustPlayShutterSound();
+    method public default java.util.Set<androidx.camera.core.DynamicRange!> querySupportedDynamicRanges(java.util.Set<androidx.camera.core.DynamicRange!>);
   }
 
   @RequiresApi(21) public final class CameraInfoUnavailableException extends java.lang.Exception {
@@ -257,6 +258,7 @@ package androidx.camera.core {
     method public void setAnalyzer(java.util.concurrent.Executor, androidx.camera.core.ImageAnalysis.Analyzer);
     method public void setTargetRotation(int);
     field public static final int COORDINATE_SYSTEM_ORIGINAL = 0; // 0x0
+    field public static final int COORDINATE_SYSTEM_SENSOR = 2; // 0x2
     field public static final int OUTPUT_IMAGE_FORMAT_RGBA_8888 = 2; // 0x2
     field public static final int OUTPUT_IMAGE_FORMAT_YUV_420_888 = 1; // 0x1
     field public static final int STRATEGY_BLOCK_PRODUCER = 1; // 0x1
@@ -377,13 +379,12 @@ package androidx.camera.core {
   }
 
   public static interface ImageCapture.ScreenFlash {
-    method @UiThread public void apply(androidx.camera.core.ImageCapture.ScreenFlashUiCompleter);
+    method @UiThread public void apply(long, androidx.camera.core.ImageCapture.ScreenFlashListener);
     method @UiThread public void clear();
   }
 
-  public static interface ImageCapture.ScreenFlashUiCompleter {
-    method public void complete();
-    method public long getExpirationTimeMillis();
+  public static interface ImageCapture.ScreenFlashListener {
+    method public void onCompleted();
   }
 
   public interface ImageCaptureCapabilities {
@@ -466,6 +467,7 @@ package androidx.camera.core {
   }
 
   @RequiresApi(21) public final class Preview extends androidx.camera.core.UseCase {
+    method public androidx.camera.core.DynamicRange getDynamicRange();
     method public static androidx.camera.core.PreviewCapabilities getPreviewCapabilities(androidx.camera.core.CameraInfo);
     method public androidx.camera.core.ResolutionInfo? getResolutionInfo();
     method public androidx.camera.core.resolutionselector.ResolutionSelector? getResolutionSelector();
@@ -480,6 +482,7 @@ package androidx.camera.core {
   public static final class Preview.Builder implements androidx.camera.core.ExtendableBuilder<androidx.camera.core.Preview> {
     ctor public Preview.Builder();
     method public androidx.camera.core.Preview build();
+    method public androidx.camera.core.Preview.Builder setDynamicRange(androidx.camera.core.DynamicRange);
     method public androidx.camera.core.Preview.Builder setPreviewStabilizationEnabled(boolean);
     method public androidx.camera.core.Preview.Builder setResolutionSelector(androidx.camera.core.resolutionselector.ResolutionSelector);
     method @Deprecated public androidx.camera.core.Preview.Builder setTargetAspectRatio(int);
@@ -556,10 +559,10 @@ package androidx.camera.core {
 
   @com.google.auto.value.AutoValue public abstract static class SurfaceRequest.TransformationInfo {
     method public abstract android.graphics.Rect getCropRect();
-    method public abstract boolean getMirroring();
     method public abstract int getRotationDegrees();
     method public abstract android.graphics.Matrix getSensorToBufferTransform();
     method public abstract boolean hasCameraTransform();
+    method public abstract boolean isMirroring();
   }
 
   public static interface SurfaceRequest.TransformationInfoListener {

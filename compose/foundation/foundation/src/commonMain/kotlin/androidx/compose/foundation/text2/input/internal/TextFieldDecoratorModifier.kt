@@ -17,6 +17,8 @@
 package androidx.compose.foundation.text2.input.internal
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
+import androidx.compose.foundation.content.internal.getReceiveContentConfiguration
 import androidx.compose.foundation.interaction.HoverInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.Handle
@@ -27,6 +29,7 @@ import androidx.compose.foundation.text2.BasicTextField2
 import androidx.compose.foundation.text2.input.InputTransformation
 import androidx.compose.foundation.text2.input.internal.selection.TextFieldSelectionState
 import androidx.compose.foundation.text2.input.internal.selection.TextToolbarState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusManager
@@ -39,9 +42,11 @@ import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.modifier.ModifierLocalModifierNode
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.GlobalPositionAwareModifierNode
+import androidx.compose.ui.node.LayoutAwareModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.ObserverModifierNode
 import androidx.compose.ui.node.PointerInputModifierNode
@@ -82,6 +87,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 private const val MIMETYPE_TEXT = "text/*"
@@ -161,7 +168,9 @@ internal class TextFieldDecoratorModifierNode(
     PointerInputModifierNode,
     KeyInputModifierNode,
     CompositionLocalConsumerModifierNode,
-    ObserverModifierNode {
+    ModifierLocalModifierNode,
+    ObserverModifierNode,
+    LayoutAwareModifierNode {
 
     private val editable get() = enabled && !readOnly
 
@@ -290,6 +299,10 @@ internal class TextFieldDecoratorModifierNode(
      */
     private var inputSessionJob: Job? = null
 
+    private val receiveContentConfigurationProvider: () -> ReceiveContentConfiguration? = {
+        getReceiveContentConfiguration()
+    }
+
     /**
      * Updates all the related properties and invalidates internal state based on the changes.
      */
@@ -349,6 +362,10 @@ internal class TextFieldDecoratorModifierNode(
 
         if (textFieldSelectionState != previousTextFieldSelectionState) {
             pointerInputNode.resetPointerInputHandler()
+            if (isAttached) {
+                textFieldSelectionState.receiveContentConfiguration =
+                    receiveContentConfigurationProvider
+            }
         }
     }
 
@@ -357,7 +374,7 @@ internal class TextFieldDecoratorModifierNode(
 
     // This function is called inside a snapshot observer.
     override fun SemanticsPropertyReceiver.applySemantics() {
-        val text = textFieldState.untransformedText
+        val text = textFieldState.outputText
         val selection = text.selectionInChars
         editableText = AnnotatedString(text.toString())
         textSelectionRange = selection
@@ -474,7 +491,6 @@ internal class TextFieldDecoratorModifierNode(
             // Deselect when losing focus even if readonly.
             if (editable) {
                 startInputSession(fromTap = false)
-                // TODO(halilibo): bringIntoView
             }
         } else {
             disposeInputSession()
@@ -484,14 +500,32 @@ internal class TextFieldDecoratorModifierNode(
 
     override fun onAttach() {
         onObservedReadsChanged()
+        textFieldSelectionState.receiveContentConfiguration = receiveContentConfigurationProvider
     }
 
     override fun onDetach() {
         disposeInputSession()
+        textFieldSelectionState.receiveContentConfiguration = null
     }
 
     override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
         textLayoutState.decoratorNodeCoordinates = coordinates
+    }
+
+    override fun onRemeasured(size: IntSize) {
+        if (!isFocused) return
+
+        // Ensure that the cursor is kept in view if the decoration box is resized while focused.
+        // This handles the case where a multi-line text field sitting right above the keyboard
+        // grows due to a newline entered while typing, which isn't handled by the cursor moving yet
+        // because the resize happens after the text state change, and the resize moves the cursor
+        // under the keyboard. This also covers the case where the field shrinks while focused.
+        val selection = textFieldState.visualText.selectionInChars
+        if (selection.collapsed) {
+            coroutineScope.launch {
+                textLayoutState.bringCursorIntoView(cursorIndex = selection.start)
+            }
+        }
     }
 
     override fun onPointerEvent(
@@ -538,6 +572,8 @@ internal class TextFieldDecoratorModifierNode(
     private fun startInputSession(fromTap: Boolean) {
         if (!fromTap && !keyboardOptions.shouldShowKeyboardOnFocus) return
 
+        val receiveContentConfiguration = getReceiveContentConfiguration()
+
         inputSessionJob = coroutineScope.launch {
             // This will automatically cancel the previous session, if any, so we don't need to
             // cancel the inputSessionJob ourselves.
@@ -547,10 +583,15 @@ internal class TextFieldDecoratorModifierNode(
                     textFieldSelectionState.observeChanges()
                 }
 
+                launch {
+                    keepSelectionInView()
+                }
+
                 platformSpecificTextInputSession(
-                    textFieldState,
-                    textLayoutState,
-                    keyboardOptions.toImeOptions(singleLine),
+                    state = textFieldState,
+                    layoutState = textLayoutState,
+                    imeOptions = keyboardOptions.toImeOptions(singleLine),
+                    receiveContentConfiguration = receiveContentConfiguration,
                     onImeAction = onImeActionPerformed
                 )
             }
@@ -560,6 +601,22 @@ internal class TextFieldDecoratorModifierNode(
     private fun disposeInputSession() {
         inputSessionJob?.cancel()
         inputSessionJob = null
+    }
+
+    /**
+     * Calls bringCursorIntoView when the cursor position changes. This handles the case where the user
+     * types while the cursor is scrolled out of view, as well as any programmatic changes to the
+     * cursor while focused.
+     *
+     * This function suspends indefinitely, should only be called when the field is focused, and
+     * cancelled when the field loses focus.
+     */
+    private suspend fun keepSelectionInView() {
+        snapshotFlow { textFieldState.visualText.selectionInChars }
+            .filter { it.collapsed }
+            .collectLatest {
+                textLayoutState.bringCursorIntoView(cursorIndex = it.start)
+            }
     }
 
     private fun startOrDisposeInputSessionOnWindowFocusChange() {
@@ -590,6 +647,7 @@ internal expect suspend fun PlatformTextInputSession.platformSpecificTextInputSe
     state: TransformedTextFieldState,
     layoutState: TextLayoutState,
     imeOptions: ImeOptions,
+    receiveContentConfiguration: ReceiveContentConfiguration?,
     onImeAction: ((ImeAction) -> Unit)?
 ): Nothing
 

@@ -16,13 +16,16 @@
 
 package androidx.camera.testing.impl.mocks;
 
+import android.os.Looper;
+
 import androidx.annotation.GuardedBy;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCapture.ScreenFlash;
-import androidx.camera.core.ImageCapture.ScreenFlashUiCompleter;
+import androidx.camera.core.ImageCapture.ScreenFlashListener;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -39,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class MockScreenFlash implements ScreenFlash {
     /**
-     * Represents {@link ScreenFlash#apply(ScreenFlashUiCompleter)} event.
+     * Represents {@link ImageCapture.ScreenFlash#apply} event.
      */
     public static final int APPLY = 0;
     /**
@@ -63,8 +66,19 @@ public class MockScreenFlash implements ScreenFlash {
     private boolean mIsApplyCompletedInstantly = true;
 
     @GuardedBy("mLock")
+    private long mLastApplyExpirationTimeMillis;
+
+    @GuardedBy("mLock")
     @Nullable
-    private ScreenFlashUiCompleter mLastApplyCompleter;
+    private Looper mLastApplyThreadLooper;
+
+    @GuardedBy("mLock")
+    @Nullable
+    private ScreenFlashListener mLastApplyListener;
+
+    @GuardedBy("mLock")
+    @Nullable
+    private Looper mLastClearThreadLooper;
 
     /**
      * Returns a list of {@link ScreenFlashEvent} in the same order as invoked.
@@ -91,33 +105,70 @@ public class MockScreenFlash implements ScreenFlash {
     }
 
     /**
-     * Enables or disables the {@link ScreenFlashUiCompleter} being completed instantly when
-     * {@link ScreenFlash#apply(ScreenFlashUiCompleter)} is invoked.
+     * Enables or disables the {@link ScreenFlashListener} being completed instantly when
+     * {@link ScreenFlash#apply(long, ScreenFlashListener)} is invoked.
      */
     public void setApplyCompletedInstantly(boolean completedInstantly) {
         mIsApplyCompletedInstantly = completedInstantly;
     }
 
     /**
-     * Gets the {@link ScreenFlashUiCompleter} instance of the last
-     * {@link ScreenFlash#apply(ScreenFlashUiCompleter)} invocation, or null in case of no
+     * Gets the expiration time argument of the last
+     * {@link ScreenFlash#apply(long, ScreenFlashListener)} invocation, or zero in case of no
+     * invocation.f<
+     */
+    public long getLastApplyExpirationTimeMillis() {
+        synchronized (mLock) {
+            return mLastApplyExpirationTimeMillis;
+        }
+    }
+
+    /**
+     * Gets the {@link Looper} of calling thread for
+     * {@link ScreenFlash#apply(long, ScreenFlashListener)} invocation, or null in case of no
      * invocation.
      */
     @Nullable
-    public ScreenFlashUiCompleter getLastApplyCompleter() {
+    public Looper getLastApplyThreadLooper() {
         synchronized (mLock) {
-            return mLastApplyCompleter;
+            return mLastApplyThreadLooper;
+        }
+    }
+
+    /**
+     * Gets the {@link ScreenFlashListener} instance of the last
+     * {@link ScreenFlash#apply(long, ScreenFlashListener)} invocation, or null in case of no
+     * invocation.
+     */
+    @Nullable
+    public ScreenFlashListener getLastApplyListener() {
+        synchronized (mLock) {
+            return mLastApplyListener;
+        }
+    }
+
+    /**
+     * Gets the {@link Looper} of calling thread for {@link ScreenFlash#clear()} invocation, or
+     * null in case of no invocation.
+     */
+    @Nullable
+    public Looper getLastClearThreadLooper() {
+        synchronized (mLock) {
+            return mLastClearThreadLooper;
         }
     }
 
     /** {@inheritDoc} */
     @Override
-    public void apply(@NonNull ScreenFlashUiCompleter screenFlashUiCompleter) {
+    public void apply(long expirationTimeMillis,
+            @NonNull ScreenFlashListener screenFlashListener) {
         synchronized (mLock) {
             mEventList.add(APPLY);
-            mLastApplyCompleter = screenFlashUiCompleter;
+            mLastApplyExpirationTimeMillis = expirationTimeMillis;
+            mLastApplyListener = screenFlashListener;
+            mLastApplyThreadLooper = Looper.myLooper();
             if (mIsApplyCompletedInstantly) {
-                screenFlashUiCompleter.complete();
+                screenFlashListener.onCompleted();
             }
         }
     }
@@ -128,6 +179,7 @@ public class MockScreenFlash implements ScreenFlash {
         synchronized (mLock) {
             mEventList.add(CLEAR);
             mClearLatch.countDown();
+            mLastClearThreadLooper = Looper.myLooper();
         }
     }
 }

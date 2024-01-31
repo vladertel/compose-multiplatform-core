@@ -23,7 +23,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.InputConnection
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.text2.ComposeInputMethodManagerTestRule
+import androidx.compose.foundation.text2.input.ComposeInputMethodManagerTestRule
 import androidx.compose.foundation.text2.input.TextFieldState
 import androidx.compose.runtime.snapshots.ObserverHandle
 import androidx.compose.runtime.snapshots.Snapshot
@@ -156,7 +156,8 @@ internal class TextInputServiceAndroidCursorAnchorInfoTest {
                 state = transformedState,
                 layoutState = layoutState,
                 imeOptions = ImeOptions.Default,
-                onImeAction = null
+                receiveContentConfiguration = null,
+                onImeAction = null,
             )
         }
 
@@ -293,7 +294,8 @@ internal class TextInputServiceAndroidCursorAnchorInfoTest {
                 state = transformedState,
                 layoutState = layoutState,
                 imeOptions = ImeOptions.Default,
-                onImeAction = null
+                receiveContentConfiguration = null,
+                onImeAction = null,
             )
         }
 

@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Rect
 import android.os.Build
@@ -515,13 +516,14 @@ public abstract class WatchFaceService : WallpaperService() {
     protected open fun createComplicationSlotsManager(
         currentUserStyleRepository: CurrentUserStyleRepository
     ): ComplicationSlotsManager =
-        if (xmlSchemaAndComplicationSlotsDefinition.complicationSlots.isEmpty())
+        if (xmlSchemaAndComplicationSlotsDefinition.complicationSlots.isEmpty()) {
             ComplicationSlotsManager(emptyList(), currentUserStyleRepository)
-        else
+        } else {
             xmlSchemaAndComplicationSlotsDefinition.buildComplicationSlotsManager(
                 currentUserStyleRepository,
                 getComplicationSlotInflationFactory(currentUserStyleRepository)
             )
+        }
 
     internal open fun createComplicationSlotsManagerInternal(
         currentUserStyleRepository: CurrentUserStyleRepository,
@@ -530,7 +532,8 @@ public abstract class WatchFaceService : WallpaperService() {
     ): ComplicationSlotsManager = createComplicationSlotsManager(currentUserStyleRepository)
 
     /**
-     * Used when inflating [ComplicationSlot]s from XML to provide a
+     * Used when inflating [ComplicationSlot]s from XML (i.e the manifest contains
+     * androidx.wear.watchface.XmlSchemaAndComplicationSlotsDefinition metadata) to provide a
      * [ComplicationSlotInflationFactory] which provides the [CanvasComplicationFactory] and where
      * necessary edge complication [ComplicationTapFilter]s needed for inflating
      * [ComplicationSlot]s.
@@ -551,7 +554,8 @@ public abstract class WatchFaceService : WallpaperService() {
         null
 
     /**
-     * Used when inflating [ComplicationSlot]s from XML to provide a
+     * Used when inflating [ComplicationSlot]s from XML (i.e the manifest contains
+     * androidx.wear.watchface.XmlSchemaAndComplicationSlotsDefinition metadata) to provide a
      * [ComplicationSlotInflationFactory] which provides the [CanvasComplicationFactory] and where
      * necessary edge complication [ComplicationTapFilter]s needed for inflating
      * [ComplicationSlot]s.
@@ -2962,6 +2966,13 @@ public abstract class WatchFaceService : WallpaperService() {
             engine.notifyColorsChanged()
         }
     }
+
+    override fun onConfigurationChanged(
+        @Suppress("InvalidNullabilityOverride") newConfig: Configuration
+    ) {
+        Log.i(TAG, "Configuration changed, scheduling redraw")
+        InteractiveInstanceManager.getCurrentInteractiveInstance()?.engine?.invalidate()
+    }
 }
 
 /**
@@ -3021,7 +3032,15 @@ abstract class StatefulWatchFaceService<Extra> : WatchFaceService() {
     protected open fun createComplicationSlotsManager(
         currentUserStyleRepository: CurrentUserStyleRepository,
         extra: Extra
-    ): ComplicationSlotsManager = super.createComplicationSlotsManager(currentUserStyleRepository)
+    ): ComplicationSlotsManager =
+        if (xmlSchemaAndComplicationSlotsDefinition.complicationSlots.isEmpty()) {
+            ComplicationSlotsManager(emptyList(), currentUserStyleRepository)
+        } else {
+            xmlSchemaAndComplicationSlotsDefinition.buildComplicationSlotsManager(
+                currentUserStyleRepository,
+                getComplicationSlotInflationFactory(currentUserStyleRepository, extra)
+            )
+        }
 
     internal override fun createComplicationSlotsManagerInternal(
         currentUserStyleRepository: CurrentUserStyleRepository,
@@ -3077,6 +3096,39 @@ abstract class StatefulWatchFaceService<Extra> : WatchFaceService() {
         currentUserStyleRepository: CurrentUserStyleRepository,
         complicationSlotsManager: ComplicationSlotsManager,
     ): UserStyleFlavors {
+        throw UnsupportedOperationException("extra must be specified")
+    }
+
+    /**
+     * Used when inflating [ComplicationSlot]s from XML (i.e the manifest contains
+     * androidx.wear.watchface.XmlSchemaAndComplicationSlotsDefinition metadata) to provide a
+     * [ComplicationSlotInflationFactory] which provides the [CanvasComplicationFactory] and where
+     * necessary edge complication [ComplicationTapFilter]s needed for inflating
+     * [ComplicationSlot]s.
+     *
+     * If an androidx.wear.watchface.XmlSchemaAndComplicationSlotsDefinition metadata tag is defined
+     * for your WatchFaceService 's manifest, and your XML includes <ComplicationSlot> tags then you
+     * must override this method. A [NotImplementedError] exception will be thrown if you don't.
+     *
+     * @param currentUserStyleRepository The [CurrentUserStyleRepository] constructed using the
+     *   [UserStyleSchema] returned by [createUserStyleSchema].
+     * @param extra The object returned by [createExtra].
+     */
+    @WorkerThread
+    protected open fun getComplicationSlotInflationFactory(
+        currentUserStyleRepository: CurrentUserStyleRepository,
+        extra: Extra
+    ): ComplicationSlotInflationFactory {
+        throw NotImplementedError(
+            "You must override StatefulWatchFaceService.getComplicationSlotInflationFactory " +
+                "to provide additional details needed to inflate ComplicationSlotsManager"
+        )
+    }
+
+    @Suppress("DocumentExceptions") // We don't want users overriding this by mistake.
+    final override fun getComplicationSlotInflationFactory(
+        currentUserStyleRepository: CurrentUserStyleRepository
+    ): ComplicationSlotInflationFactory {
         throw UnsupportedOperationException("extra must be specified")
     }
 

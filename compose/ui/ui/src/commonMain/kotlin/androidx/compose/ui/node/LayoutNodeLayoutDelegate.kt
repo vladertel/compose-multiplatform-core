@@ -19,6 +19,7 @@ package androidx.compose.ui.node
 import androidx.compose.runtime.collection.MutableVector
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.internal.checkPrecondition
+import androidx.compose.ui.internal.checkPreconditionNotNull
 import androidx.compose.ui.internal.requirePrecondition
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.Measurable
@@ -718,6 +719,10 @@ internal class LayoutNodeLayoutDelegate(
                 }
             }
 
+            checkPrecondition(lookaheadPassDelegate?.placedOnce != false) {
+                "Error: Placement happened before lookahead."
+            }
+
             // Post-lookahead (if any) placement
             placeOuterCoordinator(position, zIndex, layerBlock)
         }
@@ -971,8 +976,10 @@ internal class LayoutNodeLayoutDelegate(
          */
         fun measureBasedOnLookahead() {
             val lookaheadDelegate = lookaheadPassDelegate
-            val parent = checkNotNull(layoutNode.parent) { "layoutNode parent is not set" }
-            checkNotNull(lookaheadDelegate) { "invalid lookaheadDelegate" }
+            val parent = checkPreconditionNotNull(layoutNode.parent) {
+                "layoutNode parent is not set"
+            }
+            checkPreconditionNotNull(lookaheadDelegate) { "invalid lookaheadDelegate" }
             if (lookaheadDelegate.measuredByParent == LayoutNode.UsageByParent.InMeasureBlock &&
                 parent.layoutState == LayoutState.Measuring
             ) {
@@ -990,7 +997,7 @@ internal class LayoutNodeLayoutDelegate(
          * layerBlock as lookahead.
          */
         fun placeBasedOnLookahead() {
-            val lookaheadDelegate = checkNotNull(lookaheadPassDelegate) {
+            val lookaheadDelegate = checkPreconditionNotNull(lookaheadPassDelegate) {
                 "invalid lookaheadDelegate"
             }
             placeAt(
@@ -1035,7 +1042,7 @@ internal class LayoutNodeLayoutDelegate(
         internal val measurePassDelegate: MeasurePassDelegate
             get() = this@LayoutNodeLayoutDelegate.measurePassDelegate
         internal var duringAlignmentLinesQuery: Boolean = false
-        private var placedOnce: Boolean = false
+        internal var placedOnce: Boolean = false
         private var measuredOnce: Boolean = false
         val lastConstraints: Constraints?
             get() = lookaheadConstraints

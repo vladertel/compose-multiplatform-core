@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package androidx.compose.foundation.pager
 
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.gestures.TargetedFlingBehavior
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
@@ -57,9 +62,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
 import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
 import kotlinx.coroutines.coroutineScope
 
-@ExperimentalFoundationApi
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun Pager(
     /** Modifier to be applied for the inner layout */
@@ -73,7 +79,7 @@ internal fun Pager(
     /** The layout orientation of the Pager */
     orientation: Orientation,
     /** fling behavior to be used for flinging */
-    flingBehavior: SnapFlingBehavior,
+    flingBehavior: TargetedFlingBehavior,
     /** Whether scrolling via the user gestures is allowed. */
     userScrollEnabled: Boolean,
     /** Number of pages to compose and layout before and after the visible pages */
@@ -121,15 +127,15 @@ internal fun Pager(
         pageCount = { state.pageCount }
     )
 
-    val pagerFlingBehavior = remember(flingBehavior, state) {
-        PagerWrapperFlingBehavior(flingBehavior, state)
-    }
-
     val semanticState = rememberPagerSemanticState(
         state,
         reverseLayout,
         orientation == Orientation.Vertical
     )
+
+    val resolvedFlingBehavior = remember(state, flingBehavior) {
+        PagerWrapperFlingBehavior(flingBehavior, state)
+    }
 
     val pagerBringIntoViewSpec = remember(state) { PagerBringIntoViewSpec(state) }
 
@@ -163,7 +169,7 @@ internal fun Pager(
                 orientation = orientation,
                 enabled = userScrollEnabled,
                 reverseScrolling = reverseLayout,
-                flingBehavior = pagerFlingBehavior,
+                flingBehavior = resolvedFlingBehavior,
                 interactionSource = state.internalInteractionSource,
                 bringIntoViewSpec = pagerBringIntoViewSpec
             )
@@ -263,7 +269,6 @@ private fun rememberPagerItemProviderLambda(
 /**
  * A modifier to detect up and down events in a Pager.
  */
-@OptIn(ExperimentalFoundationApi::class)
 private fun Modifier.dragDirectionDetector(state: PagerState) =
     this then Modifier.pointerInput(state) {
         coroutineScope {
@@ -315,6 +320,27 @@ private class PagerBringIntoViewSpec(val pagerState: PagerState) : BringIntoView
                     0f
                 } else {
                     offset
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Wraps [SnapFlingBehavior] to give out information about target page coming from flings.
+ */
+private class PagerWrapperFlingBehavior(
+    val originalFlingBehavior: TargetedFlingBehavior,
+    val pagerState: PagerState
+) : FlingBehavior {
+    override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+        val scope: ScrollScope = this
+        return with(originalFlingBehavior) {
+            performFling(initialVelocity) { remainingScrollOffset ->
+                val flingPageDisplacement = remainingScrollOffset / (pagerState.pageSizeWithSpacing)
+                val targetPage = flingPageDisplacement.roundToInt() + pagerState.currentPage
+                with(pagerState) {
+                    scope.updateTargetPage(targetPage)
                 }
             }
         }
