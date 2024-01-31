@@ -31,4 +31,5 @@ val IosBugs = Screen.Selection(
     StartRecompositionCheck,
     BackspaceIssue,
     DropdownMenuIssue,
+    TextFieldCrashVisualTransformation,
 )
