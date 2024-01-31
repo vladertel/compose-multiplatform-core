@@ -201,7 +201,8 @@ public final class LayoutElementBuilders {
     /**
      * Truncate the text at the last line defined by {@code setMaxLines} in {@link Text} to fit in
      * the {@link Text} element's bounds, but add an ellipsis (i.e. ...) to the end of the text if
-     * it has been truncated.
+     * it has been truncated. Note that this will not add an ellipsis if the number of lines that
+     * fits into the available space is less than the {@code setMaxLines} in {@link Text}.
      *
      * @deprecated Use {@link #TEXT_OVERFLOW_ELLIPSIZE} instead.
      */
@@ -220,14 +221,10 @@ public final class LayoutElementBuilders {
 
     /**
      * Truncate the text to fit in the {@link Text} element's parent bounds, but add an ellipsis
-     * (i.e. ...) to the end of the text if it has been truncated. This will truncate the text even
-     * before {@code setMaxLines} in {@link Text} is reached if there's not enough space in the
-     * parent container. Note that, when this is used, the parent of the {@link Text} element this
-     * corresponds to shouldn't have its width and height set to wrapped, as it can lead to
-     * unexpected results.
+     * (i.e. ...) to the end of the text if it has been truncated.
      *
-     * <p>Note that, on {@link SpanText}, this will behave exactly the same way as
-     * TEXT_OVERFLOW_ELLIPSIZE_END.
+     * <p>Note that, when this is used, the parent of the {@link Text} element this corresponds to
+     * shouldn't have its width and height set to wrapped, as it can lead to unexpected results.
      */
     @RequiresSchemaVersion(major = 1, minor = 300)
     public static final int TEXT_OVERFLOW_ELLIPSIZE = 4;
@@ -1122,98 +1119,6 @@ public final class LayoutElementBuilders {
             @NonNull
             public MarqueeParameters build() {
                 return new MarqueeParameters(mImpl.build(), mFingerprint);
-            }
-        }
-    }
-
-    /**
-     * An Android platform specific text style configuration options for styling and compatibility.
-     */
-    @RequiresSchemaVersion(major = 1, minor = 200)
-    @ProtoLayoutExperimental
-    @RestrictTo(Scope.LIBRARY_GROUP)
-    public static final class AndroidTextStyle {
-        private final LayoutElementProto.AndroidTextStyle mImpl;
-        @Nullable private final Fingerprint mFingerprint;
-
-        AndroidTextStyle(
-                LayoutElementProto.AndroidTextStyle impl, @Nullable Fingerprint fingerprint) {
-            this.mImpl = impl;
-            this.mFingerprint = fingerprint;
-        }
-
-        /**
-         * Gets whether the {@link Text} excludes padding specified by the font, i.e. extra top and
-         * bottom padding above the normal ascent and descent. The default is false.
-         */
-        public boolean getExcludeFontPadding() {
-            return mImpl.getExcludeFontPadding();
-        }
-
-        /** Get the fingerprint for this object, or null if unknown. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @Nullable
-        public Fingerprint getFingerprint() {
-            return mFingerprint;
-        }
-
-        /** Creates a new wrapper instance from the proto. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @NonNull
-        public static AndroidTextStyle fromProto(
-                @NonNull LayoutElementProto.AndroidTextStyle proto,
-                @Nullable Fingerprint fingerprint) {
-            return new AndroidTextStyle(proto, fingerprint);
-        }
-
-        @NonNull
-        static AndroidTextStyle fromProto(@NonNull LayoutElementProto.AndroidTextStyle proto) {
-            return fromProto(proto, null);
-        }
-
-        /** Returns the internal proto instance. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @NonNull
-        public LayoutElementProto.AndroidTextStyle toProto() {
-            return mImpl;
-        }
-
-        @Override
-        @NonNull
-        public String toString() {
-            return "AndroidTextStyle{" + "excludeFontPadding=" + getExcludeFontPadding() + "}";
-        }
-
-        /** Builder for {@link AndroidTextStyle} */
-        public static final class Builder {
-            private final LayoutElementProto.AndroidTextStyle.Builder mImpl =
-                    LayoutElementProto.AndroidTextStyle.newBuilder();
-            private final Fingerprint mFingerprint = new Fingerprint(408674745);
-
-            /** Creates an instance of {@link Builder}. */
-            public Builder() {
-                // Setting this to true before setter is called, so that default behaviour is to
-                // exclude padding.
-                mImpl.setExcludeFontPadding(true);
-            }
-
-            /**
-             * Sets whether the {@link Text} excludes padding specified by the font, i.e. extra top
-             * and bottom padding above the normal ascent and descent. The default is false.
-             */
-            @RequiresSchemaVersion(major = 1, minor = 200)
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setExcludeFontPadding(boolean excludeFontPadding) {
-                mImpl.setExcludeFontPadding(excludeFontPadding);
-                mFingerprint.recordPropertyUpdate(1, Boolean.hashCode(excludeFontPadding));
-                return this;
-            }
-
-            /** Builds an instance from accumulated values. */
-            @NonNull
-            public AndroidTextStyle build() {
-                return new AndroidTextStyle(mImpl.build(), mFingerprint);
             }
         }
     }
@@ -3852,7 +3757,6 @@ public final class LayoutElementBuilders {
          * ARC_DIRECTION_NORMAL.
          */
         @Nullable
-        @RestrictTo(Scope.LIBRARY_GROUP)
         public ArcDirectionProp getArcDirection() {
             if (mImpl.hasArcDirection()) {
                 return ArcDirectionProp.fromProto(mImpl.getArcDirection());
@@ -4022,7 +3926,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@NonNull ArcDirectionProp arcDirection) {
                 mImpl.setArcDirection(arcDirection.toProto());
                 mFingerprint.recordPropertyUpdate(
@@ -4036,7 +3939,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@ArcDirection int arcDirection) {
                 return setArcDirection(
                         new ArcDirectionProp.Builder().setValue(arcDirection).build());
@@ -4100,7 +4002,6 @@ public final class LayoutElementBuilders {
          * ARC_DIRECTION_CLOCKWISE.
          */
         @Nullable
-        @RestrictTo(Scope.LIBRARY_GROUP)
         public ArcDirectionProp getArcDirection() {
             if (mImpl.hasArcDirection()) {
                 return ArcDirectionProp.fromProto(mImpl.getArcDirection());
@@ -4222,7 +4123,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@NonNull ArcDirectionProp arcDirection) {
                 mImpl.setArcDirection(arcDirection.toProto());
                 mFingerprint.recordPropertyUpdate(
@@ -4236,7 +4136,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@ArcDirection int arcDirection) {
                 return setArcDirection(
                         new ArcDirectionProp.Builder().setValue(arcDirection).build());
@@ -4342,7 +4241,6 @@ public final class LayoutElementBuilders {
          * ARC_DIRECTION_CLOCKWISE.
          */
         @Nullable
-        @RestrictTo(Scope.LIBRARY_GROUP)
         public ArcDirectionProp getArcDirection() {
             if (mImpl.hasArcDirection()) {
                 return ArcDirectionProp.fromProto(mImpl.getArcDirection());
@@ -4540,7 +4438,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@NonNull ArcDirectionProp arcDirection) {
                 mImpl.setArcDirection(arcDirection.toProto());
                 mFingerprint.recordPropertyUpdate(
@@ -4553,7 +4450,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@ArcDirection int arcDirection) {
                 return setArcDirection(
                         new ArcDirectionProp.Builder().setValue(arcDirection).build());
@@ -5008,9 +4904,11 @@ public final class LayoutElementBuilders {
         }
     }
 
-    /** An extensible {@code StrokeCap} property. */
+    /**
+     * An extensible {@code ArcDirection} property that can be set to any curved element to
+     * control the drawing direction.
+     */
     @RequiresSchemaVersion(major = 1, minor = 300)
-    @RestrictTo(Scope.LIBRARY_GROUP)
     public static final class ArcDirectionProp {
         private final LayoutElementProto.ArcDirectionProp mImpl;
         @Nullable private final Fingerprint mFingerprint;

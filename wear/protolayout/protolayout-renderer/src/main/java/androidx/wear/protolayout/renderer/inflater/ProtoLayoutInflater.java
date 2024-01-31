@@ -18,8 +18,9 @@ package androidx.wear.protolayout.renderer.inflater;
 
 import static android.util.TypedValue.COMPLEX_UNIT_SP;
 import static android.view.View.INVISIBLE;
+import static android.view.View.LAYOUT_DIRECTION_LTR;
+import static android.view.View.LAYOUT_DIRECTION_RTL;
 import static android.view.View.VISIBLE;
-import static androidx.wear.protolayout.proto.LayoutElementProto.ArcDirection.ARC_DIRECTION_CLOCKWISE_VALUE;
 
 import static androidx.core.util.Preconditions.checkNotNull;
 import static androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer.FIRST_CHILD_INDEX;
@@ -53,6 +54,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextPaint;
+import android.text.TextUtils;
 import android.text.TextUtils.TruncateAt;
 import android.text.method.LinkMovementMethod;
 import android.text.style.AbsoluteSizeSpan;
@@ -90,7 +92,6 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.AccessibilityDelegateCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
-import androidx.vectordrawable.graphics.drawable.SeekableAnimatedVectorDrawable;
 import androidx.wear.protolayout.expression.pipeline.AnimationsHelper;
 import androidx.wear.protolayout.expression.proto.AnimationParameterProto.AnimationSpec;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DynamicFloat;
@@ -114,6 +115,7 @@ import androidx.wear.protolayout.proto.DimensionProto.DegreesProp;
 import androidx.wear.protolayout.proto.DimensionProto.DpProp;
 import androidx.wear.protolayout.proto.DimensionProto.ExpandedAngularDimensionProp;
 import androidx.wear.protolayout.proto.DimensionProto.ExpandedDimensionProp;
+import androidx.wear.protolayout.proto.DimensionProto.ExtensionDimension;
 import androidx.wear.protolayout.proto.DimensionProto.ImageDimension;
 import androidx.wear.protolayout.proto.DimensionProto.ProportionalDimensionProp;
 import androidx.wear.protolayout.proto.DimensionProto.SpProp;
@@ -121,6 +123,7 @@ import androidx.wear.protolayout.proto.DimensionProto.SpacerDimension;
 import androidx.wear.protolayout.proto.DimensionProto.WrappedDimensionProp;
 import androidx.wear.protolayout.proto.FingerprintProto.NodeFingerprint;
 import androidx.wear.protolayout.proto.LayoutElementProto.Arc;
+import androidx.wear.protolayout.proto.LayoutElementProto.ArcDirection;
 import androidx.wear.protolayout.proto.LayoutElementProto.ArcLayoutElement;
 import androidx.wear.protolayout.proto.LayoutElementProto.ArcLine;
 import androidx.wear.protolayout.proto.LayoutElementProto.ArcSpacer;
@@ -141,6 +144,7 @@ import androidx.wear.protolayout.proto.LayoutElementProto.SpanImage;
 import androidx.wear.protolayout.proto.LayoutElementProto.SpanText;
 import androidx.wear.protolayout.proto.LayoutElementProto.SpanVerticalAlignmentProp;
 import androidx.wear.protolayout.proto.LayoutElementProto.Spannable;
+import androidx.wear.protolayout.proto.LayoutElementProto.StrokeCapProp;
 import androidx.wear.protolayout.proto.LayoutElementProto.Text;
 import androidx.wear.protolayout.proto.LayoutElementProto.TextOverflow;
 import androidx.wear.protolayout.proto.LayoutElementProto.TextOverflowProp;
@@ -156,6 +160,7 @@ import androidx.wear.protolayout.proto.ModifiersProto.Modifiers;
 import androidx.wear.protolayout.proto.ModifiersProto.Padding;
 import androidx.wear.protolayout.proto.ModifiersProto.Semantics;
 import androidx.wear.protolayout.proto.ModifiersProto.SemanticsRole;
+import androidx.wear.protolayout.proto.ModifiersProto.Shadow;
 import androidx.wear.protolayout.proto.ModifiersProto.SlideDirection;
 import androidx.wear.protolayout.proto.ModifiersProto.SlideInTransition;
 import androidx.wear.protolayout.proto.ModifiersProto.SlideOutTransition;
@@ -175,6 +180,7 @@ import androidx.wear.protolayout.renderer.common.LoggingUtils;
 import androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer;
 import androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer.LayoutDiff;
 import androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer.TreeNodeWithChange;
+import androidx.wear.protolayout.renderer.common.SeekableAnimatedVectorDrawable;
 import androidx.wear.protolayout.renderer.dynamicdata.ProtoLayoutDynamicDataPipeline;
 import androidx.wear.protolayout.renderer.inflater.RenderedMetadata.LayoutInfo;
 import androidx.wear.protolayout.renderer.inflater.RenderedMetadata.LinearLayoutProperties;
@@ -190,6 +196,7 @@ import com.google.common.util.concurrent.SettableFuture;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
@@ -198,11 +205,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
-import static android.view.View.LAYOUT_DIRECTION_LTR;
-import static android.view.View.LAYOUT_DIRECTION_RTL;
-import android.text.TextUtils;
-import java.util.Locale;
 
 /**
  * Renderer for ProtoLayout.
@@ -1401,7 +1403,8 @@ public final class ProtoLayoutInflater {
         if (mProtoLayoutTheme.getRippleResId() != 0) {
             try {
                 view.setForeground(
-                        mProtoLayoutTheme.getTheme()
+                        mProtoLayoutTheme
+                                .getTheme()
                                 .getDrawable(mProtoLayoutTheme.getRippleResId()));
                 return;
             } catch (Resources.NotFoundException e) {
@@ -1425,7 +1428,8 @@ public final class ProtoLayoutInflater {
         if (isValid) {
             view.setForeground(mUiContext.getDrawable(outValue.resourceId));
         } else {
-            Log.e(TAG,
+            Log.e(
+                    TAG,
                     "Could not resolve android.R.attr.selectableItemBackground from Ui Context.");
         }
     }
@@ -1657,8 +1661,6 @@ public final class ProtoLayoutInflater {
                 case SlideDirection.SLIDE_DIRECTION_BOTTOM_TO_TOP_VALUE:
                     fromYDelta = getInitialOffsetOrDefaultY(slideIn, view);
                     break;
-                default:
-                    break;
             }
 
             TranslateAnimation translateAnimation =
@@ -1710,8 +1712,6 @@ public final class ProtoLayoutInflater {
                     case SlideDirection.SLIDE_DIRECTION_TOP_TO_BOTTOM_VALUE:
                     case SlideDirection.SLIDE_DIRECTION_BOTTOM_TO_TOP_VALUE:
                         toYDelta = getTargetOffsetOrDefaultY(slideOut, view);
-                        break;
-                    default:
                         break;
                 }
 
@@ -2596,12 +2596,10 @@ public final class ProtoLayoutInflater {
                     isAutoSizeAllowed);
         }
 
-        boolean excludeFontPadding = false;
-
-        if (text.hasAndroidTextStyle()) {
-            excludeFontPadding = text.getAndroidTextStyle().getExcludeFontPadding();
-        }
-        applyExcludeFontPadding(textView, excludeFontPadding);
+        // AndroidTextStyle proto is existing only for newer builders and older renderer mix to also
+        // have excluded font padding. Here, it's being ignored, and default value (excluded font
+        // padding) is used.
+        applyExcludeFontPadding(textView);
 
         if (text.hasLineHeight()) {
             float lineHeightPx = toPx(text.getLineHeight());
@@ -2680,8 +2678,7 @@ public final class ProtoLayoutInflater {
      * line of text.
      */
     private void adjustMaxLinesForEllipsize(@NonNull TextView textView) {
-        textView
-                .getViewTreeObserver()
+        textView.getViewTreeObserver()
                 .addOnPreDrawListener(
                         new OnPreDrawListener() {
                             @Override
@@ -2717,19 +2714,13 @@ public final class ProtoLayoutInflater {
     }
 
     /**
-     * Sets whether the padding is included or not. If font padding is not included, sets the
-     * correct padding to the TextView to avoid clipping taller languages.
+     * Sets font padding to be excluded and applies correct padding to the TextView to avoid
+     * clipping taller languages.
      */
-    private void applyExcludeFontPadding(TextView textView, boolean excludeFontPadding) {
-        // Reversed value, since TextView sets padding to be included, while our protos are for
-        // excluding it.
-        textView.setIncludeFontPadding(!excludeFontPadding);
+    private void applyExcludeFontPadding(TextView textView) {
+        textView.setIncludeFontPadding(false);
 
-        // We need to update padding in the TextView if font's padding is not used, to avoid
-        // clipping of taller languages.
-        if (!excludeFontPadding) {
-            return;
-        }
+        // We need to update padding in the TextView to avoid clipping of taller languages.
 
         float ascent = textView.getPaint().getFontMetrics().ascent;
         float descent = textView.getPaint().getFontMetrics().descent;
@@ -3083,114 +3074,135 @@ public final class ProtoLayoutInflater {
 
         WearCurvedLineView lineView = new WearCurvedLineView(mUiContext);
 
-        // A ArcLineView must always be the same width/height as its parent, so it can draw the line
-        // properly inside of those bounds.
-        ArcLayout.LayoutParams layoutParams =
-                new ArcLayout.LayoutParams(generateDefaultLayoutParams());
-        layoutParams.width = LayoutParams.MATCH_PARENT;
-        layoutParams.height = LayoutParams.MATCH_PARENT;
+        try {
+            lineView.setUpdatesEnabled(false);
 
-        if (line.hasBrush()) {
-            lineView.setBrush(line.getBrush());
-        } else if (line.hasColor()) {
-            handleProp(line.getColor(), lineView::setColor, posId, pipelineMaker);
-        } else {
-            lineView.setColor(LINE_COLOR_DEFAULT);
-        }
+            // A ArcLineView must always be the same width/height as its parent, so it can draw the
+            // line properly inside of those bounds.
+            ArcLayout.LayoutParams layoutParams =
+                    new ArcLayout.LayoutParams(generateDefaultLayoutParams());
+            layoutParams.width = LayoutParams.MATCH_PARENT;
+            layoutParams.height = LayoutParams.MATCH_PARENT;
 
-        if (line.hasStrokeCap()) {
-            switch (line.getStrokeCap().getValue()) {
-                case STROKE_CAP_BUTT:
-                    lineView.setStrokeCap(Cap.BUTT);
-                    break;
-                case STROKE_CAP_ROUND:
-                    lineView.setStrokeCap(Cap.ROUND);
-                    break;
-                case STROKE_CAP_SQUARE:
-                    lineView.setStrokeCap(Cap.SQUARE);
-                    break;
-                case UNRECOGNIZED:
-                case STROKE_CAP_UNDEFINED:
-                    Log.w(TAG, "Undefined StrokeCap value.");
-                    break;
+            if (line.hasBrush()) {
+                lineView.setBrush(line.getBrush());
+            } else if (line.hasColor()) {
+                handleProp(line.getColor(), lineView::setColor, posId, pipelineMaker);
+            } else {
+                lineView.setColor(LINE_COLOR_DEFAULT);
             }
-        }
 
-        lineView.setThickness(thicknessPx);
-
-        DegreesProp length;
-        if (line.hasAngularLength()) {
-            final ArcLineLength angularLength = line.getAngularLength();
-            switch (angularLength.getInnerCase()) {
-                case DEGREES:
-                    length = line.getAngularLength().getDegrees();
-                    handleProp(length, lineView::setLineSweepAngleDegrees, posId, pipelineMaker);
-                    break;
-
-                case EXPANDED_ANGULAR_DIMENSION:
-                    {
-                        ExpandedAngularDimensionProp expandedAngularDimension =
-                                angularLength.getExpandedAngularDimension();
-                        layoutParams.setWeight(
-                                expandedAngularDimension.hasLayoutWeight()
-                                        ? expandedAngularDimension.getLayoutWeight().getValue()
-                                        : 1.0f);
-                        length = DegreesProp.getDefaultInstance();
+            if (line.hasStrokeCap()) {
+                StrokeCapProp strokeCapProp = line.getStrokeCap();
+                switch (strokeCapProp.getValue()) {
+                    case STROKE_CAP_BUTT:
+                        lineView.setStrokeCap(Cap.BUTT);
                         break;
-                    }
+                    case STROKE_CAP_ROUND:
+                        lineView.setStrokeCap(Cap.ROUND);
+                        break;
+                    case STROKE_CAP_SQUARE:
+                        lineView.setStrokeCap(Cap.SQUARE);
+                        break;
+                    case UNRECOGNIZED:
+                    case STROKE_CAP_UNDEFINED:
+                        Log.w(TAG, "Undefined StrokeCap value.");
+                        break;
+                }
 
-                default:
-                    length = DegreesProp.getDefaultInstance();
-                    break;
+                if (strokeCapProp.hasShadow()) {
+                    Shadow shadow = strokeCapProp.getShadow();
+                    int color =
+                            shadow.getColor().hasArgb() ? shadow.getColor().getArgb() : Color.BLACK;
+                    lineView.setStrokeCapShadow(
+                            safeDpToPx(shadow.getBlurRadius().getValue()), color);
+                }
             }
-        } else {
-            length = line.getLength();
-            handleProp(length, lineView::setLineSweepAngleDegrees, posId, pipelineMaker);
-        }
 
-        SizedArcContainer sizeWrapper = null;
-        SizedArcContainer.LayoutParams sizedLp =
-                new SizedArcContainer.LayoutParams(
-                        LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
-        @Nullable Float sizeForLayout = resolveSizeForLayoutIfNeeded(length);
-        if (sizeForLayout != null) {
-            int arcDirection =
+            lineView.setThickness(thicknessPx);
+
+            DegreesProp length = DegreesProp.getDefaultInstance();
+
+            if (line.hasAngularLength()) {
+                final ArcLineLength angularLength = line.getAngularLength();
+                switch (angularLength.getInnerCase()) {
+                    case DEGREES:
+                        length = line.getAngularLength().getDegrees();
+                        handleProp(
+                                length, lineView::setLineSweepAngleDegrees, posId, pipelineMaker);
+                        break;
+
+                    case EXPANDED_ANGULAR_DIMENSION:
+                        {
+                            ExpandedAngularDimensionProp expandedAngularDimension =
+                                    angularLength.getExpandedAngularDimension();
+                            layoutParams.setWeight(
+                                    expandedAngularDimension.hasLayoutWeight()
+                                            ? expandedAngularDimension.getLayoutWeight().getValue()
+                                            : 1.0f);
+                            length = DegreesProp.getDefaultInstance();
+                            break;
+                        }
+                    case INNER_NOT_SET:
+                        break;
+                }
+            } else {
+                length = line.getLength();
+                handleProp(length, lineView::setLineSweepAngleDegrees, posId, pipelineMaker);
+            }
+
+            ArcDirection arcLineDirection =
                     line.hasArcDirection()
-                            ? line.getArcDirection().getValueValue()
-                            : ARC_DIRECTION_CLOCKWISE_VALUE;
-            sizeWrapper = new SizedArcContainer(mUiContext, arcDirection);
-            if (sizeForLayout <= 0f) {
-                Log.w(
-                        TAG,
-                        "ArcLine length's value_for_layout is not a positive value. Element won't"
-                                + " be visible.");
+                            ? line.getArcDirection().getValue()
+                            : ArcDirection.ARC_DIRECTION_CLOCKWISE;
+
+            lineView.setLineDirection(arcLineDirection);
+
+            SizedArcContainer sizeWrapper = null;
+            SizedArcContainer.LayoutParams sizedLp =
+                    new SizedArcContainer.LayoutParams(
+                            LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+            @Nullable Float sizeForLayout = resolveSizeForLayoutIfNeeded(length);
+            if (sizeForLayout != null) {
+                sizeWrapper = new SizedArcContainer(mUiContext);
+                sizeWrapper.setArcDirection(arcLineDirection);
+                if (sizeForLayout <= 0f) {
+                    Log.w(
+                            TAG,
+                            "ArcLine length's value_for_layout is not a positive value. Element"
+                                + " won't be visible.");
+                }
+                sizeWrapper.setSweepAngleDegrees(sizeForLayout);
+                sizedLp.setAngularAlignment(
+                        angularAlignmentProtoToAngularAlignment(
+                                length.getAngularAlignmentForLayout()));
+
+                // Also clamp the line to that angle...
+                lineView.setMaxSweepAngleDegrees(sizeForLayout);
             }
-            sizeWrapper.setSweepAngleDegrees(sizeForLayout);
-            sizedLp.setAngularAlignment(
-                    angularAlignmentProtoToAngularAlignment(length.getAngularAlignmentForLayout()));
 
-            // Also clamp the line to that angle...
-            lineView.setMaxSweepAngleDegrees(sizeForLayout);
-        }
+            View wrappedView =
+                    applyModifiersToArcLayoutView(
+                            lineView, line.getModifiers(), posId, pipelineMaker);
 
-        View wrappedView =
-                applyModifiersToArcLayoutView(lineView, line.getModifiers(), posId, pipelineMaker);
-
-        if (sizeWrapper != null) {
-            sizeWrapper.addView(wrappedView, sizedLp);
-            parentViewWrapper.maybeAddView(sizeWrapper, layoutParams);
-            return new InflatedView(
-                    sizeWrapper,
-                    parentViewWrapper
-                            .getParentProperties()
-                            .applyPendingChildLayoutParams(layoutParams));
-        } else {
-            parentViewWrapper.maybeAddView(wrappedView, layoutParams);
-            return new InflatedView(
-                    wrappedView,
-                    parentViewWrapper
-                            .getParentProperties()
-                            .applyPendingChildLayoutParams(layoutParams));
+            if (sizeWrapper != null) {
+                sizeWrapper.addView(wrappedView, sizedLp);
+                parentViewWrapper.maybeAddView(sizeWrapper, layoutParams);
+                return new InflatedView(
+                        sizeWrapper,
+                        parentViewWrapper
+                                .getParentProperties()
+                                .applyPendingChildLayoutParams(layoutParams));
+            } else {
+                parentViewWrapper.maybeAddView(wrappedView, layoutParams);
+                return new InflatedView(
+                        wrappedView,
+                        parentViewWrapper
+                                .getParentProperties()
+                                .applyPendingChildLayoutParams(layoutParams));
+            }
+        } finally {
+            lineView.setUpdatesEnabled(true);
         }
     }
 
@@ -3205,6 +3217,7 @@ public final class ProtoLayoutInflater {
             LayoutInfo.Builder layoutInfoBuilder,
             Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
         ArcLayout arcLayout = new ArcLayout(mUiContext);
+        int anchorAngleSign = 1;
 
         if (arc.hasArcDirection()) {
             switch (arc.getArcDirection().getValue()) {
@@ -3213,12 +3226,17 @@ public final class ProtoLayoutInflater {
                     break;
                 case ARC_DIRECTION_COUNTER_CLOCKWISE:
                     arcLayout.setLayoutDirection(LAYOUT_DIRECTION_RTL);
+                    anchorAngleSign = -1;
                     break;
                 case ARC_DIRECTION_NORMAL:
-                case UNRECOGNIZED:
+                    boolean isRtl = isRtlLayoutDirectionFromLocale();
                     arcLayout.setLayoutDirection(
-                            isRtlLayoutDirectionFromLocale() ?
-                                    LAYOUT_DIRECTION_RTL : LAYOUT_DIRECTION_LTR);
+                            isRtl ? LAYOUT_DIRECTION_RTL : LAYOUT_DIRECTION_LTR);
+                    if (isRtl) {
+                        anchorAngleSign = -1;
+                    }
+                    break;
+                case UNRECOGNIZED:
                     break;
             }
         }
@@ -3227,17 +3245,18 @@ public final class ProtoLayoutInflater {
         layoutParams.width = LayoutParams.MATCH_PARENT;
         layoutParams.height = LayoutParams.MATCH_PARENT;
 
+        int finalAnchorAngleSign = anchorAngleSign;
         handleProp(
                 arc.getAnchorAngle(),
                 angle -> {
-                    arcLayout.setAnchorAngleDegrees(angle);
+                    arcLayout.setAnchorAngleDegrees(finalAnchorAngleSign * angle);
                     // Invalidating arcLayout isn't enough. AnchorAngleDegrees change should trigger
                     // child requestLayout.
                     arcLayout.requestLayout();
                 },
                 arcPosId,
                 pipelineMaker);
-        arcLayout.setAnchorAngleDegrees(arc.getAnchorAngle().getValue());
+        arcLayout.setAnchorAngleDegrees(finalAnchorAngleSign * arc.getAnchorAngle().getValue());
         arcLayout.setAnchorType(anchorTypeToAnchorPos(arc.getAnchorType().getValue()));
 
         if (arc.hasMaxAngle()) {
@@ -3499,8 +3518,6 @@ public final class ProtoLayoutInflater {
 
         boolean isAnySpanClickable = false;
 
-        boolean excludeFontPadding = false;
-
         for (Span element : spannable.getSpansList()) {
             switch (element.getInnerCase()) {
                 case IMAGE:
@@ -3520,12 +3537,8 @@ public final class ProtoLayoutInflater {
                         isAnySpanClickable = true;
                     }
 
-                    if (protoText.hasAndroidTextStyle()
-                            && protoText.getAndroidTextStyle().getExcludeFontPadding()) {
-                        excludeFontPadding = true;
-                    }
                     break;
-                default:
+                case INNER_NOT_SET:
                     Log.w(TAG, "Unknown Span child type.");
                     break;
             }
@@ -3566,7 +3579,10 @@ public final class ProtoLayoutInflater {
 
         tv.setText(builder);
 
-        applyExcludeFontPadding(tv, excludeFontPadding);
+        // AndroidTextStyle proto is existing only for newer builders and older renderer mix to also
+        // have excluded font padding. Here, it's being ignored, and default value (excluded font
+        // padding) is used.
+        applyExcludeFontPadding(tv);
 
         if (isAnySpanClickable) {
             // For any ClickableSpans to work, the MovementMethod must be set to LinkMovementMethod.
@@ -4043,11 +4059,12 @@ public final class ProtoLayoutInflater {
             case TEXT:
             case SPANNABLE:
                 return true;
+            case EXTENSION:
+                return isMeasurable(element.getExtension().getWidth());
             case INNER_NOT_SET:
                 return false;
-            default: // TODO(b/276703002): Remove default case
-                return false;
         }
+        return false;
     }
 
     private boolean isHeightMeasurable(LayoutElement element, ContainerDimension containerWidth) {
@@ -4078,11 +4095,12 @@ public final class ProtoLayoutInflater {
             case TEXT:
             case SPANNABLE:
                 return true;
+            case EXTENSION:
+                return isMeasurable(element.getExtension().getHeight());
             case INNER_NOT_SET:
                 return false;
-            default: // TODO(b/276703002): Remove default case
-                return false;
         }
+        return false;
     }
 
     private boolean isMeasurable(ContainerDimension dimension) {
@@ -4107,6 +4125,16 @@ public final class ProtoLayoutInflater {
                 return true;
             case EXPANDED_DIMENSION:
                 return false;
+            case INNER_NOT_SET:
+                return false;
+        }
+        return false;
+    }
+
+    private static boolean isMeasurable(ExtensionDimension dimension) {
+        switch (dimension.getInnerCase()) {
+            case LINEAR_DIMENSION:
+                return true;
             case INNER_NOT_SET:
                 return false;
         }
@@ -4458,9 +4486,11 @@ public final class ProtoLayoutInflater {
                 return "android.widget.Switch";
             case SEMANTICS_ROLE_RADIOBUTTON:
                 return "android.widget.RadioButton";
-            default:
+            case SEMANTICS_ROLE_NONE:
+            case UNRECOGNIZED:
                 return "";
         }
+        return "";
     }
 
     // getObsoleteContentDescription is used for backward compatibility

@@ -35,6 +35,7 @@ import androidx.camera.camera2.pipe.CameraGraph.OperatingMode.Companion.NORMAL
 import androidx.camera.camera2.pipe.GraphState.GraphStateStarting
 import androidx.camera.camera2.pipe.GraphState.GraphStateStopped
 import androidx.camera.camera2.pipe.GraphState.GraphStateStopping
+import androidx.camera.camera2.pipe.core.Log
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.StateFlow
 
@@ -94,7 +95,8 @@ interface CameraGraph : AutoCloseable {
      *
      * @param camera The Camera2 [CameraId] that this [CameraGraph] represents.
      * @param streams A list of [CameraStream]s to use when building the configuration.
-     * @param streamSharingGroups A list of [CameraStream]s to apply buffer sharing to.
+     * @param exclusiveStreamGroups A list of [CameraStream] groups where the [CameraStream]s in
+     *   a group aren't expected to used simultaneously.
      * @param input A list of input configurations to support Camera2 Reprocessing.
      * @param sessionTemplate The template id to use when creating the [CaptureRequest] to supply
      *   the default parameters for a [SessionConfiguration] object.
@@ -120,8 +122,9 @@ interface CameraGraph : AutoCloseable {
     data class Config(
         val camera: CameraId,
         val streams: List<CameraStream.Config>,
-        val streamSharingGroups: List<List<CameraStream.Config>> = listOf(),
+        val exclusiveStreamGroups: List<List<CameraStream.Config>> = listOf(),
         val input: List<InputStream.Config>? = null,
+        val postviewStream: CameraStream.Config? = null,
         val sessionTemplate: RequestTemplate = RequestTemplate(1),
         val sessionParameters: Map<*, Any?> = emptyMap<Any, Any?>(),
         val sessionMode: OperatingMode = NORMAL,
@@ -265,11 +268,19 @@ interface CameraGraph : AutoCloseable {
      * @property EXTENSION represents device-specific modes that may operate differently or have
      *   significant limitations in order to produce specific kinds of camera results.
      */
-    class OperatingMode private constructor() {
+    @JvmInline
+    value class OperatingMode private constructor(internal val mode: Int) {
         companion object {
-            val NORMAL = OperatingMode()
-            val HIGH_SPEED = OperatingMode()
-            val EXTENSION = OperatingMode()
+            val NORMAL = OperatingMode(0)
+            val HIGH_SPEED = OperatingMode(1)
+            val EXTENSION = OperatingMode(2)
+
+            fun custom(mode: Int): OperatingMode {
+                require(mode != NORMAL.mode && mode != HIGH_SPEED.mode) {
+                    Log.error { "Custom operating mode $mode conflicts with standard modes" }
+                }
+                return OperatingMode(mode)
+            }
         }
     }
 

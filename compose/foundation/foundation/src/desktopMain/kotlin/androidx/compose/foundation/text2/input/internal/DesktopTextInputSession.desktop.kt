@@ -16,6 +16,8 @@
 
 package androidx.compose.foundation.text2.input.internal
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
 import androidx.compose.ui.platform.PlatformTextInputSession
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
@@ -24,10 +26,12 @@ import kotlinx.coroutines.awaitCancellation
 /**
  * Runs desktop-specific text input session logic.
  */
+@OptIn(ExperimentalFoundationApi::class)
 internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
     state: TransformedTextFieldState,
     layoutState: TextLayoutState,
     imeOptions: ImeOptions,
+    receiveContentConfiguration: ReceiveContentConfiguration?,
     onImeAction: ((ImeAction) -> Unit)?
 ): Nothing {
     // TODO(b/267235947) Wire up desktop.

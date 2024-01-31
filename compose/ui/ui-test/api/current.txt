@@ -29,6 +29,7 @@ package androidx.compose.ui.test {
 
   @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public abstract class AndroidComposeUiTestEnvironment<A extends androidx.activity.ComponentActivity> {
     ctor public AndroidComposeUiTestEnvironment(optional kotlin.coroutines.CoroutineContext effectContext);
+    method public final void cancelAndRecreateRecomposer();
     method protected abstract A? getActivity();
     method public final androidx.compose.ui.test.AndroidComposeUiTest<A> getTest();
     method public final <R> R runTest(kotlin.jvm.functions.Function1<? super androidx.compose.ui.test.AndroidComposeUiTest<A>,? extends R> block);
@@ -99,13 +100,12 @@ package androidx.compose.ui.test {
     method public void setContent(kotlin.jvm.functions.Function0<kotlin.Unit> composable);
     method public void unregisterIdlingResource(androidx.compose.ui.test.IdlingResource idlingResource);
     method public void waitForIdle();
-    method public void waitUntil(optional long timeoutMillis, kotlin.jvm.functions.Function0<java.lang.Boolean> condition);
+    method public void waitUntil(optional String? conditionDescription, optional long timeoutMillis, kotlin.jvm.functions.Function0<java.lang.Boolean> condition);
     property public abstract androidx.compose.ui.unit.Density density;
     property public abstract androidx.compose.ui.test.MainTestClock mainClock;
   }
 
   public final class ComposeUiTestKt {
-    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void runComposeUiTest(optional kotlin.coroutines.CoroutineContext effectContext, kotlin.jvm.functions.Function1<? super androidx.compose.ui.test.ComposeUiTest,kotlin.Unit> block);
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void waitUntilAtLeastOneExists(androidx.compose.ui.test.ComposeUiTest, androidx.compose.ui.test.SemanticsMatcher matcher, optional long timeoutMillis);
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void waitUntilDoesNotExist(androidx.compose.ui.test.ComposeUiTest, androidx.compose.ui.test.SemanticsMatcher matcher, optional long timeoutMillis);
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void waitUntilExactlyOneExists(androidx.compose.ui.test.ComposeUiTest, androidx.compose.ui.test.SemanticsMatcher matcher, optional long timeoutMillis);
@@ -118,6 +118,29 @@ package androidx.compose.ui.test {
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static inline <reified A extends androidx.activity.ComponentActivity> void runAndroidComposeUiTest(optional kotlin.coroutines.CoroutineContext effectContext, kotlin.jvm.functions.Function1<? super androidx.compose.ui.test.AndroidComposeUiTest<A>,kotlin.Unit> block);
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void runComposeUiTest(optional kotlin.coroutines.CoroutineContext effectContext, kotlin.jvm.functions.Function1<? super androidx.compose.ui.test.ComposeUiTest,kotlin.Unit> block);
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void runEmptyComposeUiTest(kotlin.jvm.functions.Function1<? super androidx.compose.ui.test.ComposeUiTest,kotlin.Unit> block);
+  }
+
+  public fun interface DeviceConfigurationOverride {
+    method @androidx.compose.runtime.Composable public void Override(kotlin.jvm.functions.Function0<kotlin.Unit> contentUnderTest);
+    field public static final androidx.compose.ui.test.DeviceConfigurationOverride.Companion Companion;
+  }
+
+  public static final class DeviceConfigurationOverride.Companion {
+  }
+
+  public final class DeviceConfigurationOverrideKt {
+    method @androidx.compose.runtime.Composable public static void DeviceConfigurationOverride(androidx.compose.ui.test.DeviceConfigurationOverride override, kotlin.jvm.functions.Function0<kotlin.Unit> content);
+    method public static infix androidx.compose.ui.test.DeviceConfigurationOverride then(androidx.compose.ui.test.DeviceConfigurationOverride, androidx.compose.ui.test.DeviceConfigurationOverride other);
+  }
+
+  public final class DeviceConfigurationOverride_androidKt {
+    method public static androidx.compose.ui.test.DeviceConfigurationOverride DarkMode(androidx.compose.ui.test.DeviceConfigurationOverride.Companion, boolean isDarkMode);
+    method public static androidx.compose.ui.test.DeviceConfigurationOverride FontScale(androidx.compose.ui.test.DeviceConfigurationOverride.Companion, float fontScale);
+    method @RequiresApi(31) public static androidx.compose.ui.test.DeviceConfigurationOverride FontWeightAdjustment(androidx.compose.ui.test.DeviceConfigurationOverride.Companion, int fontWeightAdjustment);
+    method public static androidx.compose.ui.test.DeviceConfigurationOverride ForcedSize(androidx.compose.ui.test.DeviceConfigurationOverride.Companion, long size);
+    method public static androidx.compose.ui.test.DeviceConfigurationOverride LayoutDirection(androidx.compose.ui.test.DeviceConfigurationOverride.Companion, androidx.compose.ui.unit.LayoutDirection layoutDirection);
+    method public static androidx.compose.ui.test.DeviceConfigurationOverride Locales(androidx.compose.ui.test.DeviceConfigurationOverride.Companion, androidx.compose.ui.text.intl.LocaleList locales);
+    method @RequiresApi(23) public static androidx.compose.ui.test.DeviceConfigurationOverride RoundScreen(androidx.compose.ui.test.DeviceConfigurationOverride.Companion, boolean isScreenRound);
   }
 
   @SuppressCompatibility @kotlin.RequiresOptIn(message="This testing API is experimental and is likely to be changed or removed entirely") @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) public @interface ExperimentalTestApi {

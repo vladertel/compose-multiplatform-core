@@ -78,8 +78,6 @@ tasks.withType(Test).configureEach {
     it.dependsOn(configurations.neededForGradleTestKitAgp81)
 }
 
-SdkResourceGenerator.generateForHostTest(project)
-
 gradlePlugin {
     plugins {
         baselineProfileProducer {
@@ -107,13 +105,6 @@ androidx {
     type = LibraryType.GRADLE_PLUGIN
     inceptionYear = "2022"
     description = "Android Baseline Profile Gradle Plugin"
-}
-
-tasks {
-    validatePlugins {
-        failOnWarning.set(true)
-        enableStricterValidation.set(true)
-    }
 }
 
 tasks.withType(Test).configureEach { test ->

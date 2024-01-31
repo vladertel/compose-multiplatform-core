@@ -55,7 +55,6 @@ import androidx.compose.ui.semantics.showTextSubstitution
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.semantics.textSubstitution
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextLayoutInput
 import androidx.compose.ui.text.TextLayoutResult
@@ -82,9 +81,11 @@ internal class TextAnnotatedStringNode(
     private var placeholders: List<AnnotatedString.Range<Placeholder>>? = null,
     private var onPlaceholderLayout: ((List<Rect?>) -> Unit)? = null,
     private var selectionController: SelectionController? = null,
-    private var overrideColor: ColorProducer? = null
+    private var overrideColor: ColorProducer? = null,
+    private var onShowTranslation: ((TextSubstitutionValue) -> Unit)? = null
 ) : Modifier.Node(), LayoutModifierNode, DrawModifierNode, SemanticsModifierNode {
-    private var baselineCache: Map<AlignmentLine, Int>? = null
+    @Suppress("PrimitiveInCollection")
+    private var baselineCache: MutableMap<AlignmentLine, Int>? = null
 
     private var _layoutCache: MultiParagraphLayoutCache? = null
     private val layoutCache: MultiParagraphLayoutCache
@@ -194,7 +195,8 @@ internal class TextAnnotatedStringNode(
     fun updateCallbacks(
         onTextLayout: ((TextLayoutResult) -> Unit)?,
         onPlaceholderLayout: ((List<Rect?>) -> Unit)?,
-        selectionController: SelectionController?
+        selectionController: SelectionController?,
+        onShowTranslation: ((TextSubstitutionValue) -> Unit)?
     ): Boolean {
         var changed = false
 
@@ -210,6 +212,11 @@ internal class TextAnnotatedStringNode(
 
         if (this.selectionController != selectionController) {
             this.selectionController = selectionController
+            changed = true
+        }
+
+        if (this.onShowTranslation != onShowTranslation) {
+            this.onShowTranslation = onShowTranslation
             changed = true
         }
         return changed
@@ -340,6 +347,8 @@ internal class TextAnnotatedStringNode(
 
         setTextSubstitution { updatedText ->
             setSubstitution(updatedText)
+            // TODO: add test to cover the immediate semantics invalidation
+            invalidateSemantics()
 
             true
         }
@@ -347,6 +356,7 @@ internal class TextAnnotatedStringNode(
             if (this@TextAnnotatedStringNode.textSubstitution == null) {
                 return@showTextSubstitution false
             }
+            onShowTranslation?.invoke(this@TextAnnotatedStringNode.textSubstitution!!)
 
             this@TextAnnotatedStringNode.textSubstitution?.isShowingSubstitution = it
 
@@ -367,6 +377,9 @@ internal class TextAnnotatedStringNode(
         }
         getTextLayoutResult(action = localSemanticsTextLayoutResult)
     }
+
+    override val shouldClearDescendantSemantics: Boolean
+        get() = true
 
     fun measureNonExtension(
         measureScope: MeasureScope,
@@ -395,10 +408,12 @@ internal class TextAnnotatedStringNode(
             invalidateLayer()
             onTextLayout?.invoke(textLayoutResult)
             selectionController?.updateTextLayout(textLayoutResult)
-            baselineCache = mapOf(
-                FirstBaseline to textLayoutResult.firstBaseline.fastRoundToInt(),
-                LastBaseline to textLayoutResult.lastBaseline.fastRoundToInt()
-            )
+
+            @Suppress("PrimitiveInCollection")
+            val cache = baselineCache ?: LinkedHashMap(2)
+            cache[FirstBaseline] = textLayoutResult.firstBaseline.fastRoundToInt()
+            cache[LastBaseline] = textLayoutResult.lastBaseline.fastRoundToInt()
+            baselineCache = cache
         }
 
         // first share the placeholders
@@ -534,13 +549,16 @@ internal class TextAnnotatedStringNode(
             }
 
             // draw inline content and links indication
-            if (text.hasLinks() || !placeholders.isNullOrEmpty()) {
+            val hasLinks = if (textSubstitution?.isShowingSubstitution == true) {
+                false
+            } else {
+                text.hasLinks()
+            }
+            if (hasLinks || !placeholders.isNullOrEmpty()) {
                 drawContent()
             }
         }
     }
 }
 
-@OptIn(ExperimentalTextApi::class)
-// TODO(soboleva) replace with has*Annotations in upcoming CL with API change
-internal fun AnnotatedString.hasLinks() = getUrlAnnotations(0, text.length).isNotEmpty()
+internal fun AnnotatedString.hasLinks() = hasLinkAnnotations(0, length)

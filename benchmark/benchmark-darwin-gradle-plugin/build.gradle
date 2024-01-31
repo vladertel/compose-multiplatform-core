@@ -39,8 +39,6 @@ dependencies {
     testImplementation(libs.truth)
 }
 
-SdkResourceGenerator.generateForHostTest(project)
-
 gradlePlugin {
     plugins {
         darwinBenchmark {
@@ -56,8 +54,4 @@ androidx {
     type = LibraryType.GRADLE_PLUGIN
     inceptionYear = "2022"
     description = "AndroidX Benchmarks - Darwin Gradle Plugin"
-}
-
-validatePlugins {
-    enableStricterValidation = true
 }

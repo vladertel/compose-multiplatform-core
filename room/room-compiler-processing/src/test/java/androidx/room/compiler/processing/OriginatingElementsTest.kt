@@ -19,6 +19,7 @@ package androidx.room.compiler.processing
 import androidx.kruth.assertThat
 import androidx.room.compiler.processing.ksp.KSClassDeclarationAsOriginatingElement
 import androidx.room.compiler.processing.ksp.KSFileAsOriginatingElement
+import androidx.room.compiler.processing.ksp.KspFileMemberContainer
 import androidx.room.compiler.processing.ksp.KspTypeElement
 import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticPropertyMethodElement
 import androidx.room.compiler.processing.util.Source
@@ -54,7 +55,6 @@ class OriginatingElementsTest {
             val element = it.processingEnv.requireTypeElement("foo.bar.Baz")
 
             val originatingElement = element.originatingElementForPoet()
-            assertThat(originatingElement).isNotNull()
 
             if (it.isKsp) {
                 assertThat(originatingElement).isInstanceOf<KSFileAsOriginatingElement>()
@@ -79,7 +79,6 @@ class OriginatingElementsTest {
                 .requireTypeElement("com.google.devtools.ksp.processing.SymbolProcessor")
 
             val originatingElement = element.originatingElementForPoet()
-            assertThat(originatingElement).isNotNull()
 
             if (it.isKsp) {
                 assertThat(originatingElement)
@@ -125,7 +124,6 @@ class OriginatingElementsTest {
 
             syntheticPropertyElements.forEach { syntheticPropertyElement ->
                 val originatingElement = syntheticPropertyElement.originatingElementForPoet()
-                assertThat(originatingElement).isNotNull()
 
                 if (invocation.isKsp) {
                     assertThat(originatingElement)
@@ -176,6 +174,38 @@ class OriginatingElementsTest {
                 hasSize(1)
                 containsExactlyElementsIn(kotlinPoetTypeSpec.originatingElements)
                 containsExactly(xTypeElement.originatingElementForPoet())
+            }
+        }
+    }
+
+    @Test
+    fun fileAsOriginatingElement() {
+        runProcessorTest(
+            sources = listOf(
+                Source.kotlin(
+                    "foo.bar.Baz.kt",
+                    """
+                    package foo.bar
+                    fun f(): String = TODO()
+                    """.trimIndent()
+                )
+            )
+        ) {
+            it.processingEnv.getElementsFromPackage("foo.bar").forEach { element ->
+                val originatingElement = element.closestMemberContainer.originatingElementForPoet()
+
+                if (it.isKsp) {
+                    assertThat(originatingElement)
+                        .isInstanceOf<KSFileAsOriginatingElement>()
+
+                    val originatingFile = (originatingElement as KSFileAsOriginatingElement).ksFile
+                    assertThat(originatingFile)
+                        .isEqualTo((element.enclosingElement as KspFileMemberContainer).ksFile)
+                } else {
+                    assertThat(originatingElement).isInstanceOf<TypeElement>()
+                    assertThat((originatingElement as TypeElement).qualifiedName.toString())
+                        .isEqualTo("foo.bar.Foo_bar_BazKt")
+                }
             }
         }
     }

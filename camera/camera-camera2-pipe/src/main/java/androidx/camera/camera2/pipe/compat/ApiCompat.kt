@@ -366,6 +366,15 @@ internal object Api31Compat {
 
     @JvmStatic
     @DoNotInline
+    fun addSensorPixelModeUsed(
+        outputConfiguration: OutputConfiguration,
+        sensorPixelMode: Int,
+    ) {
+        outputConfiguration.addSensorPixelModeUsed(sensorPixelMode)
+    }
+
+    @JvmStatic
+    @DoNotInline
     fun createExtensionCaptureSession(
         cameraDevice: CameraDevice,
         extensionConfiguration: ExtensionSessionConfiguration
@@ -518,4 +527,23 @@ internal object Api34Compat {
         extensionCharacteristics: CameraExtensionCharacteristics,
         extension: Int
     ): Boolean = extensionCharacteristics.isPostviewAvailable(extension)
+
+    @JvmStatic
+    @DoNotInline
+    fun getPostviewSupportedSizes(
+        extensionCharacteristics: CameraExtensionCharacteristics,
+        extension: Int,
+        captureSize: Size,
+        format: Int
+    ): List<Size> =
+        extensionCharacteristics.getPostviewSupportedSizes(extension, captureSize, format)
+
+    @JvmStatic
+    @DoNotInline
+    fun setPostviewOutputConfiguration(
+        extensionSessionConfiguration: ExtensionSessionConfiguration,
+        postviewOutputConfiguration: OutputConfiguration
+    ) {
+        extensionSessionConfiguration.postviewOutputConfiguration = postviewOutputConfiguration
+    }
 }

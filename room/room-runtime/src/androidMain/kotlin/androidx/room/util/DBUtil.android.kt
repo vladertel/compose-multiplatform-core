@@ -26,13 +26,94 @@ import android.os.Build
 import android.os.CancellationSignal
 import androidx.annotation.RestrictTo
 import androidx.room.RoomDatabase
+import androidx.room.TransactionElement
 import androidx.room.driver.SupportSQLiteConnection
+import androidx.room.getQueryDispatcher
+import androidx.room.transactionDispatcher
+import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.nio.ByteBuffer
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+
+/**
+ * Performs a single database read operation.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+actual suspend fun <R> performReadSuspending(
+    db: RoomDatabase,
+    sql: String,
+    block: (SQLiteStatement) -> R
+): R {
+    return if (db.inCompatibilityMode()) {
+        if (db.isOpenInternal && db.inTransaction()) {
+            db.perform(true, sql, block)
+        }
+        val context =
+            coroutineContext[TransactionElement]?.transactionDispatcher ?: db.getQueryDispatcher()
+        withContext(context) {
+            db.perform(true, sql, block)
+        }
+    } else {
+        db.perform(true, sql, block)
+    }
+}
+
+/**
+ * Performs a single database read transaction operation.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+actual suspend fun <R> performReadTransactionSuspending(
+    db: RoomDatabase,
+    sql: String,
+    block: (SQLiteStatement) -> R
+): R {
+    return if (db.inCompatibilityMode()) {
+        if (db.isOpenInternal && db.inTransaction()) {
+            db.performTransaction(true) { it.usePrepared(sql, block) }
+        }
+        val context =
+            coroutineContext[TransactionElement]?.transactionDispatcher ?: db.transactionDispatcher
+        withContext(context) {
+            db.performTransaction(true) { it.usePrepared(sql, block) }
+        }
+    } else {
+        db.performTransaction(true) { it.usePrepared(sql, block) }
+    }
+}
+
+/**
+ * Performs a single database read query operation.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+fun <R> performReadBlocking(
+    db: RoomDatabase,
+    sql: String,
+    block: (SQLiteStatement) -> R
+): R {
+    db.assertNotMainThread()
+    db.assertNotSuspendingTransaction()
+    return runBlocking { db.perform(isReadOnly = true, sql, block) }
+}
+
+/**
+ * Performs a single database read query transaction operation.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+fun <R> performReadTransactionBlocking(
+    db: RoomDatabase,
+    sql: String,
+    block: (SQLiteStatement) -> R
+): R {
+    db.assertNotMainThread()
+    db.assertNotSuspendingTransaction()
+    return runBlocking { db.performTransaction(isReadOnly = true) { it.usePrepared(sql, block) } }
+}
 
 /**
  * Performs the SQLiteQuery on the given database.

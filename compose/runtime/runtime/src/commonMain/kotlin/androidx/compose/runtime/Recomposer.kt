@@ -852,7 +852,7 @@ class Recomposer(
     suspend fun runRecomposeConcurrentlyAndApplyChanges(
         recomposeCoroutineContext: CoroutineContext
     ) = recompositionRunner { parentFrameClock ->
-        require(recomposeCoroutineContext[Job] == null) {
+        requirePrecondition(recomposeCoroutineContext[Job] == null) {
             "recomposeCoroutineContext may not contain a Job; found " +
                 recomposeCoroutineContext[Job]
         }
@@ -1336,6 +1336,9 @@ class Recomposer(
     internal override val compoundHashKey: Int
         get() = RecomposerCompoundHashKey
 
+    internal override val collectingCallByInformation: Boolean
+        get() = _hotReloadEnabled.get()
+
     // Collecting parameter happens at the level of a composer; starts as false
     internal override val collectingParameterInformation: Boolean
         get() = false
@@ -1556,7 +1559,7 @@ private class ProduceFrameSignal {
      * available up until this point. (Synchronizing access to that data is up to the caller.)
      */
     fun takeFrameRequestLocked() {
-        check(pendingFrameContinuation === FramePending) { "frame not pending" }
+        checkPrecondition(pendingFrameContinuation === FramePending) { "frame not pending" }
         pendingFrameContinuation = null
     }
 

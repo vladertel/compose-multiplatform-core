@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.input.pointer.PointerInputFilter
 import androidx.compose.ui.input.pointer.PointerInputModifier
 import androidx.compose.ui.internal.checkPrecondition
+import androidx.compose.ui.internal.checkPreconditionNotNull
 import androidx.compose.ui.internal.requirePrecondition
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
@@ -504,7 +505,7 @@ internal class LayoutNode(
      */
     internal fun detach() {
         val owner = owner
-        checkNotNull(owner) {
+        checkPreconditionNotNull(owner) {
             "Cannot detach node that is already detached!  Tree: " + parent?.debugTreeToString()
         }
         invalidateFocusOnDetach()
@@ -820,7 +821,7 @@ internal class LayoutNode(
             }
             val layerCoordinator = _innerLayerCoordinator
             if (layerCoordinator != null) {
-                checkNotNull(layerCoordinator.layer) { "layer was not set" }
+                checkPreconditionNotNull(layerCoordinator.layer) { "layer was not set" }
             }
             return layerCoordinator
         }
@@ -978,16 +979,17 @@ internal class LayoutNode(
                 // this node was scheduled for remeasure or relayout while it was not
                 // placed. such requests are ignored for non-placed nodes so we have to
                 // re-schedule remeasure or relayout.
-                if (it.measurePending) {
-                    it.requestRemeasure(forceRequest = true)
-                } else if (it.layoutPending) {
-                    it.requestRelayout(forceRequest = true)
-                } else if (it.lookaheadMeasurePending) {
+                if (it.lookaheadMeasurePending) {
                     it.requestLookaheadRemeasure(forceRequest = true)
-                } else if (it.lookaheadLayoutPending) {
-                    it.requestLookaheadRelayout(forceRequest = true)
                 } else {
-                    // no extra work required and node is ready to be displayed
+                    if (it.lookaheadLayoutPending) {
+                        it.requestLookaheadRelayout(forceRequest = true)
+                    }
+                    if (it.measurePending) {
+                        it.requestRemeasure(forceRequest = true)
+                    } else if (it.layoutPending) {
+                        it.requestRelayout(forceRequest = true)
+                    }
                 }
             }
 
@@ -1465,7 +1467,7 @@ internal class LayoutNode(
  */
 internal fun LayoutNode.requireOwner(): Owner {
     val owner = owner
-    checkNotNull(owner) {
+    checkPreconditionNotNull(owner) {
         "LayoutNode should be attached to an owner"
     }
     return owner

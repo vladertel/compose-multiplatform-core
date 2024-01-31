@@ -137,7 +137,8 @@ public final class Camera2CameraInfoImpl implements CameraInfoInternal {
         mCameraCharacteristicsCompat = cameraManager.getCameraCharacteristicsCompat(mCameraId);
         mCamera2CameraInfo = new Camera2CameraInfo(this);
         mCameraQuirks = CameraQuirks.get(cameraId, mCameraCharacteristicsCompat);
-        mCamera2EncoderProfilesProvider = new Camera2EncoderProfilesProvider(cameraId);
+        mCamera2EncoderProfilesProvider = new Camera2EncoderProfilesProvider(cameraId,
+                mCameraQuirks);
         mCameraStateLiveData = new RedirectableLiveData<>(
                 CameraState.create(CameraState.Type.CLOSED));
     }
@@ -424,6 +425,23 @@ public final class Camera2CameraInfoImpl implements CameraInfoInternal {
             default:
                 return Timebase.UPTIME;
         }
+    }
+
+    @NonNull
+    @Override
+    public Set<Integer> getSupportedOutputFormats() {
+        StreamConfigurationMapCompat mapCompat =
+                mCameraCharacteristicsCompat.getStreamConfigurationMapCompat();
+        int[] formats = mapCompat.getOutputFormats();
+        if (formats == null) {
+            return new HashSet<>();
+        }
+
+        Set<Integer> result = new HashSet<>();
+        for (int format : formats) {
+            result.add(format);
+        }
+        return result;
     }
 
     @NonNull

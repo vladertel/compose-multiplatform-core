@@ -97,6 +97,8 @@ import org.gradle.kotlin.dsl.extra
 import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.withModule
+import org.gradle.plugin.devel.plugins.JavaGradlePluginPlugin
+import org.gradle.plugin.devel.tasks.ValidatePlugins
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
@@ -129,13 +131,12 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 project
             )
 
-        project.configurations.create("samples")
-
         project.tasks.register(BUILD_ON_SERVER_TASK, DefaultTask::class.java)
         // Perform different actions based on which plugins have been applied to the project.
         // Many of the actions overlap, ex. API tracking.
         project.plugins.all { plugin ->
             when (plugin) {
+                is JavaGradlePluginPlugin -> configureGradlePluginPlugin(project)
                 is JavaPlugin -> configureWithJavaPlugin(project, androidXExtension)
                 is LibraryPlugin -> configureWithLibraryPlugin(project, androidXExtension)
                 is AppPlugin -> configureWithAppPlugin(project, androidXExtension)
@@ -158,6 +159,9 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         project.configureLint()
         project.configureKtlint()
         project.configureKotlinVersion()
+
+        // Avoid conflicts between full Guava and LF-only Guava.
+        project.configureGuavaUpgradeHandler()
 
         // Configure all Jar-packing tasks for hermetic builds.
         project.tasks.withType(Zip::class.java).configureEach { it.configureForHermeticBuild() }
@@ -199,6 +203,8 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         }
         project.disallowAccidentalAndroidDependenciesInKmpProject(androidXKmpExtension)
         TaskUpToDateValidator.setup(project, registry)
+
+        project.workaroundPrebuiltTakingPrecedenceOverProject()
     }
 
     private fun Project.registerProjectOrArtifact() {
@@ -497,7 +503,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 }
             }
             project.configureKmp()
-            project.configureSourceJarForMultiplatform()
+            project.configureSourceJarForMultiplatform(androidXExtension)
 
             // Disable any source JAR task(s) added by KotlinMultiplatformPlugin.
             // https://youtrack.jetbrains.com/issue/KT-55881
@@ -699,7 +705,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         }
 
         project.configurePublicResourcesStub(libraryExtension)
-        project.configureSourceJarForAndroid(libraryExtension)
+        project.configureSourceJarForAndroid(libraryExtension, androidXExtension)
         project.configureVersionFileWriter(libraryAndroidComponentsExtension, androidXExtension)
         project.configureJavaCompilationWarnings(androidXExtension)
 
@@ -733,6 +739,14 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         project.buildOnServerDependsOnLint()
     }
 
+    private fun configureGradlePluginPlugin(project: Project) {
+        project.tasks.withType(ValidatePlugins::class.java).configureEach {
+            it.enableStricterValidation.set(true)
+            it.failOnWarning.set(true)
+        }
+        SdkResourceGenerator.generateForHostTest(project)
+    }
+
     private fun configureWithJavaPlugin(project: Project, androidXExtension: AndroidXExtension) {
         project.configureErrorProneForJava()
 
@@ -759,7 +773,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                 }
             }
             if (!project.plugins.hasPlugin(KotlinBasePluginWrapper::class.java)) {
-                project.configureSourceJarForJava()
+                project.configureSourceJarForJava(androidXExtension)
             }
         }
 
@@ -913,6 +927,11 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         @Suppress("DEPRECATION")
         externalNativeBuild.cmake.buildStagingDirectory =
             File(project.buildDir, "../nativeBuildStaging")
+
+        // Align the ELF region of native shared libs 16kb boundary
+        defaultConfig.externalNativeBuild.cmake.arguments.add(
+            "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+        )
     }
 
     private fun KotlinMultiplatformAndroidTarget.configureAndroidBaseOptions(
@@ -981,7 +1000,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         project.extensions.findByType<LibraryAndroidComponentsExtension>()!!.finalizeDsl {
             it.defaultConfig.aarMetadata.minCompileSdk = it.compileSdk
         }
-        project.fixGuavaDeps()
         project.disableStrictVersionConstraints()
         project.setPublishProperty(androidXExtension)
         project.afterEvaluate {
@@ -995,7 +1013,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
     ) {
         // Propagate the compileSdk value into minCompileSdk.
         aarMetadata.minCompileSdk = compileSdk
-        project.fixGuavaDeps()
         project.disableStrictVersionConstraints()
         project.setPublishProperty(androidXExtension)
     }
@@ -1015,7 +1032,12 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         }
     }
 
-    private fun Project.fixGuavaDeps() {
+    /**
+     * Adds a module handler replacement rule that treats full Guava (of any version) as an upgrade
+     * to ListenableFuture-only Guava. This prevents irreconcilable versioning conflicts and/or
+     * class duplication issues.
+     */
+    private fun Project.configureGuavaUpgradeHandler() {
         // The full Guava artifact is very large, so they split off a special artifact containing a
         // standalone version of the commonly-used ListenableFuture interface. However, they also
         // structured the artifacts in a way that causes dependency resolution conflicts:
@@ -1505,6 +1527,13 @@ fun AndroidXExtension.validateMavenVersion() {
             """
                 .trimIndent()
         )
+    }
+}
+
+/** Workaround for https://github.com/gradle/gradle/issues/27407 */
+fun Project.workaroundPrebuiltTakingPrecedenceOverProject() {
+    project.configurations.configureEach { configuration ->
+        configuration.resolutionStrategy.preferProjectModules()
     }
 }
 
