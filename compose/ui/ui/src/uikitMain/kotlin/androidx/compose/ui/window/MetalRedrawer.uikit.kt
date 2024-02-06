@@ -21,8 +21,19 @@ import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.interop.doLocked
 import androidx.compose.ui.interop.isNotEmpty
 import androidx.compose.ui.util.fastForEach
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlin.math.roundToInt
 import kotlinx.cinterop.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.jetbrains.skia.*
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSRunLoop
@@ -188,6 +199,80 @@ internal class InflightCommandBuffers(
     }
 }
 
+private class InflightSemaphore(
+    private val maxInflightCount: Int
+) {
+    private sealed interface State {
+        class Normal(val count: Int) : State
+        class Exhausted(val continuation: Continuation<Unit>) : State
+    }
+
+    /**
+     * Async mutex for guarding state transitions
+     */
+    private val mutex = Mutex(false)
+    private var state: State = State.Normal(maxInflightCount)
+
+    /**
+     * Coroutine scope for signalling
+     */
+    private val signallingScope = CoroutineScope(Dispatchers.Default)
+    fun signal() {
+        signallingScope.launch {
+            mutex.withLock {
+                when (val currentState = state) {
+                    is State.Normal -> {
+                        val newCount = currentState.count + 1
+                        check(newCount <= maxInflightCount)
+                        state = State.Normal(newCount)
+                    }
+
+                    is State.Exhausted -> {
+                        currentState.continuation.resume(Unit)
+                        state = State.Normal(0)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Return true if semaphore is exhausted and there is another active waiter, false otherwise.
+     */
+    suspend fun wait(): Boolean {
+        mutex.lock()
+
+        return when (val currentState = state) {
+            is State.Normal -> {
+                if (currentState.count > 0) {
+                    val newCount = currentState.count - 1
+                    state = State.Normal(newCount)
+                    mutex.unlock()
+                } else {
+                    try {
+                        suspendCoroutine<Unit> {
+                            // The code below will be executed synchronously and continuation will be
+                            // saved in internal state, mutex will be unlocked after suspension.
+                            state = State.Exhausted(it)
+                            mutex.unlock()
+                        }
+                    } finally {
+                        mutex.unlock()
+                    }
+                }
+
+                false
+            }
+
+            is State.Exhausted -> {
+                // Already exhausted, another waiter is active, do nothing
+                mutex.unlock()
+                true
+            }
+        }
+    }
+}
+
 internal class MetalRedrawer(
     private val metalLayer: CAMetalLayer,
     private val callbacks: MetalRedrawerCallbacks
@@ -202,12 +287,11 @@ internal class MetalRedrawer(
     private val context = DirectContext.makeMetal(device.objcPtr(), queue.objcPtr())
     private var lastRenderTimestamp: NSTimeInterval = CACurrentMediaTime()
     private val pictureRecorder = PictureRecorder()
-
-    // Semaphore for preventing command buffers count more than swapchain size to be scheduled/executed at the same time
-    private val inflightSemaphore =
-        dispatch_semaphore_create(metalLayer.maximumDrawableCount.toLong())
+    private var renderDispatchScope = CoroutineScope(Dispatchers.Main)
+    private val maxInflightCount = metalLayer.maximumDrawableCount
+    private val inflightSemaphore = InflightSemaphore(maxInflightCount.toInt())
     private val inflightCommandBuffers =
-        InflightCommandBuffers(metalLayer.maximumDrawableCount.toInt())
+        InflightCommandBuffers(maxInflightCount.toInt())
 
     var isForcedToPresentWithTransactionEveryFrame = false
 
@@ -259,7 +343,9 @@ internal class MetalRedrawer(
             val targetTimestamp = currentTargetTimestamp ?: return@DisplayLinkProxy
 
             displayLinkConditions.onDisplayLinkTick {
-                draw(waitUntilCompletion = false, targetTimestamp)
+                renderDispatchScope.launch {
+                    draw(waitUntilCompletion = false, targetTimestamp)
+                }
             }
         },
         selector = NSSelectorFromString(DisplayLinkProxy::handleDisplayLinkTick.name)
@@ -300,6 +386,8 @@ internal class MetalRedrawer(
     fun dispose() {
         check(caDisplayLink != null) { "MetalRedrawer.dispose() was called more than once" }
 
+        renderDispatchScope.cancel()
+
         applicationStateListener.dispose()
 
         caDisplayLink?.invalidate()
@@ -323,47 +411,54 @@ internal class MetalRedrawer(
             return
         }
 
-        draw(waitUntilCompletion = true, CACurrentMediaTime())
+        runBlocking {
+            draw(waitUntilCompletion = true, CACurrentMediaTime())
+        }
     }
 
-    private fun draw(waitUntilCompletion: Boolean, targetTimestamp: NSTimeInterval) {
+    private suspend fun draw(waitUntilCompletion: Boolean, targetTimestamp: NSTimeInterval) {
         check(NSThread.isMainThread)
 
         lastRenderTimestamp = maxOf(targetTimestamp, lastRenderTimestamp)
 
+        val (width, height) = metalLayer.drawableSize.useContents {
+            width.roundToInt() to height.roundToInt()
+        }
+
+        if (width <= 0 || height <= 0) {
+            return
+        }
+
+        // Perform timestep and record all draw commands into [Picture]
+        pictureRecorder.beginRecording(
+            Rect(
+                left = 0f,
+                top = 0f,
+                width.toFloat(),
+                height.toFloat()
+            )
+        ).also { canvas ->
+            canvas.clear(if (metalLayer.opaque) Color.WHITE else Color.TRANSPARENT)
+            callbacks.render(canvas, lastRenderTimestamp)
+        }
+
+        val picture = pictureRecorder.finishRecordingAsPicture()
+
+        val time = CACurrentMediaTime()
+        if (inflightSemaphore.wait()) {
+            picture.close()
+            return
+        }
+        println("semaphore wait: ${time - lastRenderTimestamp}")
+
         autoreleasepool {
-            val (width, height) = metalLayer.drawableSize.useContents {
-                width.roundToInt() to height.roundToInt()
-            }
-
-            if (width <= 0 || height <= 0) {
-                return@autoreleasepool
-            }
-
-            // Perform timestep and record all draw commands into [Picture]
-            pictureRecorder.beginRecording(
-                Rect(
-                    left = 0f,
-                    top = 0f,
-                    width.toFloat(),
-                    height.toFloat()
-                )
-            ).also { canvas ->
-                canvas.clear(if (metalLayer.opaque) Color.WHITE else Color.TRANSPARENT)
-                callbacks.render(canvas, lastRenderTimestamp)
-            }
-
-            val picture = pictureRecorder.finishRecordingAsPicture()
-
-            dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
-
             val metalDrawable = metalLayer.nextDrawable()
 
             if (metalDrawable == null) {
                 // TODO: anomaly, log
                 // Logger.warn { "'metalLayer.nextDrawable()' returned null. 'metalLayer.allowsNextDrawableTimeout' should be set to false. Skipping the frame." }
                 picture.close()
-                dispatch_semaphore_signal(inflightSemaphore)
+                inflightSemaphore.signal()
                 return@autoreleasepool
             }
 
@@ -384,7 +479,7 @@ internal class MetalRedrawer(
                 // Logger.warn { "'Surface.makeFromBackendRenderTarget' returned null. Skipping the frame." }
                 picture.close()
                 renderTarget.close()
-                dispatch_semaphore_signal(inflightSemaphore)
+                inflightSemaphore.signal()
                 return@autoreleasepool
             }
 
@@ -416,7 +511,7 @@ internal class MetalRedrawer(
 
                 commandBuffer.addCompletedHandler {
                     // Signal work finish, allow a new command buffer to be scheduled
-                    dispatch_semaphore_signal(inflightSemaphore)
+                    inflightSemaphore.signal()
                 }
                 commandBuffer.commit()
 
