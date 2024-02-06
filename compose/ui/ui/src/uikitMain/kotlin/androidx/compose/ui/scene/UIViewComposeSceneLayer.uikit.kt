@@ -32,10 +32,12 @@ import androidx.compose.ui.window.ComposeContainer
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.ProvideContainerCompositionLocals
 import androidx.compose.ui.window.RenderingUIView
+import androidx.compose.ui.window.UITouchesEventPhase
 import kotlin.coroutines.CoroutineContext
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import platform.CoreGraphics.CGPoint
+import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGRectZero
 import platform.CoreGraphics.CGSize
 import platform.UIKit.NSLayoutConstraint
@@ -69,11 +71,22 @@ internal class UIViewComposeSceneLayer(
             )
         }
 
+
+        override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
+            super.touchesBegan(touches, withEvent)
+            if (touches.size == 1) {
+                onOutsidePointerEvent?.invoke(true)
+            }
+        }
+
+        override fun touchesEnded(touches: Set<*>, withEvent: UIEvent?) {
+            super.touchesEnded(touches, withEvent)
+            if (touches.size == 1) {
+                onOutsidePointerEvent?.invoke(false)
+            }
+        }
+
         override fun pointInside(point: CValue<CGPoint>, withEvent: UIEvent?): Boolean {
-            //TODO pass invoke(true) on touch up event only when this touch event begins outside of layer bounds.
-            // Also it should be only one touch event (not multitouch with 2 and more touches).
-            // In other cases pass invoke(false)
-            onOutsidePointerEvent?.invoke(true)
             return focusable
         }
     }
