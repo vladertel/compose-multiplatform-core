@@ -422,8 +422,10 @@ class ComposerParamTransformer(
                 // the names here to ensure that dex is always safe.
                 val newName = dexSafeName(param.name)
 
-                val isDefaultInOverriden = overriddenSymbols.any { it.owner.hasDefaultExpressionDefinedForValueParameter(i) }
-                val newType = defaultParameterType(param, isDefaultInOverriden).remapTypeParameters()
+                val newType = defaultParameterType(
+                    param,
+                    this.hasDefaultExpressionDefinedForValueParameter(param.index)
+                ).remapTypeParameters()
                 param.copyTo(
                     fn,
                     name = newName,
@@ -484,7 +486,11 @@ class ComposerParamTransformer(
         }
 
         return overriddenSymbols.any {
-            it.owner.hasDefaultExpressionDefinedForValueParameter(index)
+            // ComposableFunInterfaceLowering copies extension receiver as a value
+            // parameter, which breaks indices for overrides. fun interface cannot
+            // have parameters defaults, however, so we can skip here if mismatch is detected.
+            it.owner.valueParameters.size == valueParameters.size &&
+                it.owner.hasDefaultExpressionDefinedForValueParameter(index)
         }
     }
 
@@ -619,10 +625,12 @@ class ComposerParamTransformer(
         }
     }
 
-    private fun defaultParameterType(param: IrValueParameter, isDefaultInOverriden: Boolean): IrType {
+    private fun defaultParameterType(
+        param: IrValueParameter,
+        hasDefaultValue: Boolean
+    ): IrType {
         val type = param.type
-
-        if (!isDefaultInOverriden && param.defaultValue == null) return type
+        if (!hasDefaultValue) return type
         val constructorAccessible = !type.isPrimitiveType() &&
             type.classOrNull?.owner?.primaryConstructor != null
         return when {
