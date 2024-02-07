@@ -117,7 +117,15 @@ internal class SkiaBackedCanvas(val skia: org.jetbrains.skia.Canvas) : Canvas {
     }
 
     override fun drawRect(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
-        skia.drawRect(SkRect.makeLTRB(left, top, right, bottom), paint.skia)
+        /*
+         * Do not use makeLTRB here because it adds additional checks (like left <= right) that
+         * might lead to a crash. It's not required here because skia sorts it internally.
+         * See https://github.com/JetBrains/skia/blob/skiko-m105/src/core/SkCanvas.cpp#L1776-L1778
+         *
+         * Please note that "negative" size is used in material components to support RTL.
+         */
+        val rect = SkRect(left, top, right, bottom)
+        skia.drawRect(rect, paint.skia)
     }
 
     override fun drawRoundRect(
