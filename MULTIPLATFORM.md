@@ -64,6 +64,7 @@ Compose Multiplatform core libraries can be published to local Maven with the fo
 ```bash
 export COMPOSE_CUSTOM_VERSION=0.0.0-custom-version
 ```
+
 2. Publish core libraries
 ```bash
 ./gradlew :mpp:publishComposeJbToMavenLocal -Pcompose.platforms=all
