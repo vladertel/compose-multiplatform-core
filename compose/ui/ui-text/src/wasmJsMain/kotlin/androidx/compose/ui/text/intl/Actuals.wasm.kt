@@ -27,3 +27,6 @@ internal actual fun userPreferredLanguages(): List<String> {
 
 private fun getUserPreferredLanguagesAsArray(): JsArray<JsString> =
     js("window.navigator.languages")
+
+internal actual fun parseLanguageTagToIntlLocale(languageTag: String): IntlLocale =
+    js("new Intl.Locale(languageTag)")

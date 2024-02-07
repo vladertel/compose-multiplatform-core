@@ -62,7 +62,7 @@ internal external interface IntlLocale {
     val baseName: String
 }
 
-internal fun parseLanguageTagToIntlLocale(languageTag: String): IntlLocale = js("new Intl.Locale(languageTag)")
+internal expect fun parseLanguageTagToIntlLocale(languageTag: String): IntlLocale
 
 internal expect fun userPreferredLanguages(): List<String>
 

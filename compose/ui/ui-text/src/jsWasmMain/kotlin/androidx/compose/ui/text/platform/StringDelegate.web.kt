@@ -17,7 +17,6 @@
 package androidx.compose.ui.text.platform
 
 import androidx.compose.ui.text.PlatformStringDelegate
-import androidx.compose.ui.text.intl.JsLocale
 import androidx.compose.ui.text.intl.PlatformLocale
 
 /**
@@ -59,10 +58,5 @@ internal class JsStringDelegate : PlatformStringDelegate {
 internal actual fun ActualStringDelegate(): PlatformStringDelegate =
     JsStringDelegate()
 
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleUpperCase
-internal fun toLocaleUpperCase(text: String, locale: String): String =
-    js("text.toLocaleUpperCase(locale)")
-
-//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleLowerCase
-internal fun toLocaleLowerCase(text: String, locale: String): String =
-    js("text.toLocaleLowerCase(locale)")
+internal expect fun toLocaleUpperCase(text: String, locale: String): String
+internal expect fun toLocaleLowerCase(text: String, locale: String): String

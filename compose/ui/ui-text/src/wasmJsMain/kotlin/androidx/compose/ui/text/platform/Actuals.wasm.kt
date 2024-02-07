@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.text.intl
+package androidx.compose.ui.text.platform
 
-internal actual fun userPreferredLanguages(): List<String> {
-    return getUserPreferredLanguagesAsArray().toList()
-}
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleUpperCase
+internal actual fun toLocaleUpperCase(text: String, locale: String): String =
+    js("text.toLocaleUpperCase(locale)")
 
-@Suppress("UnsafeCastFromDynamic")
-private fun getUserPreferredLanguagesAsArray(): Array<String> =
-    js("window.navigator.languages")
-
-@Suppress("UNCHECKED_CAST_TO_EXTERNAL_INTERFACE")
-internal actual fun parseLanguageTagToIntlLocale(languageTag: String): IntlLocale =
-    js("new Intl.Locale(languageTag)") as IntlLocale
+//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleLowerCase
+internal actual fun toLocaleLowerCase(text: String, locale: String): String =
+    js("text.toLocaleLowerCase(locale)")

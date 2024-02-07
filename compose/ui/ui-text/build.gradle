@@ -251,12 +251,6 @@ android {
     namespace "androidx.compose.ui.text"
 }
 
-project.tasks.configureEach {
-    if (name == "compileJsWasmMainKotlinMetadata") {
-        enabled = false
-    }
-}
-
 afterEvaluate {
     tasks.withType(Test) { t ->
         t.jvmArgs += ["--add-opens=java.desktop/sun.font=ALL-UNNAMED"]
