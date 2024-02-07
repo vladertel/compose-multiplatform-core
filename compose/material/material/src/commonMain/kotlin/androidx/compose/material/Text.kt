@@ -159,7 +159,7 @@ fun Text(
 }
 
 @Deprecated(
-    "Maintained for binary compatibility. Use version with minLines instead",
+    "Maintained for binary qqcompatibility. Use version with minLines instead",
     level = DeprecationLevel.HIDDEN
 )
 @Composable
