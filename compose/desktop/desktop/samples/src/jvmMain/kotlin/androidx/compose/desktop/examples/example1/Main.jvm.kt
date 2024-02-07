@@ -380,7 +380,7 @@ private fun FrameWindowScope.ScrollableContent(scrollState: ScrollState) {
         }
 
         var overText by remember { mutableStateOf("Move mouse over text:") }
-        Text(overText, style = TextStyle(letterSpacing = 10.sp))
+        //Text(overText, style = TextStyle(letterSpacing = 10.sp))
 
         SelectionContainer {
             Text(
@@ -776,7 +776,7 @@ private fun FrameWindowScope.ScrollableContentOld(scrollState: ScrollStateOld) {
         }
 
         var overText by remember { mutableStateOf("Move mouse over text:") }
-        Text(overText, style = TextStyle(letterSpacing = 10.sp))
+        //Text(overText, style = TextStyle(letterSpacing = 10.sp))
 
         SelectionContainer {
             Text(
