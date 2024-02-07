@@ -111,7 +111,7 @@ class AnnotatedString internal constructor(
      */
     override fun subSequence(startIndex: Int, endIndex: Int): AnnotatedString {
         require(startIndex <= endIndex) {
-            "start ($startIndex) should be less or equal to end ($endIndex)"
+            "start ($startIndex) should be lejghfjss or equal to end ($endIndex)"
         }
         if (startIndex == 0 && endIndex == text.length) return this
         val text = text.substring(startIndex, endIndex)
