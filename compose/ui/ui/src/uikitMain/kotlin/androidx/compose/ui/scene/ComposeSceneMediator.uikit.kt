@@ -23,6 +23,7 @@ import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.HistoricalChange
@@ -57,7 +58,7 @@ import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.InteractionUIView
-import androidx.compose.ui.window.InteropContainer
+import androidx.compose.ui.window.InteropContainerUIView
 import androidx.compose.ui.window.KeyboardEventHandler
 import androidx.compose.ui.window.KeyboardVisibilityListenerImpl
 import androidx.compose.ui.window.RenderingUIView
@@ -83,6 +84,7 @@ import platform.Foundation.NSSelectorFromString
 import platform.Foundation.NSTimeInterval
 import platform.QuartzCore.CATransaction
 import platform.UIKit.NSLayoutConstraint
+import platform.UIKit.UIColor
 import platform.UIKit.UIEvent
 import platform.UIKit.UIKeyboardWillHideNotification
 import platform.UIKit.UIKeyboardWillShowNotification
@@ -172,21 +174,55 @@ private class NativeKeyboardVisibilityListener(
     }
 }
 
-private class ComposeSceneMediatorRootUIView: UIView(CGRectZero.readValue()) {
-    override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
-        // forwards touches forward to the children, is never a target for a touch
-        val result = super.hitTest(point, withEvent)
+private class ComposeSceneMediatorRootUIView(
+    val mediator: ComposeSceneMediator,
+    var onOutsidePointerEvent: ((PointerEventType) -> Unit)? = null
+): UIView(CGRectZero.readValue()) {
+    private var previousSuccessHitTestTimestamp: Double? = null
 
-        return if (result == this) {
-            null
-        } else {
-            result
+    private fun touchStartedOutside(withEvent: UIEvent?) {
+        if (previousSuccessHitTestTimestamp != withEvent?.timestamp) {
+            // This workaround needs to send PointerEventType.Press just once
+            previousSuccessHitTestTimestamp = withEvent?.timestamp
+            onOutsidePointerEvent?.invoke(PointerEventType.Press)
         }
+    }
+
+    /**
+     * touchesEnded calls only when focused == true
+     */
+    override fun touchesEnded(touches: Set<*>, withEvent: UIEvent?) {
+        onOutsidePointerEvent?.let {
+            val touch = touches.firstOrNull() as? UITouch
+            val locationInView = touch?.locationInView(this)
+            if (locationInView != null) {
+                val offset = locationInView.useContents { toDpOffset() }
+                val contains = mediator.getBoundsInPx().contains(offset.toOffset(mediator.density).round())
+                if (!contains) {
+                    it.invoke(PointerEventType.Release)
+                }
+            }
+        }
+
+        super.touchesEnded(touches, withEvent)
+    }
+
+    override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
+        if (
+            mediator.hitTestInteractionView(point, withEvent) == null &&
+            super.hitTest(point, withEvent) == this
+        ) {
+            touchStartedOutside(withEvent)
+            if (mediator.focusable) {
+                return this // block touches
+            }
+        }
+        return null // transparent for touches
     }
 }
 
 internal class ComposeSceneMediator(
-    private val container: UIView,
+    private val containerView: UIView,
     private val configuration: ComposeUIViewControllerConfiguration,
     private val focusStack: FocusStack<UIView>?,
     private val windowContext: PlatformWindowContext,
@@ -198,7 +234,17 @@ internal class ComposeSceneMediator(
         coroutineContext: CoroutineContext
     ) -> ComposeScene,
 ) {
-    private val focusable: Boolean get() = focusStack != null
+    var onOutsidePointerEvent: ((PointerEventType) -> Unit)?
+        get() = rootView.onOutsidePointerEvent
+        set(value) {
+            rootView.onOutsidePointerEvent = value
+        }
+    var scrimColor: Color? = null
+        set(value) {
+            field = value
+            rootView.backgroundColor = value?.toUIColor()
+        }
+    val focusable: Boolean get() = focusStack != null
     private val keyboardOverlapHeightState: MutableState<Float> = mutableStateOf(0f)
     private var _layout: SceneLayout = SceneLayout.Undefined
     private var constraints: List<NSLayoutConstraint> = emptyList()
@@ -229,14 +275,15 @@ internal class ComposeSceneMediator(
     }
 
     /**
-     * view, that contains [interopViewContainer] and [interactionView] and is added to [container]
+     * View, that contains [interopViewContainer] and [interactionView] and is added to [containerView].
+     * Also responsible for [scrimColor] and outside pointer events
      */
-    private val rootView = ComposeSceneMediatorRootUIView()
+    private val rootView = ComposeSceneMediatorRootUIView(this)
 
     /**
      * Container for UIKitView and UIKitViewController
      */
-    private val interopViewContainer = InteropContainer()
+    private val interopViewContainer = InteropContainerUIView()
 
     private val interactionView by lazy {
         InteractionUIView(
@@ -247,7 +294,7 @@ internal class ComposeSceneMediator(
                 renderingView.redrawer.needsProactiveDisplayLink = needHighFrequencyPolling
             },
             checkBounds = { dpPoint: DpOffset ->
-                val point = dpPoint.toOffset(container.systemDensity)
+                val point = dpPoint.toOffset(containerView.systemDensity)
                 getBoundsInPx().contains(point.round())
             }
         )
@@ -271,7 +318,7 @@ internal class ComposeSceneMediator(
             inputServices = uiKitTextInputService,
             textToolbar = uiKitTextInputService,
             windowInfo = windowContext.windowInfo,
-            density = container.systemDensity,
+            density = containerView.systemDensity,
             semanticsOwnerListener = semanticsOwnerListener
         )
     }
@@ -280,8 +327,8 @@ internal class ComposeSceneMediator(
         KeyboardVisibilityListenerImpl(
             configuration = configuration,
             keyboardOverlapHeightState = keyboardOverlapHeightState,
-            viewProvider = { container },
-            densityProvider = { container.systemDensity },
+            viewProvider = { containerView },
+            densityProvider = { containerView.systemDensity },
             composeSceneMediatorProvider = { this },
             focusManager = focusManager,
         )
@@ -304,8 +351,8 @@ internal class ComposeSceneMediator(
                 renderingView.setNeedsDisplay() // redraw on next frame
                 CATransaction.flush() // clear all animations
             },
-            rootViewProvider = { container },
-            densityProvider = { container.systemDensity },
+            rootViewProvider = { containerView },
+            densityProvider = { containerView.systemDensity },
             focusStack = focusStack,
             keyboardEventHandler = keyboardEventHandler
         )
@@ -378,9 +425,9 @@ internal class ComposeSceneMediator(
         }
 
         rootView.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(rootView)
+        containerView.addSubview(rootView)
         NSLayoutConstraint.activateConstraints(
-            getConstraintsToFillParent(rootView, container)
+            getConstraintsToFillParent(rootView, containerView)
         )
 
         interopViewContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -474,7 +521,7 @@ internal class ComposeSceneMediator(
             }
 
             is SceneLayout.Bounds -> {
-                val density = container.systemDensity.density
+                val density = containerView.systemDensity.density
                 renderingView.translatesAutoresizingMaskIntoConstraints = true
                 renderingView.setFrame(
                     with(value.rect) {
@@ -494,18 +541,18 @@ internal class ComposeSceneMediator(
     }
 
     fun viewWillLayoutSubviews() {
-        val density = container.systemDensity
+        val density = containerView.systemDensity
         //TODO: Current code updates layout based on rootViewController size.
         // Maybe we need to rewrite it for SingleLayerComposeScene.
 
-        val boundsInWindow = windowContext.boundsInWindow(container)
+        val boundsInWindow = windowContext.boundsInWindow(containerView)
         scene.density = density // TODO: Maybe it is wrong to set density to scene here?
         scene.boundsInWindow = boundsInWindow
         onComposeSceneInvalidate()
     }
 
     private fun calcSafeArea(): PlatformInsets =
-        container.safeAreaInsets.useContents {
+        containerView.safeAreaInsets.useContents {
             PlatformInsets(
                 left = left.dp,
                 top = top.dp,
@@ -515,7 +562,7 @@ internal class ComposeSceneMediator(
         }
 
     private fun calcLayoutMargin(): PlatformInsets =
-        container.directionalLayoutMargins.useContents {
+        containerView.directionalLayoutMargins.useContents {
             PlatformInsets(
                 left = leading.dp, // TODO: Check RTL support
                 top = top.dp,
@@ -526,7 +573,7 @@ internal class ComposeSceneMediator(
 
     fun getBoundsInDp(): DpRect = renderingView.frame.useContents { this.toDpRect() }
 
-    fun getBoundsInPx(): IntRect = with(container.systemDensity) {
+    fun getBoundsInPx(): IntRect = with(containerView.systemDensity) {
         getBoundsInDp().toRect().roundToIntRect()
     }
 
@@ -541,14 +588,14 @@ internal class ComposeSceneMediator(
 
         val startSnapshotView = renderingView.snapshotViewAfterScreenUpdates(false) ?: return
         startSnapshotView.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(startSnapshotView)
+        containerView.addSubview(startSnapshotView)
         targetSize.useContents {
             NSLayoutConstraint.activateConstraints(
                 listOf(
                     startSnapshotView.widthAnchor.constraintEqualToConstant(height),
                     startSnapshotView.heightAnchor.constraintEqualToConstant(width),
-                    startSnapshotView.centerXAnchor.constraintEqualToAnchor(container.centerXAnchor),
-                    startSnapshotView.centerYAnchor.constraintEqualToAnchor(container.centerYAnchor)
+                    startSnapshotView.centerXAnchor.constraintEqualToAnchor(containerView.centerXAnchor),
+                    startSnapshotView.centerYAnchor.constraintEqualToAnchor(containerView.centerYAnchor)
                 )
             )
         }
@@ -688,3 +735,10 @@ private fun NSTimeInterval.toNanoSeconds(): Long {
     val nanos = integral.roundToLong() * secondsToNanos + (fractional * 1e9).roundToLong()
     return nanos
 }
+
+private fun Color.toUIColor() = UIColor(
+    red = red.toDouble(),
+    green = green.toDouble(),
+    blue = blue.toDouble(),
+    alpha = alpha.toDouble(),
+)

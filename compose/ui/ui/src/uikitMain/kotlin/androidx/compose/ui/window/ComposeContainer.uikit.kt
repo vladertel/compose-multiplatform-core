@@ -75,7 +75,6 @@ import platform.UIKit.UIContentSizeCategoryExtraSmall
 import platform.UIKit.UIContentSizeCategoryLarge
 import platform.UIKit.UIContentSizeCategoryMedium
 import platform.UIKit.UIContentSizeCategorySmall
-import platform.UIKit.UIScreen
 import platform.UIKit.UITraitCollection
 import platform.UIKit.UIUserInterfaceLayoutDirection
 import platform.UIKit.UIUserInterfaceStyle
@@ -310,7 +309,7 @@ internal class ComposeContainer(
 
     private fun setContent(content: @Composable () -> Unit) {
         val mediator = mediator ?: ComposeSceneMediator(
-            container = view,
+            containerView = view,
             configuration = configuration,
             focusStack = focusStack,
             windowContext = windowContext,
