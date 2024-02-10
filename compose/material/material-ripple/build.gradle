@@ -105,8 +105,18 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 dependsOn(jsWasmMain)
             }
 
+            nativeMain {
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
+
             wasmJsMain {
                 dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                }
             }
         }
     }

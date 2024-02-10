@@ -131,7 +131,13 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.kotlinStdlib)
                 }
             }
-            jsNativeMain.dependsOn(skikoMain)
+            jsNativeMain {
+                dependsOn(skikoMain)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
             nativeMain.dependsOn(jsNativeMain)
             jsWasmMain.dependsOn(jsNativeMain)
 
@@ -141,6 +147,9 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             wasmJsMain {
                 dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                }
             }
 
             commonTest {
@@ -218,7 +227,12 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             nativeTest.dependsOn(jsNativeTest)
             jsTest.dependsOn(jsNativeTest)
-            wasmJsTest.dependsOn(jsNativeTest)
+            wasmJsTest {
+                dependsOn(jsNativeTest)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
 
             configureEach {
                 languageSettings.optIn("androidx.compose.foundation.ExperimentalFoundationApi")

@@ -89,6 +89,12 @@ kotlin {
         jvmMain.dependsOn(jbMain)
 
         wasmJsMain.dependsOn(jsWasmMain)
+        wasmJsTest {
+            dependsOn(commonTest)
+            dependencies {
+                implementation(libs.kotlinCoroutinesCore18)
+            }
+        }
 
         nativeMain.dependsOn(jsNativeMain)
         linuxArm64Main.dependsOn(nativeMain)

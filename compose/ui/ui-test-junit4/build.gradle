@@ -166,6 +166,20 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 implementation(project(":compose:foundation:foundation"))
                 implementation(project(":compose:ui:ui-test-junit4"))
             }
+
+            nativeMain {
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
+
+            wasmJsMain {
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
         }
     }
 

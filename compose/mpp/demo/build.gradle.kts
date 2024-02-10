@@ -193,10 +193,16 @@ kotlin {
             resources.srcDirs(unzipTask.map { it.destinationDir })
             dependencies {
                 implementation(libs.kotlinStdlib)
+                implementation(libs.kotlinCoroutinesCore18)
             }
         }
 
         val nativeMain by creating { dependsOn(skikoMain) }
+        nativeMain {
+            dependencies {
+                implementation(libs.kotlinCoroutinesCore18)
+            }
+        }
         val darwinMain by creating { dependsOn(nativeMain) }
         val macosMain by creating { dependsOn(darwinMain) }
         val macosX64Main by getting { dependsOn(macosMain) }

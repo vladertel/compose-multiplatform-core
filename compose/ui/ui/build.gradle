@@ -212,7 +212,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
 
-            jsNativeMain.dependsOn(skikoMain)
+            jsNativeMain {
+                dependsOn(skikoMain)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
             nativeMain.dependsOn(jsNativeMain)
             jsWasmMain.dependsOn(jsNativeMain)
             jsWasmMain.dependsOn(notMobileMain)
@@ -231,6 +237,7 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.kotlinStdlib)
                     implementation(libs.create("skikoWasm"))
                     implementation(libs.create("skikoWasmWasm"))
+                    implementation(libs.kotlinCoroutinesCore18)
                 }
             }
 
@@ -306,6 +313,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
             wasmJsTest {
                 dependsOn(skikoTest)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
             }
 
             desktopTest.dependencies {

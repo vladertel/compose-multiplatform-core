@@ -149,7 +149,13 @@ if (AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             }
 
             desktopMain.dependsOn(skikoMain)
-            jsNativeMain.dependsOn(skikoMain)
+            jsNativeMain {
+                dependsOn(skikoMain)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
             jsMain.dependsOn(jsNativeMain)
             wasmJsMain.dependsOn(jsNativeMain)
             nativeMain.dependsOn(jsNativeMain)

@@ -96,7 +96,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             desktopMain.dependencies {
                 implementation(libs.kotlinStdlib)
             }
-            jsNativeMain.dependsOn(commonMain)
+            jsNativeMain {
+                dependsOn(commonMain)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
             nativeMain.dependsOn(jsNativeMain)
             jsWasmMain.dependsOn(jsNativeMain)
 
@@ -106,6 +112,9 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
 
             wasmJsMain {
                 dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                }
             }
 
             // TODO(b/214407011): These dependencies leak into instrumented tests as well. If you

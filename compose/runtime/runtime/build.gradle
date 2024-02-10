@@ -152,7 +152,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
 
-            jsNativeMain.dependsOn(jbMain)
+            jsNativeMain {
+                dependsOn(jbMain)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
             jsWasmMain.dependsOn(jsNativeMain)
             jsMain.dependsOn(jsWasmMain)
             desktopMain.dependsOn(jbMain)
@@ -161,8 +167,18 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
             jsTest.dependsOn(jbTest)
             nativeTest.dependsOn(jbTest)
 
-            wasmJsMain.dependsOn(jsWasmMain)
-            wasmJsTest.dependsOn(jbTest)
+            wasmJsMain {
+                dependsOn(jsWasmMain)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesCore18)
+                }
+            }
+            wasmJsTest {
+                dependsOn(jbTest)
+                dependencies {
+                    implementation(libs.kotlinCoroutinesTest18)
+                }
+            }
 
             nativeMain {
                 dependsOn(jsNativeMain)
