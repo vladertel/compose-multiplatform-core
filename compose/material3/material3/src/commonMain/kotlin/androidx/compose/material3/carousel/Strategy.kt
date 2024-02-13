@@ -19,7 +19,6 @@ package androidx.compose.material3.carousel
 import androidx.annotation.VisibleForTesting
 import androidx.collection.FloatList
 import androidx.collection.mutableFloatListOf
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.lerp
@@ -29,104 +28,124 @@ import kotlin.math.roundToInt
  * Contains default values used across Strategies
  */
 internal object StrategyDefaults {
-    val minSmallSize = 40.dp
-    val maxSmallSize = 56.dp
-    val anchorSize = 10.dp
+    val MinSmallSize = 40.dp
+    val MaxSmallSize = 56.dp
+    val AnchorSize = 10.dp
+    const val MediumLargeItemDiffThreshold = 0.85f
 }
 
 /**
- * Helper method to create a default start-aligned [Strategy] contained within the bounds of
- * [availableSpace] and based on the given [Arrangement].
+ * A class responsible for supplying carousel with a [KeylineList] that is corrected for scroll
+ * offset, layout direction, and snapping behaviors.
  *
- * @param availableSpace the available space to contain the [Strategy] within
- * @param arrangement the arrangement containing information on the sizes and counts of the
- * items in the [Strategy].
- * @param anchorSize the size that the anchor keylines should be in the strategy. The smaller
- * this is, the more the item will shrink as it moves off-screen.
+ * Strategy is created using a [keylineList] block that returns a default [KeylineList]. This is
+ * the list of keylines that define how items should be arranged, from left-to-right,
+ * to achieve the carousel's desired appearance. For example, a start-aligned large
+ * item, followed by a medium and a small item for a multi-browse carousel. Or a small item,
+ * a center-aligned large item, and a small item for a centered hero carousel. Strategy will
+ * use the [KeylineList] returned from the [keylineList] block to then derive new scroll, and layout
+ * direction-aware [KeylineList]s and supply them for use by carousel. For example, when a
+ * device is running in a right-to-left layout direction, Strategy will handle reversing the default
+ * [KeylineList]. Or if the default keylines use a center-aligned large item, Strategy will shift
+ * the large item to the start or end of the screen when the carousel is scrolled to the start or
+ * end of the list, letting all items become large without having them detach from the edges of
+ * the scroll container.
+ *
+ * @param keylineList a function that generates default keylines for this strategy based on the
+ * carousel's available space. This function will be called anytime availableSpace changes.
  */
-internal fun createStartAlignedStrategy(
-    availableSpace: Float,
-    arrangement: Arrangement,
-    anchorSize: Float,
-): Strategy {
-    val keylineList = keylineListOf(availableSpace, CarouselAlignment.Start) {
-        add(anchorSize, isAnchor = true)
-
-        repeat(arrangement.largeCount) { add(arrangement.largeSize) }
-        repeat(arrangement.mediumCount) { add(arrangement.mediumSize) }
-        repeat(arrangement.smallCount) { add(arrangement.smallSize) }
-
-        add(anchorSize, isAnchor = true)
-    }
-
-    return Strategy.create(availableSpace, keylineList)
-}
-
-/**
- * A class that provides [Strategy] instances to a scrollable component.
- *
- * [StrategyProvider.createStrategy] will be called any time properties which affect a carousel's
- * arrangement change. It is the implementation's responsibility to create an arrangement for the
- * given parameters and return a [Strategy] by calling [Strategy.create].
- */
-internal sealed class StrategyProvider() {
-
-    /**
-     * Create and return a new [Strategy] for the given carousel size.
-     *
-     * @param density The current density value
-     * @param carouselMainAxisSize the size of the carousel in the main axis in pixels
-     * @param itemSpacing The spacing in between the items that are not a part of the item size
-     */
-    internal abstract fun createStrategy(
-        density: Density,
-        carouselMainAxisSize: Float,
-        itemSpacing: Int,
-    ): Strategy?
-}
-
-/**
- * A class which supplies carousel with the appropriate [KeylineList] for any given scroll offset.
- *
- * All items in a carousel need the opportunity to pass through the focal keyline range. Depending
- * on where the focal range is located within the scrolling container, some items, like those at
- * the beginning or end of the list, might not reach the focal range. To account for this,
- * [Strategy] manages shifting the focal keylines to the beginning of the list when scrolled an
- * offset of 0 and the end of the list when scrolled to the list's max offset. [StrategyProvider]
- * needs only to create a "default" [KeylineList] (where keylines should be placed when scrolling
- * in the middle of the list) and call [Strategy.create] to have [Strategy] generate the steps
- * needed to move the focal range to the start and end of the scroll container. When scrolling, the
- * scrollable component can access the correct [KeylineList] for any given offset using
- * [getKeylineListForScrollOffset].
- *
- * @param defaultKeylines the [KeylineList] used when anywhere in the center of the list
- * @param startKeylineSteps a list of [KeylineList]s that will be moved through when approaching
- * the beginning of the list
- * @param endKeylineSteps a list o [KeylineList]s that will be moved through when appraoching
- * the end of the list
- * @param startShiftDistance the scroll distance it should take to move through all the steps in
- * [startKeylineSteps]
- * @param endShiftDistance the scroll distance it should take to move through all the steps in the
- * [endKeylineSteps]
- * @param startShiftPoints a list of floats between 0-1 that define the percentage of shift distance
- * at which the start keyline step at the corresponding index should be used
- * @param endShiftPoints a list of floats between 0-1 that define the percentage of shift distance
- * at which the end keyline step at the corresponding index should be used
- */
-internal class Strategy private constructor(
-    private val defaultKeylines: KeylineList,
-    private val startKeylineSteps: List<KeylineList>,
-    private val endKeylineSteps: List<KeylineList>,
-    private val startShiftDistance: Float,
-    private val endShiftDistance: Float,
-    private val startShiftPoints: FloatList,
-    private val endShiftPoints: FloatList
+internal class Strategy(
+    private val keylineList: (availableSpace: Float) -> KeylineList?
 ) {
 
+    /** The keylines generated from the [keylineList] block. */
+    private lateinit var defaultKeylines: KeylineList
     /**
-     * The size of items when in focus and fully unmasked.
+     * A list of [KeylineList]s that move the focal range from its position in [defaultKeylines]
+     * to the start of the carousel container, one keyline at a time.
      */
-    internal val itemMainAxisSize = defaultKeylines.firstFocal.size
+    private lateinit var startKeylineSteps: List<KeylineList>
+    /**
+     * A list of [KeylineList]s that move the focal range from its position in [defaultKeylines]
+     * to the end of the carousel container, one keyline at a time.
+     */
+    private lateinit var endKeylineSteps: List<KeylineList>
+    /** The scroll distance needed to move through all steps in [startKeylineSteps]. */
+    private var startShiftDistance: Float = 0f
+    /** The scroll distance needed to move through all steps in [endKeylineSteps]. */
+    private var endShiftDistance: Float = 0f
+    /**
+     * A list of floats whose index aligns with a [KeylineList] from [startKeylineSteps] and
+     * whose value is the percentage of [startShiftDistance] that should be scrolled when the
+     * start step is used.
+     */
+    private lateinit var startShiftPoints: FloatList
+    /**
+     * A list of floats whose index aligns with a [KeylineList] from [endKeylineSteps] and
+     * whose value is the percentage of [endShiftDistance] that should be scrolled when the
+     * end step is used.
+     */
+    private lateinit var endShiftPoints: FloatList
+
+    /** The available space in the main axis used in the most recent call to [apply]. */
+    private var availableSpace: Float = 0f
+    /** The size of items when in focus and fully unmasked. */
+    internal var itemMainAxisSize: Float = 0f
+
+    /**
+     * Whether this strategy holds a valid set of keylines that are ready for use.
+     *
+     * This is true after [apply] has been called and the [keylineList] block has returned a
+     * non-null [KeylineList].
+     */
+    fun isValid() = itemMainAxisSize != 0f
+
+    /**
+     * Updates this [Strategy] based on carousel's main axis available space.
+     *
+     * This method must be called before a strategy can be used by carousel.
+     *
+     * @param availableSpace the size of the carousel container in scrolling axis
+     */
+    internal fun apply(availableSpace: Float): Strategy {
+        // Skip computing new keylines and updating this strategy if
+        // available space has not changed.
+        if (this.availableSpace == availableSpace) {
+            return this
+        }
+
+        val keylineList = keylineList.invoke(availableSpace) ?: return this
+        val startKeylineSteps = getStartKeylineSteps(keylineList, availableSpace)
+        val endKeylineSteps =
+            getEndKeylineSteps(keylineList, availableSpace)
+
+        // TODO: Update this to use the first/last focal keylines to calculate shift?
+        val startShiftDistance = startKeylineSteps.last().first().unadjustedOffset -
+            keylineList.first().unadjustedOffset
+        val endShiftDistance = keylineList.last().unadjustedOffset -
+            endKeylineSteps.last().last().unadjustedOffset
+
+        this.defaultKeylines = keylineList
+        this.defaultKeylines = keylineList
+        this.startKeylineSteps = startKeylineSteps
+        this.endKeylineSteps = endKeylineSteps
+        this.startShiftDistance = startShiftDistance
+        this.endShiftDistance = endShiftDistance
+        this.startShiftPoints = getStepInterpolationPoints(
+            startShiftDistance,
+            startKeylineSteps,
+            true
+        )
+        this.endShiftPoints = getStepInterpolationPoints(
+            endShiftDistance,
+            endKeylineSteps,
+            false
+        )
+        this.availableSpace = availableSpace
+        this.itemMainAxisSize = defaultKeylines.firstFocal.size
+
+        return this
+    }
 
     /**
      * Returns the [KeylineList] that should be used for the current [scrollOffset].
@@ -197,55 +216,51 @@ internal class Strategy private constructor(
         return defaultKeylines
     }
 
+    @VisibleForTesting
+    internal fun getEndKeylines(): KeylineList {
+        return endKeylineSteps.last()
+    }
+
+    @VisibleForTesting
+    internal fun getStartKeylines(): KeylineList {
+        return startKeylineSteps.last()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Strategy) return false
+        // If neither strategy is valid, they should be considered equal
+        if (!isValid() && !other.isValid()) return true
+
+        if (isValid() != other.isValid()) return false
+        if (availableSpace != other.availableSpace) return false
+        if (itemMainAxisSize != other.itemMainAxisSize) return false
+        if (startShiftDistance != other.startShiftDistance) return false
+        if (endShiftDistance != other.endShiftDistance) return false
+        if (startShiftPoints != other.startShiftPoints) return false
+        if (endShiftPoints != other.endShiftPoints) return false
+        // Only check default keyline equality since all other keylines are
+        // derived from the defaults
+        if (defaultKeylines != other.defaultKeylines) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        if (!isValid()) return isValid().hashCode()
+
+        var result = isValid().hashCode()
+        result = 31 * result + availableSpace.hashCode()
+        result = 31 * result + itemMainAxisSize.hashCode()
+        result = 31 * result + startShiftDistance.hashCode()
+        result = 31 * result + endShiftDistance.hashCode()
+        result = 31 * result + startShiftPoints.hashCode()
+        result = 31 * result + endShiftPoints.hashCode()
+        result = 31 * result + defaultKeylines.hashCode()
+        return result
+    }
+
     companion object {
-
-        /**
-         * Creates a new [Strategy] based on a default [keylineList].
-         *
-         * The [keylineList] passed to this method will be the keylines used when the carousel is
-         * scrolled anywhere in the middle of the list (not the beginning or end). From these
-         * default keylines, additional [KeylineList]s will be created which move the focal range
-         * to the beginning of the carousel container when scrolled to the beginning of the list and
-         * the end of the container when scrolled to the end of the list.
-         *
-         * @param carouselMainAxisSize the size of the carousel container in scrolling axis
-         * @param keylineList the default keylines that will be used to create the strategy
-         */
-        fun create(
-            /** The size of the carousel in the main axis. */
-            carouselMainAxisSize: Float,
-            /** The keylines along the main axis */
-            keylineList: KeylineList
-        ): Strategy {
-
-            val startKeylineSteps = getStartKeylineSteps(keylineList, carouselMainAxisSize)
-            val endKeylineSteps =
-                getEndKeylineSteps(keylineList, carouselMainAxisSize)
-
-            // TODO: Update this to use the first/last focal keylines to calculate shift?
-            val startShiftDistance = startKeylineSteps.last().first().unadjustedOffset -
-                keylineList.first().unadjustedOffset
-            val endShiftDistance = keylineList.last().unadjustedOffset -
-                endKeylineSteps.last().last().unadjustedOffset
-
-            return Strategy(
-                defaultKeylines = keylineList,
-                startKeylineSteps = startKeylineSteps,
-                endKeylineSteps = endKeylineSteps,
-                startShiftDistance = startShiftDistance,
-                endShiftDistance = endShiftDistance,
-                startShiftPoints = getStepInterpolationPoints(
-                    startShiftDistance,
-                    startKeylineSteps,
-                    true
-                ),
-                endShiftPoints = getStepInterpolationPoints(
-                    endShiftDistance,
-                    endKeylineSteps,
-                    false
-                )
-            )
-        }
 
         /**
          * Generates discreet steps which move the focal range from its original position until
@@ -401,7 +416,7 @@ internal class Strategy private constructor(
         ): KeylineList {
             // -1 if the pivot is shifting left/top, 1 if shifting right/bottom
             val pivotDir = if (srcIndex > dstIndex) 1 else -1
-            val pivotDelta = from[srcIndex].size * pivotDir
+            val pivotDelta = (from[srcIndex].size - from[srcIndex].cutoff) * pivotDir
             val newPivotIndex = from.pivotIndex + pivotDir
             val newPivotOffset = from.pivot.offset + pivotDelta
             return keylineListOf(carouselMainAxisSize, newPivotIndex, newPivotOffset) {
@@ -491,7 +506,8 @@ internal class Strategy private constructor(
             return ShiftPointRange(
                 fromStepIndex = 0,
                 toStepIndex = 0,
-                steppedInterpolation = 0f)
+                steppedInterpolation = 0f
+            )
         }
 
         private fun MutableList<Keyline>.move(srcIndex: Int, dstIndex: Int): MutableList<Keyline> {

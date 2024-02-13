@@ -16,12 +16,13 @@
 
 package androidx.compose.material3.carousel
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.lightColorScheme
@@ -30,11 +31,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeWithVelocity
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import com.google.common.truth.Truth.assertThat
@@ -44,7 +47,7 @@ import org.junit.runner.RunWith
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 class CarouselTest {
 
     private lateinit var carouselState: CarouselState
@@ -101,10 +104,10 @@ class CarouselTest {
     internal fun Item(index: Int) {
         Box(
             modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Blue)
-            .testTag("$index")
-            .focusable(),
+                .fillMaxSize()
+                .background(Color.Blue)
+                .testTag("$index")
+                .focusable(),
             contentAlignment = Alignment.Center
         ) {
             BasicText(text = index.toString())
@@ -114,30 +117,30 @@ class CarouselTest {
     private fun createCarousel(
         initialItem: Int = 0,
         itemCount: () -> Int = { DefaultItemCount },
-        modifier: Modifier = Modifier,
+        modifier: Modifier = Modifier.width(412.dp).height(221.dp),
         orientation: Orientation = Orientation.Horizontal,
         content: @Composable CarouselScope.(item: Int) -> Unit = { Item(index = it) }
     ) {
         rule.setMaterialContent(lightColorScheme()) {
-            val state = rememberCarouselState(
-                initialItem = initialItem,
-                itemCount = itemCount,
-            ).also {
+            val state = rememberCarouselState(initialItem, itemCount).also {
                 carouselState = it
             }
-            if (orientation == Orientation.Horizontal) {
-                HorizontalCarousel(
-                    state = state,
-                    modifier = modifier.testTag(CarouselTestTag),
-                    content = content,
-                )
-            } else {
-                VerticalCarousel(
-                    state = state,
-                    modifier = modifier.testTag(CarouselTestTag),
-                    content = content,
-                )
-            }
+            val density = LocalDensity.current
+            Carousel(
+                state = state,
+                orientation = orientation,
+                keylineList = { availableSpace ->
+                    multiBrowseKeylineList(
+                        density = density,
+                        carouselMainAxisSize = availableSpace,
+                        preferredItemSize = with(density) { 186.dp.toPx() },
+                        itemSpacing = 0f,
+                    )
+                },
+                modifier = modifier.testTag(CarouselTestTag),
+                itemSpacing = 0.dp,
+                content = content,
+            )
         }
     }
 }

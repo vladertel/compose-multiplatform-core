@@ -39,7 +39,6 @@ import androidx.compose.ui.layout.PinnableContainer
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.GlobalPositionAwareModifierNode
-import androidx.compose.ui.node.LayoutAwareModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.ObserverModifierNode
 import androidx.compose.ui.node.SemanticsModifierNode
@@ -50,7 +49,6 @@ import androidx.compose.ui.platform.InspectableModifier
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.debugInspectorInfo
-import androidx.compose.ui.platform.inspectable
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.focused
 import androidx.compose.ui.semantics.requestFocus
@@ -67,6 +65,7 @@ import kotlinx.coroutines.launch
  * @param interactionSource [MutableInteractionSource] that will be used to emit
  * [FocusInteraction.Focus] when this element is being focused.
  */
+@Stable
 fun Modifier.focusable(
     enabled: Boolean = true,
     interactionSource: MutableInteractionSource? = null,
@@ -122,16 +121,8 @@ private val focusGroupInspectorInfo = InspectableModifier(
 internal fun Modifier.focusableInNonTouchMode(
     enabled: Boolean,
     interactionSource: MutableInteractionSource?
-) = inspectable(inspectorInfo = {
-    name = "focusableInNonTouchMode"
-    properties["enabled"] = enabled
-    properties["interactionSource"] = interactionSource
-},
-    factory = {
-        Modifier
-            .then(if (enabled) FocusableInNonTouchModeElement else Modifier)
-            .focusable(enabled, interactionSource)
-    })
+) = then(if (enabled) FocusableInNonTouchModeElement else Modifier)
+    .focusable(enabled, interactionSource)
 
 private val FocusableInNonTouchModeElement =
     object : ModifierNodeElement<FocusableInNonTouchMode>() {
@@ -150,6 +141,7 @@ private val FocusableInNonTouchModeElement =
 
 internal class FocusableInNonTouchMode : Modifier.Node(), CompositionLocalConsumerModifierNode,
     FocusPropertiesModifierNode {
+    override val shouldAutoInvalidate: Boolean = false
 
     private val inputModeManager: InputModeManager
         get() = currentValueOf(LocalInputModeManager)
@@ -194,8 +186,9 @@ private class FocusableElement(
 @OptIn(ExperimentalFoundationApi::class)
 internal class FocusableNode(
     interactionSource: MutableInteractionSource?
-) : DelegatingNode(), FocusEventModifierNode, LayoutAwareModifierNode, SemanticsModifierNode,
+) : DelegatingNode(), FocusEventModifierNode, SemanticsModifierNode,
     GlobalPositionAwareModifierNode, FocusRequesterModifierNode {
+    override val shouldAutoInvalidate: Boolean = false
 
     private var focusState: FocusState? = null
 
@@ -216,13 +209,11 @@ internal class FocusableNode(
     //    See aosp/1964580.
     private val bringIntoViewRequester = BringIntoViewRequester()
 
+    /** This is just needed for the delegate, it's not referenced anywhere directly. */
+    @Suppress("unused")
     private val bringIntoViewRequesterNode = delegate(
         BringIntoViewRequesterNode(bringIntoViewRequester)
     )
-
-    // TODO(levima) Remove this once delegation can propagate this events on its own
-    override fun onPlaced(coordinates: LayoutCoordinates) =
-        bringIntoViewRequesterNode.onPlaced(coordinates)
 
     fun update(interactionSource: MutableInteractionSource?) =
         focusableInteractionNode.update(interactionSource)
@@ -260,6 +251,8 @@ private class FocusableInteractionNode(
     private var interactionSource: MutableInteractionSource?
 ) : Modifier.Node() {
     private var focusedInteraction: FocusInteraction.Focus? = null
+
+    override val shouldAutoInvalidate: Boolean = false
 
     /**
      * Interaction source events will be controlled entirely by changes in focus events. The
@@ -319,6 +312,8 @@ private class FocusablePinnableContainerNode : Modifier.Node(),
     CompositionLocalConsumerModifierNode, ObserverModifierNode {
     private var pinnedHandle: PinnableContainer.PinnedHandle? = null
     private var isFocused: Boolean = false
+
+    override val shouldAutoInvalidate: Boolean = false
 
     private fun retrievePinnableContainer(): PinnableContainer? {
         var container: PinnableContainer? = null

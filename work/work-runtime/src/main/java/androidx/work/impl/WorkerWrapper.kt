@@ -29,6 +29,7 @@ import androidx.work.Logger
 import androidx.work.WorkInfo
 import androidx.work.WorkerExceptionInfo
 import androidx.work.WorkerParameters
+import androidx.work.await
 import androidx.work.impl.background.systemalarm.RescheduleReceiver
 import androidx.work.impl.foreground.ForegroundProcessor
 import androidx.work.impl.model.DependencyDao
@@ -37,12 +38,13 @@ import androidx.work.impl.model.WorkSpec
 import androidx.work.impl.model.WorkSpecDao
 import androidx.work.impl.model.generationalId
 import androidx.work.impl.utils.PackageManagerHelper
-import androidx.work.impl.utils.SynchronousExecutor
-import androidx.work.impl.utils.WorkForegroundRunnable
 import androidx.work.impl.utils.WorkForegroundUpdater
 import androidx.work.impl.utils.WorkProgressUpdater
 import androidx.work.impl.utils.futures.SettableFuture
+import androidx.work.impl.utils.safeAccept
 import androidx.work.impl.utils.taskexecutor.TaskExecutor
+import androidx.work.impl.utils.workForeground
+import androidx.work.launchFuture
 import androidx.work.logd
 import androidx.work.loge
 import androidx.work.logi
@@ -51,6 +53,8 @@ import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
 
 /**
  * A runnable that looks up the [WorkSpec] from the database for a given id, instantiates
@@ -168,6 +172,7 @@ class WorkerWrapper internal constructor(builder: Builder) : Runnable {
             workSpec.runAttemptCount,
             workSpec.generation,
             configuration.executor,
+            configuration.workerCoroutineContext,
             workTaskExecutor,
             configuration.workerFactory,
             WorkProgressUpdater(workDatabase, workTaskExecutor),
@@ -185,15 +190,11 @@ class WorkerWrapper internal constructor(builder: Builder) : Runnable {
                 )
             } catch (e: Throwable) {
                 loge(TAG) { "Could not create Worker ${workSpec.workerClassName}" }
-                try {
-                    configuration.workerInitializationExceptionHandler?.accept(
-                        WorkerExceptionInfo(workSpec.workerClassName, params, e)
-                    )
-                } catch (exception: Exception) {
-                    loge(TAG, exception) {
-                        "Exception handler threw an exception"
-                    }
-                }
+
+                configuration.workerInitializationExceptionHandler?.safeAccept(
+                    WorkerExceptionInfo(workSpec.workerClassName, params, e),
+                    TAG
+                )
                 setFailedAndResolve(Failure())
                 return
             }
@@ -206,38 +207,14 @@ class WorkerWrapper internal constructor(builder: Builder) : Runnable {
             if (tryCheckForInterruptionAndResolve()) {
                 return
             }
-            val foregroundRunnable = WorkForegroundRunnable(
-                appContext,
-                workSpec,
-                worker,
-                params.foregroundUpdater,
-                workTaskExecutor
-            )
-            workTaskExecutor.getMainThreadExecutor().execute(foregroundRunnable)
-            val runExpedited = foregroundRunnable.future
-            // propagate cancellation to runExpedited
-            workerResultFuture.addListener({
-                if (workerResultFuture.isCancelled()) {
-                    runExpedited.cancel(true)
-                }
-            }, SynchronousExecutor())
-            runExpedited.addListener(Runnable {
-                // if mWorkerResultFuture is already cancelled don't even try to do anything.
-                // Naturally, the race between cancellation and mWorker.startWork() still can
-                // happen but we try to avoid doing unnecessary work when it is possible.
-                if (workerResultFuture.isCancelled()) {
-                    return@Runnable
-                }
-                try {
-                    runExpedited.get()
-                    logd(TAG) { "Starting work for ${workSpec.workerClassName}" }
-                    // Call mWorker.startWork() on the main thread.
-                    workerResultFuture.setFuture(worker.startWork())
-                } catch (e: Throwable) {
-                    workerResultFuture.setException(e)
-                }
-            }, workTaskExecutor.getMainThreadExecutor())
-
+            val foregroundUpdater = params.foregroundUpdater
+            val mainDispatcher = workTaskExecutor.getMainThreadExecutor().asCoroutineDispatcher()
+            val future = launchFuture(mainDispatcher + Job()) {
+                workForeground(appContext, workSpec, worker, foregroundUpdater, workTaskExecutor)
+                logd(TAG) { "Starting work for ${workSpec.workerClassName}" }
+                worker.startWork().await()
+            }
+            workerResultFuture.setFuture(future)
             // Avoid synthetic accessors.
             val workDescription = workDescription
             workerResultFuture.addListener({
@@ -255,45 +232,23 @@ class WorkerWrapper internal constructor(builder: Builder) : Runnable {
                         logd(TAG) { "${workSpec.workerClassName} returned a $futureResult." }
                         futureResult
                     }
-                } catch (exception: InterruptedException) {
-                    loge(TAG, exception) {
+                } catch (exception: CancellationException) {
+                    // Cancellations need to be treated with care here because innerFuture
+                    // cancellations will bubble up, and we need to gracefully handle that.
+                    logi(TAG, exception) { "$workDescription was cancelled" }
+                } catch (exception: Exception) {
+                    val exceptionToReport = if (exception is ExecutionException) {
+                        exception.cause ?: exception
+                    } else {
+                        exception
+                    }
+                    loge(TAG, exceptionToReport) {
                         "$workDescription failed because it threw an exception/error"
                     }
-                    try {
-                        configuration.workerExecutionExceptionHandler?.accept(
-                            WorkerExceptionInfo(workSpec.workerClassName, params, exception)
-                        )
-                    } catch (exception: Exception) {
-                        loge(TAG, exception) {
-                            "Exception handler threw an exception"
-                        }
-                    }
-                } catch (exception: Exception) {
-                    when (exception) {
-                        is CancellationException -> {
-                            // Cancellations need to be treated with care here because innerFuture
-                            // cancellations will bubble up, and we need to gracefully handle that.
-                            logi(TAG, exception) { "$workDescription was cancelled" }
-                        }
-                        is ExecutionException -> {
-                            loge(TAG, exception) {
-                                "$workDescription failed because it threw an exception/error"
-                            }
-                        }
-                    }
-                    try {
-                        configuration.workerExecutionExceptionHandler?.accept(
-                            WorkerExceptionInfo(
-                                workSpec.workerClassName,
-                                params,
-                                exception.cause ?: exception
-                            )
-                        )
-                    } catch (exception: Exception) {
-                        loge(TAG, exception) {
-                            "Exception handler threw an exception"
-                        }
-                    }
+                    configuration.workerExecutionExceptionHandler?.safeAccept(
+                        WorkerExceptionInfo(workSpec.workerClassName, params, exceptionToReport),
+                        TAG
+                    )
                 } finally {
                     onWorkFinished(result)
                 }

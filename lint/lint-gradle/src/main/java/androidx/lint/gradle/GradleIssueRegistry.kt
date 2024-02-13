@@ -27,13 +27,13 @@ class GradleIssueRegistry : IssueRegistry() {
     override val api = CURRENT_API
 
     override val issues = listOf(
-        EagerTaskConfigurationDetector.ISSUE,
+        EagerConfigurationDetector.ISSUE,
     )
 
     override val vendor = Vendor(
         // TODO: Update component (or the issue template)
         feedbackUrl = "https://issuetracker.google.com/issues/new?component=1147525",
-        identifier = "androidx.gradle-lint:gradle-lint-checks",
+        identifier = "androidx.lint:lint-gradle",
         vendorName = "Android Open Source Project",
     )
 }

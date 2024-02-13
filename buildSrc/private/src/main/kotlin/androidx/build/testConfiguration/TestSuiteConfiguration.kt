@@ -24,9 +24,9 @@ import androidx.build.dependencyTracker.AffectedModuleDetector
 import androidx.build.getFileInTestConfigDirectory
 import androidx.build.getPrivacySandboxApksDirectory
 import androidx.build.getSupportRootFolder
-import androidx.build.hasAndroidTestSourceCode
 import androidx.build.hasBenchmarkPlugin
 import androidx.build.isPresubmitBuild
+import androidx.build.multiplatformExtension
 import com.android.build.api.artifact.Artifacts
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.dsl.KotlinMultiplatformAndroidTarget
@@ -40,16 +40,20 @@ import com.android.build.api.variant.TestAndroidComponentsExtension
 import com.android.build.api.variant.Variant
 import com.android.build.gradle.BaseExtension
 import com.android.build.gradle.TestExtension
+import com.android.build.gradle.TestedExtension
 import com.android.build.gradle.internal.attributes.VariantAttr
 import com.android.build.gradle.internal.publishing.AndroidArtifacts
 import com.android.build.gradle.internal.publishing.AndroidArtifacts.ArtifactType
 import org.gradle.api.Project
 import org.gradle.api.attributes.Usage
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.named
+import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinAndroidTarget
 
 /**
  * Creates and configures the test config generation task for a project. Configuration includes
@@ -121,16 +125,12 @@ fun Project.createTestConfigurationGenerationTask(
             task.hasBenchmarkPlugin.set(hasBenchmarkPlugin)
             task.testRunner.set(testRunner)
             task.testProjectPath.set(path)
+            // Skip task if getTestSourceSetsForAndroid is empty, even if
+            //  androidXExtension.deviceTests.enabled is set to true
+            task.androidTestSourceCodeCollection.from(getTestSourceSetsForAndroid())
+            task.enabled = androidXExtension.deviceTests.enabled
             AffectedModuleDetector.configureTaskGuard(task)
         }
-    // Disable xml generation for projects that have no test sources
-    // or explicitly don't want to run device tests
-    afterEvaluate {
-        val androidXExtension = extensions.getByType<AndroidXExtension>()
-        generateTestConfigurationTask.configure {
-            it.enabled = androidXExtension.deviceTests.enabled && hasAndroidTestSourceCode()
-        }
-    }
     rootProject.tasks
         .findByName(FINALIZE_TEST_CONFIGS_WITH_APKS_TASK)!!
         .dependsOn(generateTestConfigurationTask)
@@ -261,24 +261,18 @@ fun Project.addAppApkToTestConfigGeneration(androidXExtension: AndroidXExtension
 }
 
 private fun getOrCreateMediaTestConfigTask(
-    project: Project,
-    isMedia2: Boolean
+    project: Project
 ): TaskProvider<GenerateMediaTestConfigurationTask> {
-    val mediaPrefix = getMediaConfigTaskPrefix(isMedia2)
     val parentProject = project.parent!!
     if (
         !parentProject.tasks
             .withType(GenerateMediaTestConfigurationTask::class.java)
             .names
-            .contains(
-                "support-$mediaPrefix-test${
-                    AndroidXImplPlugin.GENERATE_TEST_CONFIGURATION_TASK
-                    }"
-            )
+            .contains("support-media-test${AndroidXImplPlugin.GENERATE_TEST_CONFIGURATION_TASK}")
     ) {
         val task =
             parentProject.tasks.register(
-                "support-$mediaPrefix-test${AndroidXImplPlugin.GENERATE_TEST_CONFIGURATION_TASK}",
+                "support-media-test${AndroidXImplPlugin.GENERATE_TEST_CONFIGURATION_TASK}",
                 GenerateMediaTestConfigurationTask::class.java
             ) { task ->
                 AffectedModuleDetector.configureTaskGuard(task)
@@ -288,16 +282,8 @@ private fun getOrCreateMediaTestConfigTask(
     } else {
         return parentProject.tasks
             .withType(GenerateMediaTestConfigurationTask::class.java)
-            .named(
-                "support-$mediaPrefix-test${
-                    AndroidXImplPlugin.GENERATE_TEST_CONFIGURATION_TASK
-                    }"
-            )
+            .named("support-media-test${AndroidXImplPlugin.GENERATE_TEST_CONFIGURATION_TASK}")
     }
-}
-
-private fun getMediaConfigTaskPrefix(isMedia2: Boolean): String {
-    return if (isMedia2) "media2" else "media"
 }
 
 fun Project.createOrUpdateMediaTestConfigurationGenerationTask(
@@ -305,13 +291,11 @@ fun Project.createOrUpdateMediaTestConfigurationGenerationTask(
     artifacts: Artifacts,
     minSdk: Int,
     testRunner: String,
-    isMedia2: Boolean
 ) {
-    val mediaPrefix = getMediaConfigTaskPrefix(isMedia2)
-    val mediaTask = getOrCreateMediaTestConfigTask(this, isMedia2)
+    val mediaTask = getOrCreateMediaTestConfigTask(this)
 
     fun getJsonName(clientToT: Boolean, serviceToT: Boolean, clientTests: Boolean): String {
-        return "_${mediaPrefix}Client${
+        return "_mediaClient${
             if (clientToT) "ToT" else "Previous"
         }Service${
             if (serviceToT) "ToT" else "Previous"
@@ -403,15 +387,15 @@ fun Project.createOrUpdateMediaTestConfigurationGenerationTask(
                 getJsonName(clientToT = true, serviceToT = true, clientTests = false)
             )
         )
-        it.totClientApk.set(getFileInTestConfigDirectory("${mediaPrefix}ClientToT$variantName.apk"))
+        it.totClientApk.set(getFileInTestConfigDirectory("mediaClientToT$variantName.apk"))
         it.previousClientApk.set(
-            getFileInTestConfigDirectory("${mediaPrefix}ClientPrevious$variantName.apk")
+            getFileInTestConfigDirectory("mediaClientPrevious$variantName.apk")
         )
         it.totServiceApk.set(
-            getFileInTestConfigDirectory("${mediaPrefix}ServiceToT$variantName.apk")
+            getFileInTestConfigDirectory("mediaServiceToT$variantName.apk")
         )
         it.previousServiceApk.set(
-            getFileInTestConfigDirectory("${mediaPrefix}ServicePrevious$variantName.apk")
+            getFileInTestConfigDirectory("mediaServicePrevious$variantName.apk")
         )
         it.minSdk.set(minSdk)
         it.testRunner.set(testRunner)
@@ -439,22 +423,12 @@ fun Project.configureTestConfigGeneration(baseExtension: BaseExtension) {
                 return@onVariants
             }
             when {
-                path.contains("media2:media2-session:version-compat-tests:") -> {
-                    createOrUpdateMediaTestConfigurationGenerationTask(
-                        name,
-                        artifacts,
-                        baseExtension.defaultConfig.minSdk!!,
-                        baseExtension.defaultConfig.testInstrumentationRunner!!,
-                        isMedia2 = true
-                    )
-                }
                 path.contains("media:version-compat-tests:") -> {
                     createOrUpdateMediaTestConfigurationGenerationTask(
                         name,
                         artifacts,
                         baseExtension.defaultConfig.minSdk!!,
                         baseExtension.defaultConfig.testInstrumentationRunner!!,
-                        isMedia2 = false,
                     )
                 }
                 else -> {
@@ -490,4 +464,46 @@ fun Project.configureTestConfigGeneration(
             )
         }
     }
+}
+
+private fun Project.getTestSourceSetsForAndroid(): List<FileCollection> {
+    val testSourceFileCollections = mutableListOf<FileCollection>()
+    // com.android.test modules keep test code in main sourceset
+    extensions.findByType(TestExtension::class.java)?.let { testExtension ->
+        testExtension.sourceSets.find { it.name == "main" }?.let { sourceSet ->
+            testSourceFileCollections.addAll(sourceSet.java.getSourceDirectoryTrees())
+        }
+        // Add kotlin-android main source set
+        extensions
+            .findByType(KotlinAndroidProjectExtension::class.java)
+            ?.sourceSets
+            ?.find { it.name == "main" }
+            ?.let { testSourceFileCollections.add(it.kotlin.sourceDirectories) }
+        // Note, don't have to add kotlin-multiplatform as it is not compatible with
+        // com.android.test modules
+    }
+
+    // Add Java androidTest source set
+    extensions
+        .findByType(TestedExtension::class.java)
+        ?.sourceSets
+        ?.find { it.name == "androidTest" }
+        ?.let { sourceSet ->
+            testSourceFileCollections.addAll(sourceSet.java.getSourceDirectoryTrees())
+        }
+
+    // Add kotlin-android androidTest source set
+    extensions
+        .findByType(KotlinAndroidProjectExtension::class.java)
+        ?.sourceSets
+        ?.find { it.name == "androidTest" }
+        ?.let { testSourceFileCollections.add(it.kotlin.sourceDirectories) }
+
+    // Add kotlin-multiplatform androidInstrumentedTest target source sets
+    multiplatformExtension?.targets
+        ?.filterIsInstance<KotlinAndroidTarget>()
+        ?.mapNotNull { it.compilations.find { it.name == "debugAndroidTest" } }
+        ?.flatMap { it.allKotlinSourceSets }
+        ?.mapTo(testSourceFileCollections) { it.kotlin.sourceDirectories }
+    return testSourceFileCollections
 }

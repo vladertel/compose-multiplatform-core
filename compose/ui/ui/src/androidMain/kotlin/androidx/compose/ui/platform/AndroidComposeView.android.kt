@@ -207,6 +207,8 @@ import kotlin.coroutines.CoroutineContext
 internal var platformTextInputServiceInterceptor:
         (PlatformTextInputService) -> PlatformTextInputService = { it }
 
+private const val ONE_FRAME_120_HERTZ_IN_MILLISECONDS = 8L
+
 @Suppress("ViewConstructor", "VisibleForTests", "ConstPropertyName", "NullAnnotationGroup")
 @OptIn(ExperimentalComposeUiApi::class, InternalComposeUiApi::class)
 internal class AndroidComposeView(
@@ -343,9 +345,6 @@ internal class AndroidComposeView(
 
     private val motionEventAdapter = MotionEventAdapter()
     private val pointerInputEventProcessor = PointerInputEventProcessor(root)
-
-    // TODO(mount): reinstate when coroutines are supported by IR compiler
-    // private val ownerScope = CoroutineScope(Dispatchers.Main.immediate + Job())
 
     /**
      * Used for updating LocalConfiguration when configuration changes - consume LocalConfiguration
@@ -733,6 +732,11 @@ internal class AndroidComposeView(
 
     override fun requestFocus(direction: Int, previouslyFocusedRect: Rect?): Boolean {
         if (focusOwner.rootState.hasFocus) return true
+
+        // b/318968220 When we clear focus on Pre P devices, request focus is called even when we
+        // are in touch mode. We fix this by assigning initial focus only in non-touch mode.
+        if (isInTouchMode) return false
+
         return focusOwner.takeFocus(
             focusDirection = toFocusDirection(direction) ?: Enter,
             previouslyFocusedRect = previouslyFocusedRect?.toComposeRect()
@@ -940,6 +944,34 @@ internal class AndroidComposeView(
             }
             else -> {}
         }
+    }
+
+    override fun addView(child: View?) = addView(child, -1)
+
+    override fun addView(child: View?, index: Int) =
+        addView(child, index, child!!.layoutParams ?: generateDefaultLayoutParams())
+
+    override fun addView(child: View?, width: Int, height: Int) =
+        addView(
+            child,
+            -1,
+            generateDefaultLayoutParams().also { it.width = width; it.height = height }
+        )
+
+    override fun addView(child: View?, params: LayoutParams?) = addView(child, -1, params)
+
+    /**
+     * Directly adding _real_ [View]s to this view is not supported for external consumers, so we
+     * can use the non-layout-invalidating [addViewInLayout] for when we need to add utility
+     * container views, such as [viewLayersContainer].
+     */
+    override fun addView(child: View?, index: Int, params: LayoutParams?) {
+        addViewInLayout(
+            child,
+            index,
+            params,
+            /* preventRequestLayout = */ true
+        )
     }
 
     /**
@@ -1502,10 +1534,7 @@ internal class AndroidComposeView(
         viewTreeObserver.addOnTouchModeChangeListener(touchModeChangeListener)
 
         if (SDK_INT >= S) {
-            AndroidComposeViewTranslationCallbackS.setViewTranslationCallback(
-                this,
-                AndroidComposeViewTranslationCallback()
-            )
+            AndroidComposeViewTranslationCallbackS.setViewTranslationCallback(this)
         }
     }
 
@@ -1557,17 +1586,32 @@ internal class AndroidComposeView(
         )
     }
 
-    override fun dispatchGenericMotionEvent(event: MotionEvent) = when (event.actionMasked) {
-        ACTION_SCROLL -> when {
-            isBadMotionEvent(event) || !isAttachedToWindow ->
-                super.dispatchGenericMotionEvent(event)
-
-            event.isFromSource(SOURCE_ROTARY_ENCODER) -> handleRotaryEvent(event)
-
-            else -> handleMotionEvent(event).dispatchedToAPointerInputModifier
+    override fun dispatchGenericMotionEvent(motionEvent: MotionEvent): Boolean {
+        if (hoverExitReceived) {
+            removeCallbacks(sendHoverExitEvent)
+            // Ignore ACTION_HOVER_EXIT if it is directly followed by an ACTION_SCROLL.
+            // Note: In some versions of Android Studio with screen mirroring, studio will
+            // incorrectly add an ACTION_HOVER_EXIT during a scroll event which causes
+            // issues (b/314269723), so we ignore the exit in that case.
+            if (motionEvent.actionMasked == ACTION_SCROLL) {
+                hoverExitReceived = false
+            } else {
+                sendHoverExitEvent.run()
+            }
         }
 
-        else -> super.dispatchGenericMotionEvent(event)
+        return when (motionEvent.actionMasked) {
+            ACTION_SCROLL -> when {
+                isBadMotionEvent(motionEvent) || !isAttachedToWindow ->
+                    super.dispatchGenericMotionEvent(motionEvent)
+
+                motionEvent.isFromSource(SOURCE_ROTARY_ENCODER) -> handleRotaryEvent(motionEvent)
+
+                else -> handleMotionEvent(motionEvent).dispatchedToAPointerInputModifier
+            }
+
+            else -> super.dispatchGenericMotionEvent(motionEvent)
+        }
     }
 
     // TODO(shepshapard): Test this method.
@@ -1959,7 +2003,11 @@ internal class AndroidComposeView(
                     previousMotionEvent?.recycle()
                     previousMotionEvent = MotionEvent.obtainNoHistory(event)
                     hoverExitReceived = true
-                    post(sendHoverExitEvent)
+                    // There are cases where the hover exit will incorrectly trigger because this
+                    // post is called right before the end of the frame and the new frame checks for
+                    // a press/down event (which hasn't occurred yet). Therefore, we delay the post
+                    // call a small amount to account for that.
+                    postDelayed(sendHoverExitEvent, ONE_FRAME_120_HERTZ_IN_MILLISECONDS)
                     return false
                 }
             }
@@ -2120,26 +2168,26 @@ internal class AndroidComposeView(
          */
         val savedStateRegistryOwner: SavedStateRegistryOwner
     )
+}
 
-    @RequiresApi(S)
-    private class AndroidComposeViewTranslationCallback : ViewTranslationCallback {
-        override fun onShowTranslation(view: View): Boolean {
-            val androidComposeView = view as AndroidComposeView
-            androidComposeView.contentCaptureManager.onShowTranslation()
-            return true
-        }
+@RequiresApi(S)
+private object AndroidComposeViewTranslationCallback : ViewTranslationCallback {
+    override fun onShowTranslation(view: View): Boolean {
+        val androidComposeView = view as AndroidComposeView
+        androidComposeView.contentCaptureManager.onShowTranslation()
+        return true
+    }
 
-        override fun onHideTranslation(view: View): Boolean {
-            val androidComposeView = view as AndroidComposeView
-            androidComposeView.contentCaptureManager.onHideTranslation()
-            return true
-        }
+    override fun onHideTranslation(view: View): Boolean {
+        val androidComposeView = view as AndroidComposeView
+        androidComposeView.contentCaptureManager.onHideTranslation()
+        return true
+    }
 
-        override fun onClearTranslation(view: View): Boolean {
-            val androidComposeView = view as AndroidComposeView
-            androidComposeView.contentCaptureManager.onClearTranslation()
-            return true
-        }
+    override fun onClearTranslation(view: View): Boolean {
+        val androidComposeView = view as AndroidComposeView
+        androidComposeView.contentCaptureManager.onClearTranslation()
+        return true
     }
 }
 
@@ -2197,8 +2245,8 @@ private object AndroidComposeViewForceDarkModeQ {
 internal object AndroidComposeViewTranslationCallbackS {
     @DoNotInline
     @RequiresApi(S)
-    fun setViewTranslationCallback(view: View, translationCallback: ViewTranslationCallback) {
-        view.setViewTranslationCallback(translationCallback)
+    fun setViewTranslationCallback(view: View) {
+        view.setViewTranslationCallback(AndroidComposeViewTranslationCallback)
     }
 
     @DoNotInline

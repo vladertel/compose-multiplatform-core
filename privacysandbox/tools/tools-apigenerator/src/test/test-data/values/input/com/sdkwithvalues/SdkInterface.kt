@@ -13,6 +13,8 @@ interface SdkInterface {
     suspend fun processNullableValues(request: SdkRequest?): SdkResponse?
 
     suspend fun processValueList(x: List<SdkRequest>): List<SdkResponse>
+
+    suspend fun processEnum(requestFlag: RequestFlag): RequestFlag
 }
 
 @PrivacySandboxValue
@@ -32,12 +34,19 @@ data class InnerSdkValue(
 )
 
 @PrivacySandboxValue
+enum class RequestFlag {
+    UP,
+    DOWN,
+}
+
+@PrivacySandboxValue
 data class SdkRequest(
     val id: Long,
     val innerValue: InnerSdkValue,
     val maybeInnerValue: InnerSdkValue?,
     val moreValues: List<InnerSdkValue>,
     val activityLauncher: SdkActivityLauncher,
+    val requestFlag: RequestFlag,
 )
 
 @PrivacySandboxValue
