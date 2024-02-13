@@ -254,7 +254,7 @@ private Set<BuildType> createRequestedFilter() {
                         "CAMERA  - camera projects\n" +
                         "MAIN    - androidx projects that are not compose\n" +
                         "FLAN    - fragment, lifecycle, activity, and navigation projects\n" +
-                        "MEDIA   - media, media2, and mediarouter projects\n" +
+                        "MEDIA   - media and mediarouter projects\n" +
                         "WEAR    - Wear OS projects\n" +
                         "NATIVE  - native projects\n" +
                         "WINDOW  - window projects\n" +
@@ -336,6 +336,8 @@ includeProject(":activity:activity-ktx", [BuildType.MAIN, BuildType.FLAN, BuildT
 includeProject(":activity:activity-lint", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":activity:integration-tests:testapp", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":activity:integration-tests:baselineprofile", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
+includeProject(":activity:integration-tests:macrobenchmark", [BuildType.MAIN, BuildType.FLAN])
+includeProject(":activity:integration-tests:macrobenchmark-target", [BuildType.MAIN, BuildType.FLAN])
 includeProject(":annotation:annotation")
 includeProject(":annotation:annotation-experimental")
 includeProject(":annotation:annotation-experimental-lint")
@@ -507,11 +509,13 @@ includeProject(":compose:lint:internal-lint-checks", [BuildType.COMPOSE])
 includeProject(":compose:lint:common", [BuildType.COMPOSE])
 includeProject(":compose:lint:common-test", [BuildType.COMPOSE])
 includeProject(":compose:material", [BuildType.COMPOSE])
+includeProject(":compose:material3:adaptive:adaptive", [BuildType.COMPOSE])
+includeProject(":compose:material3:adaptive:adaptive-layout", [BuildType.COMPOSE])
+includeProject(":compose:material3:adaptive:adaptive-navigation", [BuildType.COMPOSE])
+includeProject(":compose:material3:adaptive:adaptive-samples", "compose/material3/adaptive/samples", [BuildType.COMPOSE])
+includeProject(":compose:material3:adaptive:adaptive-benchmark", "compose/material3/adaptive/benchmark", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3", [BuildType.COMPOSE])
 includeProject(":compose:material3:benchmark", [BuildType.COMPOSE])
-includeProject(":compose:material3:material3-adaptive", [BuildType.COMPOSE])
-includeProject(":compose:material3:material3-adaptive:material3-adaptive-samples", "compose/material3/material3-adaptive/samples", [BuildType.COMPOSE])
-includeProject(":compose:material3:material3-adaptive:material3-adaptive-benchmark", "compose/material3/material3-adaptive/benchmark", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3-adaptive-navigation-suite", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3-adaptive-navigation-suite:material3-adaptive-navigation-suite-samples", "compose/material3/material3-adaptive-navigation-suite/samples", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3-common", [BuildType.COMPOSE])
@@ -752,16 +756,16 @@ includeProject(":lifecycle:lifecycle-livedata-ktx", [BuildType.MAIN, BuildType.F
 includeProject(":lifecycle:lifecycle-process", [BuildType.MAIN, BuildType.FLAN])
 includeProject(":lifecycle:lifecycle-reactivestreams", [BuildType.MAIN, BuildType.FLAN])
 includeProject(":lifecycle:lifecycle-reactivestreams-ktx", [BuildType.MAIN, BuildType.FLAN])
-includeProject(":lifecycle:lifecycle-runtime", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
+includeProject(":lifecycle:lifecycle-runtime", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.INFRAROGUE, BuildType.KMP])
 includeProject(":lifecycle:lifecycle-runtime-compose", [BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-runtime-compose:lifecycle-runtime-compose-samples", "lifecycle/lifecycle-runtime-compose/samples", [BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-runtime-compose:integration-tests:lifecycle-runtime-compose-demos", [BuildType.COMPOSE])
-includeProject(":lifecycle:lifecycle-runtime-ktx", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
+includeProject(":lifecycle:lifecycle-runtime-ktx", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.INFRAROGUE, BuildType.KMP])
 includeProject(":lifecycle:lifecycle-runtime-ktx-lint", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-runtime-testing", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-runtime-testing-lint", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-service", [BuildType.MAIN, BuildType.FLAN, BuildType.GLANCE])
-includeProject(":lifecycle:lifecycle-viewmodel", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
+includeProject(":lifecycle:lifecycle-viewmodel", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.INFRAROGUE, BuildType.KMP])
 includeProject(":lifecycle:lifecycle-viewmodel-compose", [BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-viewmodel-compose:lifecycle-viewmodel-compose-samples", "lifecycle/lifecycle-viewmodel-compose/samples", [BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-viewmodel-compose:integration-tests:lifecycle-viewmodel-demos", [BuildType.COMPOSE])
@@ -772,12 +776,6 @@ includeProject(":lint-checks")
 includeProject(":lint-checks:integration-tests")
 includeProject(":loader:loader", [BuildType.MAIN])
 includeProject(":loader:loader-ktx", [BuildType.MAIN])
-includeProject(":media2:integration-tests:testapp", [BuildType.MAIN, BuildType.MEDIA])
-includeProject(":media2:media2-common", [BuildType.MAIN, BuildType.MEDIA])
-includeProject(":media2:media2-exoplayer", [BuildType.MAIN, BuildType.MEDIA])
-includeProject(":media2:media2-player", [BuildType.MAIN, BuildType.MEDIA])
-includeProject(":media2:media2-session", [BuildType.MAIN, BuildType.MEDIA])
-includeProject(":media2:media2-widget", [BuildType.MAIN, BuildType.MEDIA])
 includeProject(":media:media", [BuildType.MAIN, BuildType.MEDIA])
 includeProject(":mediarouter:mediarouter", [BuildType.MAIN, BuildType.MEDIA])
 includeProject(":mediarouter:mediarouter-testing", [BuildType.MAIN, BuildType.MEDIA])
@@ -851,6 +849,7 @@ includeProject(":privacysandbox:tools:tools-testing", [BuildType.MAIN])
 includeProject(":privacysandbox:ui:integration-tests:testaidl", [BuildType.MAIN])
 includeProject(":privacysandbox:ui:integration-tests:testapp", [BuildType.MAIN])
 includeProject(":privacysandbox:ui:integration-tests:testsdkprovider", [BuildType.MAIN])
+includeProject(":privacysandbox:ui:integration-tests:mediateesdkprovider", [BuildType.MAIN])
 includeProject(":privacysandbox:ui:ui-client", [BuildType.MAIN])
 includeProject(":privacysandbox:ui:ui-core", [BuildType.MAIN])
 includeProject(":privacysandbox:ui:ui-provider", [BuildType.MAIN])
@@ -905,6 +904,7 @@ includeProject(":security:security-biometric", [BuildType.MAIN])
 includeProject(":security:security-crypto", [BuildType.MAIN])
 includeProject(":security:security-crypto-ktx", [BuildType.MAIN])
 includeProject(":security:security-identity-credential", [BuildType.MAIN])
+includeProject(":security:security-mls", [BuildType.MAIN])
 includeProject(":sharetarget:integration-tests:testapp", [BuildType.MAIN])
 includeProject(":sharetarget:sharetarget", [BuildType.MAIN])
 includeProject(":slice:slice-benchmark", [BuildType.MAIN])
@@ -1113,7 +1113,6 @@ includeProject(":internal-testutils-ktx", "testutils/testutils-ktx")
 includeProject(":internal-testutils-macrobenchmark", "testutils/testutils-macrobenchmark", [BuildType.MAIN, BuildType.COMPOSE])
 includeProject(":internal-testutils-navigation", "testutils/testutils-navigation", [BuildType.MAIN, BuildType.COMPOSE, BuildType.FLAN])
 includeProject(":internal-testutils-paging", "testutils/testutils-paging", [BuildType.MAIN, BuildType.COMPOSE])
-includeProject(":internal-testutils-paparazzi", "testutils/testutils-paparazzi", [BuildType.COMPOSE])
 includeProject(":internal-testutils-gradle-plugin", "testutils/testutils-gradle-plugin", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE, BuildType.TOOLS])
 includeProject(":internal-testutils-mockito", "testutils/testutils-mockito", [BuildType.MAIN, BuildType.MEDIA, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":kruth:kruth", [BuildType.MAIN, BuildType.INFRAROGUE, BuildType.KMP, BuildType.COMPOSE])
@@ -1133,16 +1132,6 @@ includeProject(":media:version-compat-tests:service-previous",
         "media/version-compat-tests/previous/service", [BuildType.MAIN, BuildType.MEDIA])
 includeProject(":media:version-compat-tests:lib", [BuildType.MAIN, BuildType.MEDIA])
 
-includeProject(":media2:media2-session:version-compat-tests:client",
-        "media2/media2-session/version-compat-tests/current/client", [BuildType.MAIN, BuildType.MEDIA])
-includeProject(":media2:media2-session:version-compat-tests:client-previous",
-        "media2/media2-session/version-compat-tests/previous/client", [BuildType.MAIN, BuildType.MEDIA])
-includeProject(":media2:media2-session:version-compat-tests:service",
-        "media2/media2-session/version-compat-tests/current/service", [BuildType.MAIN, BuildType.MEDIA])
-includeProject(":media2:media2-session:version-compat-tests:service-previous",
-        "media2/media2-session/version-compat-tests/previous/service", [BuildType.MAIN, BuildType.MEDIA])
-includeProject(":media2:media2-session:version-compat-tests:common", [BuildType.MAIN, BuildType.MEDIA])
-
 /////////////////////////////
 //
 // External
@@ -1156,8 +1145,6 @@ includeProject(":icing:nativeLib", new File(externalRoot, "icing/nativeLib"), [B
 includeProject(":external:libyuv", [BuildType.CAMERA])
 includeProject(":noto-emoji-compat-font", new File(externalRoot, "noto-fonts/emoji-compat"), [BuildType.MAIN])
 includeProject(":noto-emoji-compat-flatbuffers", new File(externalRoot, "noto-fonts/emoji-compat-flatbuffers"), [BuildType.MAIN, BuildType.COMPOSE])
-includeProject(":external:paparazzi:paparazzi", [BuildType.COMPOSE])
-includeProject(":external:paparazzi:paparazzi-agent", [BuildType.COMPOSE])
 
 if (isAllProjects()) {
     includeProject(":docs-tip-of-tree")

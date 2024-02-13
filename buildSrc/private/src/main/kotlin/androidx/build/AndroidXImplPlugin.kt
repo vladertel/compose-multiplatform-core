@@ -25,6 +25,7 @@ import androidx.build.checkapi.JavaApiTaskConfig
 import androidx.build.checkapi.KmpApiTaskConfig
 import androidx.build.checkapi.LibraryApiTaskConfig
 import androidx.build.checkapi.configureProjectForApiTasks
+import androidx.build.docs.CheckTipOfTreeDocsTask.Companion.setUpCheckDocsTask
 import androidx.build.gradle.isRoot
 import androidx.build.license.configureExternalDependencyLicenseCheck
 import androidx.build.resources.configurePublicResourcesStub
@@ -59,6 +60,7 @@ import com.android.build.gradle.api.KotlinMultiplatformAndroidPlugin
 import com.android.build.gradle.tasks.factory.AndroidUnitTest
 import java.io.File
 import java.time.Duration
+import java.time.LocalDateTime
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -99,14 +101,12 @@ import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.withModule
 import org.gradle.plugin.devel.plugins.JavaGradlePluginPlugin
 import org.gradle.plugin.devel.tasks.ValidatePlugins
-import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.plugin.KotlinBasePluginWrapper
 import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinAndroidTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -471,6 +471,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                         )
                 }
                 task.kotlinOptions.freeCompilerArgs += kotlinCompilerArgs
+                logScriptSources(task, project)
             }
 
             val isAndroidProject =
@@ -578,6 +579,31 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             AndroidMultiplatformApiTaskConfig,
             androidXExtension
         )
+        project.setUpCheckDocsTask(androidXExtension)
+    }
+
+    /**
+     * Temporary diagnostics for b/321949384
+     */
+    private fun logScriptSources(task: KotlinCompile, project: Project) {
+        if (getBuildId() == "0")
+            return // don't need to log when not running on the build server
+        val logFile = File(project.getDistributionDirectory(), "KotlinCompile-scriptSources.log")
+        fun writeScriptSources(label: String) {
+            val now = LocalDateTime.now()
+            @Suppress("INVISIBLE_MEMBER")
+            val scriptSources = task.scriptSources.files
+            logFile.appendText(
+                "${task.path} $label at $now with ${scriptSources.size} scriptSources: " +
+                "${scriptSources.joinToString()}\n"
+            )
+        }
+        task.doFirst {
+            writeScriptSources("starting")
+        }
+        task.doLast {
+            writeScriptSources("completed")
+        }
     }
 
     /**
@@ -602,18 +628,17 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
 
     private fun Project.buildOnServerDependsOnLint() {
         if (!project.usingMaxDepVersions()) {
-            project.agpVariants.all { variant ->
-                // in AndroidX, release and debug variants are essentially the same,
-                // so we don't run the lintRelease task on the build server
+            val androidComponents = extensions.findByType(AndroidComponentsExtension::class.java)
+            androidComponents?.onVariants { variant ->
                 if (!variant.name.lowercase(Locale.getDefault()).contains("release")) {
                     val taskName =
                         "lint${variant.name.replaceFirstChar {
-                        if (it.isLowerCase()) {
-                            it.titlecase(Locale.getDefault())
-                        } else {
-                            it.toString()
-                        }
-                    }}"
+                            if (it.isLowerCase()) {
+                                it.titlecase(Locale.getDefault())
+                            } else {
+                                it.toString()
+                            }
+                        }}"
                     project.addToBuildOnServer(taskName)
                 }
             }
@@ -732,6 +757,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             LibraryApiTaskConfig(libraryExtension),
             androidXExtension
         )
+        project.setUpCheckDocsTask(androidXExtension)
 
         project.addToProjectMap(androidXExtension)
 
@@ -795,6 +821,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
 
         project.configureProjectForApiTasks(apiTaskConfig, androidXExtension)
+        project.setUpCheckDocsTask(androidXExtension)
 
         project.afterEvaluate {
             if (androidXExtension.shouldRelease()) {
@@ -905,7 +932,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             buildType.signingConfig = debugSigningConfig
         }
 
-        project.configureErrorProneForAndroid(variants)
+        project.configureErrorProneForAndroid()
 
         // workaround for b/120487939
         project.configurations.all { configuration ->
@@ -1395,56 +1422,6 @@ fun <T : Task> Project.addToCheckTask(task: TaskProvider<T>) {
     project.tasks.named("check").configure { it.dependsOn(task) }
 }
 
-/** Expected to be called in afterEvaluate when all extensions are available */
-internal fun Project.hasAndroidTestSourceCode(): Boolean {
-    // com.android.test modules keep test code in main sourceset
-    extensions.findByType(TestExtension::class.java)?.let { testExtension ->
-        testExtension.sourceSets.findByName("main")?.let { sourceSet ->
-            if (!sourceSet.java.getSourceFiles().isEmpty) return true
-        }
-        // check kotlin-android main source set
-        extensions
-            .findByType(KotlinAndroidProjectExtension::class.java)
-            ?.sourceSets
-            ?.findByName("main")
-            ?.let { if (it.kotlin.files.isNotEmpty()) return true }
-        // Note, don't have to check for kotlin-multiplatform as it is not compatible with
-        // com.android.test modules
-    }
-
-    // check Java androidTest source set
-    extensions
-        .findByType(TestedExtension::class.java)
-        ?.sourceSets
-        ?.findByName("androidTest")
-        ?.let { sourceSet ->
-            // using getSourceFiles() instead of sourceFiles due to b/150800094
-            if (!sourceSet.java.getSourceFiles().isEmpty) return true
-        }
-
-    // check kotlin-android androidTest source set
-    extensions
-        .findByType(KotlinAndroidProjectExtension::class.java)
-        ?.sourceSets
-        ?.findByName("androidTest")
-        ?.let { if (it.kotlin.files.isNotEmpty()) return true }
-
-    // check kotlin-multiplatform androidInstrumentedTest target source sets
-    multiplatformExtension?.let { kmpExtension ->
-        val instrumentedTestSourceSets = kmpExtension
-            .targets
-            .filterIsInstance<KotlinAndroidTarget>()
-            .mapNotNull {
-                target -> target.compilations.findByName("debugAndroidTest")
-            }.flatMap { compilation -> compilation.allKotlinSourceSets }
-        if (instrumentedTestSourceSets.any { it.kotlin.files.isNotEmpty() }) {
-            return true
-        }
-    }
-
-    return false
-}
-
 fun Project.validateMultiplatformPluginHasNotBeenApplied() {
     if (plugins.hasPlugin(KotlinMultiplatformPluginWrapper::class.java)) {
         throw GradleException(
@@ -1574,6 +1551,10 @@ private fun Project.enforceBanOnVersionRanges() {
             }
         }
     }
+}
+
+internal fun String.camelCase() = replaceFirstChar {
+    if (it.isLowerCase()) it.titlecase() else it.toString()
 }
 
 const val PROJECT_OR_ARTIFACT_EXT_NAME = "projectOrArtifact"

@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.testutils.assertModifierIsPure
 import androidx.compose.testutils.first
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -65,6 +66,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.isDebugInspectorInfoEnabled
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
@@ -163,6 +165,44 @@ class ClickableTest {
         rule.onNodeWithTag("myClickable")
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
             .assertIsNotEnabled()
+            .assertHasClickAction()
+    }
+
+    @Test
+    fun semanticsInvalidation() {
+        var enabled by mutableStateOf(true)
+        var role by mutableStateOf<Role?>(Role.Button)
+        rule.setContent {
+            Box {
+                BasicText(
+                    "ClickableText",
+                    modifier = Modifier.testTag("myClickable")
+                        .clickable(enabled = enabled, role = role) {}
+                )
+            }
+        }
+
+        rule.onNodeWithTag("myClickable")
+            .assertIsEnabled()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            .assertHasClickAction()
+
+        rule.runOnIdle {
+            role = null
+        }
+
+        rule.onNodeWithTag("myClickable")
+            .assertIsEnabled()
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
+            .assertHasClickAction()
+
+        rule.runOnIdle {
+            enabled = false
+        }
+
+        rule.onNodeWithTag("myClickable")
+            .assertIsNotEnabled()
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
             .assertHasClickAction()
     }
 
@@ -1481,7 +1521,7 @@ class ClickableTest {
                 "onClickLabel",
                 "onClick",
                 "role",
-                "indication",
+                "indicationNodeFactory",
                 "interactionSource"
             )
         }
@@ -2588,6 +2628,111 @@ class ClickableTest {
             assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
         }
     }
+
+    @Test
+    fun composedOverload_nonEquality() {
+        val onClick = {}
+        val modifier1 = Modifier.clickable(onClick = onClick)
+        val modifier2 = Modifier.clickable(onClick = onClick)
+
+        // The composed overload can never compare equal
+        assertThat(modifier1).isNotEqualTo(modifier2)
+    }
+
+    @Test
+    fun nullInteractionSourceNullIndication_equality() {
+        val onClick = {}
+        assertModifierIsPure { toggleInput ->
+            Modifier.clickable(
+                interactionSource = null,
+                indication = null,
+                enabled = toggleInput,
+                onClick = onClick
+            )
+        }
+    }
+
+    @Test
+    fun nonNullInteractionSourceNullIndication_equality() {
+        val onClick = {}
+        val interactionSource = MutableInteractionSource()
+        assertModifierIsPure { toggleInput ->
+            Modifier.clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = toggleInput,
+                onClick = onClick
+            )
+        }
+    }
+
+    @Test
+    fun nullInteractionSourceNonNullIndicationNodeFactory_equality() {
+        val onClick = {}
+        val indication = TestIndicationNodeFactory({}, { _, _ -> })
+        assertModifierIsPure { toggleInput ->
+            Modifier.clickable(
+                interactionSource = null,
+                indication = indication,
+                enabled = toggleInput,
+                onClick = onClick
+            )
+        }
+    }
+
+    @Test
+    fun nullInteractionSourceNonNullIndication_nonEquality() {
+        val onClick = {}
+        val indication = TestIndication {}
+        val modifier1 = Modifier.clickable(
+            interactionSource = null,
+            indication = indication,
+            onClick = onClick
+        )
+        val modifier2 = Modifier.clickable(
+            interactionSource = null,
+            indication = indication,
+            onClick = onClick
+        )
+
+        // Indication requires composed, so cannot compare equal
+        assertThat(modifier1).isNotEqualTo(modifier2)
+    }
+
+    @Test
+    fun nonNullInteractionSourceNonNullIndicationNodeFactory_equality() {
+        val onClick = {}
+        val interactionSource = MutableInteractionSource()
+        val indication = TestIndicationNodeFactory({}, { _, _ -> })
+        assertModifierIsPure { toggleInput ->
+            Modifier.clickable(
+                interactionSource = interactionSource,
+                indication = indication,
+                enabled = toggleInput,
+                onClick = onClick
+            )
+        }
+    }
+
+    @Test
+    fun nonNullInteractionSourceNonNullIndication_nonEquality() {
+        val onClick = {}
+        val interactionSource = MutableInteractionSource()
+        val indication = TestIndication {}
+        val modifier1 = Modifier.clickable(
+            interactionSource = interactionSource,
+            indication = indication,
+            onClick = onClick
+        )
+        val modifier2 = Modifier.clickable(
+            interactionSource = interactionSource,
+            indication = indication,
+            onClick = onClick
+        )
+
+        // Indication requires composed, so cannot compare equal
+        assertThat(modifier1).isNotEqualTo(modifier2)
+    }
 }
 
 /**
@@ -2596,7 +2741,7 @@ class ClickableTest {
  * @param onCreate lambda executed when the instance is created with [rememberUpdatedInstance]
  */
 @Suppress("DEPRECATION_ERROR")
-private class TestIndication(val onCreate: (InteractionSource) -> Unit) : Indication {
+internal class TestIndication(val onCreate: (InteractionSource) -> Unit) : Indication {
     @Deprecated("Super method is deprecated")
     @Composable
     override fun rememberUpdatedInstance(interactionSource: InteractionSource): IndicationInstance {

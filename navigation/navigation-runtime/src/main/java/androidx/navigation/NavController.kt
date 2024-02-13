@@ -323,6 +323,7 @@ public open class NavController(
         override fun pop(popUpTo: NavBackStackEntry, saveState: Boolean) {
             val destinationNavigator: Navigator<out NavDestination> =
                 _navigatorProvider[popUpTo.destination.navigatorName]
+            entrySavedState[popUpTo] = saveState
             if (destinationNavigator == navigator) {
                 val handler = popFromBackStackHandler
                 if (handler != null) {
@@ -340,7 +341,6 @@ public open class NavController(
 
         override fun popWithTransition(popUpTo: NavBackStackEntry, saveState: Boolean) {
             super.popWithTransition(popUpTo, saveState)
-            entrySavedState[popUpTo] = saveState
         }
 
         override fun markTransitionComplete(entry: NavBackStackEntry) {
@@ -1592,6 +1592,9 @@ public open class NavController(
      * Navigate to a destination from the current navigation graph. This supports both navigating
      * via an [action][NavDestination.getAction] and directly navigating to a destination.
      *
+     * If given [NavOptions] pass in [NavOptions.restoreState] `true`, any args passed here will be
+     * overridden by the restored args.
+     *
      * @param resId an [action][NavDestination.getAction] id or a destination id to
      * navigate to
      * @param args arguments to pass to the destination
@@ -1609,6 +1612,9 @@ public open class NavController(
     /**
      * Navigate to a destination from the current navigation graph. This supports both navigating
      * via an [action][NavDestination.getAction] and directly navigating to a destination.
+     *
+     * If given [NavOptions] pass in [NavOptions.restoreState] `true`, any args passed here will be
+     * overridden by the restored args.
      *
      * @param resId an [action][NavDestination.getAction] id or a destination id to
      * navigate to
@@ -2192,6 +2198,9 @@ public open class NavController(
      * Navigate to a route in the current NavGraph. If an invalid route is given, an
      * [IllegalArgumentException] will be thrown.
      *
+     * If given [NavOptions] pass in [NavOptions.restoreState] `true`, any args passed here as part
+     * of the route will be overridden by the restored args.
+     *
      * @param route route for the destination
      * @param builder DSL for constructing a new [NavOptions]
      *
@@ -2205,6 +2214,9 @@ public open class NavController(
     /**
      * Navigate to a route in the current NavGraph. If an invalid route is given, an
      * [IllegalArgumentException] will be thrown.
+     *
+     * If given [NavOptions] pass in [NavOptions.restoreState] `true`, any args passed here as part
+     * of the route will be overridden by the restored args.
      *
      * @param route route for the destination
      * @param navOptions special options for this navigation operation

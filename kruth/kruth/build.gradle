@@ -21,6 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+
 import androidx.build.KmpPlatformsKt
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
@@ -64,6 +65,13 @@ androidXMultiplatform {
                 api(libs.kotlinStdlib)
                 api(libs.kotlinTest)
                 implementation(libs.guavaAndroid)
+                implementation(libs.junit)
+            }
+        }
+
+        jvmTest {
+            dependencies {
+                api(libs.kotlinCoroutinesTest)
             }
         }
 
@@ -101,4 +109,5 @@ androidx {
     publish = Publish.SNAPSHOT_ONLY
     runApiTasks = new RunApiTasks.Yes() // Used to diff against Google Truth
     type = LibraryType.INTERNAL_TEST_LIBRARY
+    doNotDocumentReason = "Not shipped externally"
 }

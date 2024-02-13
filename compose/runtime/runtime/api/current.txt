@@ -127,6 +127,7 @@ package androidx.compose.runtime {
     method @androidx.compose.runtime.ComposeCompilerApi public void endNode();
     method @SuppressCompatibility @androidx.compose.runtime.InternalComposeApi public void endProvider();
     method @SuppressCompatibility @androidx.compose.runtime.InternalComposeApi public void endProviders();
+    method @androidx.compose.runtime.ComposeCompilerApi public void endReplaceGroup();
     method @androidx.compose.runtime.ComposeCompilerApi public void endReplaceableGroup();
     method @androidx.compose.runtime.ComposeCompilerApi public androidx.compose.runtime.ScopeUpdateScope? endRestartGroup();
     method @androidx.compose.runtime.ComposeCompilerApi public void endReusableGroup();
@@ -159,6 +160,7 @@ package androidx.compose.runtime {
     method @androidx.compose.runtime.ComposeCompilerApi public void startNode();
     method @SuppressCompatibility @androidx.compose.runtime.InternalComposeApi public void startProvider(androidx.compose.runtime.ProvidedValue<?> value);
     method @SuppressCompatibility @androidx.compose.runtime.InternalComposeApi public void startProviders(androidx.compose.runtime.ProvidedValue<?>[] values);
+    method @androidx.compose.runtime.ComposeCompilerApi public void startReplaceGroup(int key);
     method @androidx.compose.runtime.ComposeCompilerApi public void startReplaceableGroup(int key);
     method @androidx.compose.runtime.ComposeCompilerApi public androidx.compose.runtime.Composer startRestartGroup(int key);
     method @androidx.compose.runtime.ComposeCompilerApi public void startReusableGroup(int key, Object? dataKey);
@@ -940,7 +942,7 @@ package androidx.compose.runtime.snapshots {
     method public boolean addAll(java.util.Collection<? extends T> elements);
     method public void clear();
     method public boolean contains(T element);
-    method public boolean containsAll(java.util.Collection<E> elements);
+    method public boolean containsAll(java.util.Collection<? extends T> elements);
     method public T get(int index);
     method public androidx.compose.runtime.snapshots.StateRecord getFirstStateRecord();
     method public int getSize();
@@ -952,10 +954,10 @@ package androidx.compose.runtime.snapshots {
     method public java.util.ListIterator<T> listIterator(int index);
     method public void prependStateRecord(androidx.compose.runtime.snapshots.StateRecord value);
     method public boolean remove(T element);
-    method public boolean removeAll(java.util.Collection<E> elements);
+    method public boolean removeAll(java.util.Collection<? extends T> elements);
     method public T removeAt(int index);
     method public void removeRange(int fromIndex, int toIndex);
-    method public boolean retainAll(java.util.Collection<E> elements);
+    method public boolean retainAll(java.util.Collection<? extends T> elements);
     method public T set(int index, T element);
     method public java.util.List<T> subList(int fromIndex, int toIndex);
     method public java.util.List<T> toList();

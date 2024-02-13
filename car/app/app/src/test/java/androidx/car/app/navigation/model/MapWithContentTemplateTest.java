@@ -24,6 +24,7 @@ import androidx.car.app.TestUtils;
 import androidx.car.app.model.Action;
 import androidx.car.app.model.ActionStrip;
 import androidx.car.app.model.GridTemplate;
+import androidx.car.app.model.Header;
 import androidx.car.app.model.ItemList;
 import androidx.car.app.model.ListTemplate;
 import androidx.car.app.model.MessageTemplate;
@@ -51,7 +52,7 @@ public class MapWithContentTemplateTest {
 
     private static MessageTemplate createMessageTemplate() {
         return new MessageTemplate.Builder("foo")
-                .setTitle("bar")
+                .setHeader(new Header.Builder().setTitle("bar").build())
                 .build();
     }
 
@@ -76,8 +77,11 @@ public class MapWithContentTemplateTest {
         return new PaneTemplate.Builder(new Pane.Builder()
                 .addRow(row1)
                 .build())
-                .setTitle("Title")
-                .setHeaderAction(Action.BACK)
+                .setHeader(
+                        new Header.Builder()
+                                .setTitle("Title")
+                                .setStartHeaderAction(Action.BACK)
+                                .build())
                 .build();
     }
 

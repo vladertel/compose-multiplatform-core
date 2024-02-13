@@ -57,7 +57,7 @@ class KeylineTest {
         }
 
         assertThat(keylineList[1].cutoff)
-            .isEqualTo(-MediumSize + (MediumSize * .75f).roundToInt())
+            .isEqualTo(MediumSize * 0.25f)
     }
 
     @Test
@@ -130,6 +130,44 @@ class KeylineTest {
         assertThat(lerp(from, to, 0f)).isEqualTo(from)
         assertThat(lerp(from, to, 1f)).isEqualTo(to)
         assertThat(lerp(from, to, .5f)).isEqualTo(half)
+    }
+
+    @Test
+    fun test_keylineListsShouldBeEqual() {
+        val keylineList1 = keylineListOf(120f, CarouselAlignment.Start) {
+            add(10f, true)
+            add(100f)
+            add(20f)
+            add(10f, true)
+        }
+        val keylineList2 = keylineListOf(120f, CarouselAlignment.Start) {
+            add(10f, true)
+            add(100f)
+            add(20f)
+            add(10f, true)
+        }
+
+        assertThat(keylineList1 == keylineList2).isTrue()
+        assertThat(keylineList1.hashCode()).isEqualTo(keylineList2.hashCode())
+    }
+
+    @Test
+    fun testDifferentSizedItem_keylineListsShouldNotBeEqual() {
+        val keylineList1 = keylineListOf(120f, CarouselAlignment.Start) {
+            add(11f, true)
+            add(100f)
+            add(20f)
+            add(10f, true)
+        }
+        val keylineList2 = keylineListOf(120f, CarouselAlignment.Start) {
+            add(10f, true)
+            add(100f)
+            add(20f)
+            add(10f, true)
+        }
+
+        assertThat(keylineList1 == keylineList2).isFalse()
+        assertThat(keylineList1.hashCode()).isNotEqualTo(keylineList2.hashCode())
     }
 
     companion object {
