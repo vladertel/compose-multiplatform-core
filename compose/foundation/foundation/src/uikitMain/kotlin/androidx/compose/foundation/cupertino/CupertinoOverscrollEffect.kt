@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.*
 import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
 import kotlin.math.sign
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.isActive
 
 private enum class CupertinoScrollSource {
