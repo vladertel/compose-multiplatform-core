@@ -246,14 +246,7 @@ class CupertinoOverscrollEffect(
         performFling: suspend (Velocity) -> Velocity
     ) {
         val availableFlingVelocity = playInitialSpringAnimationIfNeeded(velocity)
-
-        var cancellationException: Throwable? = null
-        val velocityConsumedByFling = try {
-            performFling(availableFlingVelocity)
-        } catch (e: CancellationException) {
-            cancellationException = e
-            Velocity.Zero
-        }
+        val velocityConsumedByFling = performFling(availableFlingVelocity)
         val postFlingVelocity = availableFlingVelocity - velocityConsumedByFling
 
         playSpringAnimation(
@@ -261,9 +254,6 @@ class CupertinoOverscrollEffect(
             postFlingVelocity.toFloat(),
             CupertinoSpringAnimationReason.POSSIBLE_SPRING_IN_THE_END
         )
-        cancellationException?.let {
-            throw it
-        }
     }
 
     private fun Offset.toCupertinoOverscrollDirection(): CupertinoOverscrollDirection {
