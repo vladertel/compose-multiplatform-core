@@ -176,7 +176,7 @@ private class ComposeWindow(
         canvas.setAttribute("tabindex", "0")
         layer.layer.needRedraw()
 
-        _windowInfo.containerSize = IntSize(canvas.width, canvas.height)
+        onChangeWindowBounds()
         layer.setSize(canvas.width, canvas.height)
 
         layer.setDensity(density)
@@ -191,10 +191,15 @@ private class ComposeWindow(
     fun resize(newSize: IntSize) {
         canvas.width = newSize.width
         canvas.height = newSize.height
-        _windowInfo.containerSize = IntSize(canvas.width, canvas.height)
+        onChangeWindowBounds()
         layer.layer.attachTo(canvas)
         layer.setSize(canvas.width, canvas.height)
         layer.layer.needRedraw()
+    }
+
+    private fun onChangeWindowBounds() {
+        val density = density.density.toInt()
+        _windowInfo.containerSize = IntSize(canvas.width * density, canvas.height * density)
     }
 
     // TODO: need to call .dispose() on window close.
