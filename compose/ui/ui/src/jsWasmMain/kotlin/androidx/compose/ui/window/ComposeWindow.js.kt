@@ -42,6 +42,9 @@ import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import org.jetbrains.skiko.SkiaLayer
+import org.jetbrains.skiko.SkikoInputModifiers
+import org.jetbrains.skiko.SkikoKey
+import org.jetbrains.skiko.SkikoKeyboardEvent
 import org.jetbrains.skiko.SkikoKeyboardEventKind
 import org.jetbrains.skiko.SkikoPointerEventKind
 import org.jetbrains.skiko.SkikoView
@@ -158,8 +161,12 @@ private class ComposeWindow(
             event.preventDefault()
         })
 
+        val setOfClipboardKeys = setOf(SkikoKey.KEY_V, SkikoKey.KEY_C)
         canvas.addTypedEvent<KeyboardEvent>("keydown") { event, skikoView ->
-            event.preventDefault()
+            val skikoEvent: SkikoKeyboardEvent = event.toSkikoEvent(SkikoKeyboardEventKind.DOWN)
+            val skipPreventDefault = skikoEvent.key in setOfClipboardKeys &&
+                skikoEvent.modifiers != SkikoInputModifiers.EMPTY
+            if (!skipPreventDefault) event.preventDefault()
             skikoView.onKeyboardEvent(event.toSkikoEvent(SkikoKeyboardEventKind.DOWN))
         }
 
