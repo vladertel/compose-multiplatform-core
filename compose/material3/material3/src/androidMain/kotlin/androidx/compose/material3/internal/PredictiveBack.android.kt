@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation.text
+package androidx.compose.material3.internal
 
-import androidx.compose.foundation.text.selection.SelectionRegistrar
-import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.EaseOut
 
-internal actual fun Modifier.textPointerHoverIcon(
-    selectionRegistrar: SelectionRegistrar?
-): Modifier = this
+internal object PredictiveBack {
+    internal fun transform(progress: Float) = EaseOut.transform(progress)
+}
