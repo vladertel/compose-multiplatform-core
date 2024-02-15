@@ -35,6 +35,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.DefaultScrollMotionDurationScale
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.gestures.flingBehaviorVisibilityThreshold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
@@ -285,6 +286,7 @@ fun rememberSnapFlingBehavior(
 ): SnapFlingBehavior {
     val density = LocalDensity.current
     val highVelocityApproachSpec: DecayAnimationSpec<Float> = rememberSplineBasedDecay()
+    val visibilityThreshold = flingBehaviorVisibilityThreshold()
     return remember(
         snapLayoutInfoProvider,
         highVelocityApproachSpec,
@@ -294,7 +296,10 @@ fun rememberSnapFlingBehavior(
             snapLayoutInfoProvider = snapLayoutInfoProvider,
             lowVelocityAnimationSpec = tween(easing = LinearEasing),
             highVelocityAnimationSpec = highVelocityApproachSpec,
-            snapAnimationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+            snapAnimationSpec = spring(
+                stiffness = Spring.StiffnessMediumLow,
+                visibilityThreshold = visibilityThreshold
+            )
         )
     }
 }

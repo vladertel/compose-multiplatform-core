@@ -16,9 +16,13 @@
 
 package androidx.compose.foundation.cupertino
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateTo
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.OverscrollEffect
+import androidx.compose.foundation.gestures.flingBehaviorVisibilityThreshold
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -30,7 +34,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.layout.onPlaced
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.round
+import androidx.compose.ui.unit.toOffset
+import androidx.compose.ui.unit.toSize
 import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
 import kotlin.math.sign
@@ -109,7 +118,7 @@ class CupertinoOverscrollEffect(
      */
     private var overscrollOffset: Offset by mutableStateOf(Offset.Zero)
 
-    private var lastFlingUncosumedDelta: Offset = Offset.Zero
+    private var lastFlingUnconsumedDelta: Offset = Offset.Zero
     private val visibleOverscrollOffset: IntOffset
         get() =
             overscrollOffset.reverseHorizontalIfNeeded().rubberBanded().round()
@@ -215,14 +224,14 @@ class CupertinoOverscrollEffect(
                 // [unconsumedDelta] is going into overscroll again in case a user drags and hits the
                 // overscroll->content->overscroll or content->overscroll scenario within single frame
                 overscrollOffset += unconsumedDelta
-                lastFlingUncosumedDelta = Offset.Zero
+                lastFlingUnconsumedDelta = Offset.Zero
                 delta - unconsumedDelta
             }
 
             CupertinoScrollSource.FLING -> {
                 // If unconsumedDelta is not Zero, [CupertinoFlingEffect] will cancel fling and
                 // start spring animation instead
-                lastFlingUncosumedDelta = unconsumedDelta
+                lastFlingUnconsumedDelta = unconsumedDelta
                 delta - unconsumedDelta
             }
         }
@@ -249,7 +258,7 @@ class CupertinoOverscrollEffect(
         val postFlingVelocity = availableFlingVelocity - velocityConsumedByFling
 
         playSpringAnimation(
-            lastFlingUncosumedDelta.toFloat(),
+            lastFlingUnconsumedDelta.toFloat(),
             postFlingVelocity.toFloat(),
             CupertinoSpringAnimationReason.POSSIBLE_SPRING_IN_THE_END
         )
@@ -337,7 +346,7 @@ class CupertinoOverscrollEffect(
 
         // All input values are divided by density so all internal calculations are performed as if
         // they operated on DPs. Callback value is then scaled back to raw pixels.
-        val visibilityThreshold = 0.5f / density
+        val visibilityThreshold = flingBehaviorVisibilityThreshold / density
 
         val spec = when (reason) {
             CupertinoSpringAnimationReason.FLING_FROM_OVERSCROLL -> {

@@ -30,6 +30,7 @@ import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollCancellationException
 import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.gestures.flingBehaviorVisibilityThreshold
 import androidx.compose.foundation.gestures.snapping.FinalSnappingItem
 import androidx.compose.foundation.gestures.snapping.MinFlingVelocityDp
 import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
@@ -59,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.absoluteValue
 import kotlin.math.sign
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /**
@@ -345,7 +345,10 @@ object PagerDefaults {
         pagerSnapDistance: PagerSnapDistance = PagerSnapDistance.atMost(1),
         lowVelocityAnimationSpec: AnimationSpec<Float> = LowVelocityAnimationSpec,
         highVelocityAnimationSpec: DecayAnimationSpec<Float> = rememberSplineBasedDecay(),
-        snapAnimationSpec: AnimationSpec<Float> = spring(stiffness = Spring.StiffnessMediumLow),
+        snapAnimationSpec: AnimationSpec<Float> = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            visibilityThreshold = flingBehaviorVisibilityThreshold()
+        ),
         @FloatRange(from = 0.0, to = 1.0) snapPositionalThreshold: Float = 0.5f
     ): SnapFlingBehavior {
         require(snapPositionalThreshold in 0f..1f) {
@@ -466,9 +469,12 @@ object PagerDefaults {
             durationMillis = LowVelocityAnimationDefaultDuration
         ),
         highVelocityAnimationSpec: DecayAnimationSpec<Float> = rememberSplineBasedDecay(),
-        snapAnimationSpec: AnimationSpec<Float> = spring(stiffness = Spring.StiffnessMediumLow),
+        snapAnimationSpec: AnimationSpec<Float> = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            visibilityThreshold = flingBehaviorVisibilityThreshold()
+        ),
         snapVelocityThreshold: Dp = MinFlingVelocityDp,
-        snapPositionalThreshold: Float = 0.5f
+        snapPositionalThreshold: Float = 0.3f
     ) = flingBehavior(
         state,
         pagerSnapDistance,
