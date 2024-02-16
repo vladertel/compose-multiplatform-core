@@ -20,8 +20,9 @@ import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.DecayAnimationSpec
 import androidx.compose.animation.core.animateDecay
 import androidx.compose.foundation.gestures.DefaultScrollMotionDurationScale
-import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.gestures.ScrollCancellationException
 import androidx.compose.foundation.gestures.ScrollableDefaultFlingBehavior
+import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.ui.MotionDurationScale
 import kotlin.math.abs
 import kotlinx.coroutines.CancellationException
@@ -55,7 +56,7 @@ internal class CupertinoFlingBehavior(
                     val delta = value - lastValue
                     val consumed = try {
                         scrollBy(delta)
-                    } catch (exception: CancellationException) {
+                    } catch (exception: ScrollCancellationException) {
                         0.0f
                     }
                     lastValue = value

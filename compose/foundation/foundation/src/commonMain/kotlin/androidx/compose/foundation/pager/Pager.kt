@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
 import kotlin.math.absoluteValue
 import kotlin.math.sign
@@ -904,7 +903,7 @@ private class DefaultPagerNestedScrollConnection(
         source: NestedScrollSource
     ): Offset {
         if (source == NestedScrollSource.Fling && available != Offset.Zero) {
-            throw CancellationException("End of scrollable area reached")
+            throw ScrollCancellationException("End of scrollable area reached")
         }
         return Offset.Zero
     }
