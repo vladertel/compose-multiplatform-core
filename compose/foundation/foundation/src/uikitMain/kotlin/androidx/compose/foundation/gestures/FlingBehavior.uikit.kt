@@ -23,5 +23,5 @@ import androidx.compose.ui.unit.Dp
 internal val flingBehaviorVisibilityThresholdDp = Dp(2.0f)
 
 @Composable
-actual fun flingBehaviorVisibilityThreshold(): Float? =
+internal actual fun flingBehaviorVisibilityThreshold(): Float? =
     flingBehaviorVisibilityThresholdDp.value / LocalDensity.current.density

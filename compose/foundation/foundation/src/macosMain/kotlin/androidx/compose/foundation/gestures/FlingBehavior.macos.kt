@@ -19,4 +19,4 @@ package androidx.compose.foundation.gestures
 import androidx.compose.runtime.Composable
 
 @Composable
-actual fun flingBehaviorVisibilityThreshold(): Float? = null
+internal actual fun flingBehaviorVisibilityThreshold(): Float? = null

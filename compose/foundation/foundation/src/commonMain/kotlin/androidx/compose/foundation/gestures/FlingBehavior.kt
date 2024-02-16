@@ -46,4 +46,4 @@ interface FlingBehavior {
 }
 
 @Composable
-expect fun flingBehaviorVisibilityThreshold(): Float?
+internal expect fun flingBehaviorVisibilityThreshold(): Float?
