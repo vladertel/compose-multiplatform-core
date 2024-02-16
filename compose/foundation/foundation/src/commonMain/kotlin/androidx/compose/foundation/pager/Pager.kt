@@ -28,7 +28,6 @@ import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.ScrollCancellationException
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.flingBehaviorVisibilityThreshold
 import androidx.compose.foundation.gestures.snapping.FinalSnappingItem
