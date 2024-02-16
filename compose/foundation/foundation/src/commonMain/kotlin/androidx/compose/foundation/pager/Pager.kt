@@ -474,7 +474,7 @@ object PagerDefaults {
             visibilityThreshold = flingBehaviorVisibilityThreshold()
         ),
         snapVelocityThreshold: Dp = MinFlingVelocityDp,
-        snapPositionalThreshold: Float = 0.3f
+        snapPositionalThreshold: Float = 0.5f
     ) = flingBehavior(
         state,
         pagerSnapDistance,

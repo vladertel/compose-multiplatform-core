@@ -18,9 +18,10 @@ package androidx.compose.foundation.gestures
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 
-internal const val flingBehaviorVisibilityThreshold: Float = 2.0f
+internal val flingBehaviorVisibilityThresholdDp = Dp(2.0f)
 
 @Composable
 actual fun flingBehaviorVisibilityThreshold(): Float? =
-    flingBehaviorVisibilityThreshold / LocalDensity.current.density
+    flingBehaviorVisibilityThresholdDp.value / LocalDensity.current.density

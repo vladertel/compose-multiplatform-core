@@ -22,7 +22,7 @@ import androidx.compose.animation.core.animateTo
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.OverscrollEffect
-import androidx.compose.foundation.gestures.flingBehaviorVisibilityThreshold
+import androidx.compose.foundation.gestures.flingBehaviorVisibilityThresholdDp
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -346,7 +346,7 @@ class CupertinoOverscrollEffect(
 
         // All input values are divided by density so all internal calculations are performed as if
         // they operated on DPs. Callback value is then scaled back to raw pixels.
-        val visibilityThreshold = flingBehaviorVisibilityThreshold / density
+        val visibilityThreshold = flingBehaviorVisibilityThresholdDp.value / density
 
         val spec = when (reason) {
             CupertinoSpringAnimationReason.FLING_FROM_OVERSCROLL -> {
