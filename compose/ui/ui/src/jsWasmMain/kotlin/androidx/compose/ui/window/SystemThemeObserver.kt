@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package androidx.compose.ui.window
 
 import androidx.compose.runtime.State
 import androidx.compose.ui.SystemTheme
-import org.w3c.dom.Window
 
 
 internal interface SystemThemeObserver {
@@ -27,4 +26,4 @@ internal interface SystemThemeObserver {
     fun dispose()
 }
 
-internal expect fun getSystemThemeObserver(window: Window): SystemThemeObserver
+internal expect fun getSystemThemeObserver(): SystemThemeObserver
