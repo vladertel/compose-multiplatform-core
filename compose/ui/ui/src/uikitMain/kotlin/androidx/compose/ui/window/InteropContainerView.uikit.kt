@@ -24,7 +24,7 @@ import platform.UIKit.UIEvent
 import platform.UIKit.UIView
 
 /**
- * UIView which serves as a container for [UIKitView] and [UIKitViewController] API
+ * UIView which serves as a container for views created by usage of [UIKitView] and [UIKitViewController] API
  */
 internal class InteropContainerView : UIView(CGRectZero.readValue()) {
     /**
