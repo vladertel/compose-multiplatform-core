@@ -67,6 +67,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.math.floor
 import kotlin.math.roundToLong
 import kotlinx.cinterop.CValue
+import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.ObjCAction
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
@@ -185,7 +186,8 @@ private class NativeKeyboardVisibilityListener(
     }
 }
 
-private class ComposeSceneMediatorRootUIView : UIView(CGRectZero.readValue()) {
+@ExportObjCClass
+private class ComposeSceneMediatorRootView : UIView(CGRectZero.readValue()) {
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
         // forwards touches forward to the children, is never a target for a touch
         val result = super.hitTest(point, withEvent)
@@ -244,7 +246,7 @@ internal class ComposeSceneMediator(
     /**
      * view, that contains [interopViewContainer] and [interactionView] and is added to [container]
      */
-    private val rootView = ComposeSceneMediatorRootUIView()
+    private val rootView = ComposeSceneMediatorRootView()
 
     /**
      * Container for UIKitView and UIKitViewController
