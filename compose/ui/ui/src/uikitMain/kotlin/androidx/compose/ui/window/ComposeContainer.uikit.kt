@@ -75,7 +75,6 @@ import platform.UIKit.UIContentSizeCategoryExtraSmall
 import platform.UIKit.UIContentSizeCategoryLarge
 import platform.UIKit.UIContentSizeCategoryMedium
 import platform.UIKit.UIContentSizeCategorySmall
-import platform.UIKit.UIScreen
 import platform.UIKit.UITraitCollection
 import platform.UIKit.UIUserInterfaceLayoutDirection
 import platform.UIKit.UIUserInterfaceStyle
@@ -284,8 +283,8 @@ internal class ComposeContainer(
         ComposeSceneContextImpl(platformContext)
 
     @OptIn(ExperimentalComposeApi::class)
-    private fun createSkikoUIView(renderRelegate: RenderingUIView.Delegate): RenderingUIView =
-        RenderingUIView(renderDelegate = renderRelegate).apply {
+    private fun createSkikoUIView(renderRelegate: RenderingView.Delegate): RenderingView =
+        RenderingView(renderDelegate = renderRelegate).apply {
             opaque = configuration.opaque
         }
 
@@ -323,7 +322,7 @@ internal class ComposeContainer(
             focusStack = focusStack,
             windowContext = windowContext,
             coroutineContext = coroutineDispatcher,
-            renderingUIViewFactory = ::createSkikoUIView,
+            renderingViewFactory = ::createSkikoUIView,
             composeSceneFactory = ::createComposeScene,
         ).also {
             this.mediator = it

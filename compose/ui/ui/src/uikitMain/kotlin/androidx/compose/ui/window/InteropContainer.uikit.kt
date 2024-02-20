@@ -24,9 +24,9 @@ import platform.UIKit.UIEvent
 import platform.UIKit.UIView
 
 /**
- * This InteropContainer in UIView. And needs to add UIKitView interop views.
+ * UIView which serves as a container for [UIKitView] and [UIKitViewController] API
  */
-internal class InteropContainer : UIView(CGRectZero.readValue()) {
+internal class InteropContainerView : UIView(CGRectZero.readValue()) {
     /**
      * We used simple solution to make only this view not touchable.
      * Other view added to this container will be touchable.

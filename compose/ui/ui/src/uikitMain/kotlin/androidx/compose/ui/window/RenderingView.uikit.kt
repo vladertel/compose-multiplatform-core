@@ -30,7 +30,7 @@ import platform.Metal.MTLPixelFormatBGRA8Unorm
 import platform.QuartzCore.CAMetalLayer
 import platform.UIKit.*
 
-internal class RenderingUIView(
+internal class RenderingView(
     private val renderDelegate: Delegate,
 ) : UIView(
     frame = CGRectMake(

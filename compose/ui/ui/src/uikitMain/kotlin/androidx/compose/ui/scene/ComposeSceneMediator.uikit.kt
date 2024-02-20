@@ -58,10 +58,10 @@ import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.InteractionUIView
-import androidx.compose.ui.window.InteropContainer
+import androidx.compose.ui.window.InteropContainerView
 import androidx.compose.ui.window.KeyboardEventHandler
 import androidx.compose.ui.window.KeyboardVisibilityListenerImpl
-import androidx.compose.ui.window.RenderingUIView
+import androidx.compose.ui.window.RenderingView
 import androidx.compose.ui.window.UITouchesEventPhase
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.floor
@@ -157,7 +157,7 @@ private class RenderingUIViewDelegateImpl(
     private val interopContext: UIKitInteropContext,
     private val getBoundsInPx: () -> IntRect,
     private val scene: ComposeScene
-) : RenderingUIView.Delegate {
+) : RenderingView.Delegate {
     override fun retrieveInteropTransaction(): UIKitInteropTransaction =
         interopContext.retrieve()
 
@@ -206,7 +206,7 @@ internal class ComposeSceneMediator(
     private val focusStack: FocusStack<UIView>?,
     private val windowContext: PlatformWindowContext,
     val coroutineContext: CoroutineContext,
-    private val renderingUIViewFactory: (RenderingUIView.Delegate) -> RenderingUIView,
+    private val renderingViewFactory: (RenderingView.Delegate) -> RenderingView,
     composeSceneFactory: (
         invalidate: () -> Unit,
         platformContext: PlatformContext,
@@ -240,7 +240,7 @@ internal class ComposeSceneMediator(
     private val focusManager get() = scene.focusManager
 
     private val renderingView by lazy {
-        renderingUIViewFactory(renderDelegate)
+        renderingViewFactory(renderDelegate)
     }
 
     /**
@@ -251,7 +251,7 @@ internal class ComposeSceneMediator(
     /**
      * Container for UIKitView and UIKitViewController
      */
-    private val interopViewContainer = InteropContainer()
+    private val interopViewContainer = InteropContainerView()
 
     private val interactionView by lazy {
         InteractionUIView(

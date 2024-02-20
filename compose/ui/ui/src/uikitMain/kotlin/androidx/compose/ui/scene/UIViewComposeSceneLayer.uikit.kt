@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.toOffset
 import androidx.compose.ui.window.ComposeContainer
 import androidx.compose.ui.window.FocusStack
 import androidx.compose.ui.window.ProvideContainerCompositionLocals
-import androidx.compose.ui.window.RenderingUIView
+import androidx.compose.ui.window.RenderingView
 import kotlin.coroutines.CoroutineContext
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
@@ -114,7 +114,7 @@ internal class UIViewComposeSceneLayer(
             focusStack = focusStack,
             windowContext = windowContext,
             coroutineContext = compositionContext.effectCoroutineContext,
-            renderingUIViewFactory = ::createSkikoUIView,
+            renderingViewFactory = ::createSkikoUIView,
             composeSceneFactory = ::createComposeScene
         )
     }
@@ -128,8 +128,8 @@ internal class UIViewComposeSceneLayer(
         composeContainer.attachLayer(this)
     }
 
-    private fun createSkikoUIView(renderDelegate: RenderingUIView.Delegate): RenderingUIView =
-        RenderingUIView(renderDelegate = renderDelegate).apply {
+    private fun createSkikoUIView(renderDelegate: RenderingView.Delegate): RenderingView =
+        RenderingView(renderDelegate = renderDelegate).apply {
             opaque = false
         }
 
