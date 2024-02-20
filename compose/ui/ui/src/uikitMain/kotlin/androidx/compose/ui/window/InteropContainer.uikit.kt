@@ -28,8 +28,8 @@ import platform.UIKit.UIView
  */
 internal class InteropContainerView : UIView(CGRectZero.readValue()) {
     /**
-     * We used simple solution to make only this view not touchable.
-     * Other view added to this container will be touchable.
+     * Override `hitTest` to prevent the container from being the target of touch events,
+     * effectively making it transparent unless `super.hitTest` returns a descendant view.
      */
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? =
         super.hitTest(point, withEvent).takeIf {
