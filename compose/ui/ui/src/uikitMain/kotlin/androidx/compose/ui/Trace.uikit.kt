@@ -27,7 +27,7 @@ fun enableTraceOSLog() {
     }
 }
 
-var traceImpl: CMPOSLogger? = null
+private var traceImpl: CMPOSLogger? = null
 
 // Verbatim of androidx.compose.runtime.Trace
 internal object Trace {
