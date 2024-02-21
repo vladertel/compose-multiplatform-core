@@ -16,8 +16,11 @@ import bugs.StartRecompositionCheck
 import platform.UIKit.UIViewController
 
 
-@OptIn(ExperimentalComposeApi::class)
+@OptIn(ExperimentalComposeApi::class, ExperimentalComposeRuntimeApi::class)
 fun main(vararg args: String) {
+    androidx.compose.runtime.enableTraceOSLog()
+    androidx.compose.ui.enableTraceOSLog()
+
     val arg = args.firstOrNull() ?: ""
     defaultUIKitMain("ComposeDemo", ComposeUIViewController(configure = {
         accessibilitySyncOptions = AccessibilitySyncOptions.WhenRequiredByAccessibilityServices(object: AccessibilityDebugLogger {

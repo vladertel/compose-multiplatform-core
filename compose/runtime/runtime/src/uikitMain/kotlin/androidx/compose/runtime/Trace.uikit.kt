@@ -20,7 +20,7 @@ import androidx.compose.ui.uikit.utils.CMPOSLogger
 import androidx.compose.ui.uikit.utils.CMPOSLoggerInterval
 
 
-@ExperimentalComposeRuntimeApi
+@ExperimentalComposeApi
 fun enableTraceOSLog() {
     if (traceImpl == null) {
         traceImpl = CMPOSLogger(categoryName = "androidx.compose.runtime")
