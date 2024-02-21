@@ -21,6 +21,7 @@ import androidx.compose.ui.interop.UIKitInteropTransaction
 import androidx.compose.ui.interop.doLocked
 import androidx.compose.ui.interop.isNotEmpty
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.trace
 import kotlin.math.roundToInt
 import kotlinx.cinterop.*
 import org.jetbrains.skia.*
@@ -329,7 +330,7 @@ internal class MetalRedrawer(
         draw(waitUntilCompletion = true, CACurrentMediaTime())
     }
 
-    private fun draw(waitUntilCompletion: Boolean, targetTimestamp: NSTimeInterval) {
+    private fun draw(waitUntilCompletion: Boolean, targetTimestamp: NSTimeInterval) = trace("MetalRedrawer:draw") {
         check(NSThread.isMainThread)
 
         lastRenderTimestamp = maxOf(targetTimestamp, lastRenderTimestamp)
@@ -344,19 +345,21 @@ internal class MetalRedrawer(
             }
 
             // Perform timestep and record all draw commands into [Picture]
-            pictureRecorder.beginRecording(
-                Rect(
-                    left = 0f,
-                    top = 0f,
-                    width.toFloat(),
-                    height.toFloat()
-                )
-            ).also { canvas ->
-                canvas.clear(if (metalLayer.opaque) Color.WHITE else Color.TRANSPARENT)
-                callbacks.render(canvas, lastRenderTimestamp)
-            }
+            val picture = trace("MetalRedrawer:draw:pictureRecording") {
+                pictureRecorder.beginRecording(
+                    Rect(
+                        left = 0f,
+                        top = 0f,
+                        width.toFloat(),
+                        height.toFloat()
+                    )
+                ).also { canvas ->
+                    canvas.clear(if (metalLayer.opaque) Color.WHITE else Color.TRANSPARENT)
+                    callbacks.render(canvas, lastRenderTimestamp)
+                }
 
-            val picture = pictureRecorder.finishRecordingAsPicture()
+                pictureRecorder.finishRecordingAsPicture()
+            }
 
             dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
 
