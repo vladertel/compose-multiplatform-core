@@ -26,12 +26,35 @@
 }
 
 - (CMPOSLoggerInterval *)beginIntervalNamed:(NSString *)name {
-    //return [CMPOSLoggerInterval new];
-    return nil;
+    CMPOSLoggerInterval *interval;
+    
+    [_poolLock lock];
+    
+    if (_intervalsPool.count > 0) {
+        interval = _intervalsPool.lastObject;
+        [_intervalsPool removeLastObject];
+    } else {
+        interval = nil;
+    }
+    
+    [_poolLock unlock];
+    
+    if (interval) {
+        return interval;
+    } else {
+        interval = [[CMPOSLoggerInterval alloc] initWithLog:_log];
+        [interval beginWithName:name];
+        return interval;
+    }
 }
 
 - (void)endInterval:(CMPOSLoggerInterval *)interval {
+    [interval end];
+    [_poolLock lock];
     
+    [_intervalsPool addObject:interval];
+    
+    [_poolLock unlock];
 }
 
 

@@ -13,6 +13,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface CMPOSLoggerInterval : NSObject
 
 - (instancetype)initWithLog:(os_log_t)log;
+- (void)beginWithName:(NSString *)name;
+- (void)end;
 
 @end
 
