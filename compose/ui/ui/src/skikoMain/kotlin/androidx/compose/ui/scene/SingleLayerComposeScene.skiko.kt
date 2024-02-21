@@ -172,7 +172,7 @@ private class SingleLayerComposeSceneImpl(
         mainOwner.measureAndLayout()
     }
 
-    override fun draw(canvas: Canvas) = trace("ComposeScene:draw") {
+    override fun draw(canvas: Canvas) = trace("SingleLayerComposeSceneImpl:draw") {
         mainOwner.draw(canvas)
     }
 
