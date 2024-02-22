@@ -1,16 +1,10 @@
-## Proposed Changes
+_[Optional]_ Fixes _<the link to the bug on [Issue tracker](https://github.com/JetBrains/compose-multiplatform/issues)>_
 
-  -
-  -
-  -
+Describe the issue and the change properly. Set the title and the labels for [the changelog](link_to_rules).
 
 ## Testing
 
-Test: Describe how you tested your changes. Note that this line (with `Test:`) is required, your PR will not build without it!
-
-## Issues Fixed
-
-Fixes: [Optional] The bug on [Compose Issue tracker](https://github.com/JetBrains/compose-multiplatform/issues) being fixed
+Describe how you tested your changes.
 
 ## Google CLA
 You need to sign the Google Contributor’s License Agreement at https://cla.developers.google.com/.
