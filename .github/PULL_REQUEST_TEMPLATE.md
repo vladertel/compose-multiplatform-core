@@ -1,6 +1,12 @@
-_[Optional]_ Fixes _<the link to the bug on [Issue tracker](https://github.com/JetBrains/compose-multiplatform/issues)>_
+_[Optional]_ Fixes $linkToIssue
 
-Describe the issue and the change properly. Set the title and the labels for [the changelog](link_to_rules).
+Describe the issue fixed (bugfix, feature, refactoring, ...).
+
+If the PR should be in the changelog, describe the issue from the user point of view and add labels:
+- _changelog: normal_ - add to the changelog
+- _changelog: highlight_ - add to the changelog and highlight
+- _changelog: prerelease fix_ - add (prerelease fix) to the title in a prerelease changelog, don’t include in a stable changelog
+- _ios, desktop, web, android, common_ - affected platforms
 
 ## Testing
 
