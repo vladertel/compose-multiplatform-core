@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package androidx.lifecycle
 
-import kotlinx.atomicfu.atomic
-import kotlinx.coroutines.CoroutineScope
-
-public actual class AtomicReference<V> actual constructor(value: V) {
-    private val delegate = atomic(value)
-    public actual fun get() = delegate.value
-    public actual fun compareAndSet(expect: V, newValue: V) =
-        delegate.compareAndSet(expect, newValue)
+internal actual class WeakReference<T : Any> actual constructor(
+    private val reference: T
+) {
+    actual fun get(): T? = reference
 }
 
-public actual abstract class LifecycleCoroutineScope internal actual constructor() :
-    CoroutineScope {
-    internal actual abstract val lifecycle: Lifecycle
-}
+internal actual fun isMainThread(): Boolean =
+    true

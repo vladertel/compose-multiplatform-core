@@ -13,15 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package androidx.lifecycle
 
-internal actual class WeakReference<T : Any> actual constructor(
-    reference: T
-) {
-    private val kotlinNativeReference = kotlin.native.ref.WeakReference(reference)
-    actual fun get(): T? = kotlinNativeReference.get()
+import androidx.annotation.RestrictTo
+import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.CoroutineScope
+
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+public actual class AtomicReference<V> actual constructor(value: V) {
+    private val delegate = atomic(value)
+    public actual fun get() = delegate.value
+    public actual fun compareAndSet(expect: V, newValue: V) =
+        delegate.compareAndSet(expect, newValue)
 }
 
-internal actual fun isMainThread(): Boolean =
-    MainDispatcherChecker.isMainDispatcherThread()
+public actual abstract class LifecycleCoroutineScope internal actual constructor() :
+    CoroutineScope {
+    internal actual abstract val lifecycle: Lifecycle
+}
