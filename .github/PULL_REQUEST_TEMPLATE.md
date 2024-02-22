@@ -10,7 +10,7 @@ Test: Describe how you tested your changes. Note that this line (with `Test:`) i
 
 ## Issues Fixed
 
-Fixes: [Optional] The bug on [https://issuetracker.google.com](https://issuetracker.google.com) being fixed
+Fixes: [Optional] The bug on [Compose Issue tracker](https://github.com/JetBrains/compose-multiplatform/issues) being fixed
 
 ## Google CLA
 You need to sign the Google Contributor’s License Agreement at https://cla.developers.google.com/.
