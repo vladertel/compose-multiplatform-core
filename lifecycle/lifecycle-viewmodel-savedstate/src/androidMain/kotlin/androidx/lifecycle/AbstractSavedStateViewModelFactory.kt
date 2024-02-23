@@ -15,11 +15,11 @@
  */
 package androidx.lifecycle
 
-import android.os.Bundle
 import androidx.annotation.RestrictTo
 import androidx.lifecycle.LegacySavedStateHandleController.TAG_SAVED_STATE_HANDLE_CONTROLLER
 import androidx.lifecycle.LegacySavedStateHandleController.attachHandleIfNeeded
 import androidx.lifecycle.viewmodel.CreationExtras
+import androidx.savedstate.Bundle
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryOwner
 
