@@ -16,7 +16,6 @@
 
 package androidx.lifecycle.viewmodel.compose
 
-import android.os.Bundle
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SnapshotMutationPolicy
 import androidx.compose.runtime.getValue
@@ -24,11 +23,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.saveable.autoSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotMutableState
-import androidx.core.os.bundleOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.SavedStateHandle.Companion.validateValue
+import androidx.savedstate.Bundle
+import kotlin.jvm.JvmName
 import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadOnlyProperty
 import kotlin.properties.ReadWriteProperty
@@ -48,25 +49,11 @@ import kotlin.reflect.KProperty
  * @sample androidx.lifecycle.viewmodel.compose.samples.SnapshotStateViewModel
  */
 @SavedStateHandleSaveableApi
-fun <T : Any> SavedStateHandle.saveable(
+expect fun <T : Any> SavedStateHandle.saveable(
     key: String,
     saver: Saver<T, out Any> = autoSaver(),
     init: () -> T,
-): T {
-    @Suppress("UNCHECKED_CAST")
-    saver as Saver<T, Any>
-    // value is restored using the SavedStateHandle or created via [init] lambda
-    @Suppress("DEPRECATION") // Bundle.get has been deprecated in API 31
-    val value = get<Bundle?>(key)?.get("value")?.let(saver::restore) ?: init()
-
-    // Hook up saving the state to the SavedStateHandle
-    setSavedStateProvider(key) {
-        bundleOf("value" to with(saver) {
-            SaverScope(::validateValue).save(value)
-        })
-    }
-    return value
-}
+): T
 
 /**
  * Inter-opt between [SavedStateHandle] and [Saver] so that any state holder that is

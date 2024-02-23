@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:JvmName("ViewModelKt")
+
 package androidx.lifecycle.viewmodel.compose
 
 import androidx.compose.runtime.Composable
@@ -75,6 +77,10 @@ public inline fun <reified VM : ViewModel> viewModel(
  *
  * @sample androidx.lifecycle.viewmodel.compose.samples.CreationExtrasViewModel
  */
+@Deprecated(
+    "Moved to common source set",
+    level = DeprecationLevel.HIDDEN
+)
 @Suppress("MissingJvmstatic")
 @Composable
 public inline fun <reified VM : ViewModel> viewModel(
@@ -173,6 +179,10 @@ public fun <VM : ViewModel> viewModel(
  *
  * @sample androidx.lifecycle.viewmodel.compose.samples.CreationExtrasViewModelInitializer
  */
+@Deprecated(
+    "Moved to common source set",
+    level = DeprecationLevel.HIDDEN
+)
 @Composable
 public inline fun <reified VM : ViewModel> viewModel(
     viewModelStoreOwner: ViewModelStoreOwner = checkNotNull(LocalViewModelStoreOwner.current) {
