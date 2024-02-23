@@ -1,11 +1,14 @@
 _[Optional]_ Fixes $linkToIssue
 
-Describe the issue fixed (bugfix, feature, refactoring, ...).
+Properly describe the issue fixed.
 
-If the PR should be in the changelog, describe the issue from the user point of view and add labels:
-- _changelog: normal_ - add to the changelog
-- _changelog: highlight_ - add to the changelog and highlight
-- _changelog: prerelease fix_ - add (prerelease fix) to the title in a prerelease changelog, don’t include in a stable changelog
+Describe it from the user perspective if it affects functionality (adds a feature, fixes a bug, changes behavior, improves performance).
+
+Add labels for the changelog:
+- no labels - don't add to the changelog
+- _changelog: normal_ - add
+- _changelog: highlight_ - add and highlight
+- _changelog: prerelease fix_ - add _(prerelease fix)_ to the title in a prerelease changelog, don’t include in a stable changelog
 - _ios, desktop, web, android, common_ - affected platforms
 
 ## Testing
