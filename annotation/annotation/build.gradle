@@ -5,20 +5,14 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 
 plugins {
     id("AndroidXPlugin")
-
-    //  TODO move all functionality to Compose-independent plugin (`collection` shouldn't depend on Compose concepts)
-    id("AndroidXComposePlugin")
 }
 
-AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
-
-androidXComposeMultiplatform {
+androidXMultiplatform {
     js()
     wasm()
-    darwin()
-
-    linuxX64()
-    linuxArm64()
+    mac()
+    linux()
+    ios()
 }
 
 kotlin {
@@ -35,6 +29,11 @@ kotlin {
     tvosX64()
     tvosSimulatorArm64()
     mingwX64()
+
+    js {
+        browser()
+    }
+    wasmJs()
 
     sourceSets {
         commonMain {
@@ -68,8 +67,4 @@ androidx {
     type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2013"
     description = "Provides source annotations for tooling and readability."
-}
-
-androidxCompose {
-    composeCompilerPluginEnabled = false
 }
