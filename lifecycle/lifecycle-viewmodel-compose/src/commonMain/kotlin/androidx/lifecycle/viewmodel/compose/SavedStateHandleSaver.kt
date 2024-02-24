@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// TODO: Fix binary compatibility with existing Android version
+@file:JvmName("SavedStateHandleSaver_commonKt")
+
 package androidx.lifecycle.viewmodel.compose
 
 import androidx.compose.runtime.MutableState
@@ -21,14 +24,11 @@ import androidx.compose.runtime.SnapshotMutationPolicy
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.runtime.saveable.autoSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotMutableState
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.SavedStateHandle.Companion.validateValue
-import androidx.savedstate.Bundle
 import kotlin.jvm.JvmName
 import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadOnlyProperty
@@ -171,7 +171,7 @@ private fun <T> mutableStateSaver(inner: Saver<T, out Any>) = with(inner as Save
             }
             mutableStateOf(save(state.value), state.policy as SnapshotMutationPolicy<Any?>)
         },
-        restore = @Suppress("UNCHECKED_CAST", "ExceptionMessage") {
+        restore = {
             require(it is SnapshotMutableState<Any?>)
             mutableStateOf(
                 if (it.value != null) restore(it.value!!) else null,
