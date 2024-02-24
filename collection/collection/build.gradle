@@ -21,20 +21,14 @@ import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
-
-    //  TODO move all functionality to Compose-independent plugin (`collection` shouldn't depend on Compose concepts)
-    id("AndroidXComposePlugin")
 }
 
-AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
-
-androidXComposeMultiplatform {
+androidXMultiplatform {
     js()
     wasm()
-    darwin()
-
-    linuxX64()
-    linuxArm64()
+    mac()
+    linux()
+    ios()
 }
 
 kotlin {
@@ -51,6 +45,11 @@ kotlin {
     tvosX64()
     tvosSimulatorArm64()
     mingwX64()
+
+    js {
+        browser()
+    }
+    wasmJs()
 
     sourceSets {
         all {
@@ -98,8 +97,6 @@ kotlin {
         mingwX64Main.dependsOn(nativeMain)
         mingwX64Test.dependsOn(nativeTest)
 
-        def darwinMain = sourceSets.getByName("darwinMain")
-        def darwinTest = sourceSets.getByName("darwinTest")
         def watchOsMain = sourceSets.create("watchOsMain")
         def watchOsTest = sourceSets.create("watchOsTest")
         watchOsMain.dependsOn(darwinMain)
@@ -141,8 +138,4 @@ androidx {
     type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2018"
     description = "Standalone efficient collections."
-}
-
-androidxCompose {
-    composeCompilerPluginEnabled = false
 }
