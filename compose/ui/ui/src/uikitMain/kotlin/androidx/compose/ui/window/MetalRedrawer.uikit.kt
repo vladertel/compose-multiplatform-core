@@ -361,7 +361,9 @@ internal class MetalRedrawer(
                 pictureRecorder.finishRecordingAsPicture()
             }
 
-            dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
+            trace("MetalRedrawer:draw:waitInflightSemaphore") {
+                dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
+            }
 
             val metalDrawable = metalLayer.nextDrawable()
 
