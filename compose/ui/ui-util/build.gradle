@@ -78,6 +78,13 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                     implementation(libs.kotlinStdlib)
                 }
             }
+
+            uikitMain {
+                dependencies {
+                    api project(":compose:ui:ui-uikit")
+                }
+            }
+
             wasmJsMain.dependsOn(jbMain)
 
             commonTest.dependencies {
