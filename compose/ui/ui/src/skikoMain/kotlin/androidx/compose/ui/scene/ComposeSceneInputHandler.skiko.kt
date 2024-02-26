@@ -31,7 +31,7 @@ import androidx.compose.ui.input.pointer.SyntheticEventSender
 import androidx.compose.ui.input.pointer.areAnyPressed
 import androidx.compose.ui.input.pointer.copyFor
 import androidx.compose.ui.node.RootNodeOwner
-import androidx.compose.ui.util.trace
+import androidx.compose.ui.trace
 import org.jetbrains.skiko.currentNanoTime
 
 /**

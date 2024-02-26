@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.util.trace
+import androidx.compose.ui.trace
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
 

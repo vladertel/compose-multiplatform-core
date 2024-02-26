@@ -38,7 +38,7 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.node.SnapshotInvalidationTracker
 import androidx.compose.ui.platform.GlobalSnapshotManager
 import androidx.compose.ui.platform.PlatformContext
-import androidx.compose.ui.util.trace
+import androidx.compose.ui.trace
 import kotlin.coroutines.CoroutineContext
 import kotlin.concurrent.Volatile
 
