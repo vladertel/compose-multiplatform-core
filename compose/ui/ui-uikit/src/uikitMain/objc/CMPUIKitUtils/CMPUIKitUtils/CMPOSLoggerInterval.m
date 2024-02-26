@@ -30,11 +30,11 @@
 - (void)beginWithName:(NSString *)name {
     _name = name;
     
-    os_signpost_interval_begin(_log, _signpostId, "interval", "name: %{public}s", [name UTF8String]);
+    os_signpost_interval_begin(_log, _signpostId, "interval", "%{public}s", [name UTF8String]);
 }
 
 - (void)end {
-    os_signpost_interval_end(_log, _signpostId, "interval", "name: %{public}s", [_name UTF8String]);
+    os_signpost_interval_end(_log, _signpostId, "interval");
 }
 
 @end
