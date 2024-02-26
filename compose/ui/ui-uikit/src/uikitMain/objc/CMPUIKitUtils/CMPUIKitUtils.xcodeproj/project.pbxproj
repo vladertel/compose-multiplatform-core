@@ -18,6 +18,11 @@
 		EA70A7EC2B27106100300068 /* CMPAccessibilityContainer.m in Sources */ = {isa = PBXBuildFile; fileRef = EA70A7E92B27106100300068 /* CMPAccessibilityContainer.m */; };
 		EA82F4F92B86144E00465418 /* CMPOSLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = EA82F4F82B86144E00465418 /* CMPOSLogger.m */; };
 		EA82F4FC2B86184F00465418 /* CMPOSLoggerInterval.m in Sources */ = {isa = PBXBuildFile; fileRef = EA82F4FB2B86184F00465418 /* CMPOSLoggerInterval.m */; };
+		EAC703E32B8C826E001ECDA6 /* CMPAccessibilityElement.m in Sources */ = {isa = PBXBuildFile; fileRef = EA70A7E82B27106100300068 /* CMPAccessibilityElement.m */; };
+		EAC703E42B8C826E001ECDA6 /* CMPViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 997DFCDD2B18D135000B56B5 /* CMPViewController.m */; };
+		EAC703E52B8C826E001ECDA6 /* CMPOSLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = EA82F4F82B86144E00465418 /* CMPOSLogger.m */; };
+		EAC703E62B8C826E001ECDA6 /* CMPOSLoggerInterval.m in Sources */ = {isa = PBXBuildFile; fileRef = EA82F4FB2B86184F00465418 /* CMPOSLoggerInterval.m */; };
+		EAC703E72B8C826E001ECDA6 /* CMPAccessibilityContainer.m in Sources */ = {isa = PBXBuildFile; fileRef = EA70A7E92B27106100300068 /* CMPAccessibilityContainer.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +75,7 @@
 		EA82F4F82B86144E00465418 /* CMPOSLogger.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPOSLogger.m; sourceTree = "<group>"; };
 		EA82F4FA2B86184F00465418 /* CMPOSLoggerInterval.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMPOSLoggerInterval.h; sourceTree = "<group>"; };
 		EA82F4FB2B86184F00465418 /* CMPOSLoggerInterval.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CMPOSLoggerInterval.m; sourceTree = "<group>"; };
+		EAC703DF2B8C8154001ECDA6 /* CMPUIKitUtilsTestApp-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CMPUIKitUtilsTestApp-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,6 +166,7 @@
 			isa = PBXGroup;
 			children = (
 				997DFCFC2B18E5D3000B56B5 /* CMPUIKitUtilsTestApp.swift */,
+				EAC703DF2B8C8154001ECDA6 /* CMPUIKitUtilsTestApp-Bridging-Header.h */,
 			);
 			path = CMPUIKitUtilsTestApp;
 			sourceTree = "<group>";
@@ -239,6 +246,7 @@
 					};
 					997DFCF92B18E5D3000B56B5 = {
 						CreatedOnToolsVersion = 15.0;
+						LastSwiftMigration = 1500;
 					};
 				};
 			};
@@ -307,7 +315,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EAC703E32B8C826E001ECDA6 /* CMPAccessibilityElement.m in Sources */,
+				EAC703E42B8C826E001ECDA6 /* CMPViewController.m in Sources */,
+				EAC703E52B8C826E001ECDA6 /* CMPOSLogger.m in Sources */,
+				EAC703E72B8C826E001ECDA6 /* CMPAccessibilityContainer.m in Sources */,
 				997DFCFD2B18E5D3000B56B5 /* CMPUIKitUtilsTestApp.swift in Sources */,
+				EAC703E62B8C826E001ECDA6 /* CMPOSLoggerInterval.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -530,6 +543,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 45226JTYHN;
@@ -550,6 +564,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "CMPUIKitUtilsTestApp/CMPUIKitUtilsTestApp-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -561,6 +576,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 45226JTYHN;
@@ -581,6 +597,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "CMPUIKitUtilsTestApp/CMPUIKitUtilsTestApp-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

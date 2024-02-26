@@ -40,6 +40,7 @@
     [_poolLock unlock];
     
     if (interval) {
+        [interval beginWithName:name];
         return interval;
     } else {
         interval = [[CMPOSLoggerInterval alloc] initWithLog:_log];
