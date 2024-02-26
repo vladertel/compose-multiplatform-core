@@ -20,6 +20,16 @@ import androidx.compose.ui.uikit.utils.CMPOSLogger
 import androidx.compose.ui.uikit.utils.CMPOSLoggerInterval
 
 
+/**
+ * Enables iOS OS logging for the `androidx.compose.runtime` APIs.
+ *
+ * Tracing allows logging detailed information about the Compose UI framework, which can be further
+ * analyzed using the XCode Instruments tool.
+ *
+ * This method is an [ExperimentalComposeApi], which means it is subject to change without notice in major, minor, or patch releases.
+ *
+ * @see ExperimentalComposeApi
+ */
 @ExperimentalComposeApi
 fun enableTraceOSLog() {
     if (traceImpl == null) {
