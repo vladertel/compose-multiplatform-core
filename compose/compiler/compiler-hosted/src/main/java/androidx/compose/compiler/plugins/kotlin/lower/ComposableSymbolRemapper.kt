@@ -90,6 +90,6 @@ class ComposableSymbolRemapper : DeepCopySymbolRemapper(
 
         private fun KotlinType.containsComposable(): Boolean =
             hasComposableAnnotation() ||
-                arguments.filter { it !is StarProjectionImpl }.any { it.type.containsComposable() }
+                arguments.any { it !is StarProjectionImpl && it.type.containsComposable() }
     }
 )
