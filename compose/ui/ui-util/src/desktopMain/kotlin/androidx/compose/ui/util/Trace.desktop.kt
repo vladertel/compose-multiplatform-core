@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui
+package androidx.compose.ui.util
 
-// TODO: move to `ui-util` once it's sliced into source sets
-
-internal expect inline fun <T> trace(sectionName: String, block: () -> T): T
+actual inline fun <T> trace(sectionName: String, block: () -> T): T {
+    return block()
+}
