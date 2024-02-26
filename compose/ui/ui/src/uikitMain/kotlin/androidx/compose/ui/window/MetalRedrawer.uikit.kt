@@ -365,7 +365,9 @@ internal class MetalRedrawer(
                 dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
             }
 
-            val metalDrawable = metalLayer.nextDrawable()
+            val metalDrawable = trace("MetalRedrawer:draw:nextDrawable") {
+                metalLayer.nextDrawable()
+            }
 
             if (metalDrawable == null) {
                 // TODO: anomaly, log
