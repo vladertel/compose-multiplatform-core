@@ -16,15 +16,36 @@
 
 package androidx.compose.ui.util
 
-@ExperimentalComposeApi
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.ui.uikit.utils.CMPOSLogger
+
+/**
+ * Enables iOS OS logging for the `androidx.compose.ui` APIs.
+ *
+ * Tracing allows logging detailed information about the Compose UI framework, which can be further
+ * analyzed using the XCode Instruments tool.
+ *
+ * This method is an [ExperimentalComposeUiApi], which means it is subject to change without notice in major, minor, or patch releases.
+ *
+ * @see ExperimentalComposeUiApi
+ */
+@OptIn(InternalComposeUiApi::class)
+@ExperimentalComposeUiApi
 fun enableTraceOSLog() {
     if (traceImpl == null) {
         traceImpl = CMPOSLogger(categoryName = "androidx.compose.ui")
     }
 }
 
-private var traceImpl: CMPOSLogger? = null
+/**
+ * Instance of the [CMPOSLogger] used for tracing. Public due to `inline` requirement of [trace].
+ * Intended for internal use only.
+ */
+@InternalComposeUiApi
+var traceImpl: CMPOSLogger? = null
 
+@OptIn(InternalComposeUiApi::class)
 actual inline fun <T> trace(sectionName: String, block: () -> T): T {
     val interval = traceImpl?.beginIntervalNamed(sectionName)
     try {
