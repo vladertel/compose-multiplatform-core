@@ -20,6 +20,9 @@ import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.ui.uikit.utils.CMPOSLogger
 import androidx.compose.ui.uikit.utils.CMPOSLoggerInterval
 
+// TODO: implement within source set hierarchy of ui-utils:
+//  compose/ui/ui-util/src/jbMain/kotlin/androidx/compose/ui/util/Trace.jb.kt
+
 @ExperimentalComposeApi
 fun enableTraceOSLog() {
     if (traceImpl == null) {
