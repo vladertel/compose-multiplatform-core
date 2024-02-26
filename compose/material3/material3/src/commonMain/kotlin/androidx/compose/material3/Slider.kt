@@ -48,12 +48,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -264,17 +266,18 @@ fun Slider(
     },
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f
 ) {
+    val rememberOnValueChangeFinished = rememberUpdatedState(onValueChangeFinished)
+
     val state = remember(
         steps,
         valueRange,
-        onValueChangeFinished
+        rememberOnValueChangeFinished
     ) {
         SliderState(
             value,
             steps,
-            onValueChangeFinished,
+            rememberOnValueChangeFinished,
             valueRange
-
         )
     }
 
@@ -1325,7 +1328,7 @@ private fun Modifier.sliderSemantics(
                             state.value = resolvedValue
                         }
                     }
-                    state.onValueChangeFinished?.invoke()
+                    state.onValueChangeFinished?.value?.invoke()
                     true
                 }
             }
@@ -1789,7 +1792,7 @@ class SliderState(
     value: Float = 0f,
     @IntRange(from = 0)
     val steps: Int = 0,
-    val onValueChangeFinished: (() -> Unit)? = null,
+    val onValueChangeFinished: State<(() -> Unit)?>? = null,
     val valueRange: ClosedFloatingPointRange<Float> = 0f..1f
 ) : DraggableState {
 
@@ -1868,7 +1871,7 @@ class SliderState(
     internal val gestureEndAction = {
         if (!isDragging) {
             // check isDragging in case the change is still in progress (touch -> drag case)
-            onValueChangeFinished?.invoke()
+            onValueChangeFinished?.value?.invoke()
         }
     }
 
