@@ -16,4 +16,17 @@
 
 #import "CMPUnmanagedMetalDrawable.h"
 
+CMPUnmanagedMetalDrawable CMPUnmanagedMetalDrawableNextFromLayer(CAMetalLayer *metalLayer) {
+    return (__bridge_retained void *)[metalLayer nextDrawable];
+}
 
+void CMPUnmanagedMetalDrawableRelease(CMPUnmanagedMetalDrawable unmanagedDrawable) {
+    /// `drawable` will be released by ARC
+    __attribute__((unused)) id <CAMetalDrawable> drawable = (__bridge_transfer id <CAMetalDrawable>)unmanagedDrawable;
+}
+
+void *CMPUnmanagedMetalDrawableGetTexture(CMPUnmanagedMetalDrawable unmanagedDrawable) {
+    id <CAMetalDrawable> drawable = (__bridge id <CAMetalDrawable>)unmanagedDrawable;
+    
+    return (__bridge_retained void *)[drawable texture];
+}

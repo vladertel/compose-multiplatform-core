@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
-#import <Foundation/Foundation.h>
+#import <QuartzCore/QuartzCore.h>
 
+typedef void * CMPUnmanagedMetalDrawable;
 
+CMPUnmanagedMetalDrawable CMPUnmanagedMetalDrawableNextFromLayer(CAMetalLayer *metalLayer);
+
+void CMPUnmanagedMetalDrawableRelease(CMPUnmanagedMetalDrawable drawable);
+
+void *CMPUnmanagedMetalDrawableGetTexture(CMPUnmanagedMetalDrawable drawable);
