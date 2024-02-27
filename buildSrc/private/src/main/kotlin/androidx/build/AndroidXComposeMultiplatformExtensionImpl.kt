@@ -443,6 +443,7 @@ private fun KotlinNativeTarget.substituteForOelPublishedDependencies() {
     val comp = compilations.getByName("main")
     val androidAnnotationVersion = project.findProperty("artifactRedirecting.androidx.annotation.version")!!
     val androidCollectionVersion = project.findProperty("artifactRedirecting.androidx.collection.version")!!
+//    val androidLifecycleVersion = project.findProperty("artifactRedirecting.androidx.lifecycle.version")!!
     listOf(
         comp.configurations.compileDependencyConfiguration,
         comp.configurations.runtimeDependencyConfiguration,
@@ -457,6 +458,8 @@ private fun KotlinNativeTarget.substituteForOelPublishedDependencies() {
                     .using(it.module("androidx.annotation:annotation:$androidAnnotationVersion"))
                 it.substitute(it.project(":collection:collection"))
                     .using(it.module("androidx.collection:collection:$androidCollectionVersion"))
+//                it.substitute(it.project(":lifecycle:lifecycle-common"))
+//                    .using(it.module("androidx.lifecycle:lifecycle-common:$androidLifecycleVersion"))
             }
         }
     }

@@ -43,7 +43,9 @@ kotlin {
     js {
         browser()
     }
-    wasmJs()
+    wasmJs {
+        browser()
+    }
 
     sourceSets {
         commonMain {
@@ -79,6 +81,10 @@ kotlin {
         if (macEnabled || linuxEnabled || jsEnabled || wasmEnabled) {
             nonJvmMain {
                 dependsOn(commonMain)
+                dependencies {
+                    api(libs.kotlinStdlib)
+                    api(libs.kotlinTest)
+                }
             }
         }
 

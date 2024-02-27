@@ -6,37 +6,33 @@
  * modifying its settings.
  */
 
-import androidx.build.KmpPlatformsKt
-import androidx.build.PlatformIdentifier
+
+import androidx.build.AndroidXComposePlugin
 import androidx.build.Publish
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
     id("AndroidXPlugin")
     id("com.android.library")
+
+    //  TODO move all functionality to Compose-independent plugin (`collection` shouldn't depend on Compose concepts)
+    id("AndroidXComposePlugin")
 }
 
-def macEnabled = KmpPlatformsKt.enableMac(project)
-def linuxEnabled = KmpPlatformsKt.enableLinux(project)
-def jsEnabled = KmpPlatformsKt.enableJs(project)
-def wasmEnabled = KmpPlatformsKt.enableWasm(project)
+AndroidXComposePlugin.applyAndConfigureKotlinPlugin(project)
 
-androidXMultiplatform {
+androidXComposeMultiplatform {
     android()
     desktop()
-    mac()
-    linux()
-    ios()
+    js()
+    wasm()
+    darwin()
 
-    defaultPlatform(PlatformIdentifier.ANDROID)
+    linuxX64()
+    // linuxArm64()
 }
 
 kotlin {
-    js {
-        browser()
-    }
-    wasmJs()
-
     sourceSets {
         commonMain {
             dependencies {
@@ -59,10 +55,6 @@ kotlin {
             dependencies {
                 api("androidx.arch.core:core-common:2.2.0")
             }
-        }
-
-        desktopMain {
-            dependsOn(jvmMain)
         }
 
         androidMain {
@@ -94,39 +86,28 @@ kotlin {
             }
         }
 
-        if (macEnabled || linuxEnabled || jsEnabled || wasmEnabled) {
-            nonJvmMain {
-                dependsOn(commonMain)
-            }
+        nonJvmMain {
+            dependsOn(commonMain)
         }
 
-        if (macEnabled || linuxEnable) {
-            nativeMain {
-                dependsOn(nonJvmMain)
-
-                // Required for WeakReference usage
-                languageSettings.optIn("kotlin.experimental.ExperimentalNativeApi")
-            }
-
-            nativeTest {
-                dependsOn(commonTest)
-            }
+        nativeMain {
+            dependsOn(nonJvmMain)
         }
 
-        if (jsEnabled || wasmEnabled) {
-            webMain {
-                dependsOn(nonJvmMain)
-            }
+        nativeTest {
+            dependsOn(commonTest)
         }
-        if (jsEnabled) {
-            jsMain {
-                dependsOn(webMain)
-            }
+
+        webMain {
+            dependsOn(nonJvmMain)
         }
-        if (wasmEnabled) {
-            wasmJsMain {
-                dependsOn(webMain)
-            }
+
+        jsMain {
+            dependsOn(webMain)
+        }
+
+        wasmJsMain {
+            dependsOn(webMain)
         }
 
         targets.all { target ->
@@ -166,4 +147,8 @@ androidx {
     inceptionYear "2017"
     description "Android Lifecycle Runtime"
     metalavaK2UastEnabled = true
+}
+
+androidxCompose {
+    composeCompilerPluginEnabled = false
 }

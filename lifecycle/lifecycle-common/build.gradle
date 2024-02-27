@@ -48,18 +48,6 @@ kotlin {
     jvm {
         withJava()
     }
-    // Not all modules can have these targets, so declare them here instead of androidXComposeMultiplatform.
-    // We can support the kotlin-native targets supported by kotlin coroutines:
-    // https://github.com/Kotlin/kotlinx.coroutines/blob/master/gradle/compile-native-multiplatform.gradle
-    // NOTE: Keep this list in sync with runtime-saveable's targets.
-    watchosArm64()
-    watchosArm32()
-    watchosX64()
-    watchosSimulatorArm64()
-    tvosArm64()
-    tvosX64()
-    tvosSimulatorArm64()
-    mingwX64()
 
     sourceSets {
         commonMain {
@@ -98,65 +86,6 @@ kotlin {
 
     }
 }
-//
-//def macEnabled = KmpPlatformsKt.enableMac(project)
-//def linuxEnabled = KmpPlatformsKt.enableLinux(project)
-//def jsEnabled = KmpPlatformsKt.enableJs(project)
-//def wasmEnabled = KmpPlatformsKt.enableWasm(project)
-//
-//androidXMultiplatform {
-//    jvm {
-//        withJava()
-//    }
-//    mac()
-//    linux()
-//    ios()
-//}
-//
-//kotlin {
-//    js {
-//        browser()
-//    }
-//    wasmJs()
-//
-//    sourceSets {
-//        commonMain {
-//            dependencies {
-//                api(libs.kotlinStdlib)
-//                api(libs.kotlinCoroutinesCore)
-//                api(project(":annotation:annotation"))
-//            }
-//        }
-//
-//        jvmMain {
-//            dependsOn(commonMain)
-//        }
-//
-//        jvmTest {
-//            dependencies {
-//                implementation(libs.junit)
-//                implementation(libs.mockitoCore4)
-//            }
-//        }
-//
-//        if (macEnabled || linuxEnabled || jsEnabled || wasmEnabled) {
-//            nonJvmMain {
-//                dependsOn(commonMain)
-//                dependencies {
-//                    implementation(libs.atomicFu)
-//                }
-//            }
-//        }
-//
-//        targets.all { target ->
-//            if (target.platformType !in [KotlinPlatformType.jvm, KotlinPlatformType.common]) {
-//                target.compilations["main"].defaultSourceSet {
-//                    dependsOn(nonJvmMain)
-//                }
-//            }
-//        }
-//    }
-//}
 
 androidx {
     name = "Lifecycle-Common"
