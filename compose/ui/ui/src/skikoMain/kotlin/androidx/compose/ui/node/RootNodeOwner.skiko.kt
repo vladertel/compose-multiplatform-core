@@ -193,7 +193,7 @@ internal class RootNodeOwner(
         measureAndLayoutDelegate.dispatchOnPositionedCallbacks(forceDispatch = true)
     }
 
-    fun draw(canvas: Canvas) = trace("RootNodeOwner:draw"){
+    fun draw(canvas: Canvas) = trace("RootNodeOwner:draw") {
         owner.root.draw(canvas)
         clearInvalidObservations()
     }
