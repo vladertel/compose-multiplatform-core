@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.savedstate
+package androidx.core.bundle
 
 /**
  * @see android.os.Bundle

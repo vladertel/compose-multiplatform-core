@@ -142,6 +142,7 @@ dependencies {
     docs(project(":core:core-animation"))
     docs(project(":core:core-animation-testing"))
     docs(project(":core:core-appdigest"))
+    docs(project(":core:core-bundle"))
     docs(project(":core:core-google-shortcuts"))
     docs(project(":core:haptics:haptics"))
     samples(project(":core:haptics:haptics-samples"))
