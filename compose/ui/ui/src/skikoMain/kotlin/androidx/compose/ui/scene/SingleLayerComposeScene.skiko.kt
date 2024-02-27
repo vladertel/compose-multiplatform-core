@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.util.trace
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
 
@@ -172,7 +171,7 @@ private class SingleLayerComposeSceneImpl(
         mainOwner.measureAndLayout()
     }
 
-    override fun draw(canvas: Canvas) = trace("SingleLayerComposeSceneImpl:draw") {
+    override fun draw(canvas: Canvas) {
         mainOwner.draw(canvas)
     }
 
