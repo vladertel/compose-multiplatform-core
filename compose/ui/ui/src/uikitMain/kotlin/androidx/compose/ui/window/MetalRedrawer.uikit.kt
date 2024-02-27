@@ -367,11 +367,11 @@ internal class MetalRedrawer(
                 dispatch_semaphore_wait(inflightSemaphore, DISPATCH_TIME_FOREVER)
             }
 
-            val metalDrawable = trace("MetalRedrawer:draw:nextDrawable") {
-                metalLayer.nextDrawable()
+            val hasAvailableDrawable = trace("MetalRedrawer:draw:nextDrawable") {
+                metalDrawableManager.acquireNextDrawable()
             }
 
-            if (metalDrawable == null) {
+            if (!hasAvailableDrawable) {
                 // TODO: anomaly, log
                 // Logger.warn { "'metalLayer.nextDrawable()' returned null. 'metalLayer.allowsNextDrawableTimeout' should be set to false. Skipping the frame." }
                 picture.close()
@@ -380,7 +380,7 @@ internal class MetalRedrawer(
             }
 
             val renderTarget =
-                BackendRenderTarget.makeMetal(width, height, metalDrawable.texture.objcPtr())
+                BackendRenderTarget.makeMetal(width, height, metalDrawableManager.texture)
 
             val surface = Surface.makeFromBackendRenderTarget(
                 context,
@@ -396,6 +396,7 @@ internal class MetalRedrawer(
                 // Logger.warn { "'Surface.makeFromBackendRenderTarget' returned null. Skipping the frame." }
                 picture.close()
                 renderTarget.close()
+                metalDrawableManager.releaseDrawable()
                 dispatch_semaphore_signal(inflightSemaphore)
                 return@autoreleasepool
             }
@@ -424,7 +425,8 @@ internal class MetalRedrawer(
                     commandBuffer.label = "Present"
 
                     if (!presentsWithTransaction) {
-                        commandBuffer.presentDrawable(metalDrawable)
+                        metalDrawableManager.presentInCommandBuffer(commandBuffer)
+                        metalDrawableManager.releaseDrawable()
                     }
 
                     commandBuffer.addCompletedHandler {
@@ -440,7 +442,8 @@ internal class MetalRedrawer(
                             commandBuffer.waitUntilScheduled()
                         }
 
-                        metalDrawable.present()
+                        metalDrawableManager.present()
+                        metalDrawableManager.releaseDrawable()
 
                         interopTransaction.actions.fastForEach {
                             it.invoke()
