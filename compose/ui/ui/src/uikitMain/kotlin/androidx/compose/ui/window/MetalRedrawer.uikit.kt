@@ -380,7 +380,7 @@ internal class MetalRedrawer(
             }
 
             val renderTarget =
-                BackendRenderTarget.makeMetal(width, height, metalDrawableManager.texture)
+                BackendRenderTarget.makeMetal(width, height, metalDrawableManager.texture.rawValue)
 
             val surface = Surface.makeFromBackendRenderTarget(
                 context,
