@@ -75,7 +75,7 @@ internal abstract class BaseComposeScene(
         private set
 
     private var isInvalidationDisabled = false
-    private inline fun <T> postponeInvalidation(crossinline block: () -> T): T = trace("BaseComposeScene:postponeInvalidation") {
+    private inline fun <T> postponeInvalidation(tag: String, crossinline block: () -> T): T = trace("BaseComposeScene:postponeInvalidation($tag)") {
         check(!isClosed) { "ComposeScene is closed" }
         isInvalidationDisabled = true
         return try {
@@ -125,7 +125,7 @@ internal abstract class BaseComposeScene(
 
     override fun hasInvalidations(): Boolean = hasPendingDraws || recomposer.hasPendingWork
 
-    override fun setContent(content: @Composable () -> Unit) = postponeInvalidation {
+    override fun setContent(content: @Composable () -> Unit) = postponeInvalidation("setContent") {
         check(!isClosed) { "ComposeScene is closed" }
         inputHandler.onChangeContent()
 
@@ -148,7 +148,7 @@ internal abstract class BaseComposeScene(
 
     override fun render(canvas: Canvas, nanoTime: Long) {
         return trace("BaseComposeScene:render") {
-            postponeInvalidation {
+            postponeInvalidation("render") {
                 // Note that on Android the order is slightly different:
                 // - Recomposition
                 // - Layout
@@ -183,7 +183,7 @@ internal abstract class BaseComposeScene(
         keyboardModifiers: PointerKeyboardModifiers?,
         nativeEvent: Any?,
         button: PointerButton?
-    ) = postponeInvalidation {
+    ) = postponeInvalidation("sendPointerEvent") {
         inputHandler.onPointerEvent(
             eventType = eventType,
             position = position,
@@ -208,7 +208,7 @@ internal abstract class BaseComposeScene(
         timeMillis: Long,
         nativeEvent: Any?,
         button: PointerButton?,
-    ) = postponeInvalidation {
+    ) = postponeInvalidation("sendPointerEvent") {
         inputHandler.onPointerEvent(
             eventType = eventType,
             pointers = pointers,
@@ -221,7 +221,7 @@ internal abstract class BaseComposeScene(
         )
     }
 
-    override fun sendKeyEvent(keyEvent: KeyEvent): Boolean = postponeInvalidation {
+    override fun sendKeyEvent(keyEvent: KeyEvent): Boolean = postponeInvalidation("sendKeyEvent") {
         inputHandler.onKeyEvent(keyEvent)
     }
 
