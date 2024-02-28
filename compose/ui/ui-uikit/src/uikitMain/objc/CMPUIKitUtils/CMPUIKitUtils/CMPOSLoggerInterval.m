@@ -21,7 +21,6 @@
 @implementation CMPOSLoggerInterval {
     os_log_t _log;
     os_signpost_id_t _signpostId;
-    NSString *_name;
 }
 
 - (instancetype)initWithLog:(os_log_t)log {
@@ -30,15 +29,12 @@
     if (self) {
         _log = log;
         _signpostId = os_signpost_id_generate(_log);
-        _name = nil;
     }
     
     return self;
 }
 
-- (void)beginWithName:(NSString *)name {
-    _name = name;
-    
+- (void)beginWithName:(NSString *)name {    
     os_signpost_interval_begin(_log, _signpostId, "CMPInterval", "%{public}s", [name UTF8String]);
 }
 
