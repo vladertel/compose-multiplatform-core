@@ -194,6 +194,7 @@ class ComposeWindow @ExperimentalComposeUiApi constructor(
                     isFullscreen = true
                 }
                 WindowPlacement.Maximized -> {
+                    isFullscreen = false
                     isMaximized = true
                 }
                 WindowPlacement.Floating -> {
