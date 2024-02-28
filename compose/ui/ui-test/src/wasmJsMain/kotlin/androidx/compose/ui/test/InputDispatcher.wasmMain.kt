@@ -52,29 +52,30 @@ internal actual fun keyEvent(
                 SkikoKeyboardEventKind.UP -> "keyup"
                 else -> "keypress"
             }, KeyboardEventInit(
-                key= if (key.isPrintable()) nativeCode.toChar().toString() else "Dead"),
+                key= if (key.isPrintable()) nativeCode.toChar().toString() else "Unknown"),
             )
         )
     )
 }
 
+// Basically this is what we've tried to avoid in isTypedEvent implementation, but in tests it's totally fine
+// Just add any non-printable key you need for tests here
+private val NonPrintableKeys = setOf(
+    Key.AltLeft,
+    Key.MetaLeft,
+    Key.ShiftLeft,
+    Key.CtrlLeft,
+    Key.Delete,
+    Key.DirectionLeft,
+    Key.DirectionRight,
+    Key.DirectionDown,
+    Key.DirectionUp,
+    Key.Home,
+    Key.MoveEnd
+)
+
 private fun Key.isPrintable(): Boolean {
-    // Basically this is what we've tried to avoid in isTypedEvent implementation, but in tests it's totally fine
-    // Just add any non-printable key you need for tests here
-    return when(this) {
-        Key.AltLeft -> false
-        Key.MetaLeft -> false
-        Key.ShiftLeft -> false
-        Key.CtrlLeft -> false
-        Key.Delete -> false
-        Key.DirectionLeft -> false
-        Key.DirectionRight -> false
-        Key.DirectionDown -> false
-        Key.DirectionUp -> false
-        Key.Home -> false
-        Key.MoveEnd -> false
-        else -> true
-    }
+    return !NonPrintableKeys.contains(this)
 }
 
 internal actual fun Int.updatedKeyboardModifiers(key: Key, down: Boolean): Int {
