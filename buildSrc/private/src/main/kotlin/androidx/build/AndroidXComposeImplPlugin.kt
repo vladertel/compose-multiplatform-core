@@ -423,6 +423,10 @@ private fun configureComposeCompilerPlugin(
             // It used to be configured with `onlyIf` in upstream too.
             compile.onlyIf {
                 compile.kotlinOptions.freeCompilerArgs += "-Xplugin=${kotlinPlugin.first()}"
+                compile.kotlinOptions.freeCompilerArgs += listOf(
+                    "-P",
+                    "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=true"
+                )
 
                 if (enableMetricsProvider.orNull == "true") {
                     val metricsDest = File(libraryMetricsDirectory, "compose")
