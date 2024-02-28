@@ -46,12 +46,14 @@ internal actual fun keyEvent(
             kind = kind,
             key = SkikoKey.valueOf(nativeCode),
             modifiers = SkikoInputModifiers(modifiers),
-            platform = KeyboardEvent(when (kind) {
-                SkikoKeyboardEventKind.DOWN -> "keydown"
-                SkikoKeyboardEventKind.UP -> "keyup"
-                else -> "keypress"
-            }, KeyboardEventInit(
-                key= if (key.isPrintable()) nativeCode.toChar().toString() else "Unknown"),
+            platform = KeyboardEvent(
+                when (kind) {
+                    SkikoKeyboardEventKind.DOWN -> "keydown"
+                    SkikoKeyboardEventKind.UP -> "keyup"
+                    else -> "keypress"
+                }, KeyboardEventInit(
+                    key = if (key.isPrintable()) nativeCode.toChar().toString() else "Unknown"
+                )
             )
         )
     )
