@@ -75,7 +75,7 @@ internal abstract class BaseComposeScene(
         private set
 
     private var isInvalidationDisabled = false
-    private inline fun <T> postponeInvalidation(tag: String, crossinline block: () -> T): T = trace("BaseComposeScene:postponeInvalidation($tag)") {
+    private inline fun <T> postponeInvalidation(traceTag: String, crossinline block: () -> T): T = trace(traceTag) {
         check(!isClosed) { "ComposeScene is closed" }
         isInvalidationDisabled = true
         return try {
