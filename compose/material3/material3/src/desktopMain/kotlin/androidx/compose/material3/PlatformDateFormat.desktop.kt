@@ -33,6 +33,12 @@ internal actual class PlatformDateFormat actual constructor(private val locale: 
     actual val firstDayOfWeek: Int
         get() = delegate.firstDayOfWeek
 
+    private val dateFormatter by lazy {
+        DateTimeFormatter
+            .ofLocalizedDate(FormatStyle.LONG)
+            .localizedBy(locale)
+    }
+
     actual fun formatWithPattern(
         utcTimeMillis: Long,
         pattern: String,
@@ -54,17 +60,14 @@ internal actual class PlatformDateFormat actual constructor(private val locale: 
 
         // date picker headline and semantics are localized,
         // year picker is transformed to readable format
+
         val pattern = when(skeleton){
             DatePickerDefaults.YearAbbrMonthDaySkeleton -> {
-                return DateTimeFormatter
-                    .ofLocalizedDate(FormatStyle.LONG)
-                    .localizedBy(locale)
+                return dateFormatter
                     .format(Instant.ofEpochMilli(utcTimeMillis).atOffset(ZoneOffset.UTC))
             }
             DatePickerDefaults.YearMonthWeekdayDaySkeleton -> {
-                return DateTimeFormatter
-                    .ofLocalizedDate(FormatStyle.FULL)
-                    .localizedBy(locale)
+                return dateFormatter
                     .format(Instant.ofEpochMilli(utcTimeMillis).atOffset(ZoneOffset.UTC))
             }
             DatePickerDefaults.YearMonthSkeleton -> "MMMM yyyy"
