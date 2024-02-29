@@ -19,9 +19,14 @@ package androidx.compose.material3
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.time.format.TextStyle
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 internal actual class PlatformDateFormat actual constructor(private val locale: CalendarLocale) {
     private val delegate = LegacyCalendarModelImpl(locale)
 
@@ -47,11 +52,22 @@ internal actual class PlatformDateFormat actual constructor(private val locale: 
         // Maybe it will be supported in kotlinx.datetime in the future.
         // See https://github.com/Kotlin/kotlinx-datetime/pull/251
 
-        // stub: not localized but at least readable variant
+        // date picker headline and semantics are localized,
+        // year picker is transformed to readable format
         val pattern = when(skeleton){
+            DatePickerDefaults.YearAbbrMonthDaySkeleton -> {
+                return DateTimeFormatter
+                    .ofLocalizedDate(FormatStyle.LONG)
+                    .localizedBy(locale)
+                    .format(Instant.ofEpochMilli(utcTimeMillis).atOffset(ZoneOffset.UTC))
+            }
+            DatePickerDefaults.YearMonthWeekdayDaySkeleton -> {
+                return DateTimeFormatter
+                    .ofLocalizedDate(FormatStyle.FULL)
+                    .localizedBy(locale)
+                    .format(Instant.ofEpochMilli(utcTimeMillis).atOffset(ZoneOffset.UTC))
+            }
             DatePickerDefaults.YearMonthSkeleton -> "MMMM yyyy"
-            DatePickerDefaults.YearAbbrMonthDaySkeleton -> "MMM d, yyyy"
-            DatePickerDefaults.YearMonthWeekdayDaySkeleton -> "EEEE, MMMM d, yyyy"
             else -> skeleton
         }
         return formatWithPattern(utcTimeMillis, pattern)
