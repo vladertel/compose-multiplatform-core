@@ -37,6 +37,8 @@ import kotlinx.cinterop.CValue
 import kotlinx.cinterop.ExportObjCClass
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import platform.CoreGraphics.CGRect
@@ -813,10 +815,9 @@ private class AccessibilityContainer(
     }
 }
 
-private sealed interface NodesSyncResult {
-    object NoChanges : NodesSyncResult
-    data class Success(val newElementToFocus: Any?) : NodesSyncResult
-}
+private class NodesSyncResult(
+    val newElementToFocus: Any?
+)
 
 /**
  * A sealed class that represents the options for syncing the Compose SemanticsNode tree with the iOS UIAccessibility tree.
@@ -896,12 +897,6 @@ internal class AccessibilityMediator(
     var rootSemanticsNodeId: Int = -1
 
     /**
-     * A value of true indicates that the Compose accessible tree is dirty, meaning that compose
-     * semantics tree was modified since last sync, false otherwise.
-     */
-    private var isCurrentComposeAccessibleTreeDirty = false
-
-    /**
      * Job to cancel tree syncing when the mediator is disposed.
      */
     private val job = Job()
@@ -916,6 +911,7 @@ internal class AccessibilityMediator(
      * [AccessibilityElement].
      */
     private val accessibilityElementsMap = mutableMapOf<Int, AccessibilityElement>()
+    private val channel = Channel<Unit>(capacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
 
     init {
         getAccessibilitySyncOptions().debugLoggerIfEnabled?.log("AccessibilityMediator for ${view} created")
@@ -926,6 +922,7 @@ internal class AccessibilityMediator(
         //  should we use some other approach?
         coroutineScope.launch {
             while (isAlive) {
+                channel.receive()
                 var result: NodesSyncResult
 
                 val syncOptions = getAccessibilitySyncOptions()
@@ -943,20 +940,9 @@ internal class AccessibilityMediator(
                         result = sync()
                     }
 
-                    when (val immutableResult = result) {
-                        is NodesSyncResult.NoChanges -> {
-                            // Do nothing
-                        }
-
-                        is NodesSyncResult.Success -> {
-                            debugLogger?.log("AccessibilityMediator.sync took $time")
-
-                            UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, immutableResult.newElementToFocus)
-                        }
-                    }
+                    debugLogger?.log("AccessibilityMediator.sync took $time")
+                    UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, result.newElementToFocus)
                 }
-
-                delay(updateIntervalMillis)
             }
         }
     }
@@ -964,14 +950,17 @@ internal class AccessibilityMediator(
     fun onSemanticsChange() {
         debugLogger?.log("onSemanticsChange")
 
-        isCurrentComposeAccessibleTreeDirty = true
+        coroutineScope.launch {
+            channel.send(Unit)
+        }
     }
 
     fun convertRectToWindowSpaceCGRect(rect: Rect): CValue<CGRect> {
         val window = view.window ?: return CGRectMake(0.0, 0.0, 0.0, 0.0)
         val density = Density(window.screen.scale.toFloat())
         val localSpaceCGRect = rect.toDpRect(density).asCGRect()
-        return window.convertRect(localSpaceCGRect, fromView = view)
+        //return window.convertRect(localSpaceCGRect, fromView = view)
+        return localSpaceCGRect
     }
 
     fun dispose() {
@@ -1066,14 +1055,8 @@ internal class AccessibilityMediator(
         // TODO: investigate what needs to be done to reflect that this hierarchy is probably covered
         //   by sibling overlay
 
-        if (!isCurrentComposeAccessibleTreeDirty) {
-            return NodesSyncResult.NoChanges
-        }
-
         val rootSemanticsNode = owner.rootSemanticsNode
         rootSemanticsNodeId = rootSemanticsNode.id
-
-        isCurrentComposeAccessibleTreeDirty = false
 
         check(!view.isAccessibilityElement) {
             "Root view must not be an accessibility element"
@@ -1116,7 +1099,7 @@ internal class AccessibilityMediator(
             null
         }
 
-        return NodesSyncResult.Success(newElementToFocus)
+        return NodesSyncResult(newElementToFocus)
     }
 }
 
