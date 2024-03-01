@@ -183,11 +183,11 @@ internal class UIViewComposeSceneLayer(
         mediator.dispose()
         composeContainer.detachLayer(this)
 
-        animateTransition(false)
+        animateTransition(TransitionKind.DISAPPEAR)
     }
 
     override fun show() {
-        animateTransition(true)
+        animateTransition(TransitionKind.APPEAR)
     }
 
     override fun setContent(content: @Composable () -> Unit) {
