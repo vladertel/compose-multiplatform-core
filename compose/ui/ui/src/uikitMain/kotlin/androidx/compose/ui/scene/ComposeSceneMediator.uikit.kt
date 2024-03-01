@@ -82,6 +82,7 @@ import org.jetbrains.skiko.SkikoKeyboardEvent
 import org.jetbrains.skiko.SkikoKeyboardEventKind
 import platform.CoreGraphics.CGAffineTransformIdentity
 import platform.CoreGraphics.CGAffineTransformInvert
+import platform.CoreGraphics.CGAffineTransformMakeScale
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGRectZero
@@ -486,7 +487,6 @@ internal class ComposeSceneMediator(
         focusStack?.popUntilNext(renderingView)
         renderingView.dispose()
         interactionView.dispose()
-        rootView.removeFromSuperview()
         scene.close()
         // After scene is disposed all UIKit interop actions can't be deferred to be synchronized with rendering
         // Thus they need to be executed now.
@@ -618,6 +618,25 @@ internal class ComposeSceneMediator(
     private val nativeKeyboardVisibilityListener = NativeKeyboardVisibilityListener(
         keyboardVisibilityListener
     )
+
+    fun updateStateForAppearanceTransitionPhase(phase: AppearanceTransitionPhase) {
+        when (phase) {
+            AppearanceTransitionPhase.PRE_APPEAR -> {
+                rootView.transform = CGAffineTransformMakeScale(1.1, 1.1)
+                rootView.alpha = 0.0
+            }
+            AppearanceTransitionPhase.APPEAR -> {
+                rootView.transform = CGAffineTransformIdentity.readValue()
+                rootView.alpha = 1.0
+            }
+            AppearanceTransitionPhase.DISAPPEAR -> {
+                rootView.alpha = 0.0
+            }
+            AppearanceTransitionPhase.POST_DISAPPEAR -> {
+                rootView.removeFromSuperview()
+            }
+        }
+    }
 
     fun viewDidAppear(animated: Boolean) {
         NSNotificationCenter.defaultCenter.addObserver(

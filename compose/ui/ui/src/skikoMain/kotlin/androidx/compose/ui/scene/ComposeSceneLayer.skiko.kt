@@ -102,6 +102,11 @@ interface ComposeSceneLayer {
     var focusable: Boolean
 
     /**
+     * Play animation associated with layer appearance if any.
+     */
+    fun show() = Unit
+
+    /**
      * Close all resources and subscriptions. It's anticipated that the platform implementation
      * will automatically close all layers along with the parent scene.
      * Once this method has been called, invoking any other method of this [ComposeSceneLayer]
@@ -185,6 +190,8 @@ internal fun rememberComposeSceneLayer(
     }
     layer.focusable = focusable
     DisposableEffect(Unit) {
+        layer.show()
+
         onDispose {
             layer.close()
         }

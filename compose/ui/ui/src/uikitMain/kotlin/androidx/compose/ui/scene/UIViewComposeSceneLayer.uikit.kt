@@ -50,6 +50,18 @@ import platform.UIKit.UITouch
 import platform.UIKit.UIView
 import platform.UIKit.UIViewControllerTransitionCoordinatorProtocol
 
+internal enum class AppearanceTransitionPhase {
+    PRE_APPEAR,
+    APPEAR,
+    DISAPPEAR,
+    POST_DISAPPEAR
+}
+
+private enum class TransitionKind {
+    APPEAR,
+    DISAPPEAR
+}
+
 internal class UIViewComposeSceneLayer(
     private val composeContainer: ComposeContainer,
     private val initDensity: Density,
@@ -170,7 +182,12 @@ internal class UIViewComposeSceneLayer(
     override fun close() {
         mediator.dispose()
         composeContainer.detachLayer(this)
-        backgroundView.removeFromSuperview()
+
+        animateTransition(false)
+    }
+
+    override fun show() {
+        animateTransition(true)
     }
 
     override fun setContent(content: @Composable () -> Unit) {
@@ -196,6 +213,47 @@ internal class UIViewComposeSceneLayer(
 
     override fun calculateLocalPosition(positionInWindow: IntOffset): IntOffset {
         return positionInWindow
+    }
+
+    private fun animateTransition(kind: TransitionKind) {
+        val scrimColor = scrimColor
+
+        when (kind) {
+            TransitionKind.APPEAR -> {
+                if (scrimColor == null) {
+                    // do nothing
+                } else {
+                    rootView.layoutIfNeeded()
+                    backgroundView.alpha = 0.0
+                    mediator.updateStateForAppearanceTransitionPhase(AppearanceTransitionPhase.PRE_APPEAR)
+                    UIView.animateWithDuration(
+                        duration = 0.15,
+                        animations = {
+                            backgroundView.alpha = 1.0
+                            mediator.updateStateForAppearanceTransitionPhase(AppearanceTransitionPhase.APPEAR)
+                        }
+                    )
+                }
+            }
+            TransitionKind.DISAPPEAR -> {
+                if (scrimColor == null) {
+                    backgroundView.removeFromSuperview()
+                    mediator.updateStateForAppearanceTransitionPhase(AppearanceTransitionPhase.POST_DISAPPEAR)
+                } else {
+                    UIView.animateWithDuration(
+                        duration = 0.15,
+                        animations = {
+                            backgroundView.alpha = 0.0
+                            mediator.updateStateForAppearanceTransitionPhase(AppearanceTransitionPhase.DISAPPEAR)
+                        },
+                        completion = {
+                            backgroundView.removeFromSuperview()
+                            mediator.updateStateForAppearanceTransitionPhase(AppearanceTransitionPhase.POST_DISAPPEAR)
+                        }
+                    )
+                }
+            }
+        }
     }
 
     fun viewDidAppear(animated: Boolean) {
