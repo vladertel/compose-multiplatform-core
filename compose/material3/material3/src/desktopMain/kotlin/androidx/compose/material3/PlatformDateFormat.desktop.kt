@@ -45,20 +45,16 @@ internal actual class PlatformDateFormat actual constructor(private val locale: 
         skeleton: String
     ): String {
         // Note: there is no equivalent in Java for Android's DateFormat.getBestDateTimePattern.
-        // The JDK SimpleDateFormat expects a pattern, so the results will be "2023Jan7",
+        // The JDK SimpleDateFormat expects a pattern, so the results for unrecognized skeletons will be "2023Jan7",
         // "2023January", etc. in case a skeleton holds an actual ICU skeleton and not a pattern.
 
         // TODO: support ICU skeleton on JVM
         // Maybe it will be supported in kotlinx.datetime in the future.
-        // See https://github.com/Kotlin/kotlinx-datetime/pull/251
-
-        // date picker headline and semantics are localized,
-        // year picker is transformed to readable format
 
         val pattern = when(skeleton){
             DatePickerDefaults.YearAbbrMonthDaySkeleton -> {
                 return DateTimeFormatter
-                    .ofLocalizedDate(FormatStyle.LONG)
+                    .ofLocalizedDate(FormatStyle.MEDIUM)
                     .localizedBy(locale)
                     .format(Instant.ofEpochMilli(utcTimeMillis).atOffset(ZoneOffset.UTC))
             }
@@ -68,7 +64,7 @@ internal actual class PlatformDateFormat actual constructor(private val locale: 
                     .localizedBy(locale)
                     .format(Instant.ofEpochMilli(utcTimeMillis).atOffset(ZoneOffset.UTC))
             }
-            DatePickerDefaults.YearMonthSkeleton -> "MMMM yyyy"
+            DatePickerDefaults.YearMonthSkeleton -> "LLLL yyyy" // L is a pattern for standalone month (without day)
             else -> skeleton
         }
         return formatWithPattern(utcTimeMillis, pattern)
