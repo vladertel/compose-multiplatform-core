@@ -333,6 +333,8 @@ internal class MetalRedrawer(
     private fun draw(waitUntilCompletion: Boolean, targetTimestamp: NSTimeInterval) = trace("MetalRedrawer:draw") {
         check(NSThread.isMainThread)
 
+        println("render")
+
         lastRenderTimestamp = maxOf(targetTimestamp, lastRenderTimestamp)
 
         autoreleasepool {

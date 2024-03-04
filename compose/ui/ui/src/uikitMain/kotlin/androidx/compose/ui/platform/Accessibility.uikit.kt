@@ -916,13 +916,10 @@ internal class AccessibilityMediator(
     init {
         getAccessibilitySyncOptions().debugLoggerIfEnabled?.log("AccessibilityMediator for ${view} created")
 
-        val updateIntervalMillis = 50L
-        // TODO: this approach was copied from desktop implementation, obviously it has a [updateIntervalMillis] lag
-        //  between the actual change in the semantics tree and the change in the accessibility tree.
-        //  should we use some other approach?
         coroutineScope.launch {
             while (isAlive) {
                 channel.receive()
+                println("sync")
                 var result: NodesSyncResult
 
                 val syncOptions = getAccessibilitySyncOptions()
