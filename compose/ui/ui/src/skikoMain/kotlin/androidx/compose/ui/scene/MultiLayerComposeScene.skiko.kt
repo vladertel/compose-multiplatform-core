@@ -120,6 +120,7 @@ private class MultiLayerComposeSceneImpl(
         platformContext = composeSceneContext.platformContext,
         snapshotInvalidationTracker = snapshotInvalidationTracker,
         inputHandler = inputHandler,
+        onSemanticsChange = ::onSemanticsChange
     )
 
     override var density: Density = density
@@ -400,23 +401,25 @@ private class MultiLayerComposeSceneImpl(
         compositionContext = compositionContext,
     )
 
-    private fun onOwnerAppended(owner: RootNodeOwner) {
+    override fun onOwnerAppended(owner: RootNodeOwner) {
         if (_focusManager.isFocused) {
             owner.focusOwner.takeFocus()
         } else {
             owner.focusOwner.releaseFocus()
         }
-        semanticsOwnerListener?.onSemanticsOwnerAppended(owner.semanticsOwner)
+
+        super.onOwnerAppended(owner)
     }
 
-    private fun onOwnerRemoved(owner: RootNodeOwner) {
+    override fun onOwnerRemoved(owner: RootNodeOwner) {
         if (owner == lastHoverOwner) {
             lastHoverOwner = null
         }
         if (owner == gestureOwner) {
             gestureOwner = null
         }
-        semanticsOwnerListener?.onSemanticsOwnerRemoved(owner.semanticsOwner)
+
+        super.onOwnerRemoved(owner)
     }
 
     private fun attachLayer(layer: AttachedComposeSceneLayer) {
@@ -502,6 +505,7 @@ private class MultiLayerComposeSceneImpl(
             },
             snapshotInvalidationTracker = snapshotInvalidationTracker,
             inputHandler = inputHandler,
+            onSemanticsChange = this@MultiLayerComposeSceneImpl::onSemanticsChange
         )
         private var composition: Composition? = null
         private var outsidePointerCallback: ((eventType: PointerEventType) -> Unit)? = null

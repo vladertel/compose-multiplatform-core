@@ -97,6 +97,7 @@ private class SingleLayerComposeSceneImpl(
             platformContext = composeSceneContext.platformContext,
             snapshotInvalidationTracker = snapshotInvalidationTracker,
             inputHandler = inputHandler,
+            onSemanticsChange = ::onSemanticsChange
         )
     }
 
@@ -187,13 +188,10 @@ private class SingleLayerComposeSceneImpl(
         compositionContext = compositionContext
     )
 
-    private fun onOwnerAppended(owner: RootNodeOwner) {
+    override fun onOwnerAppended(owner: RootNodeOwner) {
         owner.focusOwner.takeFocus()
-        semanticsOwnerListener?.onSemanticsOwnerAppended(owner.semanticsOwner)
-    }
 
-    private fun onOwnerRemoved(owner: RootNodeOwner) {
-        semanticsOwnerListener?.onSemanticsOwnerRemoved(owner.semanticsOwner)
+        super.onOwnerAppended(owner)
     }
 
     private inner class ComposeSceneFocusManagerImpl : ComposeSceneFocusManager {

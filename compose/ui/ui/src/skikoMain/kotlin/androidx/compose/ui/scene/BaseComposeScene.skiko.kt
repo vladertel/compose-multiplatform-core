@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.scene
 
+import androidx.annotation.CallSuper
+import androidx.collection.mutableScatterSetOf
 import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
@@ -35,9 +37,11 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.node.RootNodeOwner
 import androidx.compose.ui.node.SnapshotInvalidationTracker
 import androidx.compose.ui.platform.GlobalSnapshotManager
 import androidx.compose.ui.platform.PlatformContext
+import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.util.trace
 import kotlin.coroutines.CoroutineContext
 import kotlin.concurrent.Volatile
@@ -79,11 +83,13 @@ internal abstract class BaseComposeScene(
         check(!isClosed) { "ComposeScene is closed" }
         isInvalidationDisabled = true
         return try {
-            // Try to get see the up-to-date state before running block
-            // Note that this doesn't guarantee it, if sendApplyNotifications is called concurrently
-            // in a different thread than this code.
-            snapshotInvalidationTracker.sendAndPerformSnapshotChanges()
-            snapshotInvalidationTracker.performSnapshotChangesSynchronously(block)
+            postponeSemanticsChangeCallbacks {
+                // Try to get see the up-to-date state before running block
+                // Note that this doesn't guarantee it, if sendApplyNotifications is called concurrently
+                // in a different thread than this code.
+                snapshotInvalidationTracker.sendAndPerformSnapshotChanges()
+                snapshotInvalidationTracker.performSnapshotChangesSynchronously(block)
+            }
         } finally {
             isInvalidationDisabled = false
         }.also {
@@ -225,6 +231,57 @@ internal abstract class BaseComposeScene(
     private fun doLayout() {
         snapshotInvalidationTracker.onLayout()
         measureAndLayout()
+    }
+
+    /**
+     * Whether calls to `platformContext.semanticsOwnerListener.onSemanticsChange` are currently
+     * being postponed.
+     */
+    private var postponingSemanticChangeNotifications = false
+
+    /**
+     * The set of [SemanticsOwner]s with which [onSemanticsChange] has been called while
+     * [postponingSemanticChangeNotifications] is `true`.
+     */
+    private val changePostponedSemanticsOwners = mutableScatterSetOf<SemanticsOwner>()
+
+    /**
+     * Postpones calls to `platformContext.semanticsOwnerListener.onSemanticsChange` from within
+     * [block] until after it returns. This is done to avoid multiple calls to it in a single frame
+     * (from [ComposeScene.render]).
+     */
+    private inline fun <T> postponeSemanticsChangeCallbacks(block: () -> T): T {
+        try {
+            postponingSemanticChangeNotifications = true
+            return block()
+        } finally {
+            postponingSemanticChangeNotifications = false
+            changePostponedSemanticsOwners.forEach {
+                platformContext.semanticsOwnerListener?.onSemanticsChange(it)
+            }
+            changePostponedSemanticsOwners.clear()
+        }
+    }
+
+    @CallSuper
+    protected open fun onSemanticsChange(semanticsOwner: SemanticsOwner) {
+        if (postponingSemanticChangeNotifications) {
+            changePostponedSemanticsOwners.add(semanticsOwner)
+        }
+        else {
+            platformContext.semanticsOwnerListener?.onSemanticsChange(semanticsOwner)
+        }
+    }
+
+    @CallSuper
+    protected open fun onOwnerAppended(owner: RootNodeOwner) {
+        semanticsOwnerListener?.onSemanticsOwnerAppended(owner.semanticsOwner)
+    }
+
+    @CallSuper
+    protected open fun onOwnerRemoved(owner: RootNodeOwner) {
+        semanticsOwnerListener?.onSemanticsOwnerRemoved(owner.semanticsOwner)
+        changePostponedSemanticsOwners.remove(owner.semanticsOwner)
     }
 
     protected abstract fun createComposition(content: @Composable () -> Unit): Composition

@@ -95,6 +95,7 @@ internal class RootNodeOwner(
     val platformContext: PlatformContext,
     private val snapshotInvalidationTracker: SnapshotInvalidationTracker,
     private val inputHandler: ComposeSceneInputHandler,
+    private val onSemanticsChange: (SemanticsOwner) -> Unit,
 ) {
     // TODO(https://github.com/JetBrains/compose-multiplatform/issues/2944)
     //  Check if ComposePanel/SwingPanel focus interop work correctly with new features of
@@ -379,11 +380,11 @@ internal class RootNodeOwner(
         )
 
         override fun onSemanticsChange() {
-            platformContext.semanticsOwnerListener?.onSemanticsChange(semanticsOwner)
+            onSemanticsChange(semanticsOwner)
         }
 
         override fun onLayoutChange(layoutNode: LayoutNode) {
-            platformContext.semanticsOwnerListener?.onSemanticsChange(semanticsOwner)
+            onSemanticsChange(semanticsOwner)
         }
 
         override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
