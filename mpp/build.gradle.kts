@@ -24,10 +24,24 @@ open class ComposePublishingTask : AbstractComposePublishingTask() {
 
 val composeProperties = ComposeProperties(project)
 
+val PublishedLifecyclePlatforms = ComposePlatforms.ALL - ComposePlatforms.SKIP_EXTRA_TARGETS
+
 val mainComponents =
     listOf(
         ComposeComponent(":annotation:annotation", supportedPlatforms = ComposePlatforms.ALL - ComposePlatforms.ANDROID),
         ComposeComponent(":collection:collection", supportedPlatforms = ComposePlatforms.ALL - ComposePlatforms.ANDROID),
+        ComposeComponent(
+            path = ":lifecycle:lifecycle-common",
+            supportedPlatforms = PublishedLifecyclePlatforms - ComposePlatforms.ANDROID
+        ),
+        ComposeComponent(
+            path = ":lifecycle:lifecycle-runtime",
+            supportedPlatforms = PublishedLifecyclePlatforms - ComposePlatforms.LinuxArm64
+        ),
+        ComposeComponent(
+            path = ":lifecycle:lifecycle-runtime-compose",
+            supportedPlatforms = PublishedLifecyclePlatforms - ComposePlatforms.LinuxArm64 - ComposePlatforms.LinuxX64
+        ),
         ComposeComponent(":compose:animation:animation"),
         ComposeComponent(":compose:animation:animation-core"),
         ComposeComponent(":compose:animation:animation-graphics"),
