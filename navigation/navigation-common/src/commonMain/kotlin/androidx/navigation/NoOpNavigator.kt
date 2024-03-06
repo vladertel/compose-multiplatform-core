@@ -15,16 +15,19 @@
  */
 package androidx.navigation
 
-import android.os.Bundle
 import androidx.annotation.RestrictTo
+import androidx.core.bundle.Bundle
+
+internal const val NO_OP_NAVIGATOR_NAME = "NoOp"
 
 /**
  * A [Navigator] that only supports creating destinations.
  */
+@Suppress("RUNTIME_ANNOTATION_NOT_SUPPORTED")
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-@Navigator.Name("NoOp")
+@Navigator.Name(NO_OP_NAVIGATOR_NAME)
 public class NoOpNavigator : Navigator<NavDestination>() {
-    override fun createDestination(): NavDestination = NavDestination(this)
+    override fun createDestination(): NavDestination = NavDestination(NO_OP_NAVIGATOR_NAME)
 
     override fun navigate(
         destination: NavDestination,
