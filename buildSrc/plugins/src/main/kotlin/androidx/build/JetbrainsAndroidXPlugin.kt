@@ -22,7 +22,11 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.create
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.plugin.KotlinMultiplatformPluginWrapper
+import org.jetbrains.kotlin.gradle.plugin.mpp.AbstractKotlinTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinAndroidTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinSoftwareComponentWithCoordinatesAndPublication
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
 @Suppress("UNUSED_PARAMETER")
@@ -31,7 +35,8 @@ open class JetbrainsExtensions(
     val multiplatformExtension: KotlinMultiplatformExtension
 ) {
 
-    val defaultKonanTargetsPublishedToAndroidx = setOf(
+    // check for example here: https://maven.google.com/web/index.html?q=lifecyc#androidx.lifecycle
+    val defaultKonanTargetsPublishedByAndroidx = setOf(
         KonanTarget.LINUX_X64,
         KonanTarget.IOS_X64,
         KonanTarget.IOS_ARM64,
@@ -42,7 +47,7 @@ open class JetbrainsExtensions(
 
     @JvmOverloads
     fun configureKNativeRedirectingDependenciesInKlibManifest(
-        konanTargets: Set<KonanTarget> = defaultKonanTargetsPublishedToAndroidx
+        konanTargets: Set<KonanTarget> = defaultKonanTargetsPublishedByAndroidx
     ) {
         multiplatformExtension.targets.all {
             if (it is KotlinNativeTarget && it.konanTarget in konanTargets) {
@@ -101,30 +106,88 @@ class JetbrainsAndroidXPlugin : Plugin<Project> {
 
     @Suppress("UNREACHABLE_CODE", "UNUSED_VARIABLE")
     override fun apply(project: Project) {
-        // we need KotlinMultiplatform Plugin to be applied first. See applyAndConfigure below.
+        project.plugins.all { plugin ->
+            if (plugin is KotlinMultiplatformPluginWrapper) {
+                onKotlinMultiplatformPluginApplied(project)
+            }
+        }
+    }
+
+    private fun onKotlinMultiplatformPluginApplied(project: Project) {
+        enableArtifactRedirectingPublishing(project)
+        val multiplatformExtension =
+            project.extensions.getByType(KotlinMultiplatformExtension::class.java)
+
+        val extension = project.extensions.create<JetbrainsExtensions>(
+            "jetbrainsExtension",
+            project,
+            multiplatformExtension
+        )
+
+        // Note: Currently we call it unconditionally since Androidx provides the same set of
+        // Konan targets for all multiplatform libs they publish.
+        // In the future we might need to call it with non-default konan targets set in some modules
+        extension.configureKNativeRedirectingDependenciesInKlibManifest()
     }
 
     companion object {
 
         @Suppress("UNUSED_PARAMETER", "UNUSED_VARIABLE")
         @JvmStatic
-        // this should be called only after KotlinMultiplatform plugin was applied
         fun applyAndConfigure(
             project: Project
-        ) {
-            val multiplatformExtension =
-                project.extensions.getByType(KotlinMultiplatformExtension::class.java)
+        ) {}
+    }
+}
 
-            val extension = project.extensions.create<JetbrainsExtensions>(
-                "jetbrainsExtension",
-                project,
-                multiplatformExtension
-            )
+private val Project.multiplatformExtension
+    get() = extensions.findByType(KotlinMultiplatformExtension::class.java)
 
-            // Note: Currently we call it unconditionally since Androidx provides the same set of
-            // Konan targets for all multiplatform libs they publish.
-            // In the future we might need to call it with non-default konan targets set in some modules
-            extension.configureKNativeRedirectingDependenciesInKlibManifest()
+fun Project.experimentalArtifactRedirectingPublication() : Boolean = findProperty("artifactRedirecting.publication") == "true"
+fun Project.artifactRedirectingAndroidxVersion() : String? = findProperty("artifactRedirecting.androidx.version") as String?
+fun Project.artifactRedirectingAndroidxFoundationVersion() : String? = findProperty("artifactRedirecting.androidx.foundation.version") as String?
+fun Project.artifactRedirectingAndroidxMaterial3Version() : String? = findProperty("artifactRedirecting.androidx.material3.version") as String?
+fun Project.artifactRedirectingAndroidxMaterialVersion() : String? = findProperty("artifactRedirecting.androidx.material.version") as String?
+
+fun enableArtifactRedirectingPublishing(project: Project) {
+    if (!project.experimentalArtifactRedirectingPublication()) return
+
+    if (project.experimentalArtifactRedirectingPublication() && (project.artifactRedirectingAndroidxVersion() == null)) {
+        error("androidx version should be specified for OEL publications")
+    }
+
+    val ext = project.multiplatformExtension ?: error("expected a multiplatform project")
+
+    var oelGroupId = project.findProperty("artifactRedirecting.androidx.groupId") as? String
+    if (oelGroupId == null) { // a case for compose-core libs
+        oelGroupId = project.group.toString().replace(
+            "org.jetbrains.", "androidx."
+        )
+    }
+
+    val newRootComponent: CustomRootComponent = run {
+        val oelVersionId = oelGroupId.replace("compose.", "")
+        val oelVersion = project.findProperty("artifactRedirecting.${oelVersionId}.version") as? String
+            ?: project.findProperty("artifactRedirecting.androidx.version") as? String
+        requireNotNull(oelVersion) {
+            "Please specify artifactRedirecting.androidx.${project.name}.version property"
+        }
+
+        val rootComponent = project
+            .components
+            .withType(KotlinSoftwareComponentWithCoordinatesAndPublication::class.java)
+            .getByName("kotlin")
+
+        val newDependency = project.dependencies.create(oelGroupId, project.name, oelVersion)
+        CustomRootComponent(rootComponent, newDependency)
+    }
+
+    val oelTargetNames = (project.findProperty("artifactRedirecting.publication.targetNames") as? String ?: "")
+        .split(",").toSet()
+
+    ext.targets.all { target ->
+        if (target.name in oelTargetNames || target is KotlinAndroidTarget) {
+            project.publishAndroidxReference(target as AbstractKotlinTarget, newRootComponent)
         }
     }
 }
