@@ -22,7 +22,6 @@
  * modifying its settings.
  */
 
-import androidx.build.KotlinTarget
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import androidx.build.Publish
@@ -40,11 +39,15 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
-    androidNative()
-    js()
-    wasm()
 
     defaultPlatform(PlatformIdentifier.JVM)
+}
+
+kotlin {
+    js {
+        browser()
+    }
+    wasmJs()
 
     sourceSets {
         commonMain {
@@ -106,8 +109,6 @@ androidXMultiplatform {
 androidx {
     legacyDisableKotlinStrictApiMode = true // Temporarily enabled to allow API tracking
     publish = Publish.SNAPSHOT_ONLY
-    kotlinTarget = KotlinTarget.KOTLIN_1_9
     runApiTasks = new RunApiTasks.Yes() // Used to diff against Google Truth
     type = LibraryType.INTERNAL_TEST_LIBRARY
-    doNotDocumentReason = "Not shipped externally"
 }
