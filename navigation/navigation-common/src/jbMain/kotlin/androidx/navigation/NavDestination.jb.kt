@@ -34,6 +34,8 @@ public actual open class NavDestination actual constructor(
     public actual val arguments: Map<String, NavArgument>
         get() = _arguments.toMap()
 
+    public actual constructor(navigator: Navigator<out NavDestination>) : this(navigator.name)
+
     public actual var route: String? = null
         set(route) {
             require(route == null || route.isNotBlank()) { "Cannot have an empty route" }
@@ -42,7 +44,7 @@ public actual open class NavDestination actual constructor(
 
     public actual open val displayName: String
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-        get() = TODO()
+        get() = navigatorName
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public actual fun hasRoute(route: String, arguments: Bundle?): Boolean {

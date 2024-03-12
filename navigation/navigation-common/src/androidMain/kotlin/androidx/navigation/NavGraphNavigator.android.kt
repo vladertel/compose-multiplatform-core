@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
  * @param navigatorProvider NavigatorProvider used to retrieve the correct
  * [Navigator] to navigate to the start destination
  */
-@Navigator.Name(NAV_GRAPH_NAVIGATOR_NAME)
+@Navigator.Name("navigation")
 public actual open class NavGraphNavigator actual constructor(
     private val navigatorProvider: NavigatorProvider
 ) : Navigator<NavGraph>() {

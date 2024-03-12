@@ -17,8 +17,6 @@ package androidx.navigation
 
 import kotlinx.coroutines.flow.StateFlow
 
-internal const val NAV_GRAPH_NAVIGATOR_NAME = "navigation"
-
 /**
  * A Navigator built specifically for [NavGraph] elements. Handles navigating to the
  * correct destination when the NavGraph is the target of navigation actions.
@@ -29,8 +27,6 @@ internal const val NAV_GRAPH_NAVIGATOR_NAME = "navigation"
  * @param navigatorProvider NavigatorProvider used to retrieve the correct
  * [Navigator] to navigate to the start destination
  */
-@Suppress("RUNTIME_ANNOTATION_NOT_SUPPORTED")
-@Navigator.Name(NAV_GRAPH_NAVIGATOR_NAME)
 public expect open class NavGraphNavigator(
     navigatorProvider: NavigatorProvider
 ) : Navigator<NavGraph> {

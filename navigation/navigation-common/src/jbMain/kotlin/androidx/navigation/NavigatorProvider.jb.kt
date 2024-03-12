@@ -39,6 +39,12 @@ public actual open class NavigatorProvider {
         return navigator as T
     }
 
+    public actual fun addNavigator(
+        navigator: Navigator<out NavDestination>
+    ): Navigator<out NavDestination>? {
+        return addNavigator(navigator.name, navigator)
+    }
+
     @CallSuper
     public actual open fun addNavigator(
         name: String,
@@ -75,3 +81,8 @@ public actual inline operator fun NavigatorProvider.set(
     name: String,
     navigator: Navigator<out NavDestination>
 ): Navigator<out NavDestination>? = addNavigator(name, navigator)
+
+@Suppress("NOTHING_TO_INLINE")
+public actual inline operator fun NavigatorProvider.plusAssign(navigator: Navigator<out NavDestination>) {
+    addNavigator(navigator)
+}

@@ -22,7 +22,9 @@ import kotlin.jvm.JvmStatic
 public actual open class NavGraph(navigatorName: String) :
     NavDestination(navigatorName), Iterable<NavDestination> {
 
-    private val nodes = mutableMapOf<String, NavDestination>()
+    public val nodes = mutableMapOf<String, NavDestination>()
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        get
 
     public actual fun addDestination(node: NavDestination) {
         val innerRoute = node.route

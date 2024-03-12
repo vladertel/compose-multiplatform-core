@@ -64,6 +64,11 @@ public expect open class NavDestination(
     public val arguments: Map<String, NavArgument>
 
     /**
+     * NavDestinations should be created via [Navigator.createDestination].
+     */
+    public constructor(navigator: Navigator<out NavDestination>)
+
+    /**
      * The destination's unique route.
      *
      * @return this destination's route, or null if no route is set

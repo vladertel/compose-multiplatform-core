@@ -41,6 +41,18 @@ public expect open class NavigatorProvider() {
     public open fun <T : Navigator<*>> getNavigator(name: String): T
 
     /**
+     * Register a navigator using its name. [destinations][NavDestination] may
+     * refer to any registered navigator by name for inflation. If a navigator by this name is
+     * already registered, this new navigator will replace it.
+     *
+     * @param navigator navigator to add
+     * @return the previously added Navigator for its name, if any
+     */
+    public fun addNavigator(
+        navigator: Navigator<out NavDestination>
+    ): Navigator<out NavDestination>?
+
+    /**
      * Register a navigator by name. [destinations][NavDestination] may refer to any
      * registered navigator by name for inflation. If a navigator by this name is already
      * registered, this new navigator will replace it.
@@ -75,3 +87,8 @@ public expect inline operator fun NavigatorProvider.set(
     name: String,
     navigator: Navigator<out NavDestination>
 ): Navigator<out NavDestination>?
+
+/**
+ * Register a navigator using the name provided by its name.
+ */
+public expect inline operator fun NavigatorProvider.plusAssign(navigator: Navigator<out NavDestination>)

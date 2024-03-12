@@ -84,7 +84,7 @@ public actual open class NavigatorProvider {
      * @return the previously added Navigator for the name provided by the
      * [Navigator.Name annotation][Navigator.Name], if any
      */
-    public fun addNavigator(
+    public actual fun addNavigator(
         navigator: Navigator<out NavDestination>
     ): Navigator<out NavDestination>? {
         return addNavigator(getNameForNavigator(navigator.javaClass), navigator)
@@ -180,6 +180,6 @@ public actual inline operator fun NavigatorProvider.set(
  * [Navigator.Name annotation][Navigator.Name].
  */
 @Suppress("NOTHING_TO_INLINE")
-public inline operator fun NavigatorProvider.plusAssign(navigator: Navigator<out NavDestination>) {
+public actual inline operator fun NavigatorProvider.plusAssign(navigator: Navigator<out NavDestination>) {
     addNavigator(navigator)
 }

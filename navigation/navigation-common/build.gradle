@@ -133,7 +133,6 @@ androidXMultiplatform {
         }
 
         targets.all { target ->
-
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     def konanTargetFamily = target.konanTarget.family

@@ -18,11 +18,9 @@ package androidx.navigation
 
 import kotlinx.coroutines.flow.StateFlow
 
-@Suppress("RUNTIME_ANNOTATION_NOT_SUPPORTED")
-@Navigator.Name(NAV_GRAPH_NAVIGATOR_NAME)
 public actual open class NavGraphNavigator actual constructor(
     private val navigatorProvider: NavigatorProvider
-) : Navigator<NavGraph>() {
+) : Navigator<NavGraph>(Companion.name) {
 
     /**
      * Gets the backstack of [NavBackStackEntry] associated with this Navigator
@@ -35,7 +33,7 @@ public actual open class NavGraphNavigator actual constructor(
      * @return The created [NavGraph].
      */
     override fun createDestination(): NavGraph {
-        return NavGraph(NAV_GRAPH_NAVIGATOR_NAME)
+        return NavGraph(name)
     }
 
     /**
@@ -80,5 +78,9 @@ public actual open class NavGraphNavigator actual constructor(
             startDestination.addInDefaultArgs(args)
         )
         navigator.navigate(listOf(startDestinationEntry), navOptions, navigatorExtras)
+    }
+
+    internal companion object {
+        internal const val name = "navigation"
     }
 }

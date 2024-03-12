@@ -176,7 +176,7 @@ public actual open class NavDestination actual constructor(
      *
      * This constructor requires that the given Navigator has a [Navigator.Name] annotation.
      */
-    public constructor(navigator: Navigator<out NavDestination>) : this(
+    public actual constructor(navigator: Navigator<out NavDestination>) : this(
         NavigatorProvider.getNameForNavigator(
             navigator.javaClass
         )

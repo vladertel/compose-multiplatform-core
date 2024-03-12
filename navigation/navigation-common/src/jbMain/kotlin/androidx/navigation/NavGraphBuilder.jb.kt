@@ -35,7 +35,7 @@ public actual constructor(
     public actual val provider: NavigatorProvider,
     startDestination: String,
     route: String?
-) : NavDestinationBuilder<NavGraph>(provider[NAV_GRAPH_NAVIGATOR_NAME], route) {
+) : NavDestinationBuilder<NavGraph>(provider[NavGraphNavigator.name], route) {
     private var startDestinationRoute: String = startDestination
 
     private val destinations = mutableListOf<NavDestination>()
