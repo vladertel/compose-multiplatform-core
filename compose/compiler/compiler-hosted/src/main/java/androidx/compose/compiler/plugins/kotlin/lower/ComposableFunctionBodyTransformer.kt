@@ -74,8 +74,8 @@ import org.jetbrains.kotlin.ir.declarations.IrTypeParameter
 import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.declarations.IrVariable
+import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
-import org.jetbrains.kotlin.ir.declarations.name
 import org.jetbrains.kotlin.ir.expressions.IrBlock
 import org.jetbrains.kotlin.ir.expressions.IrBody
 import org.jetbrains.kotlin.ir.expressions.IrBreakContinue
@@ -881,7 +881,7 @@ class ComposableFunctionBodyTransformer(
             scope.realizeCoalescableGroup()
         }
 
-        declaration.body = IrBlockBodyImpl(
+        declaration.body = IrFactoryImpl.createBlockBody(
             body.startOffset,
             body.endOffset,
             listOfNotNull(
@@ -892,12 +892,14 @@ class ComposableFunctionBodyTransformer(
                             scope,
                             irFunctionSourceKey()
                         )
+
                     collectSourceInformation && !hasExplicitGroups ->
                         irSourceInformationMarkerStart(
                             body,
                             scope,
                             irFunctionSourceKey()
                         )
+
                     else -> null
                 },
                 *scope.markerPreamble.statements.toTypedArray(),
@@ -907,11 +909,12 @@ class ComposableFunctionBodyTransformer(
                     outerGroupRequired -> irEndReplaceGroup(scope = scope)
                     collectSourceInformation && !hasExplicitGroups ->
                         irSourceInformationMarkerEnd(body, scope)
+
                     else -> null
                 },
                 returnVar?.let { irReturnVar(declaration.symbol, it) }
-            )
-        )
+            ))
+
         if (!outerGroupRequired && !hasExplicitGroups) {
             scope.realizeEndCalls {
                 irComposite(
@@ -1073,7 +1076,7 @@ class ComposableFunctionBodyTransformer(
                 endOffset = body.endOffset
             )
             scope.realizeCoalescableGroup()
-            declaration.body = IrBlockBodyImpl(
+            declaration.body = IrFactoryImpl.createBlockBody(
                 body.startOffset,
                 body.endOffset,
                 listOfNotNull(
@@ -1087,7 +1090,7 @@ class ComposableFunctionBodyTransformer(
             )
         } else {
             scope.realizeCoalescableGroup()
-            declaration.body = IrBlockBodyImpl(
+            declaration.body = IrFactoryImpl.createBlockBody(
                 body.startOffset,
                 body.endOffset,
                 listOfNotNull(
@@ -1270,7 +1273,7 @@ class ComposableFunctionBodyTransformer(
 
         scope.realizeGroup(endWithTraceEventEnd)
 
-        declaration.body = IrBlockBodyImpl(
+        declaration.body = IrFactoryImpl.createBlockBody(
             body.startOffset,
             body.endOffset,
             listOfNotNull(
