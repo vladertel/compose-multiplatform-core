@@ -52,28 +52,9 @@ import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.builders.irReturn
-import org.jetbrains.kotlin.ir.declarations.IrAnonymousInitializer
-import org.jetbrains.kotlin.ir.declarations.IrAttributeContainer
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrDeclaration
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationBase
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
-import org.jetbrains.kotlin.ir.declarations.IrEnumEntry
-import org.jetbrains.kotlin.ir.declarations.IrField
-import org.jetbrains.kotlin.ir.declarations.IrFile
-import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.IrLocalDelegatedProperty
-import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
-import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
-import org.jetbrains.kotlin.ir.declarations.IrProperty
-import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
-import org.jetbrains.kotlin.ir.declarations.IrTypeAlias
-import org.jetbrains.kotlin.ir.declarations.IrTypeParameter
-import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
-import org.jetbrains.kotlin.ir.declarations.IrValueParameter
-import org.jetbrains.kotlin.ir.declarations.IrVariable
+import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
-import org.jetbrains.kotlin.ir.declarations.name
 import org.jetbrains.kotlin.ir.expressions.IrBlock
 import org.jetbrains.kotlin.ir.expressions.IrBody
 import org.jetbrains.kotlin.ir.expressions.IrBreakContinue
@@ -872,7 +853,7 @@ class ComposableFunctionBodyTransformer(
             scope.realizeCoalescableGroup()
         }
 
-        declaration.body = IrBlockBodyImpl(
+        declaration.body = IrFactoryImpl.createBlockBody(
             body.startOffset,
             body.endOffset,
             listOfNotNull(
@@ -883,12 +864,14 @@ class ComposableFunctionBodyTransformer(
                             scope,
                             irFunctionSourceKey()
                         )
+
                     collectSourceInformation && !hasExplicitGroups ->
                         irSourceInformationMarkerStart(
                             body,
                             scope,
                             irFunctionSourceKey()
                         )
+
                     else -> null
                 },
                 *scope.markerPreamble.statements.toTypedArray(),
@@ -898,11 +881,12 @@ class ComposableFunctionBodyTransformer(
                     outerGroupRequired -> irEndReplaceableGroup(scope = scope)
                     collectSourceInformation && !hasExplicitGroups ->
                         irSourceInformationMarkerEnd(body, scope)
+
                     else -> null
                 },
                 returnVar?.let { irReturnVar(declaration.symbol, it) }
-            )
-        )
+            ))
+
         if (!outerGroupRequired && !hasExplicitGroups) {
             scope.realizeEndCalls {
                 irComposite(
@@ -1058,7 +1042,7 @@ class ComposableFunctionBodyTransformer(
                 endOffset = body.endOffset
             )
             scope.realizeCoalescableGroup()
-            declaration.body = IrBlockBodyImpl(
+            declaration.body = IrFactoryImpl.createBlockBody(
                 body.startOffset,
                 body.endOffset,
                 listOfNotNull(
@@ -1072,7 +1056,7 @@ class ComposableFunctionBodyTransformer(
             )
         } else {
             scope.realizeCoalescableGroup()
-            declaration.body = IrBlockBodyImpl(
+            declaration.body = IrFactoryImpl.createBlockBody(
                 body.startOffset,
                 body.endOffset,
                 listOfNotNull(
@@ -1255,7 +1239,7 @@ class ComposableFunctionBodyTransformer(
 
         scope.realizeGroup(endWithTraceEventEnd)
 
-        declaration.body = IrBlockBodyImpl(
+        declaration.body = IrFactoryImpl.createBlockBody(
             body.startOffset,
             body.endOffset,
             listOfNotNull(
