@@ -70,6 +70,7 @@ open class BasePagerTest(private val config: ParamConfig) :
     var pagerSize: Int = 0
     var placed = mutableSetOf<Int>()
     var focused = mutableSetOf<Int>()
+    var focusRequesters = mutableMapOf<Int, FocusRequester>()
     var pageSize: Int = 0
     lateinit var focusManager: FocusManager
     lateinit var initialFocusedItem: FocusRequester
@@ -139,15 +140,16 @@ open class BasePagerTest(private val config: ParamConfig) :
             }
             composeView = LocalView.current
             focusManager = LocalFocusManager.current
-            val resolvedFlingBehavior = flingBehavior ?: PagerDefaults.flingBehavior(
-                state = state,
-                pagerSnapDistance = snappingPage,
-                snapPositionalThreshold = snapPositionalThreshold
-            )
             CompositionLocalProvider(
                 LocalLayoutDirection provides config.layoutDirection,
                 LocalOverscrollConfiguration provides null
             ) {
+                val resolvedFlingBehavior = flingBehavior ?: PagerDefaults.flingBehavior(
+                    state = state,
+                    pagerSnapDistance = snappingPage,
+                    snapPositionalThreshold = snapPositionalThreshold
+                )
+
                 scope = rememberCoroutineScope()
                 Box(
                     modifier = Modifier
@@ -180,6 +182,7 @@ open class BasePagerTest(private val config: ParamConfig) :
     internal fun Page(index: Int, initialFocusedItemIndex: Int = 0) {
         val focusRequester = FocusRequester().also {
             if (index == initialFocusedItemIndex) initialFocusedItem = it
+            focusRequesters[index] = it
         }
         Box(modifier = Modifier
             .focusRequester(focusRequester)

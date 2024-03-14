@@ -427,7 +427,8 @@ object NavigationSuiteDefaults {
         navigationBarContentColor: Color = contentColorFor(navigationBarContainerColor),
         navigationRailContainerColor: Color = NavigationRailDefaults.ContainerColor,
         navigationRailContentColor: Color = contentColorFor(navigationRailContainerColor),
-        navigationDrawerContainerColor: Color = DrawerDefaults.containerColor,
+        navigationDrawerContainerColor: Color =
+            @Suppress("DEPRECATION") DrawerDefaults.containerColor,
         navigationDrawerContentColor: Color = contentColorFor(navigationDrawerContainerColor),
     ): NavigationSuiteColors =
         NavigationSuiteColors(
@@ -484,8 +485,7 @@ internal constructor(
  * [NavigationDrawerItem] of the [NavigationSuiteScope.item]
  */
 @ExperimentalMaterial3AdaptiveNavigationSuiteApi
-class NavigationSuiteItemColors
-internal constructor(
+class NavigationSuiteItemColors constructor(
     val navigationBarItemColors: NavigationBarItemColors,
     val navigationRailItemColors: NavigationRailItemColors,
     val navigationDrawerItemColors: NavigationDrawerItemColors,

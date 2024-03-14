@@ -16,7 +16,6 @@
 
 package androidx.tv.material3
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -72,7 +71,6 @@ import kotlinx.coroutines.launch
  * levels below 28 as it is not supported by the underlying OS
  * @param content defines the [Composable] content inside the surface
  */
-@ExperimentalTvMaterial3Api
 @NonRestartableComposable
 @Composable
 fun Surface(
@@ -129,7 +127,6 @@ fun Surface(
  * still happen internally.
  * @param content defines the [Composable] content inside the surface
  */
-@ExperimentalTvMaterial3Api
 @Composable
 fun Surface(
     onClick: () -> Unit,
@@ -238,7 +235,6 @@ fun Surface(
  * still happen internally.
  * @param content defines the [Composable] content inside the surface
  */
-@ExperimentalTvMaterial3Api
 @Composable
 fun Surface(
     checked: Boolean,
@@ -318,7 +314,6 @@ fun Surface(
     )
 }
 
-@ExperimentalTvMaterial3Api
 @Composable
 private fun SurfaceImpl(
     modifier: Modifier,
@@ -347,13 +342,9 @@ private fun SurfaceImpl(
     )
 
     val absoluteElevation = LocalAbsoluteTonalElevation.current + tonalElevation
-    val contentColorAsAnim by animateColorAsState(
-        targetValue = contentColor,
-        label = "Surface.contentColor"
-    )
 
     CompositionLocalProvider(
-        LocalContentColor provides contentColorAsAnim,
+        LocalContentColor provides contentColor,
         LocalAbsoluteTonalElevation provides absoluteElevation
     ) {
         val zIndex by animateFloatAsState(
@@ -567,7 +558,6 @@ private fun Modifier.handleDPadEnter(
 }
 
 @Composable
-@ExperimentalTvMaterial3Api
 internal fun surfaceColorAtElevation(color: Color, elevation: Dp): Color {
     return if (color == MaterialTheme.colorScheme.surface) {
         MaterialTheme.colorScheme.surfaceColorAtElevation(elevation)
@@ -611,9 +601,6 @@ internal const val EnabledContentAlpha = 1f
  * absolute elevation is a sum of all the previous elevations. Absolute elevation is only used for
  * calculating surface tonal colors, and is *not* used for drawing the shadow in a [SurfaceImpl].
  */
-@Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-@ExperimentalTvMaterial3Api
-@get:ExperimentalTvMaterial3Api
 val LocalAbsoluteTonalElevation = compositionLocalOf { 0.dp }
 
 private val AcceptableKeys = intArrayOf(

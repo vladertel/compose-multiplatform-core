@@ -18,15 +18,20 @@ package androidx.compose.foundation.text.input.internal.selection
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.BasicTextField2
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.FocusedWindowTest
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -39,6 +44,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
 import org.junit.Rule
@@ -53,7 +59,7 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
 
     private lateinit var state: TextFieldState
 
-    private val TAG = "BasicTextField2"
+    private val TAG = "BasicTextField"
 
     private val fontSize = 10.sp
 
@@ -64,7 +70,7 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         // this test is more about detecting a possible crash
         state = TextFieldState()
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
                 modifier = Modifier
@@ -76,15 +82,15 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
 
         with(rule.onNodeWithTag(TAG)) {
             performTouchInput { click(center) }
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0))
+            assertThat(state.text.selection).isEqualTo(TextRange(0))
             performTouchInput { click(Offset(left + 1f, top + 1f)) } // topLeft
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0))
+            assertThat(state.text.selection).isEqualTo(TextRange(0))
             performTouchInput { click(Offset(right - 1f, top + 1f)) } // topRight
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0))
+            assertThat(state.text.selection).isEqualTo(TextRange(0))
             performTouchInput { click(Offset(left + 1f, bottom - 1f)) } // bottomLeft
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0))
+            assertThat(state.text.selection).isEqualTo(TextRange(0))
             performTouchInput { click(Offset(right - 1f, bottom - 1f)) } // bottomRight
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0))
+            assertThat(state.text.selection).isEqualTo(TextRange(0))
         }
     }
 
@@ -92,7 +98,7 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
     fun clickOnText_ltr() {
         state = TextFieldState("abc")
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
                 modifier = Modifier
@@ -105,7 +111,7 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         with(rule.onNodeWithTag(TAG)) {
             performTouchInput { click(Offset((fontSize * 2).toPx(), height / 2f)) }
         }
-        assertThat(state.text.selectionInChars).isEqualTo(TextRange(2))
+        assertThat(state.text.selection).isEqualTo(TextRange(2))
     }
 
     @Test
@@ -113,10 +119,13 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         state = TextFieldState("\u05D0\u05D1\u05D2")
         rule.setTextFieldTestContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                BasicTextField2(
+                BasicTextField(
                     state = state,
                     textStyle = defaultTextStyle,
-                    modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                    modifier = Modifier
+                        .testTag(TAG)
+                        .width(50.dp)
+                        .height(15.dp)
                 )
             }
         }
@@ -124,7 +133,7 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         with(rule.onNodeWithTag(TAG)) {
             performTouchInput { click(Offset(right - (fontSize * 2).toPx(), height / 2f)) }
         }
-        assertThat(state.text.selectionInChars).isEqualTo(TextRange(2))
+        assertThat(state.text.selection).isEqualTo(TextRange(2))
     }
 
     @Test
@@ -132,10 +141,13 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         state = TextFieldState("abc")
         rule.setTextFieldTestContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                BasicTextField2(
+                BasicTextField(
                     state = state,
                     textStyle = defaultTextStyle,
-                    modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                    modifier = Modifier
+                        .testTag(TAG)
+                        .width(50.dp)
+                        .height(15.dp)
                 )
             }
         }
@@ -143,41 +155,47 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         with(rule.onNodeWithTag(TAG)) {
             performTouchInput { click(Offset(right - (fontSize * 2).toPx(), height / 2f)) }
         }
-        assertThat(state.text.selectionInChars).isEqualTo(TextRange(1))
+        assertThat(state.text.selection).isEqualTo(TextRange(1))
     }
 
     @Test
     fun clickOnText_rtl_in_ltrLayout() {
         state = TextFieldState("\u05D0\u05D1\u05D2")
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
-                modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(50.dp)
+                    .height(15.dp)
             )
         }
 
         with(rule.onNodeWithTag(TAG)) {
             performTouchInput { click(Offset((fontSize * 2).toPx(), height / 2f)) }
         }
-        assertThat(state.text.selectionInChars).isEqualTo(TextRange(1))
+        assertThat(state.text.selection).isEqualTo(TextRange(1))
     }
 
     @Test
     fun clickOnEmptyRegion_ltr() {
         state = TextFieldState("abc")
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
-                modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                modifier = Modifier
+                    .testTag(TAG)
+                    .width(50.dp)
+                    .height(15.dp)
             )
         }
 
         with(rule.onNodeWithTag(TAG)) {
             performTouchInput { click(Offset((fontSize * 4).toPx(), height / 2f)) }
         }
-        assertThat(state.text.selectionInChars).isEqualTo(TextRange(3))
+        assertThat(state.text.selection).isEqualTo(TextRange(3))
     }
 
     @Test
@@ -185,10 +203,13 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         state = TextFieldState("\u05D0\u05D1\u05D2")
         rule.setTextFieldTestContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                BasicTextField2(
+                BasicTextField(
                     state = state,
                     textStyle = defaultTextStyle,
-                    modifier = Modifier.testTag(TAG).width(50.dp).height(15.dp)
+                    modifier = Modifier
+                        .testTag(TAG)
+                        .width(50.dp)
+                        .height(15.dp)
                 )
             }
         }
@@ -196,7 +217,7 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         with(rule.onNodeWithTag(TAG)) {
             performTouchInput { click(Offset(fontSize.toPx(), height / 2f)) }
         }
-        assertThat(state.text.selectionInChars).isEqualTo(TextRange(3))
+        assertThat(state.text.selection).isEqualTo(TextRange(3))
     }
 
     @Test
@@ -204,7 +225,7 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         state = TextFieldState("abcabcabcabc")
         val scrollState = ScrollState(0)
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
                 lineLimits = TextFieldLineLimits.SingleLine,
@@ -221,7 +242,7 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         }
 
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(6))
+            assertThat(state.text.selection).isEqualTo(TextRange(6))
             assertThat(scrollState.value).isGreaterThan(0)
         }
     }
@@ -231,7 +252,7 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
         state = TextFieldState("abc abc abc abc")
         val scrollState = ScrollState(0)
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state = state,
                 textStyle = defaultTextStyle,
                 lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
@@ -247,7 +268,38 @@ class TextFieldClickToMoveCursorTest : FocusedWindowTest {
             performTouchInput { click(Offset(fontSize.toPx(), bottom - 1f)) }
         }
         rule.waitForIdle()
-        assertThat(state.text.selectionInChars).isEqualTo(TextRange(5))
+        assertThat(state.text.selection).isEqualTo(TextRange(5))
         assertThat(scrollState.value).isGreaterThan(0)
+    }
+
+    @Test
+    fun textFieldInsideDialog_tapsChangeCursorPosition() {
+        state = TextFieldState("abc abc abc abc")
+        val show = mutableStateOf(true)
+        val focusRequester = FocusRequester()
+        rule.setContent {
+            Dialog(
+                onDismissRequest = { show.value = false },
+                content = {
+                    BasicTextField(
+                        state = state,
+                        textStyle = defaultTextStyle,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(TAG)
+                            .focusRequester(focusRequester),
+                    )
+                    LaunchedEffect(Unit) {
+                        focusRequester.requestFocus()
+                    }
+                }
+            )
+        }
+
+        with(rule.onNodeWithTag(TAG)) {
+            performTouchInput { click(Offset(2 * fontSize.toPx(), centerY)) }
+        }
+        rule.waitForIdle()
+        assertThat(state.text.selection).isEqualTo(TextRange(2))
     }
 }

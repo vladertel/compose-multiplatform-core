@@ -21,9 +21,12 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+
 import androidx.build.PlatformIdentifier
 import androidx.build.Publish
 import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.konan.target.Family
 
 plugins {
     id("AndroidXPlugin")
@@ -32,6 +35,11 @@ plugins {
 
 androidXMultiplatform {
     android()
+    desktop()
+    mac()
+    linux()
+    ios()
+
     kotlin {
         explicitApi = ExplicitApiMode.Strict
     }
@@ -41,32 +49,42 @@ androidXMultiplatform {
     sourceSets {
         commonMain {
             dependencies {
-                // TODO(b/214568825): migrate from `androidMain` to here.
+                api(project(":annotation:annotation"))
+                api(libs.kotlinStdlib)
+                api(libs.kotlinCoroutinesCore)
             }
         }
 
         commonTest {
             dependencies {
-                // TODO(b/214568825): migrate from `androidUnitTest` to here.
+                implementation(project(":kruth:kruth"))
+                implementation(libs.kotlinTest)
+                implementation(libs.kotlinCoroutinesTest)
+            }
+        }
+
+        jvmMain {
+            dependsOn(commonMain)
+        }
+
+        jvmTest {
+            dependsOn(commonTest)
+            dependencies {
+                implementation(libs.junit)
             }
         }
 
         androidMain {
-            dependsOn(commonMain)
+            dependsOn(jvmMain)
             dependencies {
-                api(project(":annotation:annotation"))
-                api(libs.kotlinStdlib)
                 api(libs.kotlinCoroutinesAndroid)
             }
         }
 
         androidUnitTest {
-            dependsOn(commonTest)
+            dependsOn(jvmTest)
             dependencies {
-                implementation(libs.junit)
                 implementation(libs.mockitoCore4)
-                implementation(libs.kotlinTest)
-                implementation(libs.truth)
             }
         }
 
@@ -74,12 +92,30 @@ androidXMultiplatform {
             dependsOn(commonTest)
             dependencies {
                 implementation("androidx.core:core-ktx:1.2.0")
-                implementation(libs.truth)
-                implementation(libs.kotlinStdlib)
-                implementation(libs.junit)
                 implementation(libs.testExtJunit)
                 implementation(libs.testCore)
                 implementation(libs.testRunner)
+            }
+        }
+
+        desktopMain.dependsOn(jvmMain)
+        nonJvmMain.dependsOn(commonMain)
+        nativeMain.dependsOn(nonJvmMain)
+        darwinMain.dependsOn(nativeMain)
+        linuxMain.dependsOn(nativeMain)
+
+        targets.all { target ->
+            if (target.platformType == KotlinPlatformType.native) {
+                target.compilations["main"].defaultSourceSet {
+                    def konanTargetFamily = target.konanTarget.family
+                    if (konanTargetFamily == Family.OSX || konanTargetFamily == Family.IOS) {
+                        dependsOn(darwinMain)
+                    } else if (konanTargetFamily == Family.LINUX) {
+                        dependsOn(linuxMain)
+                    } else {
+                        throw new GradleException("unknown native target ${target}")
+                    }
+                }
             }
         }
     }

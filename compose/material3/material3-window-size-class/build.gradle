@@ -41,7 +41,7 @@ androidXMultiplatform {
             dependencies {
                 implementation(libs.kotlinStdlibCommon)
                 implementation("androidx.compose.ui:ui-util:1.6.0")
-                api("androidx.compose.runtime:runtime:1.6.0")
+                api(project(":compose:runtime:runtime"))
                 api("androidx.compose.ui:ui:1.6.0")
                 api("androidx.compose.ui:ui-unit:1.6.0")
             }
@@ -119,7 +119,7 @@ androidXMultiplatform {
 
 androidx {
     name = "Compose Material 3 Window Size Class"
-    type = LibraryType.PUBLISHED_LIBRARY
+    type = LibraryType.PUBLISHED_KOTLIN_ONLY_LIBRARY
     inceptionYear = "2022"
     description = "Provides window size classes for building responsive UIs"
 }

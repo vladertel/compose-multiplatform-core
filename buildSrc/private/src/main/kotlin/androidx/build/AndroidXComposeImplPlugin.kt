@@ -222,7 +222,18 @@ private fun configureComposeCompilerPlugin(project: Project, extension: AndroidX
         }
         project.dependencies.add(
             COMPILER_PLUGIN_CONFIGURATION,
-            "androidx.compose.compiler:compiler:$versionToUse"
+            if (project.isComposeCompilerUnpinned()) {
+                if (ProjectLayoutType.isPlayground(project)) {
+                    AndroidXPlaygroundRootImplPlugin.projectOrArtifact(
+                        project.rootProject,
+                        ":compose:compiler:compiler"
+                    )
+                } else {
+                    project.rootProject.resolveProject(":compose:compiler:compiler")
+                }
+            } else {
+                "androidx.compose.compiler:compiler:$versionToUse"
+            }
         )
 
         val kotlinPluginProvider = project.provider {
@@ -249,6 +260,7 @@ private fun configureComposeCompilerPlugin(project: Project, extension: AndroidX
 
             compile.pluginClasspath.from(kotlinPluginProvider.get())
             compile.addPluginOption(ComposeCompileOptions.StrongSkippingOption, "true")
+            compile.addPluginOption(ComposeCompileOptions.NonSkippingGroupOption, "true")
 
             if (shouldPublish) {
                 compile.addPluginOption(ComposeCompileOptions.SourceOption, "true")
@@ -333,9 +345,12 @@ fun Project.composeCompilerDataDir(): File {
     return File(getDistributionDirectory(), "compose-compiler-data")
 }
 
+private const val ComposePluginId = "androidx.compose.compiler.plugins.kotlin"
+
 private enum class ComposeCompileOptions(val pluginId: String, val key: String) {
-    SourceOption("androidx.compose.compiler.plugins.kotlin", "sourceInformation"),
-    MetricsOption("androidx.compose.compiler.plugins.kotlin", "metricsDestination"),
-    ReportsOption("androidx.compose.compiler.plugins.kotlin", "reportsDestination"),
-    StrongSkippingOption("androidx.compose.compiler.plugins.kotlin", "experimentalStrongSkipping");
+    SourceOption(ComposePluginId, "sourceInformation"),
+    MetricsOption(ComposePluginId, "metricsDestination"),
+    ReportsOption(ComposePluginId, "reportsDestination"),
+    StrongSkippingOption(ComposePluginId, "experimentalStrongSkipping"),
+    NonSkippingGroupOption(ComposePluginId, "nonSkippingGroupOptimization")
 }

@@ -19,18 +19,25 @@ package androidx.compose.material3.adaptive.layout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.SeekableTransitionState
+import androidx.compose.animation.core.Transition
+import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.Measurable
@@ -39,14 +46,18 @@ import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.MultiContentMeasurePolicy
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
+import androidx.compose.ui.util.fastMap
+import androidx.compose.ui.util.fastMaxOfOrNull
 import kotlin.math.max
 import kotlin.math.min
 
@@ -82,82 +93,161 @@ internal fun ThreePaneScaffold(
     windowInsets: WindowInsets,
     secondaryPane: @Composable ThreePaneScaffoldScope.() -> Unit,
     tertiaryPane: (@Composable ThreePaneScaffoldScope.() -> Unit)? = null,
+    paneExpansionState: PaneExpansionState = PaneExpansionState(),
+    paneExpansionDragHandle: (@Composable (PaneExpansionState) -> Unit)? = null,
+    primaryPane: @Composable ThreePaneScaffoldScope.() -> Unit,
+) {
+    val scaffoldState = remember {
+        SeekableTransitionState(scaffoldValue)
+    }
+    LaunchedEffect(key1 = scaffoldValue) {
+        scaffoldState.animateTo(scaffoldValue)
+    }
+    ThreePaneScaffold(
+        modifier = modifier,
+        scaffoldDirective = scaffoldDirective,
+        scaffoldState = scaffoldState,
+        paneOrder = paneOrder,
+        windowInsets = windowInsets,
+        secondaryPane = secondaryPane,
+        tertiaryPane = tertiaryPane,
+        paneExpansionState = paneExpansionState,
+        paneExpansionDragHandle = paneExpansionDragHandle,
+        primaryPane = primaryPane
+    )
+}
+
+@ExperimentalMaterial3AdaptiveApi
+@Composable
+internal fun ThreePaneScaffold(
+    modifier: Modifier,
+    scaffoldDirective: PaneScaffoldDirective,
+    scaffoldState: SeekableTransitionState<ThreePaneScaffoldValue>,
+    paneOrder: ThreePaneScaffoldHorizontalOrder,
+    windowInsets: WindowInsets,
+    secondaryPane: @Composable ThreePaneScaffoldScope.() -> Unit,
+    tertiaryPane: (@Composable ThreePaneScaffoldScope.() -> Unit)? = null,
+    paneExpansionState: PaneExpansionState = PaneExpansionState(),
+    paneExpansionDragHandle: (@Composable (PaneExpansionState) -> Unit)? = null,
     primaryPane: @Composable ThreePaneScaffoldScope.() -> Unit,
 ) {
     val layoutDirection = LocalLayoutDirection.current
     val ltrPaneOrder = remember(paneOrder, layoutDirection) {
         paneOrder.toLtrOrder(layoutDirection)
     }
-    val previousScaffoldValue = remember { ThreePaneScaffoldValueHolder(scaffoldValue) }
-    val paneMotion = calculateThreePaneMotion(
-        previousScaffoldValue = previousScaffoldValue.value,
-        currentScaffoldValue = scaffoldValue,
-        paneOrder = ltrPaneOrder
-    )
-    previousScaffoldValue.value = scaffoldValue
+    val previousScaffoldValue = remember { ThreePaneScaffoldValueHolder(scaffoldState.targetState) }
+    val spacerSize = with(LocalDensity.current) {
+        scaffoldDirective.horizontalPartitionSpacerSize.roundToPx()
+    }
+    val paneMotion = remember(scaffoldState.targetState, ltrPaneOrder, spacerSize) {
+        val previousValue = previousScaffoldValue.value
+        previousScaffoldValue.value = scaffoldState.targetState
+        calculateThreePaneMotion(
+            previousScaffoldValue = previousValue,
+            currentScaffoldValue = scaffoldState.targetState,
+            paneOrder = ltrPaneOrder,
+            spacerSize = spacerSize
+        )
+    }
 
-    // Create PaneWrappers for each of the panes and map the transitions according to each pane
-    // role and order.
-    val contents = listOf<@Composable () -> Unit>(
-        {
-            remember { ThreePaneScaffoldScopeImpl() }.apply {
-                paneAdaptedValue = scaffoldValue[ThreePaneScaffoldRole.Primary]
-                positionAnimationSpec = paneMotion.animationSpec
-                enterTransition = paneMotion.enterTransition(
-                    ThreePaneScaffoldRole.Primary,
-                    ltrPaneOrder
-                )
-                exitTransition = paneMotion.exitTransition(
-                    ThreePaneScaffoldRole.Primary,
-                    ltrPaneOrder
-                )
-                animationToolingLabel = "Primary"
-            }.primaryPane()
-        },
-        {
-            remember { ThreePaneScaffoldScopeImpl() }.apply {
-                paneAdaptedValue = scaffoldValue[ThreePaneScaffoldRole.Secondary]
-                positionAnimationSpec = paneMotion.animationSpec
-                enterTransition = paneMotion.enterTransition(
-                    ThreePaneScaffoldRole.Secondary,
-                    ltrPaneOrder
-                )
-                exitTransition = paneMotion.exitTransition(
-                    ThreePaneScaffoldRole.Secondary,
-                    ltrPaneOrder
-                )
-                animationToolingLabel = "Secondary"
-            }.secondaryPane()
-        },
-        {
-            if (tertiaryPane != null) {
-                remember { ThreePaneScaffoldScopeImpl() }.apply {
-                    paneAdaptedValue = scaffoldValue[ThreePaneScaffoldRole.Tertiary]
-                    positionAnimationSpec = paneMotion.animationSpec
-                    enterTransition = paneMotion.enterTransition(
-                        ThreePaneScaffoldRole.Tertiary,
-                        ltrPaneOrder
-                    )
-                    exitTransition = paneMotion.exitTransition(
-                        ThreePaneScaffoldRole.Tertiary,
-                        ltrPaneOrder
-                    )
-                    animationToolingLabel = "Tertiary"
-                }.tertiaryPane()
-            }
-        },
-    )
-
-    val measurePolicy = remember {
-        ThreePaneContentMeasurePolicy(scaffoldDirective, scaffoldValue, ltrPaneOrder, windowInsets)
-    }.apply {
-        this.scaffoldDirective = scaffoldDirective
-        this.scaffoldValue = scaffoldValue
-        this.paneOrder = ltrPaneOrder
-        this.windowInsets = windowInsets
+    val currentTransition = rememberTransition(scaffoldState)
+    val currentFraction = if (scaffoldState.currentState == scaffoldState.targetState) {
+        1f
+    } else {
+        scaffoldState.fraction
     }
 
     LookaheadScope {
+        // Create PaneWrappers for each of the panes and map the transitions according to each pane
+        // role and order.
+        val contents = listOf<@Composable () -> Unit>(
+            {
+                remember(currentTransition, this@LookaheadScope) {
+                    ThreePaneScaffoldScopeImpl(
+                        ThreePaneScaffoldRole.Primary,
+                        currentTransition,
+                        this@LookaheadScope
+                    )
+                }.apply {
+                    scaffoldStateTransitionFraction = currentFraction
+                    positionAnimationSpec = paneMotion.positionAnimationSpec
+                    sizeAnimationSpec = paneMotion.sizeAnimationSpec
+                    enterTransition = paneMotion.enterTransition(
+                        ThreePaneScaffoldRole.Primary,
+                        ltrPaneOrder
+                    )
+                    exitTransition = paneMotion.exitTransition(
+                        ThreePaneScaffoldRole.Primary,
+                        ltrPaneOrder
+                    )
+                }.primaryPane()
+            },
+            {
+                remember(currentTransition, this@LookaheadScope) {
+                    ThreePaneScaffoldScopeImpl(
+                        ThreePaneScaffoldRole.Secondary,
+                        currentTransition,
+                        this@LookaheadScope
+                    )
+                }.apply {
+                    scaffoldStateTransitionFraction = currentFraction
+                    positionAnimationSpec = paneMotion.positionAnimationSpec
+                    sizeAnimationSpec = paneMotion.sizeAnimationSpec
+                    enterTransition = paneMotion.enterTransition(
+                        ThreePaneScaffoldRole.Secondary,
+                        ltrPaneOrder
+                    )
+                    exitTransition = paneMotion.exitTransition(
+                        ThreePaneScaffoldRole.Secondary,
+                        ltrPaneOrder
+                    )
+                }.secondaryPane()
+            },
+            {
+                if (tertiaryPane != null) {
+                    remember(currentTransition, this@LookaheadScope) {
+                        ThreePaneScaffoldScopeImpl(
+                            ThreePaneScaffoldRole.Tertiary,
+                            currentTransition,
+                            this@LookaheadScope
+                        )
+                    }.apply {
+                        scaffoldStateTransitionFraction = currentFraction
+                        positionAnimationSpec = paneMotion.positionAnimationSpec
+                        sizeAnimationSpec = paneMotion.sizeAnimationSpec
+                        enterTransition = paneMotion.enterTransition(
+                            ThreePaneScaffoldRole.Tertiary,
+                            ltrPaneOrder
+                        )
+                        exitTransition = paneMotion.exitTransition(
+                            ThreePaneScaffoldRole.Tertiary,
+                            ltrPaneOrder
+                        )
+                    }.tertiaryPane()
+                }
+            },
+            {
+                if (paneExpansionDragHandle != null) {
+                    paneExpansionDragHandle(paneExpansionState)
+                }
+            }
+        )
+
+        val measurePolicy = remember(paneExpansionState) {
+            ThreePaneContentMeasurePolicy(
+                scaffoldDirective,
+                scaffoldState.targetState,
+                paneExpansionState,
+                ltrPaneOrder,
+                windowInsets
+            )
+        }.apply {
+            this.scaffoldDirective = scaffoldDirective
+            this.scaffoldValue = scaffoldState.targetState
+            this.paneOrder = ltrPaneOrder
+            this.windowInsets = windowInsets
+        }
+
         Layout(
             contents = contents,
             modifier = modifier,
@@ -173,6 +263,7 @@ private class ThreePaneScaffoldValueHolder(var value: ThreePaneScaffoldValue)
 private class ThreePaneContentMeasurePolicy(
     scaffoldDirective: PaneScaffoldDirective,
     scaffoldValue: ThreePaneScaffoldValue,
+    val paneExpansionState: PaneExpansionState,
     paneOrder: ThreePaneScaffoldHorizontalOrder,
     windowInsets: WindowInsets
 ) : MultiContentMeasurePolicy {
@@ -185,7 +276,7 @@ private class ThreePaneContentMeasurePolicy(
      * Data class that is used to store the position and width of an expanded pane to be reused when
      * the pane is being hidden.
      */
-    private data class PanePlacement(var positionX: Int = 0, var measuredWidth: Int = 0)
+    data class PanePlacement(var positionX: Int = 0, var measuredWidth: Int = 0)
 
     private val placementsCache = mapOf(
         ThreePaneScaffoldRole.Primary to PanePlacement(),
@@ -200,6 +291,7 @@ private class ThreePaneContentMeasurePolicy(
         val primaryMeasurables = measurables[0]
         val secondaryMeasurables = measurables[1]
         val tertiaryMeasurables = measurables[2]
+        val dragHandleMeasurables = measurables[3]
         return layout(constraints.maxWidth, constraints.maxHeight) {
             if (coordinates == null) {
                 return@layout
@@ -248,7 +340,52 @@ private class ThreePaneContentMeasurePolicy(
                 constraints.maxHeight - bottomContentPadding
             )
 
-            if (scaffoldDirective.excludedBounds.isNotEmpty()) {
+            if (!paneExpansionState.isUnspecified()) {
+                // Pane expansion should override everything
+                val availableWidth = constraints.maxWidth - leftContentPadding - rightContentPadding
+                if (paneExpansionState.firstPaneWidth == 0 ||
+                    paneExpansionState.firstPanePercentage == 0f) {
+                    if (visiblePanes.size > 1) {
+                        measureAndPlacePaneWithLocalBounds(
+                            outerBounds,
+                            visiblePanes[1],
+                            isLookingAhead
+                        )
+                    }
+                } else if (
+                    paneExpansionState.firstPaneWidth >= availableWidth - verticalSpacerSize ||
+                    paneExpansionState.firstPanePercentage >= 1f) {
+                    if (visiblePanes.isNotEmpty()) {
+                        measureAndPlacePaneWithLocalBounds(
+                            outerBounds,
+                            visiblePanes[0],
+                            isLookingAhead
+                        )
+                    }
+                } else if (visiblePanes.isNotEmpty()) {
+                    val firstPaneWidth =
+                        if (paneExpansionState.firstPaneWidth !=
+                            PaneExpansionState.UnspecifiedWidth) {
+                            paneExpansionState.firstPaneWidth
+                        } else {
+                            (paneExpansionState.firstPanePercentage *
+                                (availableWidth - verticalSpacerSize)).toInt()
+                        }
+                    val firstPaneRight = outerBounds.left + firstPaneWidth
+                    measureAndPlacePaneWithLocalBounds(
+                        outerBounds.copy(right = firstPaneRight),
+                        visiblePanes[0],
+                        isLookingAhead
+                    )
+                    if (visiblePanes.size > 1) {
+                        measureAndPlacePaneWithLocalBounds(
+                            outerBounds.copy(left = firstPaneRight + verticalSpacerSize),
+                            visiblePanes[1],
+                            isLookingAhead
+                        )
+                    }
+                }
+            } else if (scaffoldDirective.excludedBounds.isNotEmpty()) {
                 val layoutBounds = coordinates!!.boundsInWindow()
                 val layoutPhysicalPartitions = mutableListOf<Rect>()
                 var actualLeft = layoutBounds.left + leftContentPadding
@@ -342,9 +479,18 @@ private class ThreePaneContentMeasurePolicy(
                 )
             }
 
-            // Place the hidden panes. Those should only exist when isLookingAhead = true.
-            // Placing these type of pane during the lookahead phase ensures a proper motion
-            // at the AnimatedVisibility.
+            if (visiblePanes.size == 2 && dragHandleMeasurables.isNotEmpty()) {
+                measureAndPlaceDragHandleIfNeeded(
+                    dragHandleMeasurables,
+                    constraints,
+                    outerBounds,
+                    verticalSpacerSize,
+                    getSpacerMiddleOffsetX(visiblePanes[0], visiblePanes[1]),
+                )
+            }
+
+            // Place the hidden panes to ensure a proper motion at the AnimatedVisibility,
+            // otherwise the pane will be gone immediately when it's hidden.
             // The placement is done using the outerBounds, as the placementsCache holds
             // absolute position values.
             placeHiddenPanes(
@@ -415,28 +561,32 @@ private class ThreePaneContentMeasurePolicy(
         }
     }
 
-    @OptIn(ExperimentalMaterial3AdaptiveApi::class)
     private fun Placeable.PlacementScope.measureAndPlacePane(
         partitionBounds: Rect,
         measurable: PaneMeasurable,
         isLookingAhead: Boolean
+    ) = measureAndPlacePaneWithLocalBounds(
+        getLocalBounds(partitionBounds),
+        measurable,
+        isLookingAhead
+    )
+
+    private fun Placeable.PlacementScope.measureAndPlacePaneWithLocalBounds(
+        localBounds: IntRect,
+        measurable: PaneMeasurable,
+        isLookingAhead: Boolean
     ) {
-        val localBounds = getLocalBounds(partitionBounds)
-        measurable.measuredWidth = localBounds.width
-        measurable.apply {
-            measure(Constraints.fixed(measuredWidth, localBounds.height))
-                .place(localBounds.left, localBounds.top)
-        }
-        if (isLookingAhead) {
-            // Cache the values to be used when this measurable role is being hidden.
-            // See placeHiddenPanes.
-            val cachedPanePlacement = placementsCache[measurable.role]!!
-            cachedPanePlacement.measuredWidth = measurable.measuredWidth
-            cachedPanePlacement.positionX = localBounds.left
+        with(measurable) {
+            measureAndPlace(
+                localBounds.width,
+                localBounds.height,
+                localBounds.left,
+                localBounds.top,
+                if (isLookingAhead) placementsCache else null
+            )
         }
     }
 
-    @OptIn(ExperimentalMaterial3AdaptiveApi::class)
     private fun Placeable.PlacementScope.measureAndPlacePanes(
         partitionBounds: Rect,
         spacerSize: Int,
@@ -477,14 +627,14 @@ private class ThreePaneContentMeasurePolicy(
         }
         var positionX = partitionBounds.left
         measurables.fastForEach {
-            it.measure(Constraints.fixed(it.measuredWidth, partitionBounds.height))
-                .place(positionX, partitionBounds.top)
-            if (isLookingAhead) {
-                // Cache the values to be used when this measurable's role is being hidden.
-                // See placeHiddenPanes.
-                val cachedPanePlacement = placementsCache[it.role]!!
-                cachedPanePlacement.measuredWidth = it.measuredWidth
-                cachedPanePlacement.positionX = positionX
+            with(it) {
+                measureAndPlace(
+                    it.measuredWidth,
+                    partitionBounds.height,
+                    positionX,
+                    partitionBounds.top,
+                    if (isLookingAhead) placementsCache else null
+                )
             }
             positionX += it.measuredWidth + spacerSize
         }
@@ -504,31 +654,67 @@ private class ThreePaneContentMeasurePolicy(
                 return
             }
             val cachedPanePlacement = placementsCache[it.role]!!
-            it.measure(
-                Constraints.fixed(
-                    width = cachedPanePlacement.measuredWidth,
-                    height = partitionHeight
+            with(it) {
+                measureAndPlace(
+                    cachedPanePlacement.measuredWidth,
+                    partitionHeight,
+                    cachedPanePlacement.positionX,
+                    partitionTop,
+                    null,
+                    ThreePaneScaffoldDefaults.HiddenPaneZIndex
                 )
-            ).place(
-                cachedPanePlacement.positionX,
-                partitionTop,
-                ThreePaneScaffoldDefaults.HiddenPaneZIndex
-            )
+            }
         }
     }
 
     private fun Placeable.PlacementScope.getLocalBounds(bounds: Rect): IntRect {
         return bounds.translate(coordinates!!.windowToLocal(Offset.Zero)).roundToIntRect()
     }
-}
 
-/**
- * A conditional [Modifier.clipToBounds] that will only clip when the given [adaptedValue] is
- * [PaneAdaptedValue.Hidden].
- */
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
-private fun Modifier.clipToBounds(adaptedValue: PaneAdaptedValue): Modifier =
-    if (adaptedValue == PaneAdaptedValue.Hidden) this.clipToBounds() else this
+    private fun Placeable.PlacementScope.measureAndPlaceDragHandleIfNeeded(
+        measurables: List<Measurable>,
+        constraints: Constraints,
+        contentBounds: IntRect,
+        maxHandleWidth: Int,
+        offsetX: Int
+    ) {
+        if (offsetX == Int.MIN_VALUE) {
+            return
+        }
+        val placeables = measurables.fastMap {
+            it.measure(
+                Constraints(
+                    maxWidth = maxHandleWidth,
+                    maxHeight = contentBounds.height
+                )
+            )
+        }
+        val halfMaxWidth = placeables.fastMaxOfOrNull {
+            it.width
+        }!! / 2
+        val clampedOffsetX =
+            offsetX.coerceIn(
+                contentBounds.left + halfMaxWidth,
+                contentBounds.right - halfMaxWidth
+            )
+        placeables.fastForEach {
+            it.place(
+                clampedOffsetX - it.width / 2,
+                (constraints.maxHeight - it.height) / 2
+            )
+        }
+    }
+
+    private fun getSpacerMiddleOffsetX(paneLeft: PaneMeasurable, paneRight: PaneMeasurable): Int {
+        return when {
+            paneLeft.measuredAndPlaced && paneRight.measuredAndPlaced ->
+                (paneLeft.placedPositionX + paneLeft.measuredWidth + paneRight.placedPositionX) / 2
+            paneLeft.measuredAndPlaced -> paneLeft.placedPositionX + paneLeft.measuredWidth
+            paneRight.measuredAndPlaced -> 0
+            else -> Int.MIN_VALUE
+        }
+    }
+}
 
 /**
  * The root composable of pane contents in a [ThreePaneScaffold] that supports default motions
@@ -540,35 +726,30 @@ private fun Modifier.clipToBounds(adaptedValue: PaneAdaptedValue): Modifier =
  * @sample androidx.compose.material3.adaptive.samples.ListDetailPaneScaffoldSample
  * @sample androidx.compose.material3.adaptive.samples.ListDetailPaneScaffoldSampleWithExtraPane
  */
+@Suppress("IllegalExperimentalApiUsage") // TODO: address before moving to beta
+@OptIn(ExperimentalAnimationApi::class)
 @ExperimentalMaterial3AdaptiveApi
 @Composable
 fun ThreePaneScaffoldScope.AnimatedPane(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     content: (@Composable ThreePaneScaffoldScope.() -> Unit),
 ) {
-    AnimatedVisibility(
-        visible = paneAdaptedValue == PaneAdaptedValue.Expanded,
+    val keepShowing = scaffoldStateTransition.currentState[role] != PaneAdaptedValue.Hidden &&
+        scaffoldStateTransition.targetState[role] != PaneAdaptedValue.Hidden
+    scaffoldStateTransition.AnimatedVisibility(
+        visible = { value: ThreePaneScaffoldValue -> value[role] != PaneAdaptedValue.Hidden },
         modifier = modifier
             .animatedPane()
-            .clipToBounds(paneAdaptedValue)
-            .then(
-                if (paneAdaptedValue == PaneAdaptedValue.Expanded) {
-                    Modifier.animateBounds(
-                        // TODO Figure out why we need to pass a non-null here to get the bounds
-                        //  animation going on the first navigation event that pass in the spec
-                        //  later on. To resolve this, we default to the paneSpringSpec().
-                        //  Otherwise, the first motion shows a snap instead of a smooth
-                        //  transition.
-                        positionAnimationSpec = positionAnimationSpec
-                            ?: ThreePaneMotionDefaults.PaneSpringSpec
-                    )
-                } else {
-                    Modifier
-                }
-            ),
+            .animateBounds(
+                animateFraction = scaffoldStateTransitionFraction,
+                positionAnimationSpec = positionAnimationSpec,
+                sizeAnimationSpec = sizeAnimationSpec,
+                lookaheadScope = this,
+                enabled = keepShowing
+            )
+            .graphicsLayer(clip = !keepShowing),
         enter = enterTransition,
-        exit = exitTransition,
-        label = "AnimatedVisibility: $animationToolingLabel"
+        exit = exitTransition
     ) {
         content()
     }
@@ -580,8 +761,9 @@ private class PaneMeasurable(
     val priority: Int,
     val role: ThreePaneScaffoldRole,
     defaultPreferredWidth: Int
-) : Measurable by measurable {
-    private val data = ((parentData as? PaneScaffoldParentData) ?: PaneScaffoldParentData())
+) {
+    private val data =
+        ((measurable.parentData as? PaneScaffoldParentData) ?: PaneScaffoldParentData())
 
     var measuredWidth = if (data.preferredWidth == null || data.preferredWidth!!.isNaN()) {
         defaultPreferredWidth
@@ -590,23 +772,68 @@ private class PaneMeasurable(
     }
 
     val isAnimatedPane = data.isAnimatedPane
+
+    var measuredHeight = 0
+    var placedPositionX = 0
+    var placedPositionY = 0
+    var measuredAndPlaced = false
+
+    fun Placeable.PlacementScope.measureAndPlace(
+        width: Int,
+        height: Int,
+        positionX: Int,
+        positionY: Int,
+        placementsCache: Map<ThreePaneScaffoldRole, ThreePaneContentMeasurePolicy.PanePlacement>?,
+        zIndex: Float = 0f
+    ) {
+        measuredWidth = width
+        measuredHeight = height
+        placedPositionX = positionX
+        placedPositionY = positionY
+        measurable.measure(Constraints.fixed(width, height)).place(positionX, positionY, zIndex)
+        measuredAndPlaced = true
+
+        // Cache the values to be used when this measurable's role is being hidden.
+        // See placeHiddenPanes.
+        if (placementsCache != null) {
+            val cachedPanePlacement = placementsCache[role]!!
+            cachedPanePlacement.measuredWidth = width
+            cachedPanePlacement.positionX = positionX
+        }
+    }
 }
 
 /**
  * Scope for the panes of [ThreePaneScaffold].
  */
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-interface ThreePaneScaffoldScope : PaneScaffoldScope {
+interface ThreePaneScaffoldScope : PaneScaffoldScope, LookaheadScope {
     /**
-     * The adapted value of the associated pane to the scope.
+     * The [ThreePaneScaffoldRole] of the current pane in the scope.
      */
-    val paneAdaptedValue: PaneAdaptedValue
+    val role: ThreePaneScaffoldRole
+
+    /**
+     * The current scaffold state transition between [ThreePaneScaffoldValue]s.
+     */
+    val scaffoldStateTransition: Transition<ThreePaneScaffoldValue>
+
+    /**
+     * The current fraction of the scaffold state transition.
+     */
+    val scaffoldStateTransitionFraction: Float
 
     /**
      * The position animation spec of the associated pane to the scope. [AnimatedPane] will use this
      * value to perform pane animations during scaffold state changes.
      */
-    val positionAnimationSpec: FiniteAnimationSpec<IntOffset>?
+    val positionAnimationSpec: FiniteAnimationSpec<IntOffset>
+
+    /**
+     * The size animation spec of the associated pane to the scope. [AnimatedPane] will use this
+     * value to perform pane animations during scaffold state changes.
+     */
+    val sizeAnimationSpec: FiniteAnimationSpec<IntSize>
 
     /**
      * The [EnterTransition] of the associated pane. [AnimatedPane] will use this value to perform
@@ -619,21 +846,19 @@ interface ThreePaneScaffoldScope : PaneScaffoldScope {
      * pane exiting animations when it's hiding during scaffold state changes.
      */
     val exitTransition: ExitTransition
-
-    /**
-     * The label will be used by [AnimatedPane] to provide tooling labels to the foundation
-     * animation APIs like [AnimatedVisibility].
-     */
-    val animationToolingLabel: String
 }
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-private class ThreePaneScaffoldScopeImpl : ThreePaneScaffoldScope, PaneScaffoldScopeImpl() {
-    override var paneAdaptedValue by mutableStateOf(PaneAdaptedValue.Hidden)
-    override var positionAnimationSpec: FiniteAnimationSpec<IntOffset>? by mutableStateOf(null)
+private class ThreePaneScaffoldScopeImpl(
+    override val role: ThreePaneScaffoldRole,
+    override val scaffoldStateTransition: Transition<ThreePaneScaffoldValue>,
+    lookaheadScope: LookaheadScope
+) : ThreePaneScaffoldScope, LookaheadScope by lookaheadScope, PaneScaffoldScopeImpl() {
+    override var scaffoldStateTransitionFraction by mutableFloatStateOf(0f)
+    override var positionAnimationSpec: FiniteAnimationSpec<IntOffset> by mutableStateOf(snap())
+    override var sizeAnimationSpec: FiniteAnimationSpec<IntSize> by mutableStateOf(snap())
     override var enterTransition by mutableStateOf(EnterTransition.None)
     override var exitTransition by mutableStateOf(ExitTransition.None)
-    override var animationToolingLabel by mutableStateOf("")
 }
 
 /**

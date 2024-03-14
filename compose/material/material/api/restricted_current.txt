@@ -83,8 +83,6 @@ package androidx.compose.material {
   }
 
   public enum BackdropValue {
-    method public static androidx.compose.material.BackdropValue valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.material.BackdropValue[] values();
     enum_constant public static final androidx.compose.material.BackdropValue Concealed;
     enum_constant public static final androidx.compose.material.BackdropValue Revealed;
   }
@@ -122,8 +120,6 @@ package androidx.compose.material {
   }
 
   public enum BottomDrawerValue {
-    method public static androidx.compose.material.BottomDrawerValue valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.material.BottomDrawerValue[] values();
     enum_constant public static final androidx.compose.material.BottomDrawerValue Closed;
     enum_constant public static final androidx.compose.material.BottomDrawerValue Expanded;
     enum_constant public static final androidx.compose.material.BottomDrawerValue Open;
@@ -191,8 +187,6 @@ package androidx.compose.material {
   }
 
   public enum BottomSheetValue {
-    method public static androidx.compose.material.BottomSheetValue valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.material.BottomSheetValue[] values();
     enum_constant public static final androidx.compose.material.BottomSheetValue Collapsed;
     enum_constant public static final androidx.compose.material.BottomSheetValue Expanded;
   }
@@ -351,8 +345,6 @@ package androidx.compose.material {
   }
 
   public enum DismissDirection {
-    method public static androidx.compose.material.DismissDirection valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.material.DismissDirection[] values();
     enum_constant public static final androidx.compose.material.DismissDirection EndToStart;
     enum_constant public static final androidx.compose.material.DismissDirection StartToEnd;
   }
@@ -372,8 +364,6 @@ package androidx.compose.material {
   }
 
   public enum DismissValue {
-    method public static androidx.compose.material.DismissValue valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.material.DismissValue[] values();
     enum_constant public static final androidx.compose.material.DismissValue Default;
     enum_constant public static final androidx.compose.material.DismissValue DismissedToEnd;
     enum_constant public static final androidx.compose.material.DismissValue DismissedToStart;
@@ -425,8 +415,6 @@ package androidx.compose.material {
   }
 
   public enum DrawerValue {
-    method public static androidx.compose.material.DrawerValue valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.material.DrawerValue[] values();
     enum_constant public static final androidx.compose.material.DrawerValue Closed;
     enum_constant public static final androidx.compose.material.DrawerValue Open;
   }
@@ -581,8 +569,6 @@ package androidx.compose.material {
   }
 
   public enum ModalBottomSheetValue {
-    method public static androidx.compose.material.ModalBottomSheetValue valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.material.ModalBottomSheetValue[] values();
     enum_constant public static final androidx.compose.material.ModalBottomSheetValue Expanded;
     enum_constant public static final androidx.compose.material.ModalBottomSheetValue HalfExpanded;
     enum_constant public static final androidx.compose.material.ModalBottomSheetValue Hidden;
@@ -687,10 +673,7 @@ package androidx.compose.material {
   public final class ScaffoldKt {
     method @androidx.compose.runtime.Composable public static void Scaffold(androidx.compose.foundation.layout.WindowInsets contentWindowInsets, optional androidx.compose.ui.Modifier modifier, optional androidx.compose.material.ScaffoldState scaffoldState, optional kotlin.jvm.functions.Function0<kotlin.Unit> topBar, optional kotlin.jvm.functions.Function0<kotlin.Unit> bottomBar, optional kotlin.jvm.functions.Function1<? super androidx.compose.material.SnackbarHostState,kotlin.Unit> snackbarHost, optional kotlin.jvm.functions.Function0<kotlin.Unit> floatingActionButton, optional int floatingActionButtonPosition, optional boolean isFloatingActionButtonDocked, optional kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.ColumnScope,kotlin.Unit>? drawerContent, optional boolean drawerGesturesEnabled, optional androidx.compose.ui.graphics.Shape drawerShape, optional float drawerElevation, optional long drawerBackgroundColor, optional long drawerContentColor, optional long drawerScrimColor, optional long backgroundColor, optional long contentColor, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.PaddingValues,kotlin.Unit> content);
     method @androidx.compose.runtime.Composable public static void Scaffold(optional androidx.compose.ui.Modifier modifier, optional androidx.compose.material.ScaffoldState scaffoldState, optional kotlin.jvm.functions.Function0<kotlin.Unit> topBar, optional kotlin.jvm.functions.Function0<kotlin.Unit> bottomBar, optional kotlin.jvm.functions.Function1<? super androidx.compose.material.SnackbarHostState,kotlin.Unit> snackbarHost, optional kotlin.jvm.functions.Function0<kotlin.Unit> floatingActionButton, optional int floatingActionButtonPosition, optional boolean isFloatingActionButtonDocked, optional kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.ColumnScope,kotlin.Unit>? drawerContent, optional boolean drawerGesturesEnabled, optional androidx.compose.ui.graphics.Shape drawerShape, optional float drawerElevation, optional long drawerBackgroundColor, optional long drawerContentColor, optional long drawerScrimColor, optional long backgroundColor, optional long contentColor, kotlin.jvm.functions.Function1<? super androidx.compose.foundation.layout.PaddingValues,kotlin.Unit> content);
-    method @SuppressCompatibility @androidx.compose.material.ExperimentalMaterialApi public static boolean getScaffoldSubcomposeInMeasureFix();
     method @androidx.compose.runtime.Composable public static androidx.compose.material.ScaffoldState rememberScaffoldState(optional androidx.compose.material.DrawerState drawerState, optional androidx.compose.material.SnackbarHostState snackbarHostState);
-    method @SuppressCompatibility @androidx.compose.material.ExperimentalMaterialApi public static void setScaffoldSubcomposeInMeasureFix(boolean);
-    property @SuppressCompatibility @androidx.compose.material.ExperimentalMaterialApi public static final boolean ScaffoldSubcomposeInMeasureFix;
   }
 
   @androidx.compose.runtime.Stable public final class ScaffoldState {
@@ -759,8 +742,6 @@ package androidx.compose.material {
   }
 
   public enum SnackbarDuration {
-    method public static androidx.compose.material.SnackbarDuration valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.material.SnackbarDuration[] values();
     enum_constant public static final androidx.compose.material.SnackbarDuration Indefinite;
     enum_constant public static final androidx.compose.material.SnackbarDuration Long;
     enum_constant public static final androidx.compose.material.SnackbarDuration Short;
@@ -783,8 +764,6 @@ package androidx.compose.material {
   }
 
   public enum SnackbarResult {
-    method public static androidx.compose.material.SnackbarResult valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.material.SnackbarResult[] values();
     enum_constant public static final androidx.compose.material.SnackbarResult ActionPerformed;
     enum_constant public static final androidx.compose.material.SnackbarResult Dismissed;
   }

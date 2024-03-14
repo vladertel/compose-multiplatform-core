@@ -162,6 +162,11 @@ internal class Camera2CaptureSequenceProcessor(
                 checkNotNull(imageWriter) {
                     "Failed to create ImageWriter for capture session: $session"
                 }
+
+                Log.debug {
+                    "Queuing image ${request.inputRequest.image} for reprocessing " +
+                        "to ImageWriter $imageWriter"
+                }
                 // TODO(b/321603591): Queue image closer to when capture request is submitted
                 imageWriter.queueInputImage(request.inputRequest.image)
 
@@ -198,11 +203,12 @@ internal class Camera2CaptureSequenceProcessor(
             if (session is CameraConstrainedHighSpeedCaptureSessionWrapper) {
                 val highSpeedRequestList = session.createHighSpeedRequestList(captureRequest)
 
-                // Check if video stream use case is present
+                // Check if video stream use case or hint is present
                 val containsVideoStream =
                     request.streams.any {
                         streamGraph.outputs.any {
-                            it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD
+                            it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD ||
+                                it.streamUseHint == OutputStream.StreamUseHint.VIDEO_RECORD
                         }
                     }
 
@@ -339,13 +345,15 @@ internal class Camera2CaptureSequenceProcessor(
             checkNotNull(sessionInputSurface) {
                 "inputSurface is required to create instance of imageWriter."
             }
-            AndroidImageWriter.create(
+            val androidImageWriter = AndroidImageWriter.create(
                 sessionInputSurface,
                 inputStream.id,
                 inputStream.maxImages,
                 inputStream.format,
                 threads.camera2Handler
             )
+            Log.debug { "Created ImageWriter $androidImageWriter for session $session" }
+            androidImageWriter
         } else {
             null
         }
@@ -373,19 +381,21 @@ internal class Camera2CaptureSequenceProcessor(
                 containsPreviewStream =
                     request.streams.any {
                         streamGraph.outputs.any {
-                            it.streamUseCase == OutputStream.StreamUseCase.PREVIEW
+                            it.streamUseCase == OutputStream.StreamUseCase.PREVIEW ||
+                                it.streamUseHint == OutputStream.StreamUseHint.DEFAULT ||
+                                it.streamUseHint == null
                         }
                     }
 
-                // Check if all high speed requests have the same preview use case
+                // Check if all high speed requests have preview use case or hint
                 if (prevContainsPreviewStream != null) {
                     if (prevContainsPreviewStream != containsPreviewStream) {
                         Log.error {
                             "The previous high speed request and the current high speed request " +
-                                "do not have the same preview stream use case. Previous request " +
-                                "contains preview stream use case: $prevContainsPreviewStream. " +
-                                "Current request contains preview stream use " +
-                                "case: $containsPreviewStream."
+                                "must both have a preview stream use case or hint. " +
+                                "Previous request contains preview stream use case or hint: " +
+                                "$prevContainsPreviewStream. Current request contains " +
+                                "preview stream use case or hint: $containsPreviewStream."
                         }
                     }
                 }
@@ -394,7 +404,8 @@ internal class Camera2CaptureSequenceProcessor(
                 containsVideoStream =
                     request.streams.any {
                         streamGraph.outputs.any {
-                            it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD
+                            it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD ||
+                                it.streamUseHint == OutputStream.StreamUseHint.VIDEO_RECORD
                         }
                     }
 
@@ -404,17 +415,22 @@ internal class Camera2CaptureSequenceProcessor(
                         Log.error {
                             "The previous high speed request and the current high speed request " +
                                 "do not have the same video stream use case. Previous request " +
-                                "contains video stream use case: $prevContainsPreviewStream. " +
+                                "contains video stream use case: $prevContainsVideoStream. " +
                                 "Current request contains video stream use case" +
-                                ": $containsPreviewStream."
+                                ": $containsVideoStream."
                         }
                     }
                 }
 
-                if (!containsPreviewStream && !containsVideoStream) {
+                // Streams must be preview and/or video for high speed sessions
+                val allStreamsValidForHighSpeedOperatingMode = this.streamGraph.outputs.all {
+                    it.isValidForHighSpeedOperatingMode()
+                }
+
+                if (!allStreamsValidForHighSpeedOperatingMode) {
                     Log.error {
-                        "Preview and/or Video stream use cases must be " +
-                            "present for high speed sessions."
+                        "HIGH_SPEED CameraGraph must only contain Preview and/or Video " +
+                            "streams. Configured outputs are ${streamGraph.outputs}"
                     }
                     return false
                 }

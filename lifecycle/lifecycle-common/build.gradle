@@ -21,17 +21,14 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.KmpPlatformsKt
 import androidx.build.PlatformIdentifier
 import androidx.build.Publish
-import org.jetbrains.kotlin.konan.target.Family
+import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
     id("AndroidXPlugin")
 }
-
-def macEnabled = KmpPlatformsKt.enableMac(project)
-def linuxEnabled = KmpPlatformsKt.enableLinux(project)
 
 androidXMultiplatform {
     jvm {
@@ -40,6 +37,10 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
+
+    kotlin {
+        explicitApi = ExplicitApiMode.Strict
+    }
 
     defaultPlatform(PlatformIdentifier.JVM)
 
@@ -52,9 +53,7 @@ androidXMultiplatform {
             }
         }
 
-        jvmMain {
-            dependsOn(commonMain)
-        }
+        jvmMain.dependsOn(commonMain)
 
         jvmTest {
             dependencies {
@@ -63,39 +62,17 @@ androidXMultiplatform {
             }
         }
 
-        if (macEnabled || linuxEnabled) {
-            nativeMain {
-                dependsOn(commonMain)
-                dependencies {
-                    implementation(libs.atomicFu)
-                }
-            }
-        }
-        if (macEnabled) {
-            darwinMain {
-                dependsOn(nativeMain)
-            }
-        }
-        if (linuxEnabled) {
-            linuxMain {
-                dependsOn(nativeMain)
+        nonJvmMain {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.atomicFu)
             }
         }
 
         targets.all { target ->
-            if (target.platformType == org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native) {
+            if (target.platformType !in [KotlinPlatformType.jvm, KotlinPlatformType.common]) {
                 target.compilations["main"].defaultSourceSet {
-                    def konanTargetFamily = target.konanTarget.family
-                    if (konanTargetFamily == Family.OSX || konanTargetFamily == Family.IOS) {
-                        dependsOn(darwinMain)
-                    } else if (konanTargetFamily == Family.LINUX) {
-                        dependsOn(linuxMain)
-                    } else {
-                        throw new GradleException("unknown native target ${target}")
-                    }
-                }
-                target.compilations["test"].defaultSourceSet {
-                    dependsOn(nativeTest)
+                    dependsOn(nonJvmMain)
                 }
             }
         }

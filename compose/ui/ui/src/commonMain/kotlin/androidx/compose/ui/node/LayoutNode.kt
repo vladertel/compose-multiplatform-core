@@ -22,8 +22,10 @@ import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection.Companion.Exit
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.input.pointer.PointerInputFilter
 import androidx.compose.ui.input.pointer.PointerInputModifier
 import androidx.compose.ui.internal.checkPrecondition
@@ -639,7 +641,7 @@ internal class LayoutNode(
         set(value) {
             if (field != value) {
                 field = value
-                intrinsicsPolicy.updateFrom(measurePolicy)
+                intrinsicsPolicy?.updateFrom(measurePolicy)
                 invalidateMeasurements()
             }
         }
@@ -649,7 +651,37 @@ internal class LayoutNode(
      * correct remeasurement for layouts using the intrinsics of this layout
      * when the [measurePolicy] is changing.
      */
-    internal val intrinsicsPolicy = IntrinsicsPolicy(this)
+    private var intrinsicsPolicy: IntrinsicsPolicy? = null
+
+    private fun getOrCreateIntrinsicsPolicy(): IntrinsicsPolicy {
+        return intrinsicsPolicy ?: IntrinsicsPolicy(this, measurePolicy).also {
+            intrinsicsPolicy = it
+        }
+    }
+
+    fun minLookaheadIntrinsicWidth(height: Int) =
+        getOrCreateIntrinsicsPolicy().minLookaheadIntrinsicWidth(height)
+
+    fun minLookaheadIntrinsicHeight(width: Int) =
+        getOrCreateIntrinsicsPolicy().minLookaheadIntrinsicHeight(width)
+
+    fun maxLookaheadIntrinsicWidth(height: Int) =
+        getOrCreateIntrinsicsPolicy().maxLookaheadIntrinsicWidth(height)
+
+    fun maxLookaheadIntrinsicHeight(width: Int) =
+        getOrCreateIntrinsicsPolicy().maxLookaheadIntrinsicHeight(width)
+
+    fun minIntrinsicWidth(height: Int) =
+        getOrCreateIntrinsicsPolicy().minIntrinsicWidth(height)
+
+    fun minIntrinsicHeight(width: Int) =
+        getOrCreateIntrinsicsPolicy().minIntrinsicHeight(width)
+
+    fun maxIntrinsicWidth(height: Int) =
+        getOrCreateIntrinsicsPolicy().maxIntrinsicWidth(height)
+
+    fun maxIntrinsicHeight(width: Int) =
+        getOrCreateIntrinsicsPolicy().maxIntrinsicHeight(width)
 
     /**
      * The screen density to be used by this layout.
@@ -928,7 +960,8 @@ internal class LayoutNode(
         lookaheadPassDelegate!!.replace()
     }
 
-    internal fun draw(canvas: Canvas) = outerCoordinator.draw(canvas)
+    internal fun draw(canvas: Canvas, graphicsLayer: GraphicsLayer?) =
+        outerCoordinator.draw(canvas, graphicsLayer)
 
     /**
      * Carries out a hit test on the [PointerInputModifier]s associated with this [LayoutNode] and
@@ -1076,7 +1109,8 @@ internal class LayoutNode(
                 requireOwner().focusOwner.clearFocus(
                     force = true,
                     refreshFocusEvents = false,
-                    clearOwnerFocus = true
+                    clearOwnerFocus = true,
+                    @OptIn(ExperimentalComposeUiApi::class) Exit
                 )
                 it.scheduleInvalidationForFocusEvents()
             }

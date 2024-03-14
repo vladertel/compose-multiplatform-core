@@ -1,25 +1,26 @@
 import android.database.Cursor
-import android.os.CancellationSignal
 import androidx.room.CoroutinesRoom
-import androidx.room.CoroutinesRoom.Companion.execute
 import androidx.room.RoomDatabase
 import androidx.room.RoomSQLiteQuery
 import androidx.room.RoomSQLiteQuery.Companion.acquire
 import androidx.room.util.appendPlaceholders
 import androidx.room.util.getColumnIndexOrThrow
-import androidx.room.util.newStringBuilder
+import androidx.room.util.getLastInsertedRowId
+import androidx.room.util.getTotalChangedRows
+import androidx.room.util.performSuspending
 import androidx.room.util.query
-import java.lang.StringBuilder
-import java.util.ArrayList
+import androidx.sqlite.SQLiteStatement
 import java.util.concurrent.Callable
 import javax.`annotation`.processing.Generated
 import kotlin.Int
+import kotlin.Long
 import kotlin.String
 import kotlin.Suppress
 import kotlin.collections.List
 import kotlin.collections.MutableList
-import kotlin.jvm.JvmStatic
+import kotlin.collections.mutableListOf
 import kotlin.reflect.KClass
+import kotlin.text.StringBuilder
 import kotlinx.coroutines.flow.Flow
 
 @Generated(value = ["androidx.room.RoomProcessor"])
@@ -33,7 +34,7 @@ public class MyDao_Impl(
   }
 
   public override fun getFlow(vararg arg: String?): Flow<MyEntity> {
-    val _stringBuilder: StringBuilder = newStringBuilder()
+    val _stringBuilder: StringBuilder = StringBuilder()
     _stringBuilder.append("SELECT * FROM MyEntity WHERE pk IN (")
     val _inputSize: Int = arg.size
     appendPlaceholders(_stringBuilder, _inputSize)
@@ -79,7 +80,7 @@ public class MyDao_Impl(
   }
 
   public override fun getFlowNullable(vararg arg: String?): Flow<MyEntity?> {
-    val _stringBuilder: StringBuilder = newStringBuilder()
+    val _stringBuilder: StringBuilder = StringBuilder()
     _stringBuilder.append("SELECT * FROM MyEntity WHERE pk IN (")
     val _inputSize: Int = arg.size
     appendPlaceholders(_stringBuilder, _inputSize)
@@ -126,51 +127,151 @@ public class MyDao_Impl(
   }
 
   public override suspend fun getSuspendList(vararg arg: String?): List<MyEntity> {
-    val _stringBuilder: StringBuilder = newStringBuilder()
+    val _stringBuilder: StringBuilder = StringBuilder()
     _stringBuilder.append("SELECT * FROM MyEntity WHERE pk IN (")
     val _inputSize: Int = arg.size
     appendPlaceholders(_stringBuilder, _inputSize)
     _stringBuilder.append(")")
     val _sql: String = _stringBuilder.toString()
-    val _argCount: Int = 0 + _inputSize
-    val _statement: RoomSQLiteQuery = acquire(_sql, _argCount)
-    var _argIndex: Int = 1
-    for (_item: String? in arg) {
-      if (_item == null) {
-        _statement.bindNull(_argIndex)
-      } else {
-        _statement.bindString(_argIndex, _item)
-      }
-      _argIndex++
-    }
-    val _cancellationSignal: CancellationSignal = CancellationSignal()
-    return execute(__db, false, _cancellationSignal, object : Callable<List<MyEntity>> {
-      public override fun call(): List<MyEntity> {
-        val _cursor: Cursor = query(__db, _statement, false, null)
-        try {
-          val _cursorIndexOfPk: Int = getColumnIndexOrThrow(_cursor, "pk")
-          val _cursorIndexOfOther: Int = getColumnIndexOrThrow(_cursor, "other")
-          val _result: MutableList<MyEntity> = ArrayList<MyEntity>(_cursor.getCount())
-          while (_cursor.moveToNext()) {
-            val _item_1: MyEntity
-            val _tmpPk: Int
-            _tmpPk = _cursor.getInt(_cursorIndexOfPk)
-            val _tmpOther: String
-            _tmpOther = _cursor.getString(_cursorIndexOfOther)
-            _item_1 = MyEntity(_tmpPk,_tmpOther)
-            _result.add(_item_1)
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        for (_item: String? in arg) {
+          if (_item == null) {
+            _stmt.bindNull(_argIndex)
+          } else {
+            _stmt.bindText(_argIndex, _item)
           }
-          return _result
-        } finally {
-          _cursor.close()
-          _statement.release()
+          _argIndex++
         }
+        val _cursorIndexOfPk: Int = getColumnIndexOrThrow(_stmt, "pk")
+        val _cursorIndexOfOther: Int = getColumnIndexOrThrow(_stmt, "other")
+        val _result: MutableList<MyEntity> = mutableListOf()
+        while (_stmt.step()) {
+          val _item_1: MyEntity
+          val _tmpPk: Int
+          _tmpPk = _stmt.getLong(_cursorIndexOfPk).toInt()
+          val _tmpOther: String
+          _tmpOther = _stmt.getText(_cursorIndexOfOther)
+          _item_1 = MyEntity(_tmpPk,_tmpOther)
+          _result.add(_item_1)
+        }
+        _result
+      } finally {
+        _stmt.close()
       }
-    })
+    }
+  }
+
+  public override suspend fun insertEntity(pk: Long) {
+    val _sql: String = "INSERT INTO MyEntity (pk) VALUES (?)"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        _stmt.bindLong(_argIndex, pk)
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun insertEntityReturnLong(pk: Long): Long {
+    val _sql: String = "INSERT INTO MyEntity (pk) VALUES (?)"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        _stmt.bindLong(_argIndex, pk)
+        _stmt.step()
+        getLastInsertedRowId(_connection)
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun updateEntity(text: String) {
+    val _sql: String = "UPDATE MyEntity SET other = ?"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        _stmt.bindText(_argIndex, text)
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun updateEntityReturnInt(pk: Long, text: String): Int {
+    val _sql: String = "UPDATE MyEntity SET other = ? WHERE pk = ?"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        _stmt.bindText(_argIndex, text)
+        _argIndex = 2
+        _stmt.bindLong(_argIndex, pk)
+        _stmt.step()
+        getTotalChangedRows(_connection)
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun deleteEntity() {
+    val _sql: String = "DELETE FROM MyEntity"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun deleteEntityReturnInt(): Int {
+    val _sql: String = "DELETE FROM MyEntity"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        _stmt.step()
+        getTotalChangedRows(_connection)
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun deleteEntitiesIn(pks: List<Long>) {
+    val _stringBuilder: StringBuilder = StringBuilder()
+    _stringBuilder.append("DELETE FROM MyEntity WHERE pk IN (")
+    val _inputSize: Int = pks.size
+    appendPlaceholders(_stringBuilder, _inputSize)
+    _stringBuilder.append(")")
+    val _sql: String = _stringBuilder.toString()
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        for (_item: Long in pks) {
+          _stmt.bindLong(_argIndex, _item)
+          _argIndex++
+        }
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
   }
 
   public companion object {
-    @JvmStatic
     public fun getRequiredConverters(): List<KClass<*>> = emptyList()
   }
 }

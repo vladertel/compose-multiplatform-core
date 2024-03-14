@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.text.BasicTextField2
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -89,7 +89,7 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
         maxLines: Int
     ) {
         val state = remember { TextFieldState(text) }
-        BasicTextField2(
+        BasicTextField(
             state = state,
             modifier = modifier,
             textStyle = style,
@@ -230,15 +230,15 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
 
     @Test
     fun magnifier_insideDecorationBox() {
-        val tag = "BasicTextField2"
+        val tag = "BasicTextField"
         val state = TextFieldState(
             "aaaa",
-            initialSelectionInChars = TextRange.Zero
+            initialSelection = TextRange.Zero
         )
 
         rule.setTextFieldTestContent {
             CompositionLocalProvider(LocalDensity provides Density(1f, 1f)) {
-                BasicTextField2(
+                BasicTextField(
                     state = state,
                     Modifier.testTag(tag),
                     textStyle = TextStyle(fontFamily = TEST_FONT_FAMILY, fontSize = 20.sp),
@@ -268,10 +268,10 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
 
     @Test
     fun magnifier_insideDecorationBox_scrolledVertically() {
-        val tag = "BasicTextField2"
+        val tag = "BasicTextField"
         val state = TextFieldState(
             "aaaa\naaaa\naaaa\n".repeat(5),
-            initialSelectionInChars = TextRange.Zero
+            initialSelection = TextRange.Zero
         )
         val scrollState = ScrollState(0)
         var coroutineScope: CoroutineScope? = null
@@ -279,7 +279,7 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
         rule.setTextFieldTestContent {
             CompositionLocalProvider(LocalDensity provides Density(1f, 1f)) {
                 coroutineScope = rememberCoroutineScope()
-                BasicTextField2(
+                BasicTextField(
                     state = state,
                     Modifier.testTag(tag),
                     textStyle = TextStyle(fontFamily = TEST_FONT_FAMILY, fontSize = 20.sp),
@@ -315,10 +315,10 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
 
     @Test
     fun magnifier_insideDecorationBox_scrolledHorizontally() {
-        val tag = "BasicTextField2"
+        val tag = "BasicTextField"
         val state = TextFieldState(
             "aaaa aaaa aaaa ".repeat(5),
-            initialSelectionInChars = TextRange.Zero
+            initialSelection = TextRange.Zero
         )
         val scrollState = ScrollState(0)
         var coroutineScope: CoroutineScope? = null
@@ -326,7 +326,7 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
         rule.setTextFieldTestContent {
             CompositionLocalProvider(LocalDensity provides Density(1f, 1f)) {
                 coroutineScope = rememberCoroutineScope()
-                BasicTextField2(
+                BasicTextField(
                     state = state,
                     Modifier.testTag(tag).width(100.dp),
                     textStyle = TextStyle(fontFamily = TEST_FONT_FAMILY, fontSize = 20.sp),
@@ -374,15 +374,15 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
         else
             "\u05D0\u05D1\u05D2\u05D3"
 
-        val tag = "BasicTextField2"
+        val tag = "BasicTextField"
         val state = TextFieldState(
             "$fillerWord $fillerWord $fillerWord ".repeat(10),
-            initialSelectionInChars = TextRange.Zero
+            initialSelection = TextRange.Zero
         )
 
         rule.setTextFieldTestContent {
             CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
-                BasicTextField2(
+                BasicTextField(
                     state = state,
                     Modifier
                         .fillMaxWidth()
@@ -430,7 +430,7 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
     private fun setupDragAndDropContent(): View {
         val state = TextFieldState(
             "aaaa",
-            initialSelectionInChars = TextRange.Zero
+            initialSelection = TextRange.Zero
         )
         var view: View? = null
         rule.setContent { // Do not use setTextFieldTestContent for DnD tests.
@@ -441,7 +441,7 @@ internal class TextFieldMagnifierTest : AbstractSelectionMagnifierTests() {
                     override val isWindowFocused = false
                 }
             ) {
-                BasicTextField2(
+                BasicTextField(
                     state = state,
                     textStyle = TextStyle(fontFamily = TEST_FONT_FAMILY, fontSize = 20.sp),
                     lineLimits = TextFieldLineLimits.SingleLine

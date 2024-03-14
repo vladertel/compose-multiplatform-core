@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.internal.checkPrecondition
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.ApproachLayoutModifierNode
@@ -253,7 +254,7 @@ internal class LayoutModifierNodeCoordinator(
             }
         }
         measureResult.placeChildren()
-        wrappedNonNull.forceMeasureWithLookaheadConstraints = false
+        wrappedNonNull.forcePlaceWithLookaheadOffset = false
     }
 
     override fun calculateAlignmentLine(alignmentLine: AlignmentLine): Int {
@@ -261,8 +262,8 @@ internal class LayoutModifierNodeCoordinator(
             ?: calculateAlignmentAndPlaceChildAsNeeded(alignmentLine)
     }
 
-    override fun performDraw(canvas: Canvas) {
-        wrappedNonNull.draw(canvas)
+    override fun performDraw(canvas: Canvas, graphicsLayer: GraphicsLayer?) {
+        wrappedNonNull.draw(canvas, graphicsLayer)
         if (layoutNode.requireOwner().showLayoutBounds) {
             drawBorder(canvas, modifierBoundsPaint)
         }

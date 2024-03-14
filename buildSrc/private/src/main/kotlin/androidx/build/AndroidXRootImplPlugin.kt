@@ -103,7 +103,7 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
          */
         val finalizeConfigsTask =
             project.tasks.register(FINALIZE_TEST_CONFIGS_WITH_APKS_TASK, Copy::class.java) {
-                it.from(project.getPrivacySandboxApksDirectory())
+                it.from(project.getPrivacySandboxFilesDirectory())
                 it.into(project.getTestConfigDirectory())
                 it.eachFile { f -> f.relativePath = RelativePath(true, f.name) }
                 it.includeEmptyDirs = false
@@ -128,6 +128,7 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
 
         registerOwnersServiceTasks()
 
+        project.configureRootProjectForKmpLink()
         // If useMaxDepVersions is set, iterate through all the project and substitute any androidx
         // artifact dependency with the local tip of tree version of the library.
         if (project.usingMaxDepVersions()) {
@@ -173,7 +174,6 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
 
         project.zipComposeCompilerMetrics()
         project.zipComposeCompilerReports()
-        project.configureRootProjectForKmpLink()
     }
 
     private fun Project.setDependencyVersions() {

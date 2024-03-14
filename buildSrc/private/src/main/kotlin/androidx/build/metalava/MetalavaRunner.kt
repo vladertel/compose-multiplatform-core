@@ -49,13 +49,10 @@ fun runMetalavaWithArgs(
         args +
             listOf(
                 "--hide",
-                "HiddenSuperclass", // We allow having a hidden parent class
-                "--hide",
                 // Removing final from a method does not cause compatibility issues for AndroidX.
                 "RemovedFinalStrict",
                 "--error",
                 "UnresolvedImport",
-                "--delete-empty-removed-signatures",
 
                 "--kotlin-source",
                 kotlinSourceLevel.version,
@@ -114,11 +111,9 @@ abstract class MetalavaWorkAction @Inject constructor(private val execOperations
 
 fun Project.getMetalavaClasspath(): FileCollection {
     val configuration =
-        configurations.findByName("metalava")
-            ?: configurations.create("metalava") {
-                it.dependencies.add(dependencies.create(getLibraryByName("metalava")))
-                it.isCanBeConsumed = false
-            }
+        configurations.detachedConfiguration(
+                dependencies.create(getLibraryByName("metalava"))
+        )
     return project.files(configuration)
 }
 
@@ -333,7 +328,6 @@ fun getGenerateApiArgs(
         when (generateApiMode) {
             is GenerateApiMode.PublicApi -> {
                 args += listOf("--api", outputLocation.publicApiFile.toString())
-                args += listOf("--removed-api", outputLocation.removedApiFile.toString())
                 // Generate API levels just for the public API
                 args += apiLevelsArgs
             }

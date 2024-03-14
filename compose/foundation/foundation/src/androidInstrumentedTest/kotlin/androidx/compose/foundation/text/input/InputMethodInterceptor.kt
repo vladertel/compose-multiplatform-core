@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,14 @@
 package androidx.compose.foundation.text.input
 
 import android.os.Looper
-import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.InterceptPlatformTextInput
+import androidx.compose.ui.platform.PlatformTextInputInterceptor
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.PlatformTextInputSession
-import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.PlatformTextInputMethodTestOverride
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import com.google.common.truth.IntegerSubject
 import com.google.common.truth.Truth.assertThat
@@ -36,13 +34,28 @@ import kotlin.test.assertNotNull
 import kotlinx.coroutines.awaitCancellation
 
 /**
- * Helper class for testing integration of BasicTextField and BasicTextField2 with the platform IME.
+ * Helper class for testing integration of BasicTextField and Legacy BasicTextField with the
+ * platform IME.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
 
     private var currentRequest: PlatformTextInputMethodRequest? = null
     private val editorInfo = EditorInfo()
     private var inputConnection: InputConnection? = null
+    private val interceptor = PlatformTextInputInterceptor { request, _ ->
+        currentRequest = request
+        sessionCount++
+        try {
+            inputConnection = request.createInputConnection(editorInfo)
+            // Don't forward the request, block it, so that tests don't have to deal with the actual
+            // IME sending commands.
+            awaitCancellation()
+        } finally {
+            currentRequest = null
+            inputConnection = null
+        }
+    }
 
     /**
      * The total number of sessions that have been requested on this interceptor, including the
@@ -157,15 +170,10 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
      *
      * @see setContent
      */
-    @OptIn(ExperimentalTestApi::class)
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     fun Content(content: @Composable () -> Unit) {
-        val view = LocalView.current
-        val sessionHandler = remember { SessionHandler(view) }
-        PlatformTextInputMethodTestOverride(
-            sessionHandler = sessionHandler,
-            content = content
-        )
+        InterceptPlatformTextInput(interceptor, content)
     }
 
     private fun <T> runOnIdle(block: () -> T): T {
@@ -173,20 +181,6 @@ class InputMethodInterceptor(private val rule: ComposeContentTestRule) {
             rule.runOnIdle(block)
         } else {
             block()
-        }
-    }
-
-    private inner class SessionHandler(override val view: View) : PlatformTextInputSession {
-        override suspend fun startInputMethod(request: PlatformTextInputMethodRequest): Nothing {
-            currentRequest = request
-            sessionCount++
-            try {
-                inputConnection = request.createInputConnection(editorInfo)
-                awaitCancellation()
-            } finally {
-                currentRequest = null
-                inputConnection = null
-            }
         }
     }
 }

@@ -18,7 +18,7 @@ package androidx.compose.foundation.text.input.internal.selection
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.text.BasicTextField2
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.FocusedWindowTest
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.input.TextFieldState
@@ -59,13 +59,13 @@ class TextFieldSelectionOnBackTest : FocusedWindowTest {
     @get:Rule
     val rule = createComposeRule()
 
-    private val Tag = "BasicTextField2"
+    private val Tag = "BasicTextField"
 
     @Test
     fun whenBackPressed_andReleased_textFieldClearsSelection() {
         val state = TextFieldState("hello", TextRange(0, 0))
         rule.setContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 Modifier
                     .testTag(Tag)
@@ -78,7 +78,7 @@ class TextFieldSelectionOnBackTest : FocusedWindowTest {
         textNode.performKeyInput { pressKey(Key.Back) }
         val expected = TextRange(3, 3)
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(expected)
+            assertThat(state.text.selection).isEqualTo(expected)
         }
     }
 
@@ -87,7 +87,7 @@ class TextFieldSelectionOnBackTest : FocusedWindowTest {
         val state = TextFieldState("hello", TextRange(0, 0))
         var backPressed = 0
         rule.setContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 Modifier
                     .testTag(Tag)
@@ -106,7 +106,7 @@ class TextFieldSelectionOnBackTest : FocusedWindowTest {
         textNode.performKeyInput { pressKey(Key.Back) }
         val expected = TextRange(3, 3)
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(expected)
+            assertThat(state.text.selection).isEqualTo(expected)
             assertThat(backPressed).isEqualTo(0)
         }
     }
@@ -115,7 +115,7 @@ class TextFieldSelectionOnBackTest : FocusedWindowTest {
     fun whenBackPressed_coreTextFieldRetainsSelection() {
         val state = TextFieldState("hello", TextRange(0, 0))
         rule.setContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 Modifier
                     .testTag(Tag)
@@ -129,7 +129,7 @@ class TextFieldSelectionOnBackTest : FocusedWindowTest {
         // should have no effect
         textNode.performKeyInput { keyDown(Key.Back) }
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(expected)
+            assertThat(state.text.selection).isEqualTo(expected)
         }
     }
 
@@ -140,7 +140,7 @@ class TextFieldSelectionOnBackTest : FocusedWindowTest {
         val state = TextFieldState("Hello")
         rule.setTextFieldTestContent {
             softwareKeyboardController = LocalSoftwareKeyboardController.current
-            BasicTextField2(
+            BasicTextField(
                 state,
                 Modifier
                     .testTag(Tag)

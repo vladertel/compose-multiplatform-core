@@ -17,14 +17,13 @@
 package androidx.compose.foundation.text.input
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.text.BasicTextField2
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Stable
 
 /**
  * A function ([transformOutput]) that transforms the text presented to a user by a
- * [BasicTextField2].
+ * [BasicTextField].
  */
-@ExperimentalFoundationApi
 @Stable
 fun interface OutputTransformation {
 
@@ -36,5 +35,6 @@ fun interface OutputTransformation {
      * Note that the contents of the [TextFieldState] remain completely unchanged. This is a one-way
      * transformation that only affects what is presented to the user.
      */
+    @ExperimentalFoundationApi
     fun TextFieldBuffer.transformOutput()
 }

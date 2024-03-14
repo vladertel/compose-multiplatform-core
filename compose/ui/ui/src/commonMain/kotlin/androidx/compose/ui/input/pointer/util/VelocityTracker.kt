@@ -22,7 +22,9 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.internal.checkPrecondition
+import androidx.compose.ui.internal.throwIllegalArgumentException
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.util.fastCoerceAtLeast
 import androidx.compose.ui.util.fastForEach
 import kotlin.math.abs
 import kotlin.math.sign
@@ -475,10 +477,10 @@ internal fun polyFitLeastSquares(
     coefficients: FloatArray = FloatArray((degree + 1).coerceAtLeast(0))
 ): FloatArray {
     if (degree < 1) {
-        throw IllegalArgumentException("The degree must be at positive integer")
+        throwIllegalArgumentException("The degree must be at positive integer")
     }
     if (sampleCount == 0) {
-        throw IllegalArgumentException("At least one point must be provided")
+        throwIllegalArgumentException("At least one point must be provided")
     }
 
     val truncatedDegree =
@@ -489,8 +491,8 @@ internal fun polyFitLeastSquares(
         }
 
     // Shorthands for the purpose of notation equivalence to original C++ code.
-    val m: Int = sampleCount
-    val n: Int = truncatedDegree + 1
+    val m = sampleCount
+    val n = truncatedDegree + 1
 
     // Expand the X vector to a matrix A, pre-multiplied by the weights.
     val a = Matrix(n, m)
@@ -509,10 +511,8 @@ internal fun polyFitLeastSquares(
     val r = Matrix(n, n)
     for (j in 0 until n) {
         val w = q[j]
-        val aw = a[j]
-        for (h in 0 until m) {
-            w[h] = aw[h]
-        }
+        a[j].copyInto(w, 0, 0, m)
+
         for (i in 0 until j) {
             val z = q[i]
             val dot = w.dot(z)
@@ -521,22 +521,11 @@ internal fun polyFitLeastSquares(
             }
         }
 
-        val norm: Float = w.norm()
-        if (norm < 0.000001f) {
-            // TODO(b/129494471): Determine what this actually means and see if there are
-            // alternatives to throwing an Exception here.
-
-            // Vectors are linearly dependent or zero so no solution.
-            throw IllegalArgumentException(
-                "Vectors are linearly dependent or zero so no " +
-                    "solution. TODO(shepshapard), actually determine what this means"
-            )
-        }
-
-        val inverseNorm: Float = 1.0f / norm
+        val inverseNorm = 1.0f / w.norm().fastCoerceAtLeast(1e-6f)
         for (h in 0 until m) {
             w[h] *= inverseNorm
         }
+
         val v = r[j]
         for (i in 0 until n) {
             v[i] = if (i < j) 0.0f else w.dot(a[i])
@@ -561,11 +550,12 @@ internal fun polyFitLeastSquares(
     }
 
     for (i in n - 1 downTo 0) {
-        coefficients[i] = q[i].dot(wy)
+        var c = q[i].dot(wy)
+        val ri = r[i]
         for (j in n - 1 downTo i + 1) {
-            coefficients[i] -= r[i, j] * coefficients[j]
+            c -= ri[j] * coefficients[j]
         }
-        coefficients[i] /= r[i, i]
+        coefficients[i] = c / ri[i]
     }
 
     return coefficients
@@ -646,6 +636,8 @@ internal fun polyFitLeastSquares(
  *
  * Note that approach 2) is sensitive to the proper ordering of the data in time, since
  * the boundary condition must be applied to the oldest sample to be accurate.
+ *
+ * NOTE: [sampleCount] MUST be >= 2
  */
 private fun calculateImpulseVelocity(
     dataPoints: FloatArray,
@@ -653,33 +645,22 @@ private fun calculateImpulseVelocity(
     sampleCount: Int,
     isDataDifferential: Boolean
 ): Float {
-    if (sampleCount < 2) {
-        return 0f
-    }
-    if (sampleCount == 2) {
-        if (time[0] == time[1]) {
-            return 0f
-        }
-        val dataPointsDelta =
-        // For differential data ponits, each measurement reflects the amount of change in the
-        // subject's position. However, the first sample is discarded in computation because we
-            // don't know the time duration over which this change has occurred.
-            if (isDataDifferential) dataPoints[0]
-            else dataPoints[0] - dataPoints[1]
-        return dataPointsDelta / (time[0] - time[1])
-    }
     var work = 0f
-    for (i in (sampleCount - 1) downTo 1) {
-        if (time[i] == time[i - 1]) {
+    val start = sampleCount - 1
+    var nextTime = time[start]
+    for (i in start downTo 1) {
+        val currentTime = nextTime
+        nextTime = time[i - 1]
+        if (currentTime == nextTime) {
             continue
         }
-        val vPrev = kineticEnergyToVelocity(work)
         val dataPointsDelta =
             if (isDataDifferential) -dataPoints[i - 1]
             else dataPoints[i] - dataPoints[i - 1]
-        val vCurr = dataPointsDelta / (time[i] - time[i - 1])
+        val vCurr = dataPointsDelta / (currentTime - nextTime)
+        val vPrev = kineticEnergyToVelocity(work)
         work += (vCurr - vPrev) * abs(vCurr)
-        if (i == (sampleCount - 1)) {
+        if (i == start) {
             work = (work * 0.5f)
         }
     }

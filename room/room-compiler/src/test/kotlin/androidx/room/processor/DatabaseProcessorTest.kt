@@ -880,7 +880,7 @@ class DatabaseProcessorTest {
             USER, USER_DAO
         ) { db, _ ->
             val userDao = db.daoMethods.first().dao
-            val insertionMethod = userDao.insertionMethods.find { it.element.jvmName == "insert" }
+            val insertionMethod = userDao.insertMethods.find { it.element.jvmName == "insert" }
             assertThat(insertionMethod, notNullValue())
             val loadOne = userDao.queryMethods
                 .filterIsInstance<ReadQueryMethod>()
@@ -1372,7 +1372,7 @@ class DatabaseProcessorTest {
             invocation.assertCompilationResult {
                 hasErrorCount(1)
                 hasErrorContaining(
-                    ProcessorErrors.autoMigrationSchemaIsEmpty(
+                    ProcessorErrors.invalidAutoMigrationSchema(
                         1,
                         schemaFolder.root.absolutePath + File.separator + "foo.bar.MyDb"
                     )

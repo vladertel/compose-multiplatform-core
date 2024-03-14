@@ -27,6 +27,7 @@ import android.widget.TextView
 import androidx.annotation.RequiresExtension
 import androidx.appcompat.app.AppCompatActivity
 import androidx.privacysandbox.sdkruntime.client.SdkSandboxManagerCompat
+import androidx.privacysandbox.sdkruntime.core.AppOwnedSdkSandboxInterfaceCompat
 import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException
 import androidx.privacysandbox.sdkruntime.core.SandboxedSdkCompat
 import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
@@ -40,9 +41,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var mSdkSandboxManager: SdkSandboxManagerCompat
+    private lateinit var sdkSandboxManager: SdkSandboxManagerCompat
 
-    private var mSdkLoaded = false
     private lateinit var sdkApi: ISdkApi
 
     private lateinit var webViewBannerView: SandboxedSdkView
@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var resizeSdkButton: Button
     private lateinit var mediationSwitch: SwitchMaterial
     private lateinit var localWebViewToggle: SwitchMaterial
+    private lateinit var appOwnedMediateeToggleButton: SwitchMaterial
 
     // TODO(b/257429573): Remove this line once fixed.
     @RequiresExtension(extension = SdkExtensions.AD_SERVICES, version = 5)
@@ -60,26 +61,34 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mSdkSandboxManager = SdkSandboxManagerCompat.from(applicationContext)
+        sdkSandboxManager = SdkSandboxManagerCompat.from(applicationContext)
 
-        if (!mSdkLoaded) {
-            Log.i(TAG, "Loading SDK")
-            CoroutineScope(Dispatchers.Default).launch {
-                try {
-                    mSdkSandboxManager.loadSdk(MEDIATEE_SDK_NAME, Bundle())
-                    val loadedSdk = mSdkSandboxManager.loadSdk(SDK_NAME, Bundle())
-                    onLoadedSdk(loadedSdk)
-                } catch (e: LoadSdkCompatException) {
-                    Log.i(TAG, "loadSdk failed with errorCode: " + e.loadSdkErrorCode +
-                        " and errorMsg: " + e.message)
+        Log.i(TAG, "Loading SDK")
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                val loadedSdks = sdkSandboxManager.getSandboxedSdks()
+                var loadedSdk = loadedSdks.firstOrNull { it.getSdkInfo()?.name == SDK_NAME }
+                if (loadedSdk == null) {
+                    loadedSdk = sdkSandboxManager.loadSdk(SDK_NAME, Bundle())
+                    sdkSandboxManager.loadSdk(MEDIATEE_SDK_NAME, Bundle())
+                    sdkSandboxManager.registerAppOwnedSdkSandboxInterface(
+                        AppOwnedSdkSandboxInterfaceCompat(
+                            MEDIATEE_SDK_NAME,
+                            /*version=*/ 0,
+                            AppOwnedMediateeSdkApi(applicationContext)
+                        )
+                    )
                 }
+                onLoadedSdk(loadedSdk)
+            } catch (e: LoadSdkCompatException) {
+                Log.i(TAG, "loadSdk failed with errorCode: " + e.loadSdkErrorCode +
+                    " and errorMsg: " + e.message)
             }
         }
     }
 
     private fun onLoadedSdk(sandboxedSdk: SandboxedSdkCompat) {
         Log.i(TAG, "Loaded successfully")
-        mSdkLoaded = true
         sdkApi = ISdkApi.Stub.asInterface(sandboxedSdk.getInterface())
 
         webViewBannerView = findViewById(R.id.webview_ad_view)
@@ -90,6 +99,7 @@ class MainActivity : AppCompatActivity() {
         resizeSdkButton = findViewById(R.id.resize_sdk_button)
         mediationSwitch = findViewById(R.id.mediation_switch)
         localWebViewToggle = findViewById(R.id.local_to_internet_switch)
+        appOwnedMediateeToggleButton = findViewById(R.id.app_owned_mediatee_switch)
 
         loadWebViewBannerAd()
         loadBottomBannerAd()
@@ -135,11 +145,15 @@ class MainActivity : AppCompatActivity() {
         ))
 
         var count = 1
+        var loadMediateeFromApp = false
+        appOwnedMediateeToggleButton.setOnCheckedChangeListener { _, isChecked ->
+            loadMediateeFromApp = isChecked
+        }
         newAdButton.setOnClickListener {
             if (mediationSwitch.isChecked) {
                 resizableBannerView.setAdapter(
                     SandboxedUiAdapterFactory.createFromCoreLibInfo(
-                        sdkApi.loadMediatedTestAd(count)
+                        sdkApi.loadMediatedTestAd(count, loadMediateeFromApp)
                 ))
             } else {
                 resizableBannerView.setAdapter(

@@ -148,9 +148,9 @@ interface UseCaseCameraRequestControl {
     // Capture
     suspend fun issueSingleCaptureAsync(
         captureSequence: List<CaptureConfig>,
-        captureMode: Int,
-        flashType: Int,
-        flashMode: Int,
+        @ImageCapture.CaptureMode captureMode: Int,
+        @ImageCapture.FlashType flashType: Int,
+        @ImageCapture.FlashMode flashMode: Int,
     ): List<Deferred<Void?>>
 
     fun close()
@@ -275,9 +275,9 @@ class UseCaseCameraRequestControlImpl @Inject constructor(
 
     override suspend fun issueSingleCaptureAsync(
         captureSequence: List<CaptureConfig>,
-        captureMode: Int,
-        flashType: Int,
-        flashMode: Int,
+        @ImageCapture.CaptureMode captureMode: Int,
+        @ImageCapture.FlashType flashType: Int,
+        @ImageCapture.FlashMode flashMode: Int,
     ) = runIfNotClosed {
         if (captureSequence.hasInvalidSurface()) {
             failedResults(
