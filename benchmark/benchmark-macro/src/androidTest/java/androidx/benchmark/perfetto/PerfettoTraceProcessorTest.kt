@@ -32,6 +32,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.time.Duration.Companion.milliseconds
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
@@ -163,9 +164,13 @@ class PerfettoTraceProcessorTest {
         val traceFile = createTempFileFromAsset("api31_startup_cold", ".perfetto-trace")
         PerfettoTraceProcessor.runSingleSessionServer(traceFile.absolutePath) {
             val error = assertFailsWith<IllegalStateException> {
-                query("SYNTAX ERROR, PLEASE!")
+                query("SYNTAX ERROR, PLEASE")
             }
-            assertContains(error.message!!, "syntax error")
+            assertContains(
+                charSequence = error.message!!,
+                other = "syntax error",
+                message = "expected 'syntax error', saw message : '''${error.message}'''"
+            )
         }
     }
 
@@ -259,21 +264,42 @@ class PerfettoTraceProcessorTest {
     fun runServerShouldHandleStartAndStopServer() {
         assumeTrue(isAbiSupported())
 
-        // This method will return true if the server status endpoint returns 200 (that is also
-        // the only status code being returned).
-        fun isRunning(): Boolean = try {
-            val url = URL("http://localhost:${PerfettoTraceProcessor.PORT}/")
-            with(url.openConnection() as HttpURLConnection) {
-                return@with responseCode == 200
-            }
-        } catch (e: ConnectException) {
-            false
-        }
-
         // Check server is not running
         assertTrue(!isRunning())
 
         PerfettoTraceProcessor.runServer {
+            // Check server is running
+            assertTrue(isRunning())
+        }
+
+        // Check server is not running
+        assertTrue(!isRunning())
+    }
+
+    @Test
+    fun runServerWithNegativeTimeoutShouldStartAndStopServer() {
+        assumeTrue(isAbiSupported())
+
+        // Check server is not running
+        assertTrue(!isRunning())
+
+        PerfettoTraceProcessor.runServer((-1).milliseconds) {
+            // Check server is running
+            assertTrue(isRunning())
+        }
+
+        // Check server is not running
+        assertTrue(!isRunning())
+    }
+
+    @Test
+    fun runServerWithZeroTimeoutShouldStartAndStopServer() {
+        assumeTrue(isAbiSupported())
+
+        // Check server is not running
+        assertTrue(!isRunning())
+
+        PerfettoTraceProcessor.runServer((0).milliseconds) {
             // Check server is running
             assertTrue(isRunning())
         }
@@ -303,5 +329,18 @@ class PerfettoTraceProcessorTest {
             // This would throw an exception if there is an error in the parsing.
             getTraceMetrics("android_startup")
         }
+    }
+
+    /**
+     * This method will return true if the server status endpoint returns 200 (that is also
+     * the only status code being returned).
+     */
+    private fun isRunning(): Boolean = try {
+        val url = URL("http://localhost:${PerfettoTraceProcessor.PORT}/")
+        with(url.openConnection() as HttpURLConnection) {
+            return@with responseCode == 200
+        }
+    } catch (e: ConnectException) {
+        false
     }
 }

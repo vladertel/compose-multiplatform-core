@@ -38,6 +38,7 @@ import androidx.wear.compose.material.samples.AlertWithButtons
 import androidx.wear.compose.material.samples.AlertWithChips
 import androidx.wear.compose.material.samples.AnimateOptionChangePicker
 import androidx.wear.compose.material.samples.AppCardWithIcon
+import androidx.wear.compose.material.samples.AppCardWithImage
 import androidx.wear.compose.material.samples.AutoCenteringPickerGroup
 import androidx.wear.compose.material.samples.ButtonWithIcon
 import androidx.wear.compose.material.samples.ButtonWithText
@@ -76,6 +77,7 @@ import androidx.wear.compose.material.samples.SimpleScalingLazyColumnWithContent
 import androidx.wear.compose.material.samples.SimpleScalingLazyColumnWithSnap
 import androidx.wear.compose.material.samples.SimpleSwipeToDismissBox
 import androidx.wear.compose.material.samples.SplitToggleChipWithCheckbox
+import androidx.wear.compose.material.samples.SplitToggleChipWithRadioButton
 import androidx.wear.compose.material.samples.StatefulSwipeToDismissBox
 import androidx.wear.compose.material.samples.StepperSample
 import androidx.wear.compose.material.samples.StepperWithCustomSemanticsSample
@@ -86,7 +88,7 @@ import androidx.wear.compose.material.samples.TimeTextAnimation
 import androidx.wear.compose.material.samples.TimeTextWithFullDateAndTimeFormat
 import androidx.wear.compose.material.samples.TimeTextWithStatus
 import androidx.wear.compose.material.samples.TitleCardStandard
-import androidx.wear.compose.material.samples.TitleCardWithImage
+import androidx.wear.compose.material.samples.TitleCardWithImageBackground
 import androidx.wear.compose.material.samples.ToggleButtonWithIcon
 import androidx.wear.compose.material.samples.ToggleChipWithRadioButton
 import androidx.wear.compose.material.samples.ToggleChipWithSwitch
@@ -488,7 +490,12 @@ val WearMaterialDemos = DemoCategory(
                             Centralize(Modifier.padding(horizontal = 10.dp)) {
                                 SplitToggleChipWithCheckbox()
                             }
-                        }
+                        },
+                        ComposableDemo("SplitToggleChip With RadioButton") {
+                            Centralize(Modifier.padding(horizontal = 10.dp)) {
+                                SplitToggleChipWithRadioButton()
+                            }
+                        },
                     )
                 ),
                 DemoCategory(
@@ -516,14 +523,19 @@ val WearMaterialDemos = DemoCategory(
                                 AppCardWithIcon()
                             }
                         },
+                        ComposableDemo("AppCard With Image") {
+                            Centralize(Modifier.padding(horizontal = 10.dp)) {
+                                AppCardWithImage()
+                            }
+                        },
                         ComposableDemo("TitleCard") {
                             Centralize(Modifier.padding(horizontal = 10.dp)) {
                                 TitleCardStandard()
                             }
                         },
-                        ComposableDemo("TitleCard With Image") {
+                        ComposableDemo("TitleCard With Image Background") {
                             Centralize(Modifier.padding(horizontal = 10.dp)) {
-                                TitleCardWithImage()
+                                TitleCardWithImageBackground()
                             }
                         },
                     )

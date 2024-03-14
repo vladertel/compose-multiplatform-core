@@ -31,8 +31,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.progressSemantics
-import androidx.compose.material3.tokens.CircularProgressIndicatorTokens
-import androidx.compose.material3.tokens.LinearProgressIndicatorTokens
+import androidx.compose.material3.tokens.ProgressIndicatorTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -179,7 +178,14 @@ fun LinearProgressIndicator(
     }
 }
 
-private fun DrawScope.drawStopIndicator(
+/**
+ * Draws the stop indicator at the end of the track.
+ *
+ * @param stopSize size of this stop indicator, it cannot be bigger than the track's height
+ * @param color color of this stop indicator
+ * @param strokeCap stroke cap to use for the ends of this stop indicator
+ */
+fun DrawScope.drawStopIndicator(
     stopSize: Dp,
     color: Color,
     strokeCap: StrokeCap,
@@ -334,17 +340,16 @@ fun LinearProgressIndicator(
         }
         val gapSizeFraction = adjustedGapSize / size.width.toDp()
 
+        // Track before line 1
+        if (firstLineHead.value < 1f - gapSizeFraction) {
+            val start = if (firstLineHead.value > 0) firstLineHead.value + gapSizeFraction else 0f
+            drawLinearIndicator(
+                start, 1f, trackColor, strokeWidth, strokeCap
+            )
+        }
+
+        // Line 1
         if (firstLineHead.value - firstLineTail.value > 0) {
-            if (firstLineTail.value > gapSizeFraction) {
-                val start = if (secondLineHead.value > gapSizeFraction) {
-                    secondLineHead.value + gapSizeFraction
-                } else {
-                    0f
-                }
-                drawLinearIndicator(
-                    start, firstLineTail.value - gapSizeFraction, trackColor, strokeWidth, strokeCap
-                )
-            }
             drawLinearIndicator(
                 firstLineHead.value,
                 firstLineTail.value,
@@ -352,18 +357,19 @@ fun LinearProgressIndicator(
                 strokeWidth,
                 strokeCap,
             )
-            if (firstLineHead.value < 1f - gapSizeFraction) {
-                drawLinearIndicator(
-                    firstLineHead.value + gapSizeFraction, 1f, trackColor, strokeWidth, strokeCap
-                )
-            }
         }
+
+        // Track between line 1 and line 2
+        if (firstLineTail.value > gapSizeFraction) {
+            val start = if (secondLineHead.value > 0) secondLineHead.value + gapSizeFraction else 0f
+            val end = if (firstLineTail.value < 1f) firstLineTail.value - gapSizeFraction else 1f
+            drawLinearIndicator(
+                start, end, trackColor, strokeWidth, strokeCap
+            )
+        }
+
+        // Line 2
         if (secondLineHead.value - secondLineTail.value > 0) {
-            if (secondLineTail.value > gapSizeFraction) {
-                drawLinearIndicator(
-                    0f, secondLineTail.value - gapSizeFraction, trackColor, strokeWidth, strokeCap
-                )
-            }
             drawLinearIndicator(
                 secondLineHead.value,
                 secondLineTail.value,
@@ -371,16 +377,14 @@ fun LinearProgressIndicator(
                 strokeWidth,
                 strokeCap,
             )
-            if (secondLineHead.value < 1f - gapSizeFraction) {
-                val end = if (firstLineTail.value < 1f - gapSizeFraction) {
-                    firstLineTail.value - gapSizeFraction
-                } else {
-                    1f
-                }
-                drawLinearIndicator(
-                    secondLineHead.value + gapSizeFraction, end, trackColor, strokeWidth, strokeCap
-                )
-            }
+        }
+
+        // Track after line 2
+        if (secondLineTail.value > gapSizeFraction) {
+            val end = if (secondLineTail.value < 1) secondLineTail.value - gapSizeFraction else 1f
+            drawLinearIndicator(
+                0f, end, trackColor, strokeWidth, strokeCap
+            )
         }
     }
 }
@@ -851,16 +855,16 @@ object ProgressIndicatorDefaults {
     /** Default color for a linear progress indicator. */
     val linearColor: Color
         @Composable get() =
-            LinearProgressIndicatorTokens.ActiveIndicatorColor.value
+            ProgressIndicatorTokens.ActiveIndicatorColor.value
 
     /** Default color for a circular progress indicator. */
     val circularColor: Color
         @Composable get() =
-            CircularProgressIndicatorTokens.ActiveIndicatorColor.value
+            ProgressIndicatorTokens.ActiveIndicatorColor.value
 
     /** Default track color for a linear progress indicator. */
     val linearTrackColor: Color
-        @Composable get() = LinearProgressIndicatorTokens.TrackColor.value
+        @Composable get() = ProgressIndicatorTokens.TrackColor.value
 
     /** Default track color for a circular progress indicator. */
     @Deprecated(
@@ -873,14 +877,14 @@ object ProgressIndicatorDefaults {
 
     /** Default track color for a circular determinate progress indicator. */
     val circularDeterminateTrackColor: Color
-        @Composable get() = LinearProgressIndicatorTokens.TrackColor.value
+        @Composable get() = ProgressIndicatorTokens.TrackColor.value
 
     /** Default track color for a circular indeterminate progress indicator. */
     val circularIndeterminateTrackColor: Color
         @Composable get() = Color.Transparent
 
     /** Default stroke width for a circular progress indicator. */
-    val CircularStrokeWidth: Dp = CircularProgressIndicatorTokens.ActiveIndicatorWidth
+    val CircularStrokeWidth: Dp = ProgressIndicatorTokens.TrackThickness
 
     /** Default stroke cap for a linear progress indicator. */
     val LinearStrokeCap: StrokeCap = StrokeCap.Round
@@ -895,19 +899,19 @@ object ProgressIndicatorDefaults {
     @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
     @get:ExperimentalMaterial3Api
     @ExperimentalMaterial3Api
-    val LinearTrackStopIndicatorSize: Dp = 4.dp
+    val LinearTrackStopIndicatorSize: Dp = ProgressIndicatorTokens.StopSize
 
     /** Default indicator track gap size for a linear progress indicator. */
     @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
     @get:ExperimentalMaterial3Api
     @ExperimentalMaterial3Api
-    val LinearIndicatorTrackGapSize: Dp = 4.dp
+    val LinearIndicatorTrackGapSize: Dp = ProgressIndicatorTokens.ActiveTrackSpace
 
     /** Default indicator track gap size for a circular progress indicator. */
     @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
     @get:ExperimentalMaterial3Api
     @ExperimentalMaterial3Api
-    val CircularIndicatorTrackGapSize: Dp = 4.dp
+    val CircularIndicatorTrackGapSize: Dp = ProgressIndicatorTokens.ActiveTrackSpace
 
     /**
      * The default [AnimationSpec] that should be used when animating between progress in a
@@ -929,13 +933,13 @@ object ProgressIndicatorDefaults {
 internal val LinearIndicatorWidth = 240.dp
 
 /*@VisibleForTesting*/
-internal val LinearIndicatorHeight = LinearProgressIndicatorTokens.TrackHeight
+internal val LinearIndicatorHeight = ProgressIndicatorTokens.TrackThickness
 
 // CircularProgressIndicator Material specs
 // Diameter of the indicator circle
 /*@VisibleForTesting*/
 internal val CircularIndicatorDiameter =
-    CircularProgressIndicatorTokens.Size - CircularProgressIndicatorTokens.ActiveIndicatorWidth * 2
+    ProgressIndicatorTokens.Size - ProgressIndicatorTokens.TrackThickness * 2
 
 // Indeterminate linear indicator transition specs
 

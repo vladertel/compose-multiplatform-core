@@ -22,18 +22,18 @@ import androidx.build.AndroidXImplPlugin.Companion.FINALIZE_TEST_CONFIGS_WITH_AP
 import androidx.build.asFilenamePrefix
 import androidx.build.dependencyTracker.AffectedModuleDetector
 import androidx.build.getFileInTestConfigDirectory
-import androidx.build.getPrivacySandboxApksDirectory
+import androidx.build.getPrivacySandboxFilesDirectory
 import androidx.build.getSupportRootFolder
 import androidx.build.hasBenchmarkPlugin
 import androidx.build.isPresubmitBuild
 import androidx.build.multiplatformExtension
 import com.android.build.api.artifact.Artifacts
 import com.android.build.api.artifact.SingleArtifact
+import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.dsl.KotlinMultiplatformAndroidTarget
-import com.android.build.api.dsl.KotlinMultiplatformAndroidTestOnDeviceCompilation
 import com.android.build.api.variant.AndroidComponentsExtension
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
-import com.android.build.api.variant.HasAndroidTest
+import com.android.build.api.variant.HasDeviceTests
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import com.android.build.api.variant.TestAndroidComponentsExtension
@@ -64,8 +64,8 @@ fun Project.createTestConfigurationGenerationTask(
     variantName: String,
     artifacts: Artifacts,
     minSdk: Int,
-    testRunner: String,
-    instrumentationRunnerArgs: Map<String, String>
+    testRunner: Provider<String>,
+    instrumentationRunnerArgs: Provider<Map<String, String>>
 ) {
     val xmlName = "${path.asFilenamePrefix()}$variantName.xml"
     val jsonName = "_${path.asFilenamePrefix()}$variantName.json"
@@ -83,8 +83,7 @@ fun Project.createTestConfigurationGenerationTask(
             GenerateTestConfigurationTask::class.java
         ) { task ->
             val androidXExtension = extensions.getByType<AndroidXExtension>()
-
-            if (androidXExtension.deviceTests.includePrivacySandboxSdks) {
+            if (isPrivacySandboxEnabled()) {
                 // TODO (b/309610890): Replace for dependency on AGP artifact.
                 val extractedPrivacySandboxSdkApksDir = layout.buildDirectory.dir(
                     "intermediates/extracted_apks_from_privacy_sandbox_sdks"
@@ -94,12 +93,21 @@ fun Project.createTestConfigurationGenerationTask(
                         it.builtBy("buildPrivacySandboxSdkApksForDebug")
                     }
                 )
+                // TODO (b/309610890): Replace for dependency on AGP artifact.
+                val usesSdkSplitDir = layout.buildDirectory.dir(
+                    "intermediates/uses_sdk_library_split_for_local_deployment"
+                )
+                task.privacySandboxUsesSdkSplit.from(
+                    files(usesSdkSplitDir) {
+                        it.builtBy("generateDebugAdditionalSplitForPrivacySandboxDeployment")
+                    }
+                )
                 task.outputPrivacySandboxFilenamesPrefix.set(
                     "${path.asFilenamePrefix()}-$variantName"
                 )
-                task.outputPrivacySandboxSdkApks.set(
-                    getPrivacySandboxApksDirectory().map {
-                        it.dir("${path.asFilenamePrefix()}-$variantName-sdks")
+                task.outputPrivacySandboxFiles.set(
+                    getPrivacySandboxFilesDirectory().map {
+                        it.dir("${path.asFilenamePrefix()}-$variantName")
                     }
                 )
             }
@@ -115,12 +123,7 @@ fun Project.createTestConfigurationGenerationTask(
             task.outputJson.set(getFileInTestConfigDirectory(jsonName))
             task.presubmit.set(isPresubmitBuild())
             task.instrumentationArgs.putAll(instrumentationRunnerArgs)
-            // Disable work tests on < API 18: b/178127496
-            if (path.startsWith(":work:")) {
-                task.minSdk.set(maxOf(18, minSdk))
-            } else {
-                task.minSdk.set(minSdk)
-            }
+            task.minSdk.set(minSdk)
             val hasBenchmarkPlugin = hasBenchmarkPlugin()
             task.hasBenchmarkPlugin.set(hasBenchmarkPlugin)
             task.testRunner.set(testRunner)
@@ -172,6 +175,7 @@ fun Project.addAppApkToTestConfigGeneration(androidXExtension: AndroidXExtension
         }
     }
 
+    // Migrate away when b/280680434 is fixed.
     // For tests modules, the instrumentation apk is pulled from the <variant>TestedApks
     // configuration. Note that also the associated test configuration task name is different
     // from the application one.
@@ -290,7 +294,7 @@ fun Project.createOrUpdateMediaTestConfigurationGenerationTask(
     variantName: String,
     artifacts: Artifacts,
     minSdk: Int,
-    testRunner: String,
+    testRunner: Provider<String>,
 ) {
     val mediaTask = getOrCreateMediaTestConfigTask(this)
 
@@ -404,40 +408,44 @@ fun Project.createOrUpdateMediaTestConfigurationGenerationTask(
     }
 }
 
+@Suppress("UnstableApiUsage") // usage of HasDeviceTests
 fun Project.configureTestConfigGeneration(baseExtension: BaseExtension) {
     extensions.getByType(AndroidComponentsExtension::class.java).apply {
         onVariants { variant ->
-            var name: String? = null
-            var artifacts: Artifacts? = null
             when {
-                variant is HasAndroidTest -> {
-                    name = variant.androidTest?.name
-                    artifacts = variant.androidTest?.artifacts
+                variant is HasDeviceTests -> {
+                    variant.deviceTests.forEach { deviceTest ->
+                        when {
+                            path.contains("media:version-compat-tests:") -> {
+                                createOrUpdateMediaTestConfigurationGenerationTask(
+                                    deviceTest.name,
+                                    deviceTest.artifacts,
+                                    // replace minSdk after b/328495232 is fixed
+                                    baseExtension.defaultConfig.minSdk!!,
+                                    deviceTest.instrumentationRunner,
+                                )
+                            }
+                            else -> {
+                                createTestConfigurationGenerationTask(
+                                    deviceTest.name,
+                                    deviceTest.artifacts,
+                                    // replace minSdk after b/328495232 is fixed
+                                    baseExtension.defaultConfig.minSdk!!,
+                                    deviceTest.instrumentationRunner,
+                                    deviceTest.instrumentationRunnerArguments
+                                )
+                            }
+                        }
+                    }
                 }
                 project.plugins.hasPlugin("com.android.test") -> {
-                    name = variant.name
-                    artifacts = variant.artifacts
-                }
-            }
-            if (name == null || artifacts == null) {
-                return@onVariants
-            }
-            when {
-                path.contains("media:version-compat-tests:") -> {
-                    createOrUpdateMediaTestConfigurationGenerationTask(
-                        name,
-                        artifacts,
-                        baseExtension.defaultConfig.minSdk!!,
-                        baseExtension.defaultConfig.testInstrumentationRunner!!,
-                    )
-                }
-                else -> {
                     createTestConfigurationGenerationTask(
-                        name,
-                        artifacts,
+                        variant.name,
+                        variant.artifacts,
+                        // replace minSdk after b/328495232 is fixed
                         baseExtension.defaultConfig.minSdk!!,
-                        baseExtension.defaultConfig.testInstrumentationRunner!!,
-                        baseExtension.defaultConfig.testInstrumentationRunnerArguments
+                        provider { baseExtension.defaultConfig.testInstrumentationRunner!! },
+                        provider { baseExtension.defaultConfig.testInstrumentationRunnerArguments }
                     )
                 }
             }
@@ -450,17 +458,15 @@ fun Project.configureTestConfigGeneration(
     componentsExtension: KotlinMultiplatformAndroidComponentsExtension
 ) {
     componentsExtension.onVariant { variant ->
-            val name = variant.androidTest?.name ?: return@onVariant
-            val artifacts = variant.androidTest?.artifacts ?: return@onVariant
-        kotlinMultiplatformAndroidTarget.compilations.withType(
-            KotlinMultiplatformAndroidTestOnDeviceCompilation::class.java
-        ) {
+        @Suppress("UnstableApiUsage") // usage of HasDeviceTests
+        variant.deviceTests.forEach { deviceTest ->
             createTestConfigurationGenerationTask(
-                name,
-                artifacts,
+                deviceTest.name,
+                deviceTest.artifacts,
+                // replace minSdk after b/328495232 is fixed
                 kotlinMultiplatformAndroidTarget.minSdk!!,
-                it.instrumentationRunner!!,
-                mapOf()
+                deviceTest.instrumentationRunner,
+                deviceTest.instrumentationRunnerArguments,
             )
         }
     }
@@ -507,3 +513,9 @@ private fun Project.getTestSourceSetsForAndroid(): List<FileCollection> {
         ?.mapTo(testSourceFileCollections) { it.kotlin.sourceDirectories }
     return testSourceFileCollections
 }
+
+fun Project.isPrivacySandboxEnabled(): Boolean =
+    extensions.findByType(ApplicationExtension::class.java)
+        ?.privacySandbox
+        ?.enable
+        ?: false

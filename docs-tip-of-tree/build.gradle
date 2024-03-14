@@ -3,11 +3,21 @@ plugins {
     id("AndroidXDocsPlugin")
 }
 
+def docsForOptionalProject(path) {
+    Project project = findProject(path)
+    if (project != null) {
+        dependencies {
+            docs(project)
+        }
+    }
+}
+
 android {
     namespace "androidx.docs.tipoftree"
 }
 
 dependencies {
+    docsForOptionalProject(":xr:xr")
     docs(project(":activity:activity"))
     docs(project(":activity:activity-compose"))
     samples(project(":activity:activity-compose:activity-compose-samples"))
@@ -98,6 +108,8 @@ dependencies {
     kmpDocs(project(":compose:material:material-icons-core"))
     samples(project(":compose:material:material-icons-core:material-icons-core-samples"))
     kmpDocs(project(":compose:material:material-ripple"))
+    docs(project(":compose:material:material-navigation"))
+    samples(project(":compose:material:material-navigation-samples"))
     samples(project(":compose:material:material:material-samples"))
     kmpDocs(project(":compose:runtime:runtime"))
     samples(project(":compose:runtime:runtime:runtime-samples"))
@@ -162,6 +174,7 @@ dependencies {
     docs(project(":credentials:credentials-fido"))
     samples(project(":credentials:credentials-samples"))
     docs(project(":credentials:credentials-play-services-auth"))
+    docs(project(":credentials:credentials-e2ee"))
     docs(project(":cursoradapter:cursoradapter"))
     docs(project(":customview:customview"))
     docs(project(":customview:customview-poolingcontainer"))
@@ -206,7 +219,6 @@ dependencies {
     docs(project(":glance:glance-testing"))
     docs(project(":glance:glance-template"))
     docs(project(":glance:glance-wear-tiles"))
-    docs(project(":glance:glance-wear-tiles-preview"))
     docs(project(":graphics:filters:filters"))
     docs(project(":graphics:graphics-core"))
     samples(project(":graphics:graphics-core:graphics-core-samples"))
@@ -313,7 +325,7 @@ dependencies {
     kmpDocs(project(":room:room-common"))
     docs(project(":room:room-guava"))
     docs(project(":room:room-ktx"))
-    docs(project(":room:room-migration"))
+    kmpDocs(project(":room:room-migration"))
     docs(project(":room:room-paging"))
     docs(project(":room:room-paging-guava"))
     docs(project(":room:room-paging-rxjava2"))
@@ -321,7 +333,7 @@ dependencies {
     kmpDocs(project(":room:room-runtime"))
     docs(project(":room:room-rxjava2"))
     docs(project(":room:room-rxjava3"))
-    docs(project(":room:room-testing"))
+    kmpDocs(project(":room:room-testing"))
     docs(project(":safeparcel:safeparcel"))
     docs(project(":savedstate:savedstate"))
     docs(project(":savedstate:savedstate-ktx"))

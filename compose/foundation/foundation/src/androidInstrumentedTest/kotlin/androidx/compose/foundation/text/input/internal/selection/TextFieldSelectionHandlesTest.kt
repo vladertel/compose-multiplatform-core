@@ -29,7 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField2
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.FocusedWindowTest
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
@@ -84,16 +84,16 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
     private lateinit var state: TextFieldState
 
-    private val TAG = "BasicTextField2"
+    private val TAG = "BasicTextField"
 
     private val fontSize = 10.sp
     private val fontSizePx = with(rule.density) { fontSize.toPx() }
 
     @Test
     fun selectionHandles_doNotShow_whenFieldNotFocused() {
-        state = TextFieldState("hello, world", initialSelectionInChars = TextRange(2, 5))
+        state = TextFieldState("hello, world", initialSelection = TextRange(2, 5))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -107,9 +107,9 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
     @Test
     fun selectionHandles_haveMinimumTouchSizeArea() = with(rule.density) {
-        state = TextFieldState("hello, world", initialSelectionInChars = TextRange(2, 5))
+        state = TextFieldState("hello, world", initialSelection = TextRange(2, 5))
         rule.setContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -138,9 +138,9 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
     @Test
     fun selectionHandles_appears_whenFieldGetsFocused() {
-        state = TextFieldState("hello, world", initialSelectionInChars = TextRange(2, 5))
+        state = TextFieldState("hello, world", initialSelection = TextRange(2, 5))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -155,7 +155,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
     @Test
     fun selectionHandles_disappear_whenFieldLosesFocus() {
-        state = TextFieldState("hello, world", initialSelectionInChars = TextRange(2, 5))
+        state = TextFieldState("hello, world", initialSelection = TextRange(2, 5))
         val focusRequester = FocusRequester()
         rule.setTextFieldTestContent {
             Column {
@@ -164,7 +164,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
                         .size(100.dp)
                         .focusRequester(focusRequester)
                         .focusable())
-                BasicTextField2(
+                BasicTextField(
                     state,
                     textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                     modifier = Modifier
@@ -184,7 +184,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
     @Test
     fun textField_noSelectionHandles_whenWindowLosesFocus() {
-        state = TextFieldState("hello, world", initialSelectionInChars = TextRange(2, 5))
+        state = TextFieldState("hello, world", initialSelection = TextRange(2, 5))
         val focusWindow = mutableStateOf(true)
         val windowInfo = object : WindowInfo {
             override val isWindowFocused: Boolean
@@ -193,7 +193,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
         rule.setContent {
             CompositionLocalProvider(LocalWindowInfo provides windowInfo) {
-                BasicTextField2(
+                BasicTextField(
                     state,
                     textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                     modifier = Modifier.testTag(TAG).width(100.dp)
@@ -214,7 +214,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
     @Test
     fun textField_redisplaysSelectionHandlesAndToolbar_whenWindowRegainsFocus() {
-        state = TextFieldState("hello, world", initialSelectionInChars = TextRange(2, 5))
+        state = TextFieldState("hello, world", initialSelection = TextRange(2, 5))
         val focusWindow = mutableStateOf(true)
         val windowInfo = object : WindowInfo {
             override val isWindowFocused: Boolean
@@ -223,7 +223,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
         rule.setContent {
             CompositionLocalProvider(LocalWindowInfo provides windowInfo) {
-                BasicTextField2(
+                BasicTextField(
                     state,
                     textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                     modifier = Modifier.testTag(TAG).width(100.dp)
@@ -251,9 +251,9 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Test
     fun selectionHandles_locatedAtTheRightPosition_ltr_ltr() {
-        state = TextFieldState("hello, world", initialSelectionInChars = TextRange(2, 5))
+        state = TextFieldState("hello, world", initialSelection = TextRange(2, 5))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -284,9 +284,9 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     @Test
     fun selectionHandles_locatedAtTheRightPosition_ltr_rtl() {
-        state = TextFieldState("abc \u05D0\u05D1\u05D2", initialSelectionInChars = TextRange(1, 6))
+        state = TextFieldState("abc \u05D0\u05D1\u05D2", initialSelection = TextRange(1, 6))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -317,9 +317,9 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
     @Test
     fun selectionHandlesDisappear_whenScrolledOutOfView_horizontally() {
         // make it scrollable
-        state = TextFieldState("hello ".repeat(10), initialSelectionInChars = TextRange(1, 2))
+        state = TextFieldState("hello ".repeat(10), initialSelection = TextRange(1, 2))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 lineLimits = TextFieldLineLimits.SingleLine,
@@ -335,22 +335,22 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         rule.onNodeWithTag(TAG).performTouchInput { swipeLeft() }
         assertHandlesNotExist()
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 2))
+            assertThat(state.text.selection).isEqualTo(TextRange(1, 2))
         }
 
         rule.onNodeWithTag(TAG).performTouchInput { swipeRight() }
         assertHandlesDisplayed()
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 2))
+            assertThat(state.text.selection).isEqualTo(TextRange(1, 2))
         }
     }
 
     @Test
     fun selectionHandlesDisappear_whenScrolledOutOfView_vertically() {
         // make it scrollable
-        state = TextFieldState("hello ".repeat(10), initialSelectionInChars = TextRange(1, 2))
+        state = TextFieldState("hello ".repeat(10), initialSelection = TextRange(1, 2))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 2),
@@ -368,7 +368,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         }
         assertHandlesNotExist()
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 2))
+            assertThat(state.text.selection).isEqualTo(TextRange(1, 2))
         }
 
         rule.onNodeWithTag(TAG).performTouchInput {
@@ -376,7 +376,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         }
         assertHandlesDisplayed()
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 2))
+            assertThat(state.text.selection).isEqualTo(TextRange(1, 2))
         }
     }
 
@@ -384,14 +384,14 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
     fun selectionHandlesDisappear_whenScrolledOutOfView_horizontally_inContainer() {
         // make it scrollable
         val containerTag = "container"
-        state = TextFieldState("hello", initialSelectionInChars = TextRange(1, 2))
+        state = TextFieldState("hello", initialSelection = TextRange(1, 2))
         rule.setTextFieldTestContent {
             Row(modifier = Modifier
                 .width(200.dp)
                 .horizontalScroll(rememberScrollState())
                 .testTag(containerTag)
             ) {
-                BasicTextField2(
+                BasicTextField(
                     state,
                     textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                     modifier = Modifier
@@ -412,7 +412,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         }
         assertHandlesNotExist()
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 2))
+            assertThat(state.text.selection).isEqualTo(TextRange(1, 2))
         }
 
         rule.onNodeWithTag(containerTag).performTouchInput {
@@ -420,7 +420,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         }
         assertHandlesDisplayed()
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 2))
+            assertThat(state.text.selection).isEqualTo(TextRange(1, 2))
         }
     }
 
@@ -428,14 +428,14 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
     fun selectionHandlesDisappear_whenScrolledOutOfView_vertically_inContainer() {
         // make it scrollable
         val containerTag = "container"
-        state = TextFieldState("hello", initialSelectionInChars = TextRange(1, 2))
+        state = TextFieldState("hello", initialSelection = TextRange(1, 2))
         rule.setTextFieldTestContent {
             Column(modifier = Modifier
                 .height(200.dp)
                 .verticalScroll(rememberScrollState())
                 .testTag(containerTag)
             ) {
-                BasicTextField2(
+                BasicTextField(
                     state,
                     textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                     modifier = Modifier
@@ -456,7 +456,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         }
         assertHandlesNotExist()
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 2))
+            assertThat(state.text.selection).isEqualTo(TextRange(1, 2))
         }
 
         rule.onNodeWithTag(containerTag).performTouchInput {
@@ -464,15 +464,15 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         }
         assertHandlesDisplayed()
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1, 2))
+            assertThat(state.text.selection).isEqualTo(TextRange(1, 2))
         }
     }
 
     @Test
     fun dragStartSelectionHandle_toExtendSelection() {
-        state = TextFieldState("abc def ghj", initialSelectionInChars = TextRange(4, 7))
+        state = TextFieldState("abc def ghj", initialSelection = TextRange(4, 7))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -485,15 +485,15 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
         swipeToLeft(Handle.SelectionStart, fontSizePx * 4)
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 7))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 7))
         }
     }
 
     @Test
     fun dragEndSelectionHandle_toExtendSelection() {
-        state = TextFieldState("abc def ghj", initialSelectionInChars = TextRange(4, 7))
+        state = TextFieldState("abc def ghj", initialSelection = TextRange(4, 7))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -506,7 +506,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
         swipeToRight(Handle.SelectionEnd, fontSizePx * 4)
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(4, 11))
+            assertThat(state.text.selection).isEqualTo(TextRange(4, 11))
         }
     }
 
@@ -514,7 +514,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
     fun doubleClickOnWord_toSelectWord() {
         state = TextFieldState("abc def ghj")
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -529,7 +529,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
             doubleClick(Offset(fontSizePx * 5, fontSizePx / 2)) // middle word
         }
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(4, 7))
+            assertThat(state.text.selection).isEqualTo(TextRange(4, 7))
         }
     }
 
@@ -538,7 +538,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
     fun doubleClickOnWhitespace_doesNotSelectWhitespace() {
         state = TextFieldState("abc def ghj")
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -554,19 +554,19 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
             doubleClick(Offset(fontSizePx * 3.5f, fontSizePx / 2))
         }
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isNotEqualTo(TextRange(3, 4))
-            assertThat(state.text.selectionInChars.collapsed).isFalse()
+            assertThat(state.text.selection).isNotEqualTo(TextRange(3, 4))
+            assertThat(state.text.selection.collapsed).isFalse()
         }
     }
 
     @Test
     fun dragStartSelectionHandle_outOfBounds_horizontally() {
-        state = TextFieldState("abc def ".repeat(10), initialSelectionInChars = TextRange(77, 80))
+        state = TextFieldState("abc def ".repeat(10), initialSelection = TextRange(77, 80))
         val scrollState = ScrollState(0)
         lateinit var scope: CoroutineScope
         rule.setTextFieldTestContent {
             scope = rememberCoroutineScope()
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 lineLimits = TextFieldLineLimits.SingleLine,
@@ -585,18 +585,18 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
             swipeToLeft(Handle.SelectionStart, fontSizePx)
         }
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 80))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 80))
         }
     }
 
     @Test
     fun dragStartSelectionHandle_outOfBounds_vertically() {
-        state = TextFieldState("abc def ".repeat(10), initialSelectionInChars = TextRange(77, 80))
+        state = TextFieldState("abc def ".repeat(10), initialSelection = TextRange(77, 80))
         val scrollState = ScrollState(0)
         lateinit var scope: CoroutineScope
         rule.setTextFieldTestContent {
             scope = rememberCoroutineScope()
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 3),
@@ -615,15 +615,15 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         // make sure that we also swipe to start on the first line
         swipeToLeft(Handle.SelectionStart, fontSizePx * 10)
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 80))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 80))
         }
     }
 
     @Test
     fun dragEndSelectionHandle_outOfBounds_horizontally() {
-        state = TextFieldState("abc def ".repeat(10), initialSelectionInChars = TextRange(0, 3))
+        state = TextFieldState("abc def ".repeat(10), initialSelection = TextRange(0, 3))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 lineLimits = TextFieldLineLimits.SingleLine,
@@ -640,16 +640,16 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
             swipeToRight(Handle.SelectionEnd, fontSizePx)
         }
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 80))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 80))
         }
     }
 
     @Test
     fun dragEndSelectionHandle_outOfBounds_vertically() {
-        state = TextFieldState("abc def ".repeat(10), initialSelectionInChars = TextRange(0, 3))
+        state = TextFieldState("abc def ".repeat(10), initialSelection = TextRange(0, 3))
         lateinit var layoutResult: () -> TextLayoutResult?
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 3),
@@ -669,15 +669,15 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
             swipeToRight(Handle.SelectionEnd, layoutResult.size.width.toFloat())
         }
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 80))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 80))
         }
     }
 
     @Test
     fun dragStartSelectionHandle_extendsByWord() {
-        state = TextFieldState("abc def ghj", initialSelectionInChars = TextRange(4, 7))
+        state = TextFieldState("abc def ghj", initialSelection = TextRange(4, 7))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -691,15 +691,15 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         swipeToLeft(Handle.SelectionStart, fontSizePx * 2) // only move by 2 characters
         rule.runOnIdle {
             // selection extends by a word
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 7))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 7))
         }
     }
 
     @Test
     fun dragEndSelectionHandle_extendsByWord() {
-        state = TextFieldState("abc def ghj", initialSelectionInChars = TextRange(4, 7))
+        state = TextFieldState("abc def ghj", initialSelection = TextRange(4, 7))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -713,15 +713,15 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         swipeToRight(Handle.SelectionEnd, fontSizePx * 2) // only move by 2 characters
         rule.runOnIdle {
             // selection extends by a word
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(4, 11))
+            assertThat(state.text.selection).isEqualTo(TextRange(4, 11))
         }
     }
 
     @Test
     fun dragStartSelectionHandle_shrinksByCharacter() {
-        state = TextFieldState("abc def ghj", initialSelectionInChars = TextRange(4, 7))
+        state = TextFieldState("abc def ghj", initialSelection = TextRange(4, 7))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -735,15 +735,15 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         swipeToRight(Handle.SelectionStart, fontSizePx) // only move by a single character
         rule.runOnIdle {
             // selection shrinks by a character
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(5, 7))
+            assertThat(state.text.selection).isEqualTo(TextRange(5, 7))
         }
     }
 
     @Test
     fun dragEndSelectionHandle_shrinksByCharacter() {
-        state = TextFieldState("abc def ghj", initialSelectionInChars = TextRange(4, 7))
+        state = TextFieldState("abc def ghj", initialSelection = TextRange(4, 7))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -757,15 +757,15 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
         swipeToLeft(Handle.SelectionEnd, fontSizePx) // only move by a single character
         rule.runOnIdle {
             // selection shrinks by a character
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(4, 6))
+            assertThat(state.text.selection).isEqualTo(TextRange(4, 6))
         }
     }
 
     @Test
     fun dragStartSelectionHandlePastEndHandle_reversesTheSelection() {
-        state = TextFieldState("abc def ghj", initialSelectionInChars = TextRange(4, 7))
+        state = TextFieldState("abc def ghj", initialSelection = TextRange(4, 7))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -778,15 +778,15 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
         swipeToRight(Handle.SelectionStart, fontSizePx * 7)
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(11, 7))
+            assertThat(state.text.selection).isEqualTo(TextRange(11, 7))
         }
     }
 
     @Test
     fun dragEndSelectionHandlePastStartHandle_canReverseSelection() {
-        state = TextFieldState("abc def ghj", initialSelectionInChars = TextRange(4, 7))
+        state = TextFieldState("abc def ghj", initialSelection = TextRange(4, 7))
         rule.setTextFieldTestContent {
-            BasicTextField2(
+            BasicTextField(
                 state,
                 textStyle = TextStyle(fontSize = fontSize, fontFamily = TEST_FONT_FAMILY),
                 modifier = Modifier
@@ -799,7 +799,7 @@ class TextFieldSelectionHandlesTest : FocusedWindowTest {
 
         swipeToLeft(Handle.SelectionEnd, fontSizePx * 7)
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(4, 0))
+            assertThat(state.text.selection).isEqualTo(TextRange(4, 0))
         }
     }
 

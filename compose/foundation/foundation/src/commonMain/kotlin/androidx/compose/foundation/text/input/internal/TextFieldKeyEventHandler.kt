@@ -41,7 +41,7 @@ import androidx.compose.ui.text.TextRange
 internal expect fun createTextFieldKeyEventHandler(): TextFieldKeyEventHandler
 
 /**
- * Handles KeyEvents coming to a BasicTextField2. This is mostly to support hardware keyboard but
+ * Handles KeyEvents coming to a BasicTextField. This is mostly to support hardware keyboard but
  * any KeyEvent can also be sent by the IME or other platform systems.
  *
  * This class is left abstract to make sure that each platform extends from it. Platforms can
@@ -60,7 +60,7 @@ internal abstract class TextFieldKeyEventHandler {
         focusManager: FocusManager,
         keyboardController: SoftwareKeyboardController
     ): Boolean {
-        val selection = textFieldState.visualText.selectionInChars
+        val selection = textFieldState.visualText.selection
         return if (!selection.collapsed && event.cancelsTextSelection()) {
             textFieldSelectionState.deselect()
             true
@@ -237,7 +237,7 @@ internal abstract class TextFieldKeyEventHandler {
             textPreparedSelectionState = preparedSelectionState
         )
         preparedSelection.block()
-        if (preparedSelection.selection != preparedSelection.initialValue.selectionInChars) {
+        if (preparedSelection.selection != preparedSelection.initialValue.selection) {
             // selection changes are applied atomically at the end of context evaluation
             state.selectCharsIn(preparedSelection.selection)
         }

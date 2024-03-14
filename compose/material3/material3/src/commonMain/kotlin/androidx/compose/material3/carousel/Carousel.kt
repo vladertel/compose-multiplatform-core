@@ -16,11 +16,14 @@
 
 package androidx.compose.material3.carousel
 
+import androidx.collection.IntIntMap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.TargetedFlingBehavior
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +40,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -91,8 +95,9 @@ internal fun HorizontalMultiBrowseCarousel(
                     carouselMainAxisSize = availableSpace,
                     preferredItemSize = preferredItemSize.toPx(),
                     itemSpacing = itemSpacing.toPx(),
+                    itemCount = state.itemCountState.value.invoke(),
                     minSmallSize = minSmallSize.toPx(),
-                    maxSmallSize = maxSmallSize.toPx()
+                    maxSmallSize = maxSmallSize.toPx(),
                 )
             }
         },
@@ -148,6 +153,7 @@ internal fun HorizontalUncontainedCarousel(
         },
         modifier = modifier,
         itemSpacing = itemSpacing,
+        flingBehavior = rememberDecaySnapFlingBehavior(),
         content = content
     )
 }
@@ -176,13 +182,23 @@ internal fun Carousel(
     keylineList: (availableSpace: Float) -> KeylineList?,
     modifier: Modifier = Modifier,
     itemSpacing: Dp = 0.dp,
+    flingBehavior: TargetedFlingBehavior = PagerDefaults.flingBehavior(state = state.pagerState),
     content: @Composable CarouselScope.(itemIndex: Int) -> Unit
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val pageSize = remember(keylineList) { CarouselPageSize(keylineList) }
 
     // TODO: Update beyond bounds numbers according to Strategy
     val outOfBoundsPageCount = 2
     val carouselScope = CarouselScopeImpl
+
+    val snapPositionMap = remember(pageSize.strategy.itemMainAxisSize) {
+        calculateSnapPositions(
+            pageSize.strategy,
+            state.itemCountState.value()
+        )
+    }
+    val snapPosition = remember(snapPositionMap) { KeylineSnapPosition(snapPositionMap) }
 
     if (orientation == Orientation.Horizontal) {
         HorizontalPager(
@@ -190,9 +206,19 @@ internal fun Carousel(
             pageSize = pageSize,
             pageSpacing = itemSpacing,
             outOfBoundsPageCount = outOfBoundsPageCount,
+            snapPosition = snapPosition,
+            flingBehavior = flingBehavior,
             modifier = modifier
         ) { page ->
-            Box(modifier = Modifier.carouselItem(page, state, pageSize.strategy)) {
+            Box(
+                modifier = Modifier.carouselItem(
+                    index = page,
+                    state = state,
+                    strategy = pageSize.strategy,
+                    itemPositionMap = snapPositionMap,
+                    isRtl = isRtl
+                )
+            ) {
                 carouselScope.content(page)
             }
         }
@@ -202,9 +228,19 @@ internal fun Carousel(
             pageSize = pageSize,
             pageSpacing = itemSpacing,
             outOfBoundsPageCount = outOfBoundsPageCount,
+            snapPosition = snapPosition,
+            flingBehavior = flingBehavior,
             modifier = modifier
         ) { page ->
-            Box(modifier = Modifier.carouselItem(page, state, pageSize.strategy)) {
+            Box(
+                modifier = Modifier.carouselItem(
+                    index = page,
+                    state = state,
+                    strategy = pageSize.strategy,
+                    itemPositionMap = snapPositionMap,
+                    isRtl = isRtl
+                )
+            ) {
                 carouselScope.content(page)
             }
         }
@@ -256,13 +292,16 @@ internal value class CarouselAlignment private constructor(internal val value: I
  * @param index the index of the item in the carousel
  * @param state the carousel state
  * @param strategy the strategy used to mask and translate items in the carousel
+ * @param itemPositionMap the position of each index when it is the current item
+ * @param isRtl whether or not the carousel is rtl
  */
-@Suppress("IllegalExperimentalApiUsage")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 internal fun Modifier.carouselItem(
     index: Int,
     state: CarouselState,
-    strategy: Strategy
+    strategy: Strategy,
+    itemPositionMap: IntIntMap,
+    isRtl: Boolean
 ): Modifier {
     val viewportSize = state.pagerState.layoutInfo.viewportSize
     val orientation = state.pagerState.layoutInfo.orientation
@@ -272,30 +311,9 @@ internal fun Modifier.carouselItem(
     if (mainAxisCarouselSize == 0 || !strategy.isValid()) {
         return this
     }
-    // Scroll offset calculation using currentPage and currentPageOffsetFraction
-    val firstVisibleItemScrollOffset =
-        state.pagerState.currentPageOffsetFraction * strategy.itemMainAxisSize
-    val scrollOffset = (state.pagerState.currentPage * strategy.itemMainAxisSize) +
-        firstVisibleItemScrollOffset
     val itemsCount = state.pagerState.pageCount
-
     val maxScrollOffset =
         itemsCount * strategy.itemMainAxisSize - mainAxisCarouselSize
-    val keylines = strategy.getKeylineListForScrollOffset(scrollOffset, maxScrollOffset)
-
-    // Find center of the item at this index
-    val unadjustedCenter =
-        (index * strategy.itemMainAxisSize) + (strategy.itemMainAxisSize / 2f) - scrollOffset
-
-    // Find the keyline before and after this item's center and create an interpolated
-    // keyline that the item should use for its clip shape and offset
-    val keylineBefore =
-        keylines.getKeylineBefore(unadjustedCenter)
-    val keylineAfter =
-        keylines.getKeylineAfter(unadjustedCenter)
-    val progress = getProgress(keylineBefore, keylineAfter, unadjustedCenter)
-    val interpolatedKeyline = lerp(keylineBefore, keylineAfter, progress)
-    val isOutOfKeylineBounds = keylineBefore == keylineAfter
 
     return layout { measurable, constraints ->
         // Force the item to use the strategy's itemMainAxisSize along its main axis
@@ -321,6 +339,27 @@ internal fun Modifier.carouselItem(
             placeable.place(0, 0)
         }
     }.graphicsLayer {
+        val currentItemScrollOffset =
+            (state.pagerState.currentPage * strategy.itemMainAxisSize) +
+                (state.pagerState.currentPageOffsetFraction * strategy.itemMainAxisSize)
+        val scrollOffset = currentItemScrollOffset -
+            (if (itemPositionMap.size > 0) itemPositionMap[state.pagerState.currentPage] else 0)
+        val keylines = strategy.getKeylineListForScrollOffset(scrollOffset, maxScrollOffset)
+
+        // Find center of the item at this index
+        val unadjustedCenter =
+            (index * strategy.itemMainAxisSize) + (strategy.itemMainAxisSize / 2f) - scrollOffset
+
+        // Find the keyline before and after this item's center and create an interpolated
+        // keyline that the item should use for its clip shape and offset
+        val keylineBefore =
+            keylines.getKeylineBefore(unadjustedCenter)
+        val keylineAfter =
+            keylines.getKeylineAfter(unadjustedCenter)
+        val progress = getProgress(keylineBefore, keylineAfter, unadjustedCenter)
+        val interpolatedKeyline = lerp(keylineBefore, keylineAfter, progress)
+        val isOutOfKeylineBounds = keylineBefore == keylineAfter
+
         // Clip the item
         clip = true
         shape = object : Shape {
@@ -376,7 +415,7 @@ internal fun Modifier.carouselItem(
         if (isVertical) {
             translationY = translation
         } else {
-            translationX = translation
+            translationX = if (isRtl) -translation else translation
         }
     }
 }

@@ -21,7 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.KmpPlatformsKt
+
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import androidx.build.Publish
@@ -36,7 +36,6 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-def nativeEnabled = KmpPlatformsKt.enableNative(project)
 
 configurations {
     // Configuration for resolving shared archive file of androidx's SQLite compilation
@@ -85,6 +84,24 @@ androidXMultiplatform {
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
+    // Source set structure:
+    //                            ┌──────────────────┐
+    //                            │    commonMain    │
+    //                            └──────────────────┘
+    //                                      │
+    //                       ┌──────────────┴─────────────┐
+    //                       │                            │
+    //                       ▼                            ▼
+    //             ┌──────────────────┐         ┌──────────────────┐
+    //             │  jvmAndroidMain  │         │  jvmNativeMain   │
+    //             └──────────────────┘         └──────────────────┘
+    //                       │                            │
+    //           ┌───────────┴──────────────┬─────────────┴───────────┐
+    //           │                          │                         │
+    //           ▼                          ▼                         ▼
+    // ┌──────────────────┐       ┌──────────────────┐      ┌──────────────────┐
+    // │   androidMain    │       │     jvmMain      │      │    nativeMain    │
+    // └──────────────────┘       └──────────────────┘      └──────────────────┘
     sourceSets {
         commonMain {
             dependencies {
@@ -103,8 +120,15 @@ androidXMultiplatform {
                 implementation(project(":kruth:kruth"))
             }
         }
-        jvmMain {
+        jvmAndroidMain {
             dependsOn(commonMain)
+        }
+        jvmNativeMain {
+            dependsOn(commonMain)
+        }
+        jvmMain {
+            dependsOn(jvmAndroidMain)
+            dependsOn(jvmNativeMain)
         }
         jvmTest {
             dependsOn(commonTest)
@@ -114,7 +138,7 @@ androidXMultiplatform {
             }
         }
         androidMain {
-            dependsOn(commonMain)
+            dependsOn(jvmAndroidMain)
             dependencies {
                 api(project(":sqlite:sqlite-framework"))
                 api(libs.kotlinCoroutinesAndroid)
@@ -153,18 +177,16 @@ androidXMultiplatform {
                 implementation("androidx.arch.core:core-testing:2.2.0")
             }
         }
-        if (nativeEnabled) {
-            nativeMain {
-                dependsOn(commonMain)
-                dependencies {
-                    api(project(":sqlite:sqlite-framework"))
-                }
+        nativeMain {
+            dependsOn(jvmNativeMain)
+            dependencies {
+                api(project(":sqlite:sqlite-framework"))
             }
-            nativeTest {
-                dependsOn(commonTest)
-                dependencies {
-                    implementation(project(":sqlite:sqlite-bundled"))
-                }
+        }
+        nativeTest {
+            dependsOn(commonTest)
+            dependencies {
+                implementation(project(":sqlite:sqlite-bundled"))
             }
         }
         targets.all { target ->

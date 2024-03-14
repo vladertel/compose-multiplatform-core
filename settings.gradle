@@ -174,6 +174,7 @@ enum BuildType {
     CAMERA,
     NATIVE,
     WINDOW,
+    XR,
 }
 
 private String getRequestedProjectSubsetName() {
@@ -242,6 +243,9 @@ private Set<BuildType> createRequestedFilter() {
             case "WINDOW":
                 filter.add(BuildType.WINDOW)
                 break
+            case "XR":
+                filter.add(BuildType.XR)
+                break
             case "ALL":
                 // Return null so that no filtering is done
                 return null
@@ -258,7 +262,8 @@ private Set<BuildType> createRequestedFilter() {
                         "WEAR    - Wear OS projects\n" +
                         "NATIVE  - native projects\n" +
                         "WINDOW  - window projects\n" +
-                        "GLANCE  - glance projects")
+                        "GLANCE  - glance projects\n" +
+                        "XR      - XR projects")
         }
     }
     return filter
@@ -319,6 +324,13 @@ def includeProject(String name, filePath, List<BuildType> filter = []) {
         file = new File(rootDir, name.substring(1).replace(":", "/"))
     }
     projectDependencyGraph.addToAllProjects(name, file)
+}
+
+def includeOptionalProject(String name, File filePath, List<BuildType> filter = []) {
+    if (providers.gradleProperty("androidx.includeOptionalProjects")
+            .getOrElse("false").toBoolean()) {
+        includeProject(name, filePath, filter)
+    }
 }
 
 /////////////////////////////
@@ -492,6 +504,7 @@ includeProject(":compose:foundation:foundation-layout:integration-tests:foundati
 includeProject(":compose:foundation:foundation-layout:foundation-layout-samples", "compose/foundation/foundation-layout/samples", [BuildType.COMPOSE])
 includeProject(":compose:foundation:foundation-lint", [BuildType.COMPOSE])
 includeProject(":compose:foundation:foundation:integration-tests:foundation-demos", [BuildType.COMPOSE])
+includeProject(":compose:foundation:foundation:integration-tests:lazy-tests", [BuildType.COMPOSE])
 includeProject(":compose:foundation:foundation:foundation-samples", "compose/foundation/foundation/samples", [BuildType.COMPOSE])
 includeProject(":compose:integration-tests", [BuildType.COMPOSE])
 includeProject(":compose:integration-tests:demos", [BuildType.COMPOSE])
@@ -531,6 +544,8 @@ includeProject(":compose:material:material-icons-extended", [BuildType.COMPOSE])
 includeProject(":compose:material:material-ripple", [BuildType.COMPOSE])
 includeProject(":compose:material:material-ripple:material-ripple-benchmark", "compose/material/material-ripple/benchmark", [BuildType.COMPOSE])
 includeProject(":compose:material:material:icons:generator", [BuildType.COMPOSE])
+includeProject(":compose:material:material-navigation", [BuildType.COMPOSE])
+includeProject(":compose:material:material-navigation-samples", "compose/material/material-navigation/samples", [BuildType.COMPOSE])
 includeProject(":compose:material:material:integration-tests:material-demos", [BuildType.COMPOSE])
 includeProject(":compose:material:material:integration-tests:material-catalog", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3:integration-tests:material3-demos", [BuildType.COMPOSE])
@@ -635,6 +650,7 @@ includeProject(":credentials:credentials-samples", "credentials/credentials/samp
 includeProject(":credentials:credentials-fido", [BuildType.MAIN])
 includeProject(":credentials:credentials-play-services-auth", [BuildType.MAIN])
 includeProject(":credentials:credentials-provider", [BuildType.MAIN])
+includeProject(":credentials:credentials-e2ee", [BuildType.MAIN])
 includeProject(":cursoradapter:cursoradapter", [BuildType.MAIN])
 includeProject(":customview:customview", [BuildType.MAIN])
 includeProject(":customview:customview-poolingcontainer", [BuildType.MAIN, BuildType.COMPOSE])
@@ -706,7 +722,6 @@ includeProject(":glance:glance-testing", [BuildType.GLANCE])
 includeProject(":glance:glance-wear-tiles:integration-tests:demos", [BuildType.GLANCE])
 includeProject(":glance:glance-wear-tiles:integration-tests:template-demos", [BuildType.GLANCE])
 includeProject(":glance:glance-wear-tiles", [BuildType.GLANCE])
-includeProject(":glance:glance-wear-tiles-preview", [BuildType.GLANCE])
 includeProject(":graphics:filters:filters", [BuildType.MAIN])
 includeProject(":graphics:graphics-core:graphics-core-samples", "graphics/graphics-core/samples", [BuildType.MAIN])
 includeProject(":graphics:graphics-path", [BuildType.MAIN, BuildType.COMPOSE])
@@ -750,7 +765,7 @@ includeProject(":lifecycle:lifecycle-extensions", [BuildType.MAIN, BuildType.FLA
 includeProject(":lifecycle:lifecycle-livedata", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-livedata-core", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-livedata-core-ktx", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
-includeProject(":lifecycle:lifecycle-livedata-core-ktx-lint", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
+includeProject(":lifecycle:lifecycle-livedata-core-lint", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-livedata-core-truth", [BuildType.MAIN, BuildType.FLAN])
 includeProject(":lifecycle:lifecycle-livedata-ktx", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":lifecycle:lifecycle-process", [BuildType.MAIN, BuildType.FLAN])
@@ -840,6 +855,7 @@ includeProject(":privacysandbox:sdkruntime:test-sdks:current", [BuildType.MAIN])
 includeProject(":privacysandbox:sdkruntime:test-sdks:v1", [BuildType.MAIN])
 includeProject(":privacysandbox:sdkruntime:test-sdks:v2", [BuildType.MAIN])
 includeProject(":privacysandbox:sdkruntime:test-sdks:v4", [BuildType.MAIN])
+includeProject(":privacysandbox:sdkruntime:test-sdks:v5", [BuildType.MAIN])
 includeProject(":privacysandbox:tools:tools", [BuildType.MAIN])
 includeProject(":privacysandbox:tools:tools-apicompiler", [BuildType.MAIN])
 includeProject(":privacysandbox:tools:tools-apigenerator", [BuildType.MAIN])
@@ -884,7 +900,7 @@ includeProject(":room:room-compiler-processing-testing", [BuildType.MAIN, BuildT
 includeProject(":room:room-guava", [BuildType.MAIN])
 includeProject(":room:room-gradle-plugin", [BuildType.MAIN])
 includeProject(":room:room-ktx", [BuildType.MAIN, BuildType.COMPOSE])
-includeProject(":room:room-migration", [BuildType.MAIN, BuildType.COMPOSE, BuildType.KMP])
+includeProject(":room:room-migration", [BuildType.MAIN, BuildType.COMPOSE, BuildType.KMP, BuildType.INFRAROGUE])
 includeProject(":room:room-paging", [BuildType.MAIN, BuildType.COMPOSE])
 includeProject(":room:room-paging-guava", [BuildType.MAIN])
 includeProject(":room:room-paging-rxjava2", [BuildType.MAIN])
@@ -893,7 +909,7 @@ includeProject(":room:room-runtime", [BuildType.MAIN, BuildType.COMPOSE, BuildTy
 includeProject(":room:room-runtime-lint", [BuildType.MAIN, BuildType.COMPOSE])
 includeProject(":room:room-rxjava2", [BuildType.MAIN])
 includeProject(":room:room-rxjava3", [BuildType.MAIN])
-includeProject(":room:room-testing", [BuildType.MAIN])
+includeProject(":room:room-testing", [BuildType.MAIN, BuildType.KMP, BuildType.INFRAROGUE])
 includeProject(":safeparcel:safeparcel", [BuildType.MAIN])
 includeProject(":safeparcel:safeparcel-processor", [BuildType.MAIN])
 includeProject(":savedstate:savedstate", [BuildType.MAIN, BuildType.COMPOSE, BuildType.FLAN])
@@ -1064,6 +1080,16 @@ includeProject(":work:work-runtime-lint", "work/work-lint", [BuildType.MAIN])
 includeProject(":work:work-rxjava2", [BuildType.MAIN])
 includeProject(":work:work-rxjava3", [BuildType.MAIN])
 includeProject(":work:work-testing", [BuildType.MAIN])
+
+/////////////////////////////
+//
+// Optional projects
+//
+/////////////////////////////
+
+File repoRoot = new File(rootDir, "../..").canonicalFile
+
+includeOptionalProject(":xr:xr", new File(repoRoot, "xr/xr"), [BuildType.XR])
 
 /////////////////////////////
 //

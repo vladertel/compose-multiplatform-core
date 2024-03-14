@@ -19,9 +19,13 @@ package androidx.compose.material3.carousel
 import androidx.annotation.VisibleForTesting
 import androidx.collection.FloatList
 import androidx.collection.mutableFloatListOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.lerp
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
@@ -59,17 +63,17 @@ internal class Strategy(
 ) {
 
     /** The keylines generated from the [keylineList] block. */
-    private lateinit var defaultKeylines: KeylineList
+    internal lateinit var defaultKeylines: KeylineList
     /**
      * A list of [KeylineList]s that move the focal range from its position in [defaultKeylines]
      * to the start of the carousel container, one keyline at a time.
      */
-    private lateinit var startKeylineSteps: List<KeylineList>
+    internal lateinit var startKeylineSteps: List<KeylineList>
     /**
      * A list of [KeylineList]s that move the focal range from its position in [defaultKeylines]
      * to the end of the carousel container, one keyline at a time.
      */
-    private lateinit var endKeylineSteps: List<KeylineList>
+    internal lateinit var endKeylineSteps: List<KeylineList>
     /** The scroll distance needed to move through all steps in [startKeylineSteps]. */
     private var startShiftDistance: Float = 0f
     /** The scroll distance needed to move through all steps in [endKeylineSteps]. */
@@ -90,7 +94,7 @@ internal class Strategy(
     /** The available space in the main axis used in the most recent call to [apply]. */
     private var availableSpace: Float = 0f
     /** The size of items when in focus and fully unmasked. */
-    internal var itemMainAxisSize: Float = 0f
+    internal var itemMainAxisSize by mutableFloatStateOf(0f)
 
     /**
      * Whether this strategy holds a valid set of keylines that are ready for use.
@@ -98,7 +102,7 @@ internal class Strategy(
      * This is true after [apply] has been called and the [keylineList] block has returned a
      * non-null [KeylineList].
      */
-    fun isValid() = itemMainAxisSize != 0f
+    fun isValid() = itemMainAxisSize > 0f
 
     /**
      * Updates this [Strategy] based on carousel's main axis available space.
@@ -159,11 +163,14 @@ internal class Strategy(
         maxScrollOffset: Float,
         roundToNearestStep: Boolean = false
     ): KeylineList {
+        // The scroll offset could sometimes be slightly negative due to rounding; it should always
+        // be positive
+        val positiveScrollOffset = max(0f, scrollOffset)
         val startShiftOffset = startShiftDistance
-        val endShiftOffset = maxScrollOffset - endShiftDistance
+        val endShiftOffset = max(0f, maxScrollOffset - endShiftDistance)
 
         // If we're not within either shift range, return the default keylines
-        if (scrollOffset in startShiftOffset..endShiftOffset) {
+        if (positiveScrollOffset in startShiftOffset..endShiftOffset) {
             return defaultKeylines
         }
 
@@ -172,18 +179,18 @@ internal class Strategy(
             outputMax = 0f,
             inputMin = 0f,
             inputMax = startShiftOffset,
-            value = scrollOffset
+            value = positiveScrollOffset
         )
         var shiftPoints = startShiftPoints
         var steps = startKeylineSteps
 
-        if (scrollOffset > endShiftOffset) {
+        if (positiveScrollOffset > endShiftOffset) {
             interpolation = lerp(
                 outputMin = 0f,
                 outputMax = 1f,
                 inputMin = endShiftOffset,
                 inputMax = maxScrollOffset,
-                value = scrollOffset
+                value = positiveScrollOffset
             )
             shiftPoints = endShiftPoints
             steps = endKeylineSteps
@@ -209,11 +216,6 @@ internal class Strategy(
             steps[shiftPointRange.toStepIndex],
             shiftPointRange.steppedInterpolation
         )
-    }
-
-    @VisibleForTesting
-    internal fun getDefaultKeylines(): KeylineList {
-        return defaultKeylines
     }
 
     @VisibleForTesting

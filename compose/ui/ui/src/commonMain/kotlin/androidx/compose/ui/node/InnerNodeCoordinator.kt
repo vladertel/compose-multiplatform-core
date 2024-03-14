@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.unit.Constraints
@@ -99,16 +100,16 @@ internal class InnerNodeCoordinator(
         }
 
         override fun minIntrinsicWidth(height: Int) =
-            layoutNode.intrinsicsPolicy.minLookaheadIntrinsicWidth(height)
+            layoutNode.minLookaheadIntrinsicWidth(height)
 
         override fun minIntrinsicHeight(width: Int) =
-            layoutNode.intrinsicsPolicy.minLookaheadIntrinsicHeight(width)
+            layoutNode.minLookaheadIntrinsicHeight(width)
 
         override fun maxIntrinsicWidth(height: Int) =
-            layoutNode.intrinsicsPolicy.maxLookaheadIntrinsicWidth(height)
+            layoutNode.maxLookaheadIntrinsicWidth(height)
 
         override fun maxIntrinsicHeight(width: Int) =
-            layoutNode.intrinsicsPolicy.maxLookaheadIntrinsicHeight(width)
+            layoutNode.maxLookaheadIntrinsicHeight(width)
     }
 
     override fun ensureLookaheadDelegateCreated() {
@@ -139,16 +140,16 @@ internal class InnerNodeCoordinator(
     }
 
     override fun minIntrinsicWidth(height: Int) =
-        layoutNode.intrinsicsPolicy.minIntrinsicWidth(height)
+        layoutNode.minIntrinsicWidth(height)
 
     override fun minIntrinsicHeight(width: Int) =
-        layoutNode.intrinsicsPolicy.minIntrinsicHeight(width)
+        layoutNode.minIntrinsicHeight(width)
 
     override fun maxIntrinsicWidth(height: Int) =
-        layoutNode.intrinsicsPolicy.maxIntrinsicWidth(height)
+        layoutNode.maxIntrinsicWidth(height)
 
     override fun maxIntrinsicHeight(width: Int) =
-        layoutNode.intrinsicsPolicy.maxIntrinsicHeight(width)
+        layoutNode.maxIntrinsicHeight(width)
 
     override fun placeAt(
         position: IntOffset,
@@ -176,11 +177,11 @@ internal class InnerNodeCoordinator(
             ?: AlignmentLine.Unspecified
     }
 
-    override fun performDraw(canvas: Canvas) {
+    override fun performDraw(canvas: Canvas, graphicsLayer: GraphicsLayer?) {
         val owner = layoutNode.requireOwner()
         layoutNode.zSortedChildren.forEach { child ->
             if (child.isPlaced) {
-                child.draw(canvas)
+                child.draw(canvas, graphicsLayer)
             }
         }
         if (owner.showLayoutBounds) {

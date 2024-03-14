@@ -26,6 +26,7 @@ import androidx.compose.ui.focus.FocusOwner
 import androidx.compose.ui.geometry.MutableRect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.GraphicsContext
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.ReusableGraphicsLayerScope
 import androidx.compose.ui.hapticfeedback.HapticFeedback
@@ -154,6 +155,8 @@ private class FakeOwner(
         get() = TODO("Not yet implemented")
     override val accessibilityManager: AccessibilityManager
         get() = TODO("Not yet implemented")
+    override val graphicsContext: GraphicsContext
+        get() = TODO("Not yet implemented")
     override val textToolbar: TextToolbar
         get() = TODO("Not yet implemented")
     override val density: Density
@@ -222,7 +225,7 @@ private class FakeOwner(
     override fun calculatePositionInWindow(localPosition: Offset) = TODO("Not yet implemented")
     override fun calculateLocalPosition(positionInWindow: Offset) = TODO("Not yet implemented")
     override fun requestFocus() = TODO("Not yet implemented")
-    override fun onSemanticsChange() = TODO("Not yet implemented")
+    override fun onSemanticsChange() {}
     override fun getFocusDirection(keyEvent: KeyEvent) = TODO("Not yet implemented")
 }
 

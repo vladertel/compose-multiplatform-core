@@ -17,7 +17,7 @@
 package androidx.compose.foundation.text.input
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.text.BasicTextField2
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -51,13 +51,13 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
 
     private val inputMethodInterceptor = InputMethodInterceptor(rule)
 
-    private val Tag = "BasicTextField2"
+    private val Tag = "BasicTextField"
 
     @Test
     fun clickingAroundReplacement_movesCursorToEdgesOfReplacement() {
-        val text = TextFieldState("zaz", initialSelectionInChars = TextRange(0))
+        val text = TextFieldState("zaz", initialSelection = TextRange(0))
         inputMethodInterceptor.setContent {
-            BasicTextField2(
+            BasicTextField(
                 state = text,
                 modifier = Modifier.testTag(Tag),
                 textStyle = TextStyle(
@@ -77,7 +77,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(center + Offset(1f, 0f))
         }
         rule.runOnIdle {
-            assertThat(text.text.selectionInChars).isEqualTo(TextRange(2))
+            assertThat(text.text.selection).isEqualTo(TextRange(2))
         }
 
         rule.onNodeWithTag(Tag).performTouchInput {
@@ -87,7 +87,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(center + Offset(-1f, 0f))
         }
         rule.runOnIdle {
-            assertThat(text.text.selectionInChars).isEqualTo(TextRange(1))
+            assertThat(text.text.selection).isEqualTo(TextRange(1))
         }
     }
 
@@ -101,11 +101,11 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
         // | bbz              |
         // +---<--------------+
 
-        val text = TextFieldState("zzzzzzzzaz", initialSelectionInChars = TextRange(0))
+        val text = TextFieldState("zzzzzzzzaz", initialSelection = TextRange(0))
         val replacement = "bbbb\nbb"
         val indexOfA = text.text.indexOf('a')
         inputMethodInterceptor.setContent {
-            BasicTextField2(
+            BasicTextField(
                 state = text,
                 modifier = Modifier.testTag(Tag),
                 textStyle = TextStyle(
@@ -124,7 +124,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(topRight)
         }
         rule.runOnIdle {
-            assertThat(text.text.selectionInChars).isEqualTo(TextRange(indexOfA))
+            assertThat(text.text.selection).isEqualTo(TextRange(indexOfA))
         }
         assertCursor(indexOfA)
 
@@ -134,7 +134,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(bottomLeft)
         }
         rule.runOnIdle {
-            assertThat(text.text.selectionInChars)
+            assertThat(text.text.selection)
                 .isEqualTo(TextRange(indexOfA + 1))
         }
         assertCursor(indexOfA + replacement.length)
@@ -142,9 +142,9 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
 
     @Test
     fun clickingAroundReplacement_movesCursorToEdgesOfInsertion() {
-        val text = TextFieldState("zz", initialSelectionInChars = TextRange(0))
+        val text = TextFieldState("zz", initialSelection = TextRange(0))
         inputMethodInterceptor.setContent {
-            BasicTextField2(
+            BasicTextField(
                 state = text,
                 modifier = Modifier.testTag(Tag),
                 textStyle = TextStyle(
@@ -164,7 +164,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(center + Offset(1f, 0f))
         }
         rule.runOnIdle {
-            assertThat(text.text.selectionInChars).isEqualTo(TextRange(1))
+            assertThat(text.text.selection).isEqualTo(TextRange(1))
         }
         assertCursor(5)
 
@@ -175,7 +175,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(center + Offset(-1f, 0f))
         }
         rule.runOnIdle {
-            assertThat(text.text.selectionInChars).isEqualTo(TextRange(1))
+            assertThat(text.text.selection).isEqualTo(TextRange(1))
         }
         assertCursor(1)
     }

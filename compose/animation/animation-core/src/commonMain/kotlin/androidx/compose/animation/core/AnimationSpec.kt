@@ -16,6 +16,7 @@
 
 package androidx.compose.animation.core
 
+import androidx.annotation.FloatRange
 import androidx.annotation.IntRange
 import androidx.collection.MutableIntList
 import androidx.collection.MutableIntObjectMap
@@ -476,14 +477,16 @@ sealed class KeyframesSpecBaseConfig<T, E : KeyframeBaseEntity<T>> {
      * Duration of the animation in milliseconds. The minimum is `0` and defaults to
      * [DefaultDurationMillis]
      */
-    @get:IntRange(from = 0)
+    @get:IntRange(from = 0L)
+    @setparam:IntRange(from = 0L)
     var durationMillis: Int = DefaultDurationMillis
 
     /**
      * The amount of time that the animation should be delayed. The minimum is `0` and defaults
      * to 0.
      */
-    @get:IntRange(from = 0)
+    @get:IntRange(from = 0L)
+    @setparam:IntRange(from = 0L)
     var delayMillis: Int = 0
 
     internal val keyframes = mutableIntObjectMapOf<E>()
@@ -520,7 +523,7 @@ sealed class KeyframesSpecBaseConfig<T, E : KeyframeBaseEntity<T>> {
      *  @return an instance of [E] so a custom [Easing] can be added by the [using] method
      */
     // needed as `open` to guarantee binary compatibility in KeyframesSpecConfig
-    open infix fun T.atFraction(fraction: Float): E {
+    open infix fun T.atFraction(@FloatRange(from = 0.0, to = 1.0) fraction: Float): E {
         return at((durationMillis * fraction).fastRoundToInt())
     }
 
@@ -608,7 +611,9 @@ class KeyframesSpec<T>(val config: KeyframesSpecConfig<T>) : DurationBasedAnimat
          *  @return an [KeyframeEntity] so a custom [Easing] can be added by [with] method
          */
         // overrides `atFraction` for binary compatibility. It should explicitly return KeyframeEntity.
-        override infix fun T.atFraction(fraction: Float): KeyframeEntity<T> {
+        override infix fun T.atFraction(
+            @FloatRange(from = 0.0, to = 1.0) fraction: Float
+        ): KeyframeEntity<T> {
             return at((durationMillis * fraction).fastRoundToInt())
         }
 
@@ -922,3 +927,107 @@ fun <T> infiniteRepeatable(
  */
 @Stable
 fun <T> snap(delayMillis: Int = 0) = SnapSpec<T>(delayMillis)
+
+/**
+ * Returns an [AnimationSpec] that is the same as [animationSpec] with a delay of [startDelayNanos].
+ */
+@Stable
+internal fun <T> delayed(
+    animationSpec: AnimationSpec<T>,
+    startDelayNanos: Long
+): AnimationSpec<T> = StartDelayAnimationSpec(animationSpec, startDelayNanos)
+
+/**
+ * A [VectorizedAnimationSpec] that wraps [vectorizedAnimationSpec], giving it a start delay
+ * of [startDelayNanos].
+ */
+@Immutable
+private class StartDelayVectorizedAnimationSpec<V : AnimationVector>(
+    val vectorizedAnimationSpec: VectorizedAnimationSpec<V>,
+    val startDelayNanos: Long
+) : VectorizedAnimationSpec<V> {
+    override val isInfinite: Boolean
+        get() = vectorizedAnimationSpec.isInfinite
+
+    override fun getDurationNanos(
+        initialValue: V,
+        targetValue: V,
+        initialVelocity: V
+    ): Long = vectorizedAnimationSpec.getDurationNanos(
+        initialValue = initialValue,
+        targetValue = targetValue,
+        initialVelocity = initialVelocity
+    ) + startDelayNanos
+
+    override fun getVelocityFromNanos(
+        playTimeNanos: Long,
+        initialValue: V,
+        targetValue: V,
+        initialVelocity: V
+    ): V = if (playTimeNanos < startDelayNanos) {
+        initialVelocity
+    } else {
+        vectorizedAnimationSpec.getVelocityFromNanos(
+            playTimeNanos = playTimeNanos - startDelayNanos,
+            initialValue = initialValue,
+            targetValue = targetValue,
+            initialVelocity = initialVelocity
+        )
+    }
+
+    override fun getValueFromNanos(
+        playTimeNanos: Long,
+        initialValue: V,
+        targetValue: V,
+        initialVelocity: V
+    ): V = if (playTimeNanos < startDelayNanos) {
+        initialValue
+    } else {
+        vectorizedAnimationSpec.getValueFromNanos(
+            playTimeNanos = playTimeNanos - startDelayNanos,
+            initialValue = initialValue,
+            targetValue = targetValue,
+            initialVelocity = initialVelocity
+        )
+    }
+
+    override fun hashCode(): Int {
+        return 31 * vectorizedAnimationSpec.hashCode() + startDelayNanos.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is StartDelayVectorizedAnimationSpec<*>) {
+            return false
+        }
+        return other.startDelayNanos == startDelayNanos &&
+            other.vectorizedAnimationSpec == vectorizedAnimationSpec
+    }
+}
+
+/**
+ * An [AnimationSpec] that wraps [animationSpec], giving it a start delay of [startDelayNanos].
+ */
+@Immutable
+private class StartDelayAnimationSpec<T>(
+    val animationSpec: AnimationSpec<T>,
+    val startDelayNanos: Long
+) : AnimationSpec<T> {
+    override fun <V : AnimationVector> vectorize(
+        converter: TwoWayConverter<T, V>
+    ): VectorizedAnimationSpec<V> {
+        val vecSpec = animationSpec.vectorize(converter)
+        return StartDelayVectorizedAnimationSpec(vecSpec, startDelayNanos)
+    }
+
+    override fun hashCode(): Int {
+        return 31 * animationSpec.hashCode() + startDelayNanos.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is StartDelayAnimationSpec<*>) {
+            return false
+        }
+        return other.startDelayNanos == startDelayNanos &&
+            other.animationSpec == animationSpec
+    }
+}

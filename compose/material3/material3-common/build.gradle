@@ -45,7 +45,7 @@ androidXMultiplatform {
                 implementation(project(":compose:ui:ui-util"))
                 api("androidx.compose.foundation:foundation:1.6.0")
                 api("androidx.compose.foundation:foundation-layout:1.6.0")
-                api("androidx.compose.runtime:runtime:1.6.0")
+                api(project(":compose:runtime:runtime"))
                 api("androidx.compose.ui:ui-graphics:1.6.0")
                 api("androidx.compose.ui:ui-text:1.6.0")
             }
@@ -109,10 +109,10 @@ android {
 }
 
 androidx {
-    name = "Compose Material 3 Common components"
+    name = "Compose Material 3 Common"
     mavenVersion = LibraryVersions.COMPOSE_MATERIAL3_COMMON
-    type = LibraryType.PUBLISHED_LIBRARY
-    publish = Publish.NONE
+    type = LibraryType.PUBLISHED_KOTLIN_ONLY_LIBRARY
+    publish = Publish.SNAPSHOT_AND_RELEASE
     inceptionYear = "2023"
     description = "Compose Material 3 Common Library. This library contains foundational, themeless " +
             "components that can be shared between different Material libraries or used by app" +

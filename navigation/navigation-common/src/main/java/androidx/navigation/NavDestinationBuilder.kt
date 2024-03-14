@@ -17,7 +17,14 @@
 package androidx.navigation
 
 import androidx.annotation.IdRes
+import androidx.annotation.RestrictTo
 import androidx.core.os.bundleOf
+import androidx.navigation.serialization.generateNavArguments
+import androidx.navigation.serialization.generateRoutePattern
+import kotlin.reflect.KClass
+import kotlin.reflect.KType
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.serializer
 
 @DslMarker
 public annotation class NavDestinationDsl
@@ -70,6 +77,36 @@ public open class NavDestinationBuilder<out D : NavDestination> internal constru
      */
     public constructor(navigator: Navigator<out D>, route: String?) :
         this(navigator, -1, route)
+
+    /**
+     * DSL for constructing a new [NavDestination] with a serializable [KClass].
+     *
+     * This will also update the [id] of the destination based on KClass's serializer.
+     *
+     * @param navigator navigator used to create the destination
+     * @param route the [KClass] of the destination
+     * @param typeMap map of destination arguments' kotlin type [KType] to its respective custom
+     * [NavType]. Required only when destination contains custom NavTypes.
+     *
+     * @return the newly constructed [NavDestination]
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    @OptIn(InternalSerializationApi::class)
+    public constructor(
+        navigator: Navigator<out D>,
+        route: KClass<*>,
+        typeMap: Map<KType, NavType<*>> = mapOf(),
+    ) : this(
+        navigator,
+        route.serializer().hashCode(),
+        route.serializer().generateRoutePattern(typeMap.ifEmpty { null })
+    ) {
+        route.serializer()
+            .generateNavArguments(typeMap)
+            .forEach {
+                arguments[it.name] = it.argument
+            }
+    }
 
     /**
      * The descriptive label of the destination
@@ -248,6 +285,22 @@ public class NavArgumentBuilder {
         set(value) {
             field = value
             builder.setDefaultValue(value)
+        }
+
+    /**
+     * Set whether there is an unknown default value present.
+     *
+     * Use with caution!! In general you should let [defaultValue] to automatically set this state.
+     * This state should be set to true only if all these conditions are met:
+     *
+     * 1. There is default value present
+     * 2. You do not have access to actual default value (thus you can't use [defaultValue])
+     * 3. You know the default value will never ever be null if [nullable] is true.
+     */
+    internal var unknownDefaultValuePresent: Boolean = false
+        set(value) {
+            field = value
+            builder.setUnknownDefaultValuePresent(value)
         }
 
     /**

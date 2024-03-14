@@ -50,6 +50,7 @@ import androidx.camera.camera2.pipe.integration.impl.UseCaseManager.Companion.cr
 import androidx.camera.camera2.pipe.integration.impl.UseCaseSurfaceManager
 import androidx.camera.camera2.pipe.integration.impl.UseCaseThreads
 import androidx.camera.camera2.pipe.integration.impl.toMap
+import androidx.camera.core.ImageCapture
 import androidx.camera.core.UseCase
 import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.Config
@@ -120,9 +121,9 @@ class TestUseCaseCamera(
                 configs: List<CaptureConfig>,
                 requestTemplate: RequestTemplate,
                 sessionConfigOptions: Config,
-                captureMode: Int,
-                flashType: Int,
-                flashMode: Int
+                @ImageCapture.CaptureMode captureMode: Int,
+                @ImageCapture.FlashType flashType: Int,
+                @ImageCapture.FlashMode flashMode: Int
             ): List<Deferred<Void?>> {
                 throw NotImplementedError("Not implemented")
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.text.input
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.Composable
 
 /**
@@ -24,9 +23,8 @@ import androidx.compose.runtime.Composable
  * placeholder, helper messages or similar, and automatically increase the hit target area
  * of the text field.
  *
- * @sample androidx.compose.foundation.samples.BasicTextField2DecoratorSample
+ * @sample androidx.compose.foundation.samples.BasicTextFieldDecoratorSample
  */
-@ExperimentalFoundationApi
 fun interface TextFieldDecorator {
 
     /**

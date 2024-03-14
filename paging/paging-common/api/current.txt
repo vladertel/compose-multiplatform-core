@@ -24,7 +24,7 @@ package androidx.paging {
   }
 
   public final class CombinedLoadStatesKt {
-    method public static suspend Object? awaitNotLoading(kotlinx.coroutines.flow.Flow<androidx.paging.CombinedLoadStates>, kotlin.coroutines.Continuation<androidx.paging.CombinedLoadStates>);
+    method public static suspend Object? awaitNotLoading(kotlinx.coroutines.flow.Flow<androidx.paging.CombinedLoadStates>, kotlin.coroutines.Continuation<androidx.paging.CombinedLoadStates?>);
   }
 
   public abstract class DataSource<Key, Value> {
@@ -149,8 +149,6 @@ package androidx.paging {
   }
 
   public enum LoadType {
-    method public static androidx.paging.LoadType valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.paging.LoadType[] values();
     enum_constant public static final androidx.paging.LoadType APPEND;
     enum_constant public static final androidx.paging.LoadType PREPEND;
     enum_constant public static final androidx.paging.LoadType REFRESH;
@@ -412,7 +410,7 @@ package androidx.paging {
     method @CheckResult public static <T> androidx.paging.PagingData<T> insertHeaderItem(androidx.paging.PagingData<T>, optional androidx.paging.TerminalSeparatorType terminalSeparatorType, T item);
     method @CheckResult public static <T> androidx.paging.PagingData<T> insertHeaderItem(androidx.paging.PagingData<T>, T item);
     method @CheckResult public static <R, T extends R> androidx.paging.PagingData<R> insertSeparators(androidx.paging.PagingData<T>, optional androidx.paging.TerminalSeparatorType terminalSeparatorType, java.util.concurrent.Executor executor, kotlin.jvm.functions.Function2<? super T?,? super T?,? extends R?> generator);
-    method @CheckResult @kotlin.jvm.JvmSynthetic public static <T extends R, R> androidx.paging.PagingData<R> insertSeparators(androidx.paging.PagingData<T>, optional androidx.paging.TerminalSeparatorType terminalSeparatorType, kotlin.jvm.functions.Function3<? super T?,? super T?,? super kotlin.coroutines.Continuation<? super R>?,?> generator);
+    method @CheckResult @kotlin.jvm.JvmSynthetic public static <T extends R, R> androidx.paging.PagingData<R> insertSeparators(androidx.paging.PagingData<T>, optional androidx.paging.TerminalSeparatorType terminalSeparatorType, kotlin.jvm.functions.Function3<? super T?,? super T?,? super kotlin.coroutines.Continuation<? super R?>,?> generator);
     method @CheckResult public static <R, T extends R> androidx.paging.PagingData<R> insertSeparators(androidx.paging.PagingData<T>, java.util.concurrent.Executor executor, kotlin.jvm.functions.Function2<? super T?,? super T?,? extends R?> generator);
     method @CheckResult public static <T, R> androidx.paging.PagingData<R> map(androidx.paging.PagingData<T>, java.util.concurrent.Executor executor, kotlin.jvm.functions.Function1<? super T,? extends R> transform);
     method @CheckResult @kotlin.jvm.JvmSynthetic public static <T, R> androidx.paging.PagingData<R> map(androidx.paging.PagingData<T>, kotlin.jvm.functions.Function2<? super T,? super kotlin.coroutines.Continuation<? super R>,?> transform);
@@ -583,8 +581,6 @@ package androidx.paging {
   }
 
   public enum RemoteMediator.InitializeAction {
-    method public static androidx.paging.RemoteMediator.InitializeAction valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.paging.RemoteMediator.InitializeAction[] values();
     enum_constant public static final androidx.paging.RemoteMediator.InitializeAction LAUNCH_INITIAL_REFRESH;
     enum_constant public static final androidx.paging.RemoteMediator.InitializeAction SKIP_INITIAL_REFRESH;
   }
@@ -605,8 +601,6 @@ package androidx.paging {
   }
 
   public enum TerminalSeparatorType {
-    method public static androidx.paging.TerminalSeparatorType valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.paging.TerminalSeparatorType[] values();
     enum_constant public static final androidx.paging.TerminalSeparatorType FULLY_COMPLETE;
     enum_constant public static final androidx.paging.TerminalSeparatorType SOURCE_COMPLETE;
   }

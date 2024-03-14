@@ -27,14 +27,20 @@ import androidx.sqlite.execSQL
 import androidx.sqlite.use
 
 /**
- * Room's database connection manager, responsible for opening and managing such connections,
- * including performing migrations if necessary and validating schema.
+ * Expect implementation declaration of Room's connection manager.
  */
-internal abstract class RoomConnectionManager {
+internal expect class RoomConnectionManager : BaseRoomConnectionManager
+
+/**
+ * Base class for Room's database connection manager, responsible for opening and managing such
+ * connections, including performing migrations if necessary and validating schema.
+ */
+internal abstract class BaseRoomConnectionManager {
 
     protected abstract val configuration: DatabaseConfiguration
     protected abstract val connectionPool: ConnectionPool
     protected abstract val openDelegate: RoomOpenDelegate
+    protected abstract val callbacks: List<RoomDatabase.Callback>
 
     abstract suspend fun <R> useConnection(
         isReadOnly: Boolean,
@@ -233,7 +239,15 @@ internal abstract class RoomConnectionManager {
         else -> error("Can't get max number of writers for journal mode '$this'")
     }
 
-    protected abstract fun invokeCreateCallback(connection: SQLiteConnection)
-    protected abstract fun invokeDestructiveMigrationCallback(connection: SQLiteConnection)
-    protected abstract fun invokeOpenCallback(connection: SQLiteConnection)
+    private fun invokeCreateCallback(connection: SQLiteConnection) {
+        callbacks.forEach { it.onCreate(connection) }
+    }
+
+    private fun invokeDestructiveMigrationCallback(connection: SQLiteConnection) {
+        callbacks.forEach { it.onDestructiveMigration(connection) }
+    }
+
+    private fun invokeOpenCallback(connection: SQLiteConnection) {
+        callbacks.forEach { it.onOpen(connection) }
+    }
 }

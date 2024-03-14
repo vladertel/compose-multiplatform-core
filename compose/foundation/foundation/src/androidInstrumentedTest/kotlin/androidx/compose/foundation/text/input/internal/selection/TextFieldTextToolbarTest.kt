@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.BasicTextField2
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.FocusedWindowTest
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
@@ -102,7 +102,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
 
     val fontSizePx = with(rule.density) { fontSize.toPx() }
 
-    val TAG = "BasicTextField2"
+    val TAG = "BasicTextField"
 
     private var enabled by mutableStateOf(true)
 
@@ -193,7 +193,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         }
 
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(5, 2))
+            assertThat(state.text.selection).isEqualTo(TextRange(5, 2))
             assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Hidden)
         }
 
@@ -206,7 +206,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         }
 
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 5))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 5))
             assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Hidden)
         }
     }
@@ -226,7 +226,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         }
 
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 5))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 5))
             assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Hidden)
         }
     }
@@ -243,7 +243,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         }
 
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 5))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 5))
             assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Hidden)
         }
     }
@@ -262,7 +262,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         }
 
         rule.runOnIdle {
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 5))
+            assertThat(state.text.selection).isEqualTo(TextRange(0, 5))
             assertThat(textToolbar.status).isEqualTo(TextToolbarStatus.Shown)
         }
     }
@@ -494,7 +494,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
 
         selectAllOption?.invoke()
 
-        assertThat(state.text.selectionInChars).isEqualTo(TextRange(0, 5))
+        assertThat(state.text.selection).isEqualTo(TextRange(0, 5))
         rule.runOnIdle {
             assertThat(selectAllOption).isNull()
         }
@@ -615,7 +615,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
 
         rule.runOnIdle {
             assertThat(state.text.toString()).isEqualTo("Heworldllo")
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(7))
+            assertThat(state.text.selection).isEqualTo(TextRange(7))
         }
     }
 
@@ -688,7 +688,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
 
         rule.runOnIdle {
             assertThat(clipboardManager.getText()?.toString()).isEqualTo("Hello")
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(5))
+            assertThat(state.text.selection).isEqualTo(TextRange(5))
         }
     }
 
@@ -715,7 +715,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         rule.runOnIdle {
             assertThat(clipboardManager.getText()?.toString()).isEqualTo("ello")
             assertThat(state.text.toString()).isEqualTo("H World!")
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1))
+            assertThat(state.text.selection).isEqualTo(TextRange(1))
         }
     }
 
@@ -732,9 +732,9 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         val state = TextFieldState("Hello World!")
         setupContent(state, textToolbar, true, clipboardManager) { original, changes ->
             // only reject text changes, accept selection
-            val selection = changes.selectionInChars
+            val selection = changes.selection
             changes.replace(0, changes.length, original.toString())
-            changes.selectCharsIn(selection)
+            changes.selection = selection
         }
 
         rule.onNodeWithTag(TAG).requestFocus()
@@ -747,7 +747,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
         rule.runOnIdle {
             assertThat(clipboardManager.getText()?.toString()).isEqualTo("ello")
             assertThat(state.text.toString()).isEqualTo("Hello World!")
-            assertThat(state.text.selectionInChars).isEqualTo(TextRange(1))
+            assertThat(state.text.selection).isEqualTo(TextRange(1))
         }
     }
 
@@ -798,7 +798,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
                             .focusable()
                             .size(100.dp)
                     )
-                    BasicTextField2(
+                    BasicTextField(
                         state = state,
                         modifier = Modifier
                             .width(100.dp)
@@ -835,7 +835,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
             CompositionLocalProvider(LocalTextToolbar provides textToolbar) {
                 Column {
                     if (toggleState.value) {
-                        BasicTextField2(
+                        BasicTextField(
                             state = state,
                             modifier = Modifier
                                 .width(100.dp)
@@ -898,7 +898,7 @@ class TextFieldTextToolbarTest : FocusedWindowTest {
                 LocalTextToolbar provides toolbar,
                 LocalClipboardManager provides clipboardManager
             ) {
-                BasicTextField2(
+                BasicTextField(
                     state = state,
                     modifier = modifier
                         .width(100.dp)
