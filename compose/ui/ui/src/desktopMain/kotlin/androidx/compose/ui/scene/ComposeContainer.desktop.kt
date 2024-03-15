@@ -130,7 +130,7 @@ internal class ComposeContainer(
         eventListener = AwtEventListeners(
             OnlyValidPrimaryMouseButtonFilter,
             DetectEventOutsideLayer(),
-            FocusableLayerEventFilter()
+            BlockingInputLayerEventFilter()
         ),
         coroutineContext = coroutineContext,
         skiaLayerComponentFactory = ::createSkiaLayerComponent,
@@ -345,6 +345,7 @@ internal class ComposeContainer(
         density: Density,
         layoutDirection: LayoutDirection,
         focusable: Boolean,
+        blockPointerInputOutside: Boolean,
         compositionContext: CompositionContext
     ): ComposeSceneLayer {
         return when (layerType) {
@@ -355,6 +356,7 @@ internal class ComposeContainer(
                 density = density,
                 layoutDirection = layoutDirection,
                 focusable = focusable,
+                blockPointerInputOutside = blockPointerInputOutside,
                 compositionContext = compositionContext
             )
             LayerType.OnComponent -> SwingComposeSceneLayer(
@@ -363,6 +365,7 @@ internal class ComposeContainer(
                 density = density,
                 layoutDirection = layoutDirection,
                 focusable = focusable,
+                blockPointerInputOutside = blockPointerInputOutside,
                 compositionContext = compositionContext
             )
             else -> error("Unexpected LayerType")
@@ -430,11 +433,13 @@ internal class ComposeContainer(
             density: Density,
             layoutDirection: LayoutDirection,
             focusable: Boolean,
+            blockPointerInputOutside: Boolean,
             compositionContext: CompositionContext
         ): ComposeSceneLayer = this@ComposeContainer.createPlatformLayer(
             density = density,
             layoutDirection = layoutDirection,
             focusable = focusable,
+            blockPointerInputOutside = blockPointerInputOutside,
             compositionContext = compositionContext
         )
     }
@@ -462,11 +467,11 @@ internal class ComposeContainer(
         }
     }
 
-    private inner class FocusableLayerEventFilter : AwtEventListener {
-        private val noFocusableLayers get() = layers.all { !it.focusable }
+    private inner class BlockingInputLayerEventFilter : AwtEventListener {
+        private val noBlockingInputLayers get() = layers.all { !it.blockPointerInputOutside }
 
-        override fun onMouseEvent(event: AwtMouseEvent): Boolean = !noFocusableLayers
-        override fun onKeyEvent(event: AwtKeyEvent): Boolean = !noFocusableLayers
+        override fun onMouseEvent(event: AwtMouseEvent): Boolean = !noBlockingInputLayers
+        override fun onKeyEvent(event: AwtKeyEvent): Boolean = !noBlockingInputLayers
     }
 }
 

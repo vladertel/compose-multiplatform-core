@@ -101,6 +101,8 @@ interface ComposeSceneLayer {
      */
     var focusable: Boolean
 
+    var blockPointerInputOutside: Boolean
+
     /**
      * Close all resources and subscriptions. It's anticipated that the platform implementation
      * will automatically close all layers along with the parent scene.
@@ -166,7 +168,8 @@ interface ComposeSceneLayer {
  */
 @Composable
 internal fun rememberComposeSceneLayer(
-    focusable: Boolean = false
+    focusable: Boolean = false,
+    blockPointerInputOutside: Boolean = focusable,
 ): ComposeSceneLayer {
     val scene = LocalComposeScene.requireCurrent()
     val density = LocalDensity.current
@@ -178,12 +181,14 @@ internal fun rememberComposeSceneLayer(
             density = density,
             layoutDirection = layoutDirection,
             focusable = focusable,
+            blockPointerInputOutside = blockPointerInputOutside,
             compositionContext = parentComposition,
         ).also {
             it.compositionLocalContext = compositionLocalContext
         }
     }
     layer.focusable = focusable
+    layer.blockPointerInputOutside = blockPointerInputOutside
     DisposableEffect(Unit) {
         onDispose {
             layer.close()

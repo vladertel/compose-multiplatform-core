@@ -257,6 +257,7 @@ interface ComposeScene {
         density: Density,
         layoutDirection: LayoutDirection,
         focusable: Boolean,
+        blockPointerInputOutside: Boolean,
         compositionContext: CompositionContext,
     ): ComposeSceneLayer
 }

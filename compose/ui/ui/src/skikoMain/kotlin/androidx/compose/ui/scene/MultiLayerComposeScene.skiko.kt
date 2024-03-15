@@ -223,7 +223,7 @@ private class MultiLayerComposeSceneImpl(
         forEachLayerReversed { layer ->
             if (layer.isInBounds(position)) {
                 return layer.owner.hitTestInteropView(position)
-            } else if (layer == focusedLayer) {
+            } else if (layer.blockPointerInputOutside) {
                 return false
             }
         }
@@ -266,9 +266,26 @@ private class MultiLayerComposeSceneImpl(
     }
 
     /**
-     * Check if [focusedLayer] blocks input for this owner.
+     * Check if any layer blocks input for this owner.
      */
     private fun isInteractive(owner: RootNodeOwner?): Boolean {
+        if (owner == null) {
+            return true
+        }
+        layers.fastForEachReversed { layer ->
+            if (layer.owner == owner) {
+                return true
+            } else if (layer.blockPointerInputOutside) {
+                return false
+            }
+        }
+        return true
+    }
+
+    /**
+     * Check if there is [focusedLayer] above.
+     */
+    private fun isUnderFocusedLayer(owner: RootNodeOwner?): Boolean {
         if (owner == null || focusedLayer == null) {
             return true
         }
@@ -307,8 +324,8 @@ private class MultiLayerComposeSceneImpl(
             // Input event is out of bounds - send click outside notification
             layer.onOutsidePointerEvent(event)
 
-            // if the owner is in focus, do not pass the event to underlying owners
-            if (layer == focusedLayer) {
+            // if the layer blocks input, do not pass the event to underlying owners
+            if (layer.blockPointerInputOutside) {
                 return
             }
         }
@@ -392,12 +409,14 @@ private class MultiLayerComposeSceneImpl(
         density: Density,
         layoutDirection: LayoutDirection,
         focusable: Boolean,
+        blockPointerInputOutside: Boolean,
         compositionContext: CompositionContext,
     ): ComposeSceneLayer = AttachedComposeSceneLayer(
         density = density,
         layoutDirection = layoutDirection,
         focusable = focusable,
         compositionContext = compositionContext,
+        blockPointerInputOutside = blockPointerInputOutside,
     )
 
     private fun onOwnerAppended(owner: RootNodeOwner) {
@@ -444,7 +463,7 @@ private class MultiLayerComposeSceneImpl(
     }
 
     private fun requestFocus(layer: AttachedComposeSceneLayer) {
-        if (isInteractive(layer.owner)) {
+        if (isUnderFocusedLayer(layer.owner)) {
             focusedLayer = layer
 
             // Exit event to lastHoverOwner will be sent via synthetic event on next frame
@@ -482,6 +501,7 @@ private class MultiLayerComposeSceneImpl(
         density: Density,
         layoutDirection: LayoutDirection,
         focusable: Boolean,
+        override var blockPointerInputOutside: Boolean,
         private val compositionContext: CompositionContext,
     ) : ComposeSceneLayer {
         val owner = RootNodeOwner(

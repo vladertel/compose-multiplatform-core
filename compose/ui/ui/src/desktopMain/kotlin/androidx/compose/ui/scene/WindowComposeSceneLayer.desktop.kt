@@ -52,6 +52,7 @@ internal class WindowComposeSceneLayer(
     density: Density,
     layoutDirection: LayoutDirection,
     focusable: Boolean,
+    override var blockPointerInputOutside: Boolean,
     compositionContext: CompositionContext
 ) : DesktopComposeSceneLayer(composeContainer, density, layoutDirection) {
     private val window get() = requireNotNull(composeContainer.window)

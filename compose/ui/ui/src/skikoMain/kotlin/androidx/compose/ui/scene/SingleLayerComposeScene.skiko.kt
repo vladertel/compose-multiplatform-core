@@ -179,11 +179,13 @@ private class SingleLayerComposeSceneImpl(
         density: Density,
         layoutDirection: LayoutDirection,
         focusable: Boolean,
+        blockPointerInputOutside: Boolean,
         compositionContext: CompositionContext,
     ): ComposeSceneLayer = composeSceneContext.createPlatformLayer(
         density = density,
         layoutDirection = layoutDirection,
         focusable = focusable,
+        blockPointerInputOutside = blockPointerInputOutside,
         compositionContext = compositionContext
     )
 

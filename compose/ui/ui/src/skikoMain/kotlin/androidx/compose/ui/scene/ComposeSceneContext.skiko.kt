@@ -46,6 +46,7 @@ interface ComposeSceneContext {
         density: Density,
         layoutDirection: LayoutDirection,
         focusable: Boolean,
+        blockPointerInputOutside: Boolean,
         compositionContext: CompositionContext,
     ) : ComposeSceneLayer {
         throw IllegalStateException()

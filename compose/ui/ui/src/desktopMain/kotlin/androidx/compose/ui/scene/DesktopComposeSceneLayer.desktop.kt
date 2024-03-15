@@ -57,7 +57,7 @@ internal abstract class DesktopComposeSceneLayer(
         OnlyValidPrimaryMouseButtonFilter,
         DetectEventOutsideLayer(),
         boundsEventFilter,
-        FocusableLayerEventFilter()
+        BlockingInputLayerEventFilter()
     )
     private val boundsEventFilter = BoundsEventFilter(
         bounds = Rectangle(windowContainer.size)
@@ -226,12 +226,12 @@ internal abstract class DesktopComposeSceneLayer(
         }
     }
 
-    private inner class FocusableLayerEventFilter : AwtEventListener {
-        private val noFocusableLayersAbove: Boolean
-            get() = layersAbove.all { !it.focusable }
+    private inner class BlockingInputLayerEventFilter : AwtEventListener {
+        private val noBlockingInputLayers: Boolean
+            get() = layersAbove.all { !it.blockPointerInputOutside }
 
-        override fun onMouseEvent(event: MouseEvent): Boolean = !noFocusableLayersAbove
-        override fun onKeyEvent(event: KeyEvent): Boolean = !focusable || !noFocusableLayersAbove
+        override fun onMouseEvent(event: MouseEvent): Boolean = !noBlockingInputLayers
+        override fun onKeyEvent(event: KeyEvent): Boolean = !focusable || !noBlockingInputLayers
     }
 
     private inner class BoundsEventFilter(
@@ -258,6 +258,7 @@ internal abstract class DesktopComposeSceneLayer(
             return if (event.isInBounds) {
                 false
             } else {
+                // TODO pass input to other layers
                 onMouseEventOutside(event)
                 true
             }

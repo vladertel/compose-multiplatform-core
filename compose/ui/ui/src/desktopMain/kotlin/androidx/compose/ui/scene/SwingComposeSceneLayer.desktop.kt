@@ -43,6 +43,7 @@ internal class SwingComposeSceneLayer(
     density: Density,
     layoutDirection: LayoutDirection,
     focusable: Boolean,
+    blockPointerInputOutside: Boolean,
     compositionContext: CompositionContext
 ) : DesktopComposeSceneLayer(composeContainer, density, layoutDirection) {
     private val backgroundMouseListener = object : MouseAdapter() {
@@ -89,6 +90,12 @@ internal class SwingComposeSceneLayer(
         set(value) {
             field = value
             container.isFocusable = value
+        }
+
+    override var blockPointerInputOutside: Boolean = blockPointerInputOutside
+        set(value) {
+            field = value
+            // TODO pass input from [backgroundMouseListener] to other layers
         }
 
     override var scrimColor: Color? = null

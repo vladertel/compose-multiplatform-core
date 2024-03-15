@@ -81,6 +81,7 @@ actual class PopupProperties @ExperimentalComposeUiApi constructor(
     actual val clippingEnabled: Boolean = true,
     val usePlatformDefaultWidth: Boolean = false,
     val usePlatformInsets: Boolean = true,
+    val blockPointerInputOutside: Boolean = focusable,
 ) {
     // Constructor with all non-experimental arguments.
     constructor(
@@ -95,6 +96,7 @@ actual class PopupProperties @ExperimentalComposeUiApi constructor(
         clippingEnabled = clippingEnabled,
         usePlatformDefaultWidth = false,
         usePlatformInsets = true,
+        blockPointerInputOutside = focusable,
     )
 
     actual constructor(
@@ -119,6 +121,7 @@ actual class PopupProperties @ExperimentalComposeUiApi constructor(
         clippingEnabled = clippingEnabled,
         usePlatformDefaultWidth = false,
         usePlatformInsets = true,
+        blockPointerInputOutside = focusable,
     )
 
     override fun equals(other: Any?): Boolean {
@@ -131,6 +134,7 @@ actual class PopupProperties @ExperimentalComposeUiApi constructor(
         if (clippingEnabled != other.clippingEnabled) return false
         if (usePlatformDefaultWidth != other.usePlatformDefaultWidth) return false
         if (usePlatformInsets != other.usePlatformInsets) return false
+        if (blockPointerInputOutside != other.blockPointerInputOutside) return false
 
         return true
     }
@@ -142,6 +146,7 @@ actual class PopupProperties @ExperimentalComposeUiApi constructor(
         result = 31 * result + clippingEnabled.hashCode()
         result = 31 * result + usePlatformDefaultWidth.hashCode()
         result = 31 * result + usePlatformInsets.hashCode()
+        result = 31 * result + blockPointerInputOutside.hashCode()
         return result
     }
 }
@@ -439,7 +444,8 @@ private fun PopupLayout(
     var layoutParentBoundsInWindow: IntRect? by remember { mutableStateOf(null) }
     EmptyLayout(Modifier.parentBoundsInWindow { layoutParentBoundsInWindow = it })
     val layer = rememberComposeSceneLayer(
-        focusable = properties.focusable
+        focusable = properties.focusable,
+        blockPointerInputOutside = properties.blockPointerInputOutside,
     )
     layer.setKeyEventListener(onPreviewKeyEvent, onKeyEvent)
     layer.setOutsidePointerEventListener(onOutsidePointerEvent)
