@@ -29,7 +29,6 @@ import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
-import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFile
@@ -68,7 +67,7 @@ class ClassStabilityTransformer(
     symbolRemapper: DeepCopySymbolRemapper,
     metrics: ModuleMetrics,
     stabilityInferencer: StabilityInferencer,
-    private val classStabilityInferredCollection: ClassStabilityInferredCollection?
+    private val classStabilityInferredCollection: ClassStabilityInferredCollection? = null
 ) : AbstractComposeLowering(context, symbolRemapper, metrics, stabilityInferencer),
     ClassLoweringPass,
     ModuleLoweringPass {
@@ -88,7 +87,6 @@ class ClassStabilityTransformer(
         irFile.transformChildrenVoid(this)
     }
 
-    @OptIn(ObsoleteDescriptorBasedAPI::class)
     override fun visitClass(declaration: IrClass): IrStatement {
         val result = super.visitClass(declaration)
         val cls = result as? IrClass ?: return result
@@ -194,14 +192,7 @@ class ClassStabilityTransformer(
     }
 
     private fun IrClass.addStabilityMarkerField(stabilityExpression: IrExpression) {
-        val customStabilityFieldName = when {
-            context.platform?.isJvm() == false -> this.uniqueStabilityFieldName()
-            else -> null
-        }
-        val stabilityField = makeStabilityField(
-            fieldName = customStabilityFieldName
-        ).apply {
-            parent = this@addStabilityMarkerField
+        val stabilityField = this.makeStabilityField().apply {
             initializer = IrExpressionBodyImpl(
                 UNDEFINED_OFFSET,
                 UNDEFINED_OFFSET,
@@ -211,12 +202,6 @@ class ClassStabilityTransformer(
 
         if (context.platform.isJvm()) {
             declarations += stabilityField
-        } else {
-            val root = this.getPackageFragment()
-            stabilityField.parent = root
-
-            val stabilityProp = makeStabilityProp(this.uniqueStabilityPropertyName(), stabilityField, root)
-            root.addChild(stabilityProp)
         }
     }
 }

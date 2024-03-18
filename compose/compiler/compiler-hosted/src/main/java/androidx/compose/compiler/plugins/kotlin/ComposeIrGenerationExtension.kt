@@ -123,7 +123,7 @@ class ComposeIrGenerationExtension(
             metrics,
             stabilityInferencer,
             classStabilityInferredCollection = classStabilityInferredCollection?.takeIf {
-                pluginContext.platform?.isJvm() == false
+                !pluginContext.platform.isJvm()
             }
         ).lower(moduleFragment)
 

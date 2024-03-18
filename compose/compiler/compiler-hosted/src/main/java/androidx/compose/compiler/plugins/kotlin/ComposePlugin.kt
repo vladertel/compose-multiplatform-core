@@ -372,7 +372,7 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
 
         fun registerCommonExtensions(
             project: Project,
-            classStabilityInferredCollection: ClassStabilityInferredCollection?
+            classStabilityInferredCollection: ClassStabilityInferredCollection? = null
         ) {
             StorageComponentContainerContributor.registerExtension(
                 project,
