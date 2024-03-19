@@ -474,6 +474,9 @@ class ComposerParamTransformer(
     private fun IrSimpleFunction.hasDefaultExpressionDefinedForValueParameter(index: Int): Boolean {
         // checking for default value isn't enough, you need to ensure that none of the overrides
         // have it as well...
+        if (valueParameters.size <= index) {
+            return false
+        }
         if (valueParameters[index].defaultValue != null) return true
 
         if (context.platform.isJs() && this.isDecoyImplementation()) {
