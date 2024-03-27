@@ -16,14 +16,13 @@
 
 package androidx.compose.ui.input.key
 
-import org.jetbrains.skiko.SkikoPlatformKeyboardEvent
-
+expect class PlatformKeyboardEvent
 actual data class NativeKeyEvent(
     val key: Key,
     val modifiers: InputModifiers = InputModifiers.EMPTY,
     val kind: KeyEventType,
     val timestamp: Long = 0,
-    val platform: SkikoPlatformKeyboardEvent?
+    val platform: PlatformKeyboardEvent?
 )
 
 value class InputModifiers(val value: Int) {

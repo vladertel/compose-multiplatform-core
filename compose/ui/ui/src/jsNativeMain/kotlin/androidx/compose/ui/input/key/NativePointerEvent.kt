@@ -19,8 +19,8 @@ package androidx.compose.ui.input.key
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
-import org.jetbrains.skiko.SkikoPlatformPointerEvent
 
+expect class PlatformPointerEvent
 data class NativePointerEvent(
     /**
      * X position in points (scaled pixels that depend on the scale factor of the current display).
@@ -51,7 +51,7 @@ data class NativePointerEvent(
     val pointers: List<PointerEventRecord> = listOf(
         PointerEventRecord(0, x, y, pressedButtons.has(MouseButtons.LEFT))
     ),
-    val platform: SkikoPlatformPointerEvent? = null
+    val platform: PlatformPointerEvent? = null
 )
 
 /**
