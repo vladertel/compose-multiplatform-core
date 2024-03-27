@@ -33,7 +33,7 @@ import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.MouseEvent
 import org.w3c.dom.events.WheelEvent
 
-private fun KeyboardEvent.toSkikoKey(): Long {
+private fun KeyboardEvent.toKey(): Long {
     var key = this.keyCode.toLong()
     val side = this.location
     if (side == KeyboardEvent.DOM_KEY_LOCATION_RIGHT) {
@@ -47,7 +47,7 @@ private fun KeyboardEvent.toSkikoKey(): Long {
     return key
 }
 
-private fun KeyboardEvent.toSkikoModifiers(): InputModifiers {
+private fun KeyboardEvent.toInputModifiers(): InputModifiers {
     var result = 0
     if (altKey) {
         result = result.or(InputModifiers.ALT.value)
@@ -65,13 +65,13 @@ private fun KeyboardEvent.toSkikoModifiers(): InputModifiers {
     return InputModifiers(result)
 }
 
-internal fun KeyboardEvent.toSkikoEvent(
+internal fun KeyboardEvent.toNativePointerEvent(
     kind: KeyEventType
 ): NativeKeyEvent {
-    val skikoKey = toSkikoKey()
+    val skikoKey = toKey()
     return NativeKeyEvent(
         Key(skikoKey),
-        toSkikoModifiers(),
+        toInputModifiers(),
         kind,
         timeStamp.toInt().toLong(),
         this
@@ -90,7 +90,7 @@ private fun getButtonValue(button: Int): Int {
 }
 
 private var buttonsFlags = 0
-private fun MouseEvent.toSkikoPressedMouseButtons(
+private fun MouseEvent.resolvePressedMouseButtons(
     kind: PointerEventType
 ): MouseButtons {
     // https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button
@@ -105,20 +105,20 @@ private fun MouseEvent.toSkikoPressedMouseButtons(
     return MouseButtons(buttonsFlags)
 }
 
-internal fun MouseEvent.toSkikoEvent(
+internal fun MouseEvent.toNativePointerEvent(
     kind: PointerEventType
 ): NativePointerEvent {
     return NativePointerEvent(
         x = offsetX,
         y = offsetY,
-        pressedButtons = toSkikoPressedMouseButtons(kind),
+        pressedButtons = resolvePressedMouseButtons(kind),
         kind = kind,
         timestamp = timeStamp.toInt().toLong(),
         platform = this
     )
 }
 
-internal fun MouseEvent.toSkikoDragEvent(): NativePointerEvent {
+internal fun MouseEvent.toNativeDragEvent(): NativePointerEvent {
     return NativePointerEvent(
         x = offsetX,
         y = offsetY,
@@ -129,7 +129,7 @@ internal fun MouseEvent.toSkikoDragEvent(): NativePointerEvent {
     )
 }
 
-internal fun WheelEvent.toSkikoScrollEvent(): NativePointerEvent {
+internal fun WheelEvent.toNativeScrollEvent(): NativePointerEvent {
     return NativePointerEvent(
         x = offsetX,
         y = offsetY,
@@ -146,7 +146,7 @@ private abstract external class ExtendedTouchEvent : TouchEvent {
     val force: Double
 }
 
-internal fun TouchEvent.toSkikoEvent(
+internal fun TouchEvent.toNativePointerEvent(
     kind: PointerEventType,
     offsetX: Double,
     offsetY: Double

@@ -22,9 +22,9 @@ import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.LocalSystemTheme
-import androidx.compose.ui.events.toSkikoDragEvent
-import androidx.compose.ui.events.toSkikoEvent
-import androidx.compose.ui.events.toSkikoScrollEvent
+import androidx.compose.ui.events.toNativeDragEvent
+import androidx.compose.ui.events.toNativePointerEvent
+import androidx.compose.ui.events.toNativeScrollEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.pointer.BrowserCursor
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -179,45 +179,45 @@ private class ComposeWindow(
                 offsetY = top
             }
 
-            val skikoEvent = event.toSkikoEvent(PointerEventType.Press, offsetX, offsetY)
+            val skikoEvent = event.toNativePointerEvent(PointerEventType.Press, offsetX, offsetY)
             layer.view.onPointerEvent(skikoEvent)
         }
 
         addTypedEvent<TouchEvent>("touchmove") { event ->
             event.preventDefault()
-            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Move, offsetX, offsetY))
+            layer.view.onPointerEvent(event.toNativePointerEvent(PointerEventType.Move, offsetX, offsetY))
         }
 
         addTypedEvent<TouchEvent>("touchend") { event ->
             event.preventDefault()
-            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Release, offsetX, offsetY))
+            layer.view.onPointerEvent(event.toNativePointerEvent(PointerEventType.Release, offsetX, offsetY))
         }
 
         addTypedEvent<TouchEvent>("touchcancel") { event ->
             event.preventDefault()
-            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Release, offsetX, offsetY))
+            layer.view.onPointerEvent(event.toNativePointerEvent(PointerEventType.Release, offsetX, offsetY))
         }
 
         addTypedEvent<MouseEvent>("mousedown") { event ->
             isPointerPressed = true
-            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Press))
+            layer.view.onPointerEvent(event.toNativePointerEvent(PointerEventType.Press))
         }
 
         addTypedEvent<MouseEvent>("mouseup") { event ->
             isPointerPressed = false
-            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Release))
+            layer.view.onPointerEvent(event.toNativePointerEvent(PointerEventType.Release))
         }
 
         addTypedEvent<MouseEvent>("mousemove") { event ->
             if (isPointerPressed) {
-                layer.view.onPointerEvent(event.toSkikoDragEvent())
+                layer.view.onPointerEvent(event.toNativeDragEvent())
             } else {
-                layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Move))
+                layer.view.onPointerEvent(event.toNativePointerEvent(PointerEventType.Move))
             }
         }
 
         addTypedEvent<WheelEvent>("wheel") { event ->
-            layer.view.onPointerEvent(event.toSkikoScrollEvent())
+            layer.view.onPointerEvent(event.toNativeScrollEvent())
         }
 
         canvas.addEventListener("contextmenu", { event ->
@@ -225,12 +225,12 @@ private class ComposeWindow(
         })
 
         addTypedEvent<KeyboardEvent>("keydown") { event ->
-            val processed = layer.view.onKeyboardEvent(event.toSkikoEvent(KeyEventType.KeyDown))
+            val processed = layer.view.onKeyboardEvent(event.toNativePointerEvent(KeyEventType.KeyDown))
             if (processed) event.preventDefault()
         }
 
         addTypedEvent<KeyboardEvent>("keyup") { event ->
-            val processed = layer.view.onKeyboardEvent(event.toSkikoEvent(KeyEventType.KeyUp))
+            val processed = layer.view.onKeyboardEvent(event.toNativePointerEvent(KeyEventType.KeyUp))
             if (processed) event.preventDefault()
         }
 
