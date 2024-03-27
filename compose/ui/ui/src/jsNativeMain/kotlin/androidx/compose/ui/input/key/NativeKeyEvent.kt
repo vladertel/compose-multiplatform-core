@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.input.key
 
-import androidx.compose.ui.event.InputModifiers
 import org.jetbrains.skiko.SkikoPlatformKeyboardEvent
 
 actual data class NativeKeyEvent(
@@ -26,3 +25,36 @@ actual data class NativeKeyEvent(
     val timestamp: Long = 0,
     val platform: SkikoPlatformKeyboardEvent?
 )
+
+value class InputModifiers(val value: Int) {
+    companion object {
+        val EMPTY = InputModifiers(0)
+        val META = InputModifiers(1)
+        val CONTROL = InputModifiers(2)
+        val ALT = InputModifiers(4)
+        val SHIFT = InputModifiers(8)
+    }
+
+    fun has(value: InputModifiers): Boolean {
+        return value.value and this.value != 0
+    }
+
+    override fun toString(): String {
+        val result = mutableListOf<String>().apply {
+            if (has(META)) {
+                add("META")
+            }
+            if (has(CONTROL)) {
+                add("CONTROL")
+            }
+            if (has(ALT)) {
+                add("ALT")
+            }
+            if (has(SHIFT)) {
+                add("SHIFT")
+            }
+        }
+
+        return if (result.isNotEmpty()) result.toString() else ""
+    }
+}

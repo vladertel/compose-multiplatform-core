@@ -19,9 +19,8 @@ package androidx.compose.ui.native
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.key.NativeKeyEvent
-import androidx.compose.ui.event.NativePointerEvent
-import androidx.compose.ui.event.ComposeEventHandler
-import androidx.compose.ui.event.getScrollDelta
+import androidx.compose.ui.input.key.NativePointerEvent
+import androidx.compose.ui.input.key.getScrollDelta
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asComposeCanvas
 import androidx.compose.ui.input.InputMode
@@ -171,3 +170,8 @@ private fun currentMillis() = (currentNanoTime() / 1E6).toLong()
 
 
 internal expect val supportsMultitouch: Boolean
+
+interface ComposeEventHandler {
+    fun onKeyboardEvent(event: NativeKeyEvent): Boolean
+    fun onPointerEvent(event: NativePointerEvent) = Unit
+}

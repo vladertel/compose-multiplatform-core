@@ -14,27 +14,12 @@
  * limitations under the License.
  */
 
-package androidx.compose.ui.event
+package androidx.compose.ui.input.key
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
 import org.jetbrains.skiko.SkikoPlatformPointerEvent
-
-internal fun NativePointerEvent.getScrollDelta(): Offset {
-    return this.takeIf {
-        it.kind == PointerEventType.Scroll
-    }?.let {
-        Offset(it.deltaX.toFloat(), it.deltaY.toFloat())
-    } ?: Offset.Zero
-}
-
-interface ComposeEventHandler {
-    fun onKeyboardEvent(event: NativeKeyEvent): Boolean
-    fun onPointerEvent(event: NativePointerEvent) = Unit
-}
-
 
 data class NativePointerEvent(
     /**
@@ -111,6 +96,14 @@ data class PointerEventRecord(
     val pressure: Double = 1.0,
 )
 
+internal fun NativePointerEvent.getScrollDelta(): Offset {
+    return this.takeIf {
+        it.kind == PointerEventType.Scroll
+    }?.let {
+        Offset(it.deltaX.toFloat(), it.deltaY.toFloat())
+    } ?: Offset.Zero
+}
+
 value class MouseButtons(val value: Int) {
     companion object {
         val NONE = MouseButtons(0)
@@ -155,39 +148,6 @@ value class MouseButtons(val value: Int) {
                 add("BUTTON_8")
             }
         }
-        return if (result.isNotEmpty()) result.toString() else ""
-    }
-}
-
-value class InputModifiers(val value: Int) {
-    companion object {
-        val EMPTY = InputModifiers(0)
-        val META = InputModifiers(1)
-        val CONTROL = InputModifiers(2)
-        val ALT = InputModifiers(4)
-        val SHIFT = InputModifiers(8)
-    }
-
-    fun has(value: InputModifiers): Boolean {
-        return value.value and this.value != 0
-    }
-
-    override fun toString(): String {
-        val result = mutableListOf<String>().apply {
-            if (has(META)) {
-                add("META")
-            }
-            if (has(CONTROL)) {
-                add("CONTROL")
-            }
-            if (has(ALT)) {
-                add("ALT")
-            }
-            if (has(SHIFT)) {
-                add("SHIFT")
-            }
-        }
-
         return if (result.isNotEmpty()) result.toString() else ""
     }
 }

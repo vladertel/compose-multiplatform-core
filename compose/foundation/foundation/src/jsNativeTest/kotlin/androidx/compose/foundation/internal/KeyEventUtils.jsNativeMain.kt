@@ -16,7 +16,7 @@
 
 package androidx.compose.foundation.internal
 
-import androidx.compose.ui.event.InputModifiers
+import androidx.compose.ui.input.key.InputModifiers
 import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent

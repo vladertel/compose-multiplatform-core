@@ -16,8 +16,6 @@
 
 package androidx.compose.ui.input.key
 
-import androidx.compose.ui.event.InputModifiers
-
 /**
  * The key that was pressed.
  */

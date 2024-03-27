@@ -16,11 +16,11 @@
 
 package androidx.compose.ui.events
 
-import androidx.compose.ui.event.InputModifiers
+import androidx.compose.ui.input.key.InputModifiers
 import androidx.compose.ui.input.key.NativeKeyEvent
-import androidx.compose.ui.event.MouseButtons
-import androidx.compose.ui.event.NativePointerEvent
-import androidx.compose.ui.event.PointerEventRecord
+import androidx.compose.ui.input.key.MouseButtons
+import androidx.compose.ui.input.key.NativePointerEvent
+import androidx.compose.ui.input.key.PointerEventRecord
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.pointer.PointerEventType
