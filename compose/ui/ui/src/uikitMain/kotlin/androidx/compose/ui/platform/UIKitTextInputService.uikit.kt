@@ -17,7 +17,9 @@
 package androidx.compose.ui.platform
 
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.window.FocusStack
@@ -30,8 +32,6 @@ import kotlin.math.min
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.jetbrains.skia.BreakIterator
-import org.jetbrains.skiko.SkikoKey
-import org.jetbrains.skiko.SkikoKeyboardEventKind
 import platform.UIKit.*
 
 internal class UIKitTextInputService(
@@ -187,8 +187,8 @@ internal class UIKitTextInputService(
     fun onPreviewKeyEvent(event: KeyEvent): Boolean {
         val nativeKeyEvent = event.nativeKeyEvent
         return when (nativeKeyEvent.key) {
-            SkikoKey.KEY_ENTER -> handleEnterKey(nativeKeyEvent)
-            SkikoKey.KEY_BACKSPACE -> handleBackspace(nativeKeyEvent)
+            Key.Enter -> handleEnterKey(nativeKeyEvent)
+            Key.Backspace -> handleBackspace(nativeKeyEvent)
             else -> false
         }
     }
@@ -196,12 +196,12 @@ internal class UIKitTextInputService(
     private fun handleEnterKey(event: NativeKeyEvent): Boolean {
         _tempImeActionIsCalledWithHardwareReturnKey = false
         return when (event.kind) {
-            SkikoKeyboardEventKind.UP -> {
+            KeyEventType.KeyUp -> {
                 _tempHardwareReturnKeyPressed = false
                 false
             }
 
-            SkikoKeyboardEventKind.DOWN -> {
+            KeyEventType.KeyDown -> {
                 _tempHardwareReturnKeyPressed = true
                 // This prevents two new line characters from being added for one hardware return key press.
                 true
@@ -213,7 +213,7 @@ internal class UIKitTextInputService(
 
     private fun handleBackspace(event: NativeKeyEvent): Boolean {
         // This prevents two characters from being removed for one hardware backspace key press.
-        return event.kind == SkikoKeyboardEventKind.DOWN
+        return event.kind == KeyEventType.KeyDown
     }
 
     private fun sendEditCommand(vararg commands: EditCommand) {

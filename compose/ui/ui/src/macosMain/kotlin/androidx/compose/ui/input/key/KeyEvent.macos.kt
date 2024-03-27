@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,8 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation.text
+package androidx.compose.ui.input.key
 
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.native.QuaziKeyboardEvent
 
-import org.jetbrains.skiko.*
-
-actual val KeyEvent.isTypedEvent: Boolean
-    get() = nativeKeyEvent.kind == KeyEventType.KeyDown && !isMetaPressed && nativeKeyEvent.platform?.isPrintable() == true
-
-
-private fun SkikoPlatformKeyboardEvent.isPrintable(): Boolean {
-    return key.firstOrNull()?.toChar()?.toString() == key
-}
+actual typealias NativeKeyEvent = QuaziKeyboardEvent

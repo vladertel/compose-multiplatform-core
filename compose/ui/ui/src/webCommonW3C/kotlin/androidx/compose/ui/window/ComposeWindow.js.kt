@@ -25,7 +25,9 @@ import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.events.toSkikoDragEvent
 import androidx.compose.ui.events.toSkikoEvent
 import androidx.compose.ui.events.toSkikoScrollEvent
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.pointer.BrowserCursor
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.native.ComposeLayer
 import androidx.compose.ui.platform.JSTextInputService
@@ -50,11 +52,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.skiko.SkiaLayer
-import org.jetbrains.skiko.SkikoInputModifiers
-import org.jetbrains.skiko.SkikoKey
-import org.jetbrains.skiko.SkikoKeyboardEvent
-import org.jetbrains.skiko.SkikoKeyboardEventKind
-import org.jetbrains.skiko.SkikoPointerEventKind
 import org.w3c.dom.AddEventListenerOptions
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLCanvasElement
@@ -156,7 +153,6 @@ private class ComposeWindow(
     private val layer = ComposeLayer(
         layer = SkiaLayer(),
         platformContext = platformContext,
-        input = jsTextInputService.input
     )
     private val systemThemeObserver = getSystemThemeObserver()
 
@@ -183,40 +179,40 @@ private class ComposeWindow(
                 offsetY = top
             }
 
-            val skikoEvent = event.toSkikoEvent(SkikoPointerEventKind.DOWN, offsetX, offsetY)
+            val skikoEvent = event.toSkikoEvent(PointerEventType.Press, offsetX, offsetY)
             layer.view.onPointerEvent(skikoEvent)
         }
 
         addTypedEvent<TouchEvent>("touchmove") { event ->
             event.preventDefault()
-            layer.view.onPointerEvent(event.toSkikoEvent(SkikoPointerEventKind.MOVE, offsetX, offsetY))
+            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Move, offsetX, offsetY))
         }
 
         addTypedEvent<TouchEvent>("touchend") { event ->
             event.preventDefault()
-            layer.view.onPointerEvent(event.toSkikoEvent(SkikoPointerEventKind.UP, offsetX, offsetY))
+            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Release, offsetX, offsetY))
         }
 
         addTypedEvent<TouchEvent>("touchcancel") { event ->
             event.preventDefault()
-            layer.view.onPointerEvent(event.toSkikoEvent(SkikoPointerEventKind.UP, offsetX, offsetY))
+            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Release, offsetX, offsetY))
         }
 
         addTypedEvent<MouseEvent>("mousedown") { event ->
             isPointerPressed = true
-            layer.view.onPointerEvent(event.toSkikoEvent(SkikoPointerEventKind.DOWN))
+            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Press))
         }
 
         addTypedEvent<MouseEvent>("mouseup") { event ->
             isPointerPressed = false
-            layer.view.onPointerEvent(event.toSkikoEvent(SkikoPointerEventKind.UP))
+            layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Release))
         }
 
         addTypedEvent<MouseEvent>("mousemove") { event ->
             if (isPointerPressed) {
                 layer.view.onPointerEvent(event.toSkikoDragEvent())
             } else {
-                layer.view.onPointerEvent(event.toSkikoEvent(SkikoPointerEventKind.MOVE))
+                layer.view.onPointerEvent(event.toSkikoEvent(PointerEventType.Move))
             }
         }
 
@@ -229,12 +225,12 @@ private class ComposeWindow(
         })
 
         addTypedEvent<KeyboardEvent>("keydown") { event ->
-            val processed = layer.view.onKeyboardEventWithResult(event.toSkikoEvent(SkikoKeyboardEventKind.DOWN))
+            val processed = layer.view.onKeyboardEvent(event.toSkikoEvent(KeyEventType.KeyDown))
             if (processed) event.preventDefault()
         }
 
         addTypedEvent<KeyboardEvent>("keyup") { event ->
-            val processed = layer.view.onKeyboardEventWithResult(event.toSkikoEvent(SkikoKeyboardEventKind.UP))
+            val processed = layer.view.onKeyboardEvent(event.toSkikoEvent(KeyEventType.KeyUp))
             if (processed) event.preventDefault()
         }
 

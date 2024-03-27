@@ -16,79 +16,61 @@
 
 package androidx.compose.ui.events
 
-import org.jetbrains.skiko.SkikoInputEvent
-import org.jetbrains.skiko.SkikoInputModifiers
-import org.jetbrains.skiko.SkikoKey
-import org.jetbrains.skiko.SkikoKeyboardEvent
-import org.jetbrains.skiko.SkikoKeyboardEventKind
-import org.jetbrains.skiko.SkikoMouseButtons
+import androidx.compose.ui.event.InputModifiers
+import androidx.compose.ui.event.NativeKeyboardEvent
+import androidx.compose.ui.event.MouseButtons
+import androidx.compose.ui.event.NativePointerEvent
+import androidx.compose.ui.event.PointerEventRecord
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
 import org.jetbrains.skiko.SkikoPlatformPointerEvent
-import org.jetbrains.skiko.SkikoPointer
-import org.jetbrains.skiko.SkikoPointerDevice
-import org.jetbrains.skiko.SkikoPointerEvent
-import org.jetbrains.skiko.SkikoPointerEventKind
 import org.jetbrains.skiko.currentNanoTime
+import org.w3c.dom.TouchEvent
+import org.w3c.dom.asList
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.MouseEvent
 import org.w3c.dom.events.WheelEvent
-import org.w3c.dom.TouchEvent
-import org.w3c.dom.asList
 
-private fun KeyboardEvent.toSkikoKey(): Int {
-    var key = this.keyCode
+private fun KeyboardEvent.toSkikoKey(): Long {
+    var key = this.keyCode.toLong()
     val side = this.location
     if (side == KeyboardEvent.DOM_KEY_LOCATION_RIGHT) {
         if (
-            key == SkikoKey.KEY_LEFT_CONTROL.platformKeyCode ||
-            key == SkikoKey.KEY_LEFT_SHIFT.platformKeyCode ||
-            key == SkikoKey.KEY_LEFT_META.platformKeyCode
+            key == Key.CtrlLeft.keyCode ||
+            key == Key.ShiftLeft.keyCode ||
+            key == Key.MetaLeft.keyCode
         )
-            key = key.or(0x80000000.toInt())
+            key = key.or(0x80000000)
     }
     return key
 }
 
-private fun KeyboardEvent.toSkikoModifiers(): SkikoInputModifiers {
+private fun KeyboardEvent.toSkikoModifiers(): InputModifiers {
     var result = 0
     if (altKey) {
-        result = result.or(SkikoInputModifiers.ALT.value)
+        result = result.or(InputModifiers.ALT.value)
     }
     if (shiftKey) {
-        result = result.or(SkikoInputModifiers.SHIFT.value)
+        result = result.or(InputModifiers.SHIFT.value)
     }
     if (ctrlKey) {
-        result = result.or(SkikoInputModifiers.CONTROL.value)
+        result = result.or(InputModifiers.CONTROL.value)
     }
     if (metaKey) {
-        result = result.or(SkikoInputModifiers.META.value)
+        result = result.or(InputModifiers.META.value)
     }
-    return SkikoInputModifiers(result)
-}
 
-private fun MouseEvent.toSkikoModifiers(): SkikoInputModifiers {
-    var result = 0
-    if (altKey) {
-        result = result.or(SkikoInputModifiers.ALT.value)
-    }
-    if (shiftKey) {
-        result = result.or(SkikoInputModifiers.SHIFT.value)
-    }
-    if (ctrlKey) {
-        result = result.or(SkikoInputModifiers.CONTROL.value)
-    }
-    if (metaKey) {
-        result = result.or(SkikoInputModifiers.META.value)
-    }
-    return SkikoInputModifiers(result)
+    return InputModifiers(result)
 }
-
 
 internal fun KeyboardEvent.toSkikoEvent(
-    kind: SkikoKeyboardEventKind
-): SkikoKeyboardEvent {
+    kind: KeyEventType
+): NativeKeyboardEvent {
     val skikoKey = toSkikoKey()
-    return SkikoKeyboardEvent(
-        SkikoKey.valueOf(skikoKey),
+    return NativeKeyboardEvent(
+        Key(skikoKey),
         toSkikoModifiers(),
         kind,
         timeStamp.toInt().toLong(),
@@ -96,106 +78,98 @@ internal fun KeyboardEvent.toSkikoEvent(
     )
 }
 
-private fun getSkikoButtonValue(button: Int): Int {
-    return when (button) {
-        0 -> SkikoMouseButtons.LEFT.value
-        1 -> SkikoMouseButtons.MIDDLE.value
-        2 -> SkikoMouseButtons.RIGHT.value
-        3 -> SkikoMouseButtons.BUTTON_4.value
-        4 -> SkikoMouseButtons.BUTTON_5.value
-        else -> 0
-    }
+private fun getButtonValue(button: Int): Int {
+    return (when (button) {
+        0 -> MouseButtons.LEFT
+        1 -> MouseButtons.MIDDLE
+        2 -> MouseButtons.RIGHT
+        3 -> MouseButtons.BUTTON_4
+        4 -> MouseButtons.BUTTON_5
+        else -> MouseButtons.NONE
+    }).value
 }
 
 private var buttonsFlags = 0
 private fun MouseEvent.toSkikoPressedMouseButtons(
-    kind: SkikoPointerEventKind
-): SkikoMouseButtons {
-    // https://www.w3schools.com/jsref/event_button.asp
+    kind: PointerEventType
+): MouseButtons {
+    // https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button
     val button = button.toInt()
-    if (kind == SkikoPointerEventKind.DOWN) {
-        buttonsFlags = buttonsFlags.or(getSkikoButtonValue(button))
-        return SkikoMouseButtons(buttonsFlags)
-    }
-    buttonsFlags = buttonsFlags.xor(getSkikoButtonValue(button))
-    return SkikoMouseButtons(buttonsFlags)
-}
 
-private fun toSkikoMouseButton(event: MouseEvent): SkikoMouseButtons {
-    return SkikoMouseButtons(getSkikoButtonValue(event.button.toInt()))
+    buttonsFlags = if (kind == PointerEventType.Press) {
+        buttonsFlags.or(getButtonValue(button))
+    } else {
+        buttonsFlags.xor(getButtonValue(button))
+    }
+
+    return MouseButtons(buttonsFlags)
 }
 
 internal fun MouseEvent.toSkikoEvent(
-    kind: SkikoPointerEventKind
-): SkikoPointerEvent {
-    return SkikoPointerEvent(
+    kind: PointerEventType
+): NativePointerEvent {
+    return NativePointerEvent(
         x = offsetX,
         y = offsetY,
         pressedButtons = toSkikoPressedMouseButtons(kind),
-        button = toSkikoMouseButton(this),
-        modifiers = this.toSkikoModifiers(),
         kind = kind,
         timestamp = timeStamp.toInt().toLong(),
         platform = this
     )
 }
 
-internal fun MouseEvent.toSkikoDragEvent(): SkikoPointerEvent {
-    return SkikoPointerEvent(
+internal fun MouseEvent.toSkikoDragEvent(): NativePointerEvent {
+    return NativePointerEvent(
         x = offsetX,
         y = offsetY,
-        pressedButtons = SkikoMouseButtons(buttonsFlags),
-        button = toSkikoMouseButton(this),
-        modifiers = toSkikoModifiers(),
-        kind = SkikoPointerEventKind.DRAG,
+        pressedButtons = MouseButtons(buttonsFlags),
+        kind = PointerEventType.Move,
         timestamp = timeStamp.toInt().toLong(),
         platform = this
     )
 }
 
-internal fun WheelEvent.toSkikoScrollEvent(): SkikoPointerEvent {
-    return SkikoPointerEvent(
+internal fun WheelEvent.toSkikoScrollEvent(): NativePointerEvent {
+    return NativePointerEvent(
         x = offsetX,
         y = offsetY,
         deltaX = deltaX,
         deltaY = deltaY,
-        pressedButtons = SkikoMouseButtons(buttonsFlags),
-        button = SkikoMouseButtons.NONE,
-        modifiers = toSkikoModifiers(),
-        kind = SkikoPointerEventKind.SCROLL,
+        pressedButtons = MouseButtons(buttonsFlags),
+        kind = PointerEventType.Scroll,
         timestamp = timeStamp.toInt().toLong(),
         platform = this
     )
 }
 
-private abstract external class ExtendedTouchEvent: TouchEvent {
+private abstract external class ExtendedTouchEvent : TouchEvent {
     val force: Double
 }
 
 internal fun TouchEvent.toSkikoEvent(
-    kind: SkikoPointerEventKind,
+    kind: PointerEventType,
     offsetX: Double,
     offsetY: Double
-): SkikoPointerEvent {
+): NativePointerEvent {
     val pointers = changedTouches.asList().map { touch ->
         val x = touch.clientX.toDouble() - offsetX
         val y = touch.clientY.toDouble() - offsetY
         val force = touch.unsafeCast<ExtendedTouchEvent>().force
 
-        SkikoPointer(
+        PointerEventRecord(
             x = x,
             y = y,
             pressed = when (kind) {
-                SkikoPointerEventKind.DOWN, SkikoPointerEventKind.MOVE -> true
+                PointerEventType.Press, PointerEventType.Move -> true
                 else -> false
             },
-            device = SkikoPointerDevice.TOUCH,
+            device = PointerType.Touch,
             id = touch.identifier.toLong(),
             pressure = force
         )
     }
 
-    return SkikoPointerEvent(
+    return NativePointerEvent(
         x = pointers.map { it.x }.average(),
         y = pointers.map { it.y }.average(),
         kind = kind,

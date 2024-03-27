@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,9 @@
  * limitations under the License.
  */
 
-package androidx.compose.foundation.internal
+package androidx.compose.ui.input.key
 
-import androidx.compose.ui.event.InputModifiers
 import androidx.compose.ui.event.NativeKeyboardEvent
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
 
 
-internal actual fun keyEvent(
-    key: Key,
-    keyEventType: KeyEventType,
-    modifiers: Int
-): KeyEvent {
-    return KeyEvent(
-        NativeKeyboardEvent(
-            key = key,
-            modifiers = InputModifiers(modifiers),
-            kind = keyEventType,
-            timestamp = 0L,
-            platform = null
-        )
-    )
-}
+actual typealias NativeKeyEvent = NativeKeyboardEvent
