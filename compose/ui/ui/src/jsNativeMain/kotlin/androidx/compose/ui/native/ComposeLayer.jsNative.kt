@@ -18,7 +18,7 @@ package androidx.compose.ui.native
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.event.NativeKeyboardEvent
+import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.event.NativePointerEvent
 import androidx.compose.ui.event.ComposeEventHandler
 import androidx.compose.ui.event.getScrollDelta
@@ -51,7 +51,7 @@ internal class ComposeLayer(
     private var density = Density(1f)
 
     private inner class ComponentImpl : ComposeEventHandler {
-        override fun onKeyboardEvent(event: NativeKeyboardEvent): Boolean {
+        override fun onKeyboardEvent(event: NativeKeyEvent): Boolean {
             if (isDisposed) return false
             return scene.sendKeyEvent(KeyEvent(event))
         }

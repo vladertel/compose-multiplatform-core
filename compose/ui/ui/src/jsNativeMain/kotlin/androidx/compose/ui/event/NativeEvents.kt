@@ -17,11 +17,9 @@
 package androidx.compose.ui.event
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
-import org.jetbrains.skiko.SkikoPlatformKeyboardEvent
 import org.jetbrains.skiko.SkikoPlatformPointerEvent
 
 internal fun NativePointerEvent.getScrollDelta(): Offset {
@@ -33,7 +31,7 @@ internal fun NativePointerEvent.getScrollDelta(): Offset {
 }
 
 interface ComposeEventHandler {
-    fun onKeyboardEvent(event: NativeKeyboardEvent): Boolean
+    fun onKeyboardEvent(event: NativeKeyEvent): Boolean
     fun onPointerEvent(event: NativePointerEvent) = Unit
 }
 
@@ -160,14 +158,6 @@ value class MouseButtons(val value: Int) {
         return if (result.isNotEmpty()) result.toString() else ""
     }
 }
-
-data class NativeKeyboardEvent(
-    val key: Key,
-    val modifiers: InputModifiers = InputModifiers.EMPTY,
-    val kind: KeyEventType,
-    val timestamp: Long = 0,
-    val platform: SkikoPlatformKeyboardEvent?
-)
 
 value class InputModifiers(val value: Int) {
     companion object {

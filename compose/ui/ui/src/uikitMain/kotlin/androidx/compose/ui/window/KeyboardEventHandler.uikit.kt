@@ -16,8 +16,8 @@
 
 package androidx.compose.ui.window
 
-import androidx.compose.ui.event.NativeKeyboardEvent
+import androidx.compose.ui.input.key.NativeKeyEvent
 
 internal interface KeyboardEventHandler {
-    fun onKeyboardEvent(event: NativeKeyboardEvent)
+    fun onKeyboardEvent(event: NativeKeyEvent)
 }

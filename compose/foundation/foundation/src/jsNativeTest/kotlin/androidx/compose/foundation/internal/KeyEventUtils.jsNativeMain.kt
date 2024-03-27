@@ -17,7 +17,7 @@
 package androidx.compose.foundation.internal
 
 import androidx.compose.ui.event.InputModifiers
-import androidx.compose.ui.event.NativeKeyboardEvent
+import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -29,7 +29,7 @@ internal actual fun keyEvent(
     modifiers: Int
 ): KeyEvent {
     return KeyEvent(
-        NativeKeyboardEvent(
+        NativeKeyEvent(
             key = key,
             modifiers = InputModifiers(modifiers),
             kind = keyEventType,

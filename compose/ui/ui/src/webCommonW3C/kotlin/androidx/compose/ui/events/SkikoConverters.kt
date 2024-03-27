@@ -17,7 +17,7 @@
 package androidx.compose.ui.events
 
 import androidx.compose.ui.event.InputModifiers
-import androidx.compose.ui.event.NativeKeyboardEvent
+import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.event.MouseButtons
 import androidx.compose.ui.event.NativePointerEvent
 import androidx.compose.ui.event.PointerEventRecord
@@ -67,9 +67,9 @@ private fun KeyboardEvent.toSkikoModifiers(): InputModifiers {
 
 internal fun KeyboardEvent.toSkikoEvent(
     kind: KeyEventType
-): NativeKeyboardEvent {
+): NativeKeyEvent {
     val skikoKey = toSkikoKey()
-    return NativeKeyboardEvent(
+    return NativeKeyEvent(
         Key(skikoKey),
         toSkikoModifiers(),
         kind,

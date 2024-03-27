@@ -22,7 +22,7 @@ import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.event.NativeKeyboardEvent
+import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asComposeCanvas
@@ -327,7 +327,7 @@ internal class ComposeSceneMediator(
             performEscape = {
                 val down = onKeyboardEvent(
                     KeyEvent(
-                        NativeKeyboardEvent(
+                        NativeKeyEvent(
                             Key.Escape,
                             kind = KeyEventType.KeyDown,
                             platform = null
@@ -337,7 +337,7 @@ internal class ComposeSceneMediator(
 
                 val up = onKeyboardEvent(
                     KeyEvent(
-                        NativeKeyboardEvent(
+                        NativeKeyEvent(
                             Key.Escape,
                             kind = KeyEventType.KeyUp,
                             platform = null
@@ -363,7 +363,7 @@ internal class ComposeSceneMediator(
 
     private val keyboardEventHandler: KeyboardEventHandler by lazy {
         object : KeyboardEventHandler {
-            override fun onKeyboardEvent(event: NativeKeyboardEvent) {
+            override fun onKeyboardEvent(event: NativeKeyEvent) {
                 onKeyboardEvent(KeyEvent(event))
             }
         }

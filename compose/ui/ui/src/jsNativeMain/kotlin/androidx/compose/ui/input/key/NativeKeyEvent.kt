@@ -16,6 +16,13 @@
 
 package androidx.compose.ui.input.key
 
-import androidx.compose.ui.native.QuaziKeyboardEvent
+import androidx.compose.ui.event.InputModifiers
+import org.jetbrains.skiko.SkikoPlatformKeyboardEvent
 
-actual typealias NativeKeyEvent = QuaziKeyboardEvent
+actual data class NativeKeyEvent(
+    val key: Key,
+    val modifiers: InputModifiers = InputModifiers.EMPTY,
+    val kind: KeyEventType,
+    val timestamp: Long = 0,
+    val platform: SkikoPlatformKeyboardEvent?
+)

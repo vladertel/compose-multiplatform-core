@@ -18,7 +18,7 @@
 package androidx.compose.ui.test
 
 import androidx.compose.ui.event.InputModifiers
-import androidx.compose.ui.event.NativeKeyboardEvent
+import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -31,7 +31,7 @@ internal actual fun keyEvent(
     key: Key, keyEventType: KeyEventType, modifiers: Int
 ): KeyEvent {
     return KeyEvent(
-        NativeKeyboardEvent(
+        NativeKeyEvent(
 // TODO replace  `enum class SkikoKey` by `class SkikoKey` in skiko, change code here to `SkikoKey(it.platformKeyCode)`
             key = key,
             modifiers = InputModifiers(modifiers),

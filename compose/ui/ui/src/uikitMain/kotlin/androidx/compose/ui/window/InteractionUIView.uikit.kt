@@ -17,7 +17,7 @@
 package androidx.compose.ui.window
 
 import androidx.compose.ui.event.InputModifiers
-import androidx.compose.ui.event.NativeKeyboardEvent
+import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import kotlinx.cinterop.CValue
@@ -133,7 +133,7 @@ internal class InteractionUIView(
         updateTouchesCount = {}
         inBounds = { false }
         keyboardEventHandler = object: KeyboardEventHandler {
-            override fun onKeyboardEvent(event: NativeKeyboardEvent) {}
+            override fun onKeyboardEvent(event: NativeKeyEvent) {}
         }
     }
 }
@@ -173,9 +173,9 @@ internal fun handleUIViewPressesEnded(
 private fun toSkikoKeyboardEvent(
     event: UIPress,
     kind: KeyEventType
-): NativeKeyboardEvent {
+): NativeKeyEvent {
     val timestamp = (event.timestamp * 1_000).toLong()
-    return NativeKeyboardEvent(
+    return NativeKeyEvent(
         Key(event.key!!.keyCode),
         toSkikoModifiers(event),
         kind,
