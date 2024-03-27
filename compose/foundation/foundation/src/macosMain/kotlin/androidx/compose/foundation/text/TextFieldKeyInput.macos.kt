@@ -17,10 +17,11 @@
 package androidx.compose.foundation.text
 
 import androidx.compose.ui.input.key.KeyEvent
-import org.jetbrains.skiko.*
+import androidx.compose.ui.input.key.KeyEventType
+import org.jetbrains.skiko.SkikoPlatformKeyboardEvent
 
 actual val KeyEvent.isTypedEvent: Boolean
-    get() = nativeKeyEvent.kind == SkikoKeyboardEventKind.DOWN
+    get() = nativeKeyEvent.kind == KeyEventType.KeyDown
         && nativeKeyEvent.platform?.isPrintable() == true
 
 private fun SkikoPlatformKeyboardEvent.isPrintable(): Boolean =
