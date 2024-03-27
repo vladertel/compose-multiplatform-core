@@ -36,6 +36,8 @@ import androidx.compose.compiler.plugins.kotlin.lower.WrapJsComposableLambdaLowe
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.CreateDecoysTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.RecordDecoySignaturesTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.SubstituteDecoyCallsTransformer
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.AddHiddenFromObjCLowering
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.HideFromObjCDeclarationsSet
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.serialization.DeclarationTable
@@ -47,6 +49,7 @@ import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.platform.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
+import org.jetbrains.kotlin.platform.konan.isNative
 
 class ComposeIrGenerationExtension(
     @Suppress("unused") private val liveLiteralsEnabled: Boolean = false,
@@ -55,6 +58,7 @@ class ComposeIrGenerationExtension(
     private val sourceInformationEnabled: Boolean = true,
     private val traceMarkersEnabled: Boolean = true,
     private val intrinsicRememberEnabled: Boolean = false,
+    private val nonSkippingGroupOptimizationEnabled: Boolean = false,
     private val decoysEnabled: Boolean = false,
     private val metricsDestination: String? = null,
     private val reportsDestination: String? = null,
@@ -62,7 +66,8 @@ class ComposeIrGenerationExtension(
     private val useK2: Boolean = false,
     private val strongSkippingEnabled: Boolean = false,
     private val stableTypeMatchers: Set<FqNameMatcher> = emptySet(),
-    private val moduleMetricsFactory: ((StabilityInferencer) -> ModuleMetrics)? = null
+    private val moduleMetricsFactory: ((StabilityInferencer) -> ModuleMetrics)? = null,
+    private val hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet? = null,
 ) : IrGenerationExtension {
     var metrics: ModuleMetrics = EmptyModuleMetrics
         private set
@@ -99,7 +104,18 @@ class ComposeIrGenerationExtension(
             }
         }
 
+        if (pluginContext.platform.isNative() && hideFromObjCDeclarationsSet != null) {
+            AddHiddenFromObjCLowering(
+                pluginContext,
+                symbolRemapper,
+                metrics,
+                hideFromObjCDeclarationsSet,
+                stabilityInferencer
+            ).lower(moduleFragment)
+        }
+
         ClassStabilityTransformer(
+            useK2,
             pluginContext,
             symbolRemapper,
             metrics,
@@ -133,7 +149,9 @@ class ComposeIrGenerationExtension(
             symbolRemapper,
             metrics,
             stabilityInferencer,
-            strongSkippingEnabled
+            strongSkippingEnabled,
+            intrinsicRememberEnabled,
+            nonSkippingGroupOptimizationEnabled,
         ).lower(moduleFragment)
 
         if (!useK2) {
@@ -204,6 +222,7 @@ class ComposeIrGenerationExtension(
             sourceInformationEnabled,
             traceMarkersEnabled,
             intrinsicRememberEnabled,
+            nonSkippingGroupOptimizationEnabled,
             strongSkippingEnabled
         ).lower(moduleFragment)
 

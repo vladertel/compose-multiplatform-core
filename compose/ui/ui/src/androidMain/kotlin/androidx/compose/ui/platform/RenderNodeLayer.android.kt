@@ -19,6 +19,7 @@ package androidx.compose.ui.platform
 import android.os.Build
 import android.view.View
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.geometry.MutableRect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.ReusableGraphicsLayerScope
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.GraphicLayerInfo
@@ -61,7 +63,11 @@ internal class RenderNodeLayer(
                 ownerView.notifyLayerIsDirty(this, value)
             }
         }
-    private val outlineResolver = OutlineResolver(ownerView.density)
+    private val outlineResolver = Snapshot.withoutReadObservation {
+        // we don't really care about observation here as density is applied manually
+        // not observing the density changes saves performance on recording reads
+        OutlineResolver(ownerView.density)
+    }
     private var isDestroyed = false
     private var drawnWithZ = false
 
@@ -271,7 +277,7 @@ internal class RenderNodeLayer(
         }
     }
 
-    override fun drawLayer(canvas: Canvas) {
+    override fun drawLayer(canvas: Canvas, parentLayer: GraphicsLayer?) {
         val androidCanvas = canvas.nativeCanvas
         if (androidCanvas.isHardwareAccelerated) {
             updateDisplayList()

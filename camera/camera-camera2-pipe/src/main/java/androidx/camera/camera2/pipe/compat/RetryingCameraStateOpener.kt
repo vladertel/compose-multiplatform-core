@@ -82,7 +82,7 @@ constructor(private val cameraManager: Provider<CameraManager>, private val thre
     )
     override fun openCamera(cameraId: CameraId, stateCallback: StateCallback) {
         val instance = cameraManager.get()
-        Debug.trace("CameraDevice-${cameraId.value}#openCamera") {
+        Debug.trace("$cameraId#openCamera") {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 Api28Compat.openCamera(
                     instance, cameraId.value, threads.camera2Executor, stateCallback
@@ -173,6 +173,7 @@ constructor(
         cameraId: CameraId,
         attempts: Int,
         requestTimestamp: TimestampNs,
+        audioRestriction: AudioRestrictionController? = null
     ): OpenCameraResult {
         val metadata = camera2MetadataProvider.getCameraMetadata(cameraId)
         val cameraState =
@@ -186,7 +187,10 @@ constructor(
                 camera2DeviceCloser,
                 threads,
                 cameraInteropConfig?.cameraDeviceStateCallback,
-                cameraInteropConfig?.cameraSessionStateCallback
+                cameraInteropConfig?.cameraSessionStateCallback,
+                /** interopExtensionSessionStateCallback= */
+                null,
+                audioRestriction
             )
 
         try {
@@ -229,6 +233,7 @@ constructor(
     private val timeSource: TimeSource,
     private val devicePolicyManager: DevicePolicyManagerWrapper,
     private val cameraInteropConfig: CameraPipe.CameraInteropConfig?,
+    private val audioRestriction: AudioRestrictionController? = null
 ) {
     internal suspend fun openCameraWithRetry(
         cameraId: CameraId,
@@ -245,6 +250,7 @@ constructor(
                     cameraId,
                     attempts,
                     requestTimestamp,
+                    audioRestriction
                 )
             val elapsed = Timestamps.now(timeSource) - requestTimestamp
             with(result) {

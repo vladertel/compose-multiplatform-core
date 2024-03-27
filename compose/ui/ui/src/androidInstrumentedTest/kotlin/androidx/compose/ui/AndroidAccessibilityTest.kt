@@ -45,6 +45,7 @@ import android.view.accessibility.AccessibilityNodeProvider
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
@@ -69,19 +70,24 @@ import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.BasicSecureTextField
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.BottomAppBar
 import androidx.compose.material.Button
 import androidx.compose.material.DrawerValue
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.FabPosition
+import androidx.compose.material.FilterChip
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
@@ -230,6 +236,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 
 @LargeTest
+@OptIn(ExperimentalMaterialApi::class)
 @RunWith(AndroidJUnit4::class)
 class AndroidAccessibilityTest {
     @get:Rule
@@ -356,6 +363,38 @@ class AndroidAccessibilityTest {
         }
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
+    @Test
+    fun testCreateAccessibilityNodeInfo_forSecureTextField() {
+        // Arrange.
+        setContent {
+            Surface {
+                // BasicSecureTextField is considered a password field.
+                BasicSecureTextField(
+                    state = rememberTextFieldState(),
+                    modifier = Modifier.testTag(tag)
+                )
+            }
+        }
+
+        val passwordFieldId = rule.onNodeWithTag(tag, true).semanticsId
+
+        // Act.
+        val info = rule.runOnIdle { createAccessibilityNodeInfo(passwordFieldId) }
+
+        // Assert.
+        rule.runOnIdle {
+            with(AccessibilityNodeInfoCompat.wrap(info)) {
+                assertThat(className).isEqualTo("android.widget.EditText")
+                assertThat(isPassword).isTrue()
+                assertThat(isFocusable).isTrue()
+                assertThat(isFocused).isFalse()
+                assertThat(isEditable).isTrue()
+                assertThat(isVisibleToUser).isTrue()
+            }
+        }
+    }
+
     @Test
     fun testCreateAccessibilityNodeInfo_forDropdown() {
         // Arrange.
@@ -421,13 +460,14 @@ class AndroidAccessibilityTest {
             with(AccessibilityNodeInfoCompat.wrap(info)) {
                 assertThat(className).isEqualTo("android.view.View")
                 assertThat(stateDescription).isEqualTo("Selected")
-                assertThat(isClickable).isFalse()
+                assertThat(isClickable).isTrue()
                 assertThat(isCheckable).isTrue()
                 assertThat(isVisibleToUser).isTrue()
                 assertThat(actionList)
                     .containsExactly(
                         AccessibilityActionCompat(ACTION_ACCESSIBILITY_FOCUS, null),
                         AccessibilityActionCompat(ACTION_FOCUS, null),
+                        AccessibilityActionCompat(ACTION_CLICK, null),
                     )
             }
         }
@@ -466,6 +506,67 @@ class AndroidAccessibilityTest {
         }
     }
 
+    @Test
+    fun testCreateAccessibilityNodeInfo_forRadioButton() {
+        // Arrange.
+        setContent {
+            Box(
+                Modifier
+                    .selectable(selected = true, onClick = {}, role = Role.RadioButton)
+                    .testTag(tag)) {
+                BasicText("Text")
+            }
+        }
+        val virtualId = rule.onNodeWithTag(tag).semanticsId
+
+        // Act.
+        val info = rule.runOnIdle { createAccessibilityNodeInfo(virtualId) }
+
+        // Assert.
+        rule.runOnIdle {
+            with(AccessibilityNodeInfoCompat.wrap(info)) {
+                assertThat(className).isEqualTo("android.view.View")
+                assertThat(isClickable).isFalse()
+                assertThat(isVisibleToUser).isTrue()
+                assertThat(isChecked).isTrue()
+                assertThat(actionList)
+                    .containsExactly(
+                        AccessibilityActionCompat(ACTION_ACCESSIBILITY_FOCUS, null),
+                        AccessibilityActionCompat(ACTION_FOCUS, null),
+                    )
+            }
+        }
+    }
+
+    @Test
+    fun testCreateAccessibilityNodeInfo_forFilterButton() {
+        // Arrange.
+        setContent {
+            FilterChip(selected = true, onClick = {}, modifier = Modifier.testTag(tag)) {
+                Text("Filter chip")
+            }
+        }
+        val virtualId = rule.onNodeWithTag(tag).semanticsId
+
+        // Act.
+        val info = rule.runOnIdle { createAccessibilityNodeInfo(virtualId) }
+
+        // Assert.
+        rule.runOnIdle {
+            with(AccessibilityNodeInfoCompat.wrap(info)) {
+                // We don't check for a CheckBox role since the role is found in a fake descendant.
+                assertThat(stateDescription).isEqualTo("Selected")
+                assertThat(isClickable).isTrue()
+                assertThat(isCheckable).isTrue()
+                assertThat(isChecked).isTrue()
+                assertThat(isVisibleToUser).isTrue()
+                assertThat(actionList)
+                    .contains(
+                        AccessibilityActionCompat(ACTION_CLICK, null),
+                    )
+            }
+        }
+    }
     @Test
     fun testCreateAccessibilityNodeInfo_progressIndicator_determinate() {
         // Arrange.
@@ -2363,12 +2464,17 @@ class AndroidAccessibilityTest {
         // Arrange.
         val focusRequester = FocusRequester()
         setContent {
-            Box(
-                Modifier
-                    .testTag(tag)
-                    .focusRequester(focusRequester)
-                    .focusable()) {
-                BasicText("focusable")
+            Row {
+                // Initially focused item.
+                Box(Modifier.size(10.dp).focusable())
+                Box(
+                    Modifier
+                        .testTag(tag)
+                        .focusRequester(focusRequester)
+                        .focusable()
+                ) {
+                    BasicText("focusable")
+                }
             }
         }
         rule.runOnIdle { focusRequester.requestFocus() }
@@ -2514,11 +2620,15 @@ class AndroidAccessibilityTest {
     fun testTextField_testFocusClearFocusAction() {
         // Arrange.
         setContent {
-            BasicTextField(
-                modifier = Modifier.testTag(tag),
-                value = "value",
-                onValueChange = {}
-            )
+            Row {
+                // Initially focused item.
+                Box(Modifier.size(10.dp).focusable())
+                BasicTextField(
+                    modifier = Modifier.testTag(tag),
+                    value = "value",
+                    onValueChange = {}
+                )
+            }
         }
         val textFieldId = rule.onNodeWithTag(tag)
             .assert(expectValue(Focused, false))
@@ -2916,7 +3026,7 @@ class AndroidAccessibilityTest {
 
         // TODO(b/272068594): Extra TYPE_WINDOW_CONTENT_CHANGED sent 100ms after setup.
         rule.mainClock.advanceTimeBy(100L)
-        clearInvocations(container)
+        rule.runOnIdle { clearInvocations(container) }
 
         // Act.
         rule.onNodeWithTag(tag).performSemanticsAction(SetText) { it(AnnotatedString(finalText)) }
@@ -3010,6 +3120,7 @@ class AndroidAccessibilityTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun selectionEventBeforeTraverseEvent_whenTraverseTextField() {
         val text = "h"
         setContent {
@@ -3390,7 +3501,7 @@ class AndroidAccessibilityTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.R)
     fun viewInteropIsInvisibleToUser() {
         setContent {
-             AndroidView({ TextView(it).apply { text = "Test"; isScreenReaderFocusable = true } })
+            AndroidView({ TextView(it).apply { text = "Test"; isScreenReaderFocusable = true } })
         }
         Espresso
             .onView(instanceOf(TextView::class.java))
@@ -3576,7 +3687,7 @@ class AndroidAccessibilityTest {
             assertThat(colAccessibilityNode.childCount).isEqualTo(2)
             assertThat(colSemanticsNode.replacedChildren.size).isEqualTo(2)
             assertThat(buttonHolder.importantForAccessibility)
-                .isEqualTo(ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_YES)
+                .isEqualTo(View.IMPORTANT_FOR_ACCESSIBILITY_YES)
             assertThat((buttonHolder.getChildAt(0) as Button).text)
                 .isEqualTo(buttonText)
         }
@@ -4186,8 +4297,8 @@ class AndroidAccessibilityTest {
                     textPositionOnScreenY,
                     textPositionOnScreenX + size,
                     textPositionOnScreenY + size
+                )
             )
-        )
     }
 
     @Test
@@ -5185,7 +5296,7 @@ class AndroidAccessibilityTest {
                 Modifier
                     .progressSemantics(0.5f)
                     .testTag("box")) {
-                 BasicText("test", Modifier.testTag("child"))
+                BasicText("test", Modifier.testTag("child"))
             }
         }
         val boxId = rule.onNodeWithTag("box", useUnmergedTree = true).semanticsId
@@ -5212,7 +5323,7 @@ class AndroidAccessibilityTest {
                 Modifier
                     .progressSemantics()
                     .testTag("box")) {
-                 BasicText("test", Modifier.testTag("child"))
+                BasicText("test", Modifier.testTag("child"))
             }
         }
         val boxId = rule.onNodeWithTag("box", useUnmergedTree = true).semanticsId
@@ -5244,7 +5355,7 @@ class AndroidAccessibilityTest {
             // This test implies that the listener was removed
             // and the enabled services were set to empty.
             assertThat(androidComposeView.isAttachedToWindow).isFalse()
-            assertThat(delegate.isEnabledForAccessibility).isFalse()
+            assertThat(delegate.isEnabled).isFalse()
         }
     }
 
@@ -5262,7 +5373,7 @@ class AndroidAccessibilityTest {
             // This test implies that the listener was removed
             // and the enabled services were set to empty.
             assertThat(androidComposeView.isAttachedToWindow).isFalse()
-            assertThat(delegate.isEnabledForAccessibility).isFalse()
+            assertThat(delegate.isEnabled).isFalse()
         }
     }
 
@@ -5275,7 +5386,7 @@ class AndroidAccessibilityTest {
         rule.runOnIdle {
             // This test implies that UIAutomator is enabled and is the only enabled a11y service
             assertThat(accessibilityManager.isEnabled).isTrue()
-            assertThat(delegate.isEnabledForAccessibility).isFalse()
+            assertThat(delegate.isEnabled).isFalse()
         }
     }
 
@@ -5310,11 +5421,11 @@ class AndroidAccessibilityTest {
     private fun getAccessibilityEventSourceSemanticsNodeId(
         event: android.view.accessibility.AccessibilityEvent
     ): Int = Class
-            .forName("android.view.accessibility.AccessibilityRecord")
-            .getDeclaredMethod("getSourceNodeId").run {
-                isAccessible = true
-                invoke(event) as Long shr 32
-            }.toInt()
+        .forName("android.view.accessibility.AccessibilityRecord")
+        .getDeclaredMethod("getSourceNodeId").run {
+            isAccessible = true
+            invoke(event) as Long shr 32
+        }.toInt()
 
     private fun createMovementGranularityCharacterArgs(): Bundle {
         return Bundle().apply {

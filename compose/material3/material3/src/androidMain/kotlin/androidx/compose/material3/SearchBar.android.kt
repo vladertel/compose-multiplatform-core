@@ -16,35 +16,36 @@
 
 package androidx.compose.material3
 
+import androidx.activity.BackEventCompat
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.MutatorMutex
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.onConsumedWindowInsetsChanged
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.GenericShape
@@ -54,6 +55,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.SearchBarDefaults.InputFieldHeight
+import androidx.compose.material3.internal.PredictiveBack
 import androidx.compose.material3.tokens.ElevationTokens
 import androidx.compose.material3.tokens.FilledTextFieldTokens
 import androidx.compose.material3.tokens.MotionTokens
@@ -62,10 +64,12 @@ import androidx.compose.material3.tokens.SearchViewTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.State
+import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Modifier
@@ -80,7 +84,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
-import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -95,13 +100,19 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
-import androidx.compose.ui.unit.offset
+import androidx.compose.ui.util.fastFirst
+import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sign
 import kotlinx.coroutines.delay
 
 /**
@@ -150,9 +161,10 @@ import kotlinx.coroutines.delay
  * [Surface].
  * @param shadowElevation the elevation for the shadow below the search bar
  * @param windowInsets the window insets that the search bar will respect
- * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
- * for this search bar. You can create and pass in your own `remember`ed instance to observe
- * [Interaction]s and customize the appearance / behavior of this search bar in different states.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this search bar. You can use this to change the search bar's
+ * appearance or preview the search bar in different states. Note that if `null` is provided,
+ * interactions will still happen internally.
  * @param content the content of this search bar that will be displayed below the input field
  */
 @ExperimentalMaterial3Api
@@ -173,95 +185,72 @@ fun SearchBar(
     tonalElevation: Dp = SearchBarDefaults.TonalElevation,
     shadowElevation: Dp = SearchBarDefaults.ShadowElevation,
     windowInsets: WindowInsets = SearchBarDefaults.windowInsets,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val animationProgress: State<Float> = animateFloatAsState(
-        targetValue = if (active) 1f else 0f,
-        animationSpec = if (active) AnimationEnterFloatSpec else AnimationExitFloatSpec
-    )
+    val animationProgress = remember { Animatable(initialValue = if (active) 1f else 0f) }
+    val finalBackProgress = remember { mutableFloatStateOf(Float.NaN) }
+    val firstBackEvent = remember { mutableStateOf<BackEventCompat?>(null) }
+    val currentBackEvent = remember { mutableStateOf<BackEventCompat?>(null) }
 
-    val focusManager = LocalFocusManager.current
-    val density = LocalDensity.current
-
-    val defaultInputFieldShape = SearchBarDefaults.inputFieldShape
-    val defaultFullScreenShape = SearchBarDefaults.fullScreenShape
-    val useFullScreenShape by remember {
-        derivedStateOf(structuralEqualityPolicy()) { animationProgress.value == 1f }
+    LaunchedEffect(active) {
+        val animationInProgress = animationProgress.value > 0 && animationProgress.value < 1
+        val animationSpec =
+            if (animationInProgress) AnimationPredictiveBackExitFloatSpec
+            else if (active) AnimationEnterFloatSpec
+            else AnimationExitFloatSpec
+        val targetValue = if (active) 1f else 0f
+        if (animationProgress.value != targetValue) {
+            animationProgress.animateTo(targetValue, animationSpec)
+        }
+        if (!active) {
+            finalBackProgress.floatValue = Float.NaN
+            firstBackEvent.value = null
+            currentBackEvent.value = null
+        }
     }
-    val animatedShape = remember(useFullScreenShape, shape) {
-        when {
-            shape == defaultInputFieldShape ->
-                // The shape can only be animated if it's the default spec value
-                GenericShape { size, _ ->
-                    val radius = with(density) {
-                        (SearchBarCornerRadius * (1 - animationProgress.value)).toPx()
+
+    val mutatorMutex = remember { MutatorMutex() }
+    PredictiveBackHandler(enabled = active) { progress ->
+        mutatorMutex.mutate {
+            try {
+                finalBackProgress.floatValue = Float.NaN
+                progress.collect { backEvent ->
+                    if (firstBackEvent.value == null) {
+                        firstBackEvent.value = backEvent
                     }
-                    addRoundRect(RoundRect(size.toRect(), CornerRadius(radius)))
+                    currentBackEvent.value = backEvent
+                    val interpolatedProgress = PredictiveBack.transform(backEvent.progress)
+                    animationProgress.snapTo(targetValue = 1 - interpolatedProgress)
                 }
-            useFullScreenShape -> defaultFullScreenShape
-            else -> shape
+                finalBackProgress.floatValue = animationProgress.value
+                onActiveChange(false)
+            } catch (e: CancellationException) {
+                animationProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = AnimationPredictiveBackExitFloatSpec
+                )
+                finalBackProgress.floatValue = Float.NaN
+                firstBackEvent.value = null
+                currentBackEvent.value = null
+            }
         }
     }
 
-    // The main animation complexity is allowing the component to smoothly expand while keeping the
-    // input field at the same relative location on screen. `Modifier.windowInsetsPadding` does not
-    // support animation and thus is not suitable. Instead, we convert the insets to a padding
-    // applied to the Surface, which gradually becomes padding applied to the input field as the
-    // animation proceeds.
-    val unconsumedInsets = remember { MutableWindowInsets() }
-    val topPadding = remember(density) {
-        derivedStateOf {
-            SearchBarVerticalPadding +
-                unconsumedInsets.asPaddingValues(density).calculateTopPadding()
-        }
-    }
-
-    Surface(
-        shape = animatedShape,
-        color = colors.containerColor,
-        contentColor = contentColorFor(colors.containerColor),
-        tonalElevation = tonalElevation,
-        shadowElevation = shadowElevation,
-        modifier = modifier
-            .zIndex(1f)
-            .onConsumedWindowInsetsChanged { consumedInsets ->
-                unconsumedInsets.insets = windowInsets.exclude(consumedInsets)
-            }
-            .consumeWindowInsets(unconsumedInsets)
-            .layout { measurable, constraints ->
-                val animatedTopPadding =
-                    lerp(topPadding.value, 0.dp, animationProgress.value).roundToPx()
-
-                val startWidth = max(constraints.minWidth, SearchBarMinWidth.roundToPx())
-                    .coerceAtMost(min(constraints.maxWidth, SearchBarMaxWidth.roundToPx()))
-                val startHeight = max(constraints.minHeight, InputFieldHeight.roundToPx())
-                    .coerceAtMost(constraints.maxHeight)
-                val endWidth = constraints.maxWidth
-                val endHeight = constraints.maxHeight
-
-                val width = lerp(startWidth, endWidth, animationProgress.value)
-                val height =
-                    lerp(startHeight, endHeight, animationProgress.value) + animatedTopPadding
-
-                val placeable = measurable.measure(Constraints.fixed(width, height)
-                    .offset(vertical = -animatedTopPadding))
-                layout(width, height) {
-                    placeable.placeRelative(0, animatedTopPadding)
-                }
-            }
-    ) {
-        Column {
-            val animatedInputFieldPadding = remember {
-                AnimatedPaddingValues(animationProgress, topPadding)
-            }
+    SearchBarImpl(
+        animationProgress = animationProgress,
+        finalBackProgress = finalBackProgress,
+        firstBackEvent = firstBackEvent,
+        currentBackEvent = currentBackEvent,
+        modifier = modifier,
+        inputField = {
             SearchBarInputField(
                 query = query,
                 onQueryChange = onQueryChange,
                 onSearch = onSearch,
                 active = active,
                 onActiveChange = onActiveChange,
-                modifier = Modifier.padding(paddingValues = animatedInputFieldPadding),
+                modifier = Modifier.fillMaxWidth(),
                 enabled = enabled,
                 placeholder = placeholder,
                 leadingIcon = leadingIcon,
@@ -269,33 +258,14 @@ fun SearchBar(
                 colors = colors.inputFieldColors,
                 interactionSource = interactionSource,
             )
-
-            val showResults by remember {
-                derivedStateOf(structuralEqualityPolicy()) { animationProgress.value > 0 }
-            }
-            if (showResults) {
-                Column(Modifier.graphicsLayer { alpha = animationProgress.value }) {
-                    HorizontalDivider(color = colors.dividerColor)
-                    content()
-                }
-            }
-        }
-    }
-
-    val isFocused = interactionSource.collectIsFocusedAsState().value
-    val shouldClearFocus = !active && isFocused
-    LaunchedEffect(active) {
-        if (shouldClearFocus) {
-            // Not strictly needed according to the motion spec, but since the animation already has
-            // a delay, this works around b/261632544.
-            delay(AnimationDelayMillis.toLong())
-            focusManager.clearFocus()
-        }
-    }
-
-    BackHandler(enabled = active) {
-        onActiveChange(false)
-    }
+        },
+        shape = shape,
+        colors = colors,
+        tonalElevation = tonalElevation,
+        shadowElevation = shadowElevation,
+        windowInsets = windowInsets,
+        content = content,
+    )
 }
 
 /**
@@ -338,9 +308,10 @@ fun SearchBar(
  * value will result in a darker color in light theme and lighter color in dark theme. See also:
  * [Surface].
  * @param shadowElevation the elevation for the shadow below the search bar
- * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
- * for this search bar. You can create and pass in your own `remember`ed instance to observe
- * [Interaction]s and customize the appearance / behavior of this search bar in different states.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this search bar. You can use this to change the search bar's
+ * appearance or preview the search bar in different states. Note that if `null` is provided,
+ * interactions will still happen internally.
  * @param content the content of this search bar that will be displayed below the input field
  */
 @ExperimentalMaterial3Api
@@ -360,10 +331,11 @@ fun DockedSearchBar(
     colors: SearchBarColors = SearchBarDefaults.colors(),
     tonalElevation: Dp = SearchBarDefaults.TonalElevation,
     shadowElevation: Dp = SearchBarDefaults.ShadowElevation,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val focusManager = LocalFocusManager.current
+    @Suppress("NAME_SHADOWING")
+    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
 
     Surface(
         shape = shape,
@@ -377,6 +349,7 @@ fun DockedSearchBar(
     ) {
         Column {
             SearchBarInputField(
+                modifier = Modifier.fillMaxWidth(),
                 query = query,
                 onQueryChange = onQueryChange,
                 onSearch = onSearch,
@@ -411,17 +384,6 @@ fun DockedSearchBar(
         }
     }
 
-    val isFocused = interactionSource.collectIsFocusedAsState().value
-    val shouldClearFocus = !active && isFocused
-    LaunchedEffect(active) {
-        if (shouldClearFocus) {
-            // Not strictly needed according to the motion spec, but since the animation already has
-            // a delay, this works around b/261632544.
-            delay(AnimationDelayMillis.toLong())
-            focusManager.clearFocus()
-        }
-    }
-
     BackHandler(enabled = active) {
         onActiveChange(false)
     }
@@ -429,7 +391,7 @@ fun DockedSearchBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SearchBarInputField(
+internal fun SearchBarInputField(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
@@ -441,21 +403,28 @@ private fun SearchBarInputField(
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     colors: TextFieldColors = SearchBarDefaults.inputFieldColors(),
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
 ) {
+    @Suppress("NAME_SHADOWING")
+    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
     val searchSemantics = getString(Strings.SearchBarSearch)
     val suggestionsAvailableSemantics = getString(Strings.SuggestionsAvailable)
     val textColor = LocalTextStyle.current.color.takeOrElse {
-        colors.textColor(enabled, isError = false, interactionSource = interactionSource).value
+        val focused = interactionSource.collectIsFocusedAsState().value
+        colors.textColor(enabled, isError = false, focused = focused)
     }
 
     BasicTextField(
         value = query,
         onValueChange = onQueryChange,
         modifier = modifier
-            .height(InputFieldHeight)
-            .fillMaxWidth()
+            .sizeIn(
+                minWidth = SearchBarMinWidth,
+                maxWidth = SearchBarMaxWidth,
+                minHeight = InputFieldHeight,
+            )
             .focusRequester(focusRequester)
             .onFocusChanged { if (it.isFocused) onActiveChange(true) }
             .semantics {
@@ -471,7 +440,7 @@ private fun SearchBarInputField(
         enabled = enabled,
         singleLine = true,
         textStyle = LocalTextStyle.current.merge(TextStyle(color = textColor)),
-        cursorBrush = SolidColor(colors.cursorColor(isError = false).value),
+        cursorBrush = SolidColor(colors.cursorColor(isError = false)),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { onSearch(query) }),
         interactionSource = interactionSource,
@@ -497,6 +466,17 @@ private fun SearchBarInputField(
             )
         }
     )
+
+    val isFocused = interactionSource.collectIsFocusedAsState().value
+    val shouldClearFocus = !active && isFocused
+    LaunchedEffect(active) {
+        if (shouldClearFocus) {
+            // Not strictly needed according to the motion spec, but since the animation already has
+            // a delay, this works around b/261632544.
+            delay(AnimationDelayMillis.toLong())
+            focusManager.clearFocus()
+        }
+    }
 }
 
 /**
@@ -505,7 +485,7 @@ private fun SearchBarInputField(
 @ExperimentalMaterial3Api
 object SearchBarDefaults {
     /** Default tonal elevation for a search bar. */
-    val TonalElevation: Dp = SearchBarTokens.ContainerElevation
+    val TonalElevation: Dp = ElevationTokens.Level0
 
     /** Default shadow elevation for a search bar. */
     val ShadowElevation: Dp = ElevationTokens.Level0
@@ -659,7 +639,7 @@ object SearchBarDefaults {
  */
 @ExperimentalMaterial3Api
 @Immutable
-class SearchBarColors internal constructor(
+class SearchBarColors(
     val containerColor: Color,
     val dividerColor: Color,
     val inputFieldColors: TextFieldColors,
@@ -685,17 +665,273 @@ class SearchBarColors internal constructor(
     }
 }
 
-@Stable
-private class AnimatedPaddingValues(
-    val animationProgress: State<Float>,
-    val topPadding: State<Dp>,
-) : PaddingValues {
-    override fun calculateTopPadding(): Dp = topPadding.value * animationProgress.value
-    override fun calculateBottomPadding(): Dp = SearchBarVerticalPadding * animationProgress.value
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SearchBarImpl(
+    animationProgress: Animatable<Float, AnimationVector1D>,
+    finalBackProgress: MutableFloatState,
+    firstBackEvent: MutableState<BackEventCompat?>,
+    currentBackEvent: MutableState<BackEventCompat?>,
+    modifier: Modifier = Modifier,
+    inputField: @Composable () -> Unit,
+    shape: Shape = SearchBarDefaults.inputFieldShape,
+    colors: SearchBarColors = SearchBarDefaults.colors(),
+    tonalElevation: Dp = SearchBarDefaults.TonalElevation,
+    shadowElevation: Dp = SearchBarDefaults.ShadowElevation,
+    windowInsets: WindowInsets = SearchBarDefaults.windowInsets,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val density = LocalDensity.current
 
-    override fun calculateLeftPadding(layoutDirection: LayoutDirection): Dp = 0.dp
-    override fun calculateRightPadding(layoutDirection: LayoutDirection): Dp = 0.dp
+    val defaultInputFieldShape = SearchBarDefaults.inputFieldShape
+    val defaultFullScreenShape = SearchBarDefaults.fullScreenShape
+    val useFullScreenShape by remember {
+        derivedStateOf(structuralEqualityPolicy()) { animationProgress.value == 1f }
+    }
+    val animatedShape = remember(useFullScreenShape, shape) {
+        when {
+            shape == defaultInputFieldShape ->
+                // The shape can only be animated if it's the default spec value
+                GenericShape { size, _ ->
+                    val radius = with(density) {
+                        (SearchBarCornerRadius * (1 - animationProgress.value)).toPx()
+                    }
+                    addRoundRect(RoundRect(size.toRect(), CornerRadius(radius)))
+                }
+            useFullScreenShape -> defaultFullScreenShape
+            else -> shape
+        }
+    }
+    val surface = @Composable {
+        Surface(
+            modifier = Modifier,
+            shape = animatedShape,
+            color = colors.containerColor,
+            contentColor = contentColorFor(colors.containerColor),
+            tonalElevation = tonalElevation,
+            shadowElevation = shadowElevation,
+            content = {},
+        )
+    }
+
+    val showContent by remember {
+        derivedStateOf(structuralEqualityPolicy()) { animationProgress.value > 0 }
+    }
+    val wrappedContent: (@Composable () -> Unit)? = if (showContent) {
+        {
+            Column(Modifier.graphicsLayer { alpha = animationProgress.value }) {
+                HorizontalDivider(color = colors.dividerColor)
+                content()
+            }
+        }
+    } else null
+
+    SearchBarLayout(
+        animationProgress = animationProgress,
+        finalBackProgress = finalBackProgress,
+        firstBackEvent = firstBackEvent,
+        currentBackEvent = currentBackEvent,
+        modifier = modifier,
+        windowInsets = windowInsets,
+        inputField = inputField,
+        surface = surface,
+        content = wrappedContent,
+    )
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchBarLayout(
+    animationProgress: Animatable<Float, AnimationVector1D>,
+    finalBackProgress: MutableFloatState,
+    firstBackEvent: MutableState<BackEventCompat?>,
+    currentBackEvent: MutableState<BackEventCompat?>,
+    modifier: Modifier,
+    windowInsets: WindowInsets,
+    inputField: @Composable () -> Unit,
+    surface: @Composable () -> Unit,
+    content: (@Composable () -> Unit)?,
+) {
+    // `Modifier.windowInsetsPadding` does not support animation,
+    // so the insets are converted to paddings in the Layout's MeasureScope
+    // and the animation calculations are done manually.
+    val unconsumedInsets = remember { MutableWindowInsets() }
+    Layout(
+        modifier = modifier
+            .zIndex(1f)
+            .onConsumedWindowInsetsChanged { consumedInsets ->
+                unconsumedInsets.insets = windowInsets.exclude(consumedInsets)
+            }
+            .consumeWindowInsets(unconsumedInsets),
+        content = {
+            Box(Modifier.layoutId(LayoutIdSurface), propagateMinConstraints = true) {
+                surface()
+            }
+            Box(Modifier.layoutId(LayoutIdInputField), propagateMinConstraints = true) {
+                inputField()
+            }
+            content?.let { content ->
+                Box(Modifier.layoutId(LayoutIdSearchContent), propagateMinConstraints = true) {
+                    content()
+                }
+            }
+        },
+    ) { measurables, constraints ->
+        @Suppress("NAME_SHADOWING")
+        val animationProgress = animationProgress.value
+
+        val inputFieldMeasurable = measurables.fastFirst { it.layoutId == LayoutIdInputField }
+        val surfaceMeasurable = measurables.fastFirst { it.layoutId == LayoutIdSurface }
+        val contentMeasurable = measurables.fastFirstOrNull { it.layoutId == LayoutIdSearchContent }
+
+        val topPadding = unconsumedInsets.getTop(this) + SearchBarVerticalPadding.roundToPx()
+        val bottomPadding = SearchBarVerticalPadding.roundToPx()
+
+        val defaultStartWidth = constraints
+            .constrainWidth(inputFieldMeasurable.maxIntrinsicWidth(constraints.maxHeight))
+        val defaultStartHeight = constraints
+            .constrainHeight(inputFieldMeasurable.minIntrinsicHeight(constraints.maxWidth))
+
+        val predictiveBackStartWidth =
+            (constraints.maxWidth * SearchBarPredictiveBackMinScale).roundToInt()
+        val predictiveBackStartHeight =
+            (constraints.maxHeight * SearchBarPredictiveBackMinScale).roundToInt()
+        val predictiveBackMultiplier = calculatePredictiveBackMultiplier(
+            currentBackEvent.value,
+            animationProgress,
+            finalBackProgress.floatValue
+        )
+
+        val startWidth =
+            lerp(defaultStartWidth, predictiveBackStartWidth, predictiveBackMultiplier)
+        val startHeight = lerp(
+            topPadding + defaultStartHeight,
+            predictiveBackStartHeight,
+            predictiveBackMultiplier
+        )
+
+        val endWidth = constraints.maxWidth
+        val endHeight = constraints.maxHeight
+
+        val width = lerp(startWidth, endWidth, animationProgress)
+        val height = lerp(startHeight, endHeight, animationProgress)
+
+        // Note: animatedTopPadding decreases w.r.t. animationProgress
+        val animatedTopPadding = lerp(topPadding, 0, animationProgress)
+        val animatedBottomPadding = lerp(0, bottomPadding, animationProgress)
+
+        // As the animation proceeds, the surface loses its padding
+        // and expands to cover the entire container.
+        val surfacePlaceable = surfaceMeasurable
+            .measure(Constraints.fixed(width, height - animatedTopPadding))
+        val inputFieldPlaceable = inputFieldMeasurable
+            .measure(Constraints.fixed(width, defaultStartHeight))
+        val contentPlaceable = contentMeasurable?.measure(
+            Constraints(
+                minWidth = width,
+                maxWidth = width,
+                minHeight = 0,
+                maxHeight = if (constraints.hasBoundedHeight) {
+                    (constraints.maxHeight - (topPadding + defaultStartHeight + bottomPadding))
+                        .coerceAtLeast(0)
+                } else {
+                    constraints.maxHeight
+                }
+            )
+        )
+
+        layout(width, height) {
+            val minOffsetMargin = SearchBarPredictiveBackMinMargin.roundToPx()
+            val predictiveBackOffsetX = calculatePredictiveBackOffsetX(
+                constraints = constraints,
+                minMargin = minOffsetMargin,
+                currentBackEvent = currentBackEvent.value,
+                layoutDirection = layoutDirection,
+                progress = animationProgress,
+                predictiveBackMultiplier = predictiveBackMultiplier,
+            )
+            val predictiveBackOffsetY = calculatePredictiveBackOffsetY(
+                constraints = constraints,
+                minMargin = minOffsetMargin,
+                currentBackEvent = currentBackEvent.value,
+                firstBackEvent = firstBackEvent.value,
+                height = height,
+                maxOffsetY = SearchBarPredictiveBackMaxOffsetY.roundToPx(),
+                predictiveBackMultiplier = predictiveBackMultiplier,
+            )
+
+            surfacePlaceable.placeRelative(
+                predictiveBackOffsetX,
+                predictiveBackOffsetY + animatedTopPadding,
+            )
+            inputFieldPlaceable.placeRelative(
+                predictiveBackOffsetX,
+                predictiveBackOffsetY + topPadding,
+            )
+            contentPlaceable?.placeRelative(
+                predictiveBackOffsetX,
+                predictiveBackOffsetY + topPadding + inputFieldPlaceable.height +
+                    animatedBottomPadding,
+            )
+        }
+    }
+}
+
+private fun calculatePredictiveBackMultiplier(
+    currentBackEvent: BackEventCompat?,
+    progress: Float,
+    finalBackProgress: Float
+) = when {
+    currentBackEvent == null -> 0f // Not in predictive back at all.
+    finalBackProgress.isNaN() -> 1f // User is currently swiping predictive back.
+    finalBackProgress <= 0 -> 0f // Safety check for divide by zero.
+    else -> progress / finalBackProgress // User has released predictive back swipe.
+}
+
+private fun calculatePredictiveBackOffsetX(
+    constraints: Constraints,
+    minMargin: Int,
+    currentBackEvent: BackEventCompat?,
+    layoutDirection: LayoutDirection,
+    progress: Float,
+    predictiveBackMultiplier: Float
+): Int {
+    if (currentBackEvent == null || predictiveBackMultiplier == 0f) {
+        return 0
+    }
+    val directionMultiplier = if (currentBackEvent.swipeEdge == BackEventCompat.EDGE_LEFT) 1 else -1
+    val rtlMultiplier = if (layoutDirection == LayoutDirection.Ltr) 1 else -1
+    val maxOffsetX =
+        (constraints.maxWidth * SearchBarPredictiveBackMaxOffsetXRatio) - minMargin
+    val interpolatedOffsetX = maxOffsetX * (1 - progress)
+    return (interpolatedOffsetX * predictiveBackMultiplier * directionMultiplier * rtlMultiplier)
+        .roundToInt()
+}
+
+private fun calculatePredictiveBackOffsetY(
+    constraints: Constraints,
+    minMargin: Int,
+    currentBackEvent: BackEventCompat?,
+    firstBackEvent: BackEventCompat?,
+    height: Int,
+    maxOffsetY: Int,
+    predictiveBackMultiplier: Float
+): Int {
+    if (firstBackEvent == null || currentBackEvent == null || predictiveBackMultiplier == 0f) {
+        return 0
+    }
+    val availableVerticalSpace = max(0, (constraints.maxHeight - height) / 2 - minMargin)
+    val adjustedMaxOffsetY = min(availableVerticalSpace, maxOffsetY)
+    val yDelta = currentBackEvent.touchY - firstBackEvent.touchY
+    val yProgress = abs(yDelta) / constraints.maxHeight
+    val directionMultiplier = sign(yDelta)
+    val interpolatedOffsetY = lerp(0, adjustedMaxOffsetY, yProgress)
+    return (interpolatedOffsetY * predictiveBackMultiplier * directionMultiplier).roundToInt()
+}
+
+private const val LayoutIdInputField = "InputField"
+private const val LayoutIdSurface = "Surface"
+private const val LayoutIdSearchContent = "Content"
 
 // Measurement specs
 @OptIn(ExperimentalMaterial3Api::class)
@@ -707,6 +943,10 @@ private val SearchBarMaxWidth: Dp = 720.dp
 internal val SearchBarVerticalPadding: Dp = 8.dp
 // Search bar has 16dp padding between icons and start/end, while by default text field has 12dp.
 private val SearchBarIconOffsetX: Dp = 4.dp
+private const val SearchBarPredictiveBackMinScale: Float = 9f / 10f
+private val SearchBarPredictiveBackMinMargin: Dp = 8.dp
+private const val SearchBarPredictiveBackMaxOffsetXRatio: Float = 1f / 20f
+private val SearchBarPredictiveBackMaxOffsetY: Dp = 24.dp
 
 // Animation specs
 private const val AnimationEnterDurationMillis: Int = MotionTokens.DurationLong4.toInt()
@@ -722,6 +962,10 @@ private val AnimationEnterFloatSpec: FiniteAnimationSpec<Float> = tween(
 private val AnimationExitFloatSpec: FiniteAnimationSpec<Float> = tween(
     durationMillis = AnimationExitDurationMillis,
     delayMillis = AnimationDelayMillis,
+    easing = AnimationExitEasing,
+)
+private val AnimationPredictiveBackExitFloatSpec: FiniteAnimationSpec<Float> = tween(
+    durationMillis = AnimationExitDurationMillis,
     easing = AnimationExitEasing,
 )
 private val AnimationEnterSizeSpec: FiniteAnimationSpec<IntSize> = tween(

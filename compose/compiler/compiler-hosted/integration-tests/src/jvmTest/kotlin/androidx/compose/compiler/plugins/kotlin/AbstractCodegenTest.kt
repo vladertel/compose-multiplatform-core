@@ -105,19 +105,20 @@ abstract class AbstractCodegenTest(useFir: Boolean) : AbstractCompilerTest(useFi
     protected fun classLoader(
         sources: Map<String, String>,
         additionalPaths: List<File>,
-        dumpClasses: Boolean = false
+        dumpClasses: Boolean = false,
+        forcedFirSetting: Boolean? = null
     ): GeneratedClassLoader {
         val loader = createClassLoader(
             sources.map { (fileName, source) -> SourceFile(fileName, source) },
-            additionalPaths = additionalPaths
+            additionalPaths = additionalPaths,
+            forcedFirSetting = forcedFirSetting
         )
         if (dumpClasses) dumpClasses(loader)
         return loader
     }
 
-    protected fun testCompile(source: String, dumpClasses: Boolean = false) {
-        val loader = createClassLoader(listOf(SourceFile("Test.kt", source)))
-        if (dumpClasses) dumpClasses(loader)
+    protected fun testCompile(@Language("kotlin") source: String, dumpClasses: Boolean = false) {
+        classLoader(source, "Test.kt", dumpClasses)
     }
 
     protected val COMPOSE_VIEW_STUBS_IMPORTS = """

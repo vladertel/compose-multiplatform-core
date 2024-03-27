@@ -29,8 +29,13 @@ import androidx.camera.camera2.pipe.CameraStream
 import androidx.camera.camera2.pipe.CameraSurfaceManager
 import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.StreamFormat
+import androidx.camera.camera2.pipe.compat.AudioRestrictionController
+import androidx.camera.camera2.pipe.compat.AudioRestrictionMode
 import androidx.camera.camera2.pipe.internal.CameraBackendsImpl
+import androidx.camera.camera2.pipe.internal.FrameCaptureQueue
+import androidx.camera.camera2.pipe.internal.FrameDistributor
 import androidx.camera.camera2.pipe.internal.GraphLifecycleManager
+import androidx.camera.camera2.pipe.internal.ImageSourceMap
 import androidx.camera.camera2.pipe.testing.CameraControllerSimulator
 import androidx.camera.camera2.pipe.testing.FakeCameraBackend
 import androidx.camera.camera2.pipe.testing.FakeCameraMetadata
@@ -39,6 +44,7 @@ import androidx.camera.camera2.pipe.testing.FakeThreads
 import androidx.camera.camera2.pipe.testing.RobolectricCameraPipeTestRunner
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import kotlin.test.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -95,14 +101,34 @@ internal class CameraGraphImplTest {
         val cameraContext = CameraBackendsImpl.CameraBackendContext(context, threads, backends)
         val graphLifecycleManager = GraphLifecycleManager(threads)
         val streamGraph = StreamGraphImpl(metadata, graphConfig)
+        val imageSourceMap = ImageSourceMap(graphConfig, streamGraph, threads)
+        val frameCaptureQueue = FrameCaptureQueue()
+        val frameDistributor = FrameDistributor(
+            imageSourceMap.imageSources,
+            frameCaptureQueue
+        ) { }
         cameraController =
             CameraControllerSimulator(cameraContext, graphConfig, fakeGraphProcessor, streamGraph)
         cameraSurfaceManager.addListener(fakeSurfaceListener)
-        val surfaceGraph = SurfaceGraph(streamGraph, cameraController, cameraSurfaceManager)
+        val surfaceGraph = SurfaceGraph(
+            streamGraph,
+            cameraController,
+            cameraSurfaceManager,
+            emptyMap()
+        )
+        val audioRestriction: AudioRestrictionController? =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                AudioRestrictionController()
+            } else {
+                null
+            }
+
+        val cameraGraphId = CameraGraphId.nextId()
         val graph =
             CameraGraphImpl(
                 graphConfig,
                 metadata,
+                cameraGraphId,
                 graphLifecycleManager,
                 fakeGraphProcessor,
                 fakeGraphProcessor,
@@ -111,7 +137,10 @@ internal class CameraGraphImplTest {
                 backend,
                 cameraController,
                 GraphState3A(),
-                Listener3A()
+                Listener3A(),
+                frameDistributor,
+                frameCaptureQueue,
+                audioRestriction
             )
         stream1 =
             checkNotNull(graph.streams[stream1Config]) {
@@ -242,5 +271,14 @@ internal class CameraGraphImplTest {
         verify(fakeSurfaceListener, times(1)).onSurfaceActive(eq(imageReader2.surface))
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(imageReader1.surface))
         verify(fakeSurfaceListener, times(1)).onSurfaceInactive(eq(imageReader1.surface))
+    }
+
+    @Test
+    @Config(minSdk = Build.VERSION_CODES.R)
+    fun setAudioRestriction_setValueSuccessfully() = runTest {
+        val mode = AudioRestrictionMode(0)
+        val cameraGraph = initializeCameraGraphImpl(this)
+        cameraGraph.setAudioRestriction(mode)
+        assertEquals(mode, cameraGraph.getAudioRestriction())
     }
 }

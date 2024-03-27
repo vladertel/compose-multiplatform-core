@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@file:Suppress("DEPRECATION")
+
 package androidx.compose.ui.node
 
 import androidx.compose.testutils.TestViewConfiguration
@@ -28,11 +30,13 @@ import androidx.compose.ui.focus.FocusOwner
 import androidx.compose.ui.geometry.MutableRect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.GraphicsContext
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.ReusableGraphicsLayerScope
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.KeyEvent
@@ -54,6 +58,7 @@ import androidx.compose.ui.modifier.ModifierLocalManager
 import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
@@ -2513,6 +2518,8 @@ internal class MockOwner(
         get() = TODO("Not yet implemented")
     override val accessibilityManager: AccessibilityManager
         get() = TODO("Not yet implemented")
+    override val graphicsContext: GraphicsContext
+        get() = TODO("Not yet implemented")
     override val textToolbar: TextToolbar
         get() = TODO("Not yet implemented")
 
@@ -2526,6 +2533,8 @@ internal class MockOwner(
     override val density: Density
         get() = Density(1f)
     override val textInputService: TextInputService
+        get() = TODO("Not yet implemented")
+    override val softwareKeyboardController: SoftwareKeyboardController
         get() = TODO("Not yet implemented")
     override val pointerIconService: PointerIconService
         get() = TODO("Not yet implemented")
@@ -2620,11 +2629,24 @@ internal class MockOwner(
         TODO("Not yet implemented")
     }
 
+    override fun screenToLocal(positionOnScreen: Offset): Offset {
+        TODO("Not yet implemented")
+    }
+
+    override fun localToScreen(localPosition: Offset): Offset {
+        TODO("Not yet implemented")
+    }
+
+    override fun localToScreen(localTransform: Matrix) {
+        TODO("Not yet implemented")
+    }
+
     val invalidatedLayers = mutableListOf<OwnedLayer>()
 
     override fun createLayer(
         drawBlock: (Canvas) -> Unit,
-        invalidateParentLayer: () -> Unit
+        invalidateParentLayer: () -> Unit,
+        explicitLayer: GraphicsLayer?
     ): OwnedLayer {
         val transform = Matrix()
         val inverseTransform = Matrix()
@@ -2650,7 +2672,7 @@ internal class MockOwner(
             override fun resize(size: IntSize) {
             }
 
-            override fun drawLayer(canvas: Canvas) {
+            override fun drawLayer(canvas: Canvas, parentLayer: GraphicsLayer?) {
                 drawBlock(canvas)
             }
 

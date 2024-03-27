@@ -22,7 +22,12 @@ import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.GraphState
 import androidx.camera.camera2.pipe.StreamGraph
 import androidx.camera.camera2.pipe.StreamId
+import androidx.camera.camera2.pipe.compat.AudioRestrictionMode
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
 @RequiresApi(21)
@@ -48,6 +53,17 @@ class FakeCameraGraph(
     }
 
     override fun acquireSessionOrNull() = if (isClosed) null else fakeCameraGraphSession
+    override suspend fun <T> useSession(
+        action: suspend CoroutineScope.(CameraGraph.Session) -> T
+    ): T =
+        fakeCameraGraphSession.use { coroutineScope { action(it) } }
+
+    override fun <T> useSessionIn(
+        scope: CoroutineScope,
+        action: suspend CoroutineScope.(CameraGraph.Session) -> T
+    ): Deferred<T> = scope.async {
+        useSession(action)
+    }
 
     override fun close() {
         isClosed = true
@@ -55,6 +71,14 @@ class FakeCameraGraph(
 
     override fun setSurface(stream: StreamId, surface: Surface?) {
         setSurfaceResults[stream] = surface
+    }
+
+    override fun getAudioRestriction(): AudioRestrictionMode? {
+        throw NotImplementedError("Not used in testing")
+    }
+
+    override fun setAudioRestriction(mode: AudioRestrictionMode) {
+        throw NotImplementedError("Not used in testing")
     }
 
     override fun start() {

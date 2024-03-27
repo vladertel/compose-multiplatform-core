@@ -880,7 +880,7 @@ class DatabaseProcessorTest {
             USER, USER_DAO
         ) { db, _ ->
             val userDao = db.daoMethods.first().dao
-            val insertionMethod = userDao.insertionMethods.find { it.element.jvmName == "insert" }
+            val insertionMethod = userDao.insertMethods.find { it.element.jvmName == "insert" }
             assertThat(insertionMethod, notNullValue())
             val loadOne = userDao.queryMethods
                 .filterIsInstance<ReadQueryMethod>()
@@ -1370,9 +1370,10 @@ class DatabaseProcessorTest {
             USER, AUTOMIGRATION,
         ) { _, invocation ->
             invocation.assertCompilationResult {
-                hasErrorCount(1)
+                hasErrorCount(2)
+                hasErrorContaining("Unable to read schema file")
                 hasErrorContaining(
-                    ProcessorErrors.autoMigrationSchemaIsEmpty(
+                    ProcessorErrors.invalidAutoMigrationSchema(
                         1,
                         schemaFolder.root.absolutePath + File.separator + "foo.bar.MyDb"
                     )
@@ -1401,7 +1402,8 @@ class DatabaseProcessorTest {
             USER, AUTOMIGRATION,
         ) { _, invocation ->
             invocation.assertCompilationResult {
-                hasErrorCount(1)
+                hasErrorCount(2)
+                hasErrorContaining("Unable to read schema file")
                 hasErrorContaining(
                     invalidAutoMigrationSchema(
                         1,
@@ -1585,6 +1587,24 @@ class DatabaseProcessorTest {
             ).process()
             invocation.assertCompilationResult {
                 hasErrorContaining(ProcessorErrors.KOTLIN_PROPERTY_OVERRIDE)
+            }
+        }
+    }
+
+    @Test
+    fun invalidVersion() {
+        singleDb(
+            """
+            @Database(entities = {User.class}, version = 0)
+            public abstract class MyDb extends RoomDatabase {
+                abstract UserDao userDao();
+            }
+            """,
+            USER, USER_DAO
+        ) { _, invocation ->
+            invocation.assertCompilationResult {
+                hasErrorCount(1)
+                hasErrorContaining(ProcessorErrors.INVALID_DATABASE_VERSION)
             }
         }
     }

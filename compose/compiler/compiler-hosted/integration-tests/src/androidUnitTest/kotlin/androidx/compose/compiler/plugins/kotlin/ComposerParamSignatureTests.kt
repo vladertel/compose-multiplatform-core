@@ -1046,6 +1046,7 @@ class ComposerParamSignatureTests(useFir: Boolean) : AbstractCodegenSignatureTes
         """,
         """
             public abstract class CompositionLocal2 {
+              PERMITTEDSUBCLASS ProvidableCompositionLocal2
               private <init>()V
               public final getCurrent(Landroidx/compose/runtime/Composer;I)Ljava/lang/Object;
               public final foo(Landroidx/compose/runtime/Composer;I)V
@@ -1736,8 +1737,23 @@ class ComposerParamSignatureTests(useFir: Boolean) : AbstractCodegenSignatureTes
     @Test
     fun testComposableColorFunInterfaceExample() = checkApi(
         """
-            import androidx.compose.material.Text
             import androidx.compose.ui.graphics.Color
+            import java.lang.UnsupportedOperationException
+
+            @Composable
+            public fun Text(text: String, color: Color = Color.Unspecified) {}
+
+            @Immutable
+            @kotlin.jvm.JvmInline
+            value class Color(val value: ULong) {
+                companion object {
+                    @Stable
+                    val Red = Color(0xFFFF0000)
+
+                    @Stable
+                    val Blue = Color(0xFF0000FF)
+                }
+            }
 
             @Composable fun condition(): Boolean = true
 
@@ -1756,16 +1772,61 @@ class ComposerParamSignatureTests(useFir: Boolean) : AbstractCodegenSignatureTes
             }
         """,
         """
+            public final class Color {
+              public final getValue-s-VKNKU()J
+              public static toString-impl(J)Ljava/lang/String;
+              public toString()Ljava/lang/String;
+              public static hashCode-impl(J)I
+              public hashCode()I
+              public static equals-impl(JLjava/lang/Object;)Z
+              public equals(Ljava/lang/Object;)Z
+              private synthetic <init>(J)V
+              public static constructor-impl(J)J
+              public final static synthetic box-impl(J)LColor;
+              public final synthetic unbox-impl()J
+              public final static equals-impl0(JJ)Z
+              public final static synthetic access%getRed%cp()J
+              public final static synthetic access%getBlue%cp()J
+              static <clinit>()V
+              public final static LColor%Companion; Companion
+              private final J value
+              private final static J Red
+              private final static J Blue
+              public final static INNERCLASS Color%Companion Color Companion
+            }
+            public final class Color%Companion {
+              private <init>()V
+              public final getRed-0d7_KjU()J
+              public static synthetic getRed-0d7_KjU%annotations()V
+              public final getBlue-0d7_KjU()J
+              public static synthetic getBlue-0d7_KjU%annotations()V
+              public synthetic <init>(Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+              public final static INNERCLASS Color%Companion Color Companion
+            }
             public abstract interface ButtonColors {
               public abstract getColor-WaAFU9c(Landroidx/compose/runtime/Composer;I)J
             }
             public final class TestKt {
+              public final static Text-iJQMabo(Ljava/lang/String;JLandroidx/compose/runtime/Composer;II)V
               public final static condition(Landroidx/compose/runtime/Composer;I)Z
               public final static Button(LButtonColors;Landroidx/compose/runtime/Composer;I)V
               public final static Test(Landroidx/compose/runtime/Composer;I)V
               final static INNERCLASS TestKt%Button%1 null null
               final static INNERCLASS TestKt%Test%1 null null
               final static INNERCLASS TestKt%Test%2 null null
+              final static INNERCLASS TestKt%Text%1 null null
+              public final static INNERCLASS androidx/compose/ui/graphics/Color%Companion androidx/compose/ui/graphics/Color Companion
+            }
+            final class TestKt%Text%1 extends kotlin/jvm/internal/Lambda implements kotlin/jvm/functions/Function2 {
+              <init>(Ljava/lang/String;JII)V
+              public final invoke(Landroidx/compose/runtime/Composer;I)V
+              public synthetic bridge invoke(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+              final synthetic Ljava/lang/String; %text
+              final synthetic J %color
+              final synthetic I %%changed
+              final synthetic I %%default
+              OUTERCLASS TestKt Text-iJQMabo (Ljava/lang/String;JLandroidx/compose/runtime/Composer;II)V
+              final static INNERCLASS TestKt%Text%1 null null
             }
             final class TestKt%Button%1 extends kotlin/jvm/internal/Lambda implements kotlin/jvm/functions/Function2 {
               <init>(LButtonColors;I)V
@@ -1814,4 +1875,35 @@ class ComposerParamSignatureTests(useFir: Boolean) : AbstractCodegenSignatureTes
     ) {
         assertFalse(it.contains("INVOKESTATIC kotlin/jvm/internal/Reflection.property0 (Lkotlin/jvm/internal/PropertyReference0;)Lkotlin/reflect/KProperty0;"))
     }
+
+    @Test
+    fun testComposableAdaptedFunctionReference() = validateBytecode(
+        """
+            class ScrollState {
+                fun test(index: Int, default: Int = 0): Int = 0
+                fun testExact(index: Int): Int = 0
+            }
+            fun scrollState(): ScrollState = TODO()
+
+            @Composable fun rememberFooInline() = fooInline(scrollState()::test)
+            @Composable fun rememberFoo() = foo(scrollState()::test)
+            @Composable fun rememberFooExactInline() = fooInline(scrollState()::testExact)
+            @Composable fun rememberFooExact() = foo(scrollState()::testExact)
+
+            @Composable
+            inline fun fooInline(block: (Int) -> Int) = block(0)
+
+            @Composable
+            fun foo(block: (Int) -> Int) = block(0)
+        """,
+        validate = {
+            // Validate that function references in inline calls are actually getting inlined
+            assertFalse(
+                it.contains("""INVOKESPECIAL Test_0Kt${'$'}rememberFooInline$1$1.<init> (Ljava/lang/Object;)V""")
+            )
+            assertFalse(
+                it.contains("""INVOKESPECIAL Test_0Kt${'$'}rememberFooExactInline$1$1.<init> (Ljava/lang/Object;)V""")
+            )
+        }
+    )
 }
