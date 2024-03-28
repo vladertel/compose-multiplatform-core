@@ -28,7 +28,7 @@ import android.view.View
 import android.view.ViewOutlineProvider
 import android.view.ViewTreeObserver
 import android.view.WindowManager
-import androidx.compose.material3.touchExplorationState
+import android.view.accessibility.AccessibilityManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.DisposableEffect
@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.AbstractComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
@@ -86,17 +87,19 @@ internal fun ExposedDropdownMenuPopup(
     val view = LocalView.current
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
-    val isTouchExplorationEnabled by touchExplorationState()
+    val context = LocalContext.current
+    val a11yManager =
+        context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
 
     val parentComposition = rememberCompositionContext()
     val currentContent by rememberUpdatedState(content)
     val popupId = rememberSaveable { UUID.randomUUID() }
-    val popupLayout = remember(isTouchExplorationEnabled) {
+    val popupLayout = remember(a11yManager) {
         PopupLayout(
             onDismissRequest = onDismissRequest,
             composeView = view,
             positionProvider = popupPositionProvider,
-            isTouchExplorationEnabled = isTouchExplorationEnabled,
+            focusable = a11yManager?.isTouchExplorationEnabled == true,
             density = density,
             popupId = popupId,
         ).apply {
@@ -204,7 +207,7 @@ private class PopupLayout(
     private var onDismissRequest: (() -> Unit)?,
     private val composeView: View,
     private val positionProvider: PopupPositionProvider,
-    private val isTouchExplorationEnabled: Boolean,
+    private val focusable: Boolean,
     density: Density,
     popupId: UUID
 ) : AbstractComposeView(composeView.context),
@@ -395,15 +398,13 @@ private class PopupLayout(
             gravity = Gravity.START or Gravity.TOP
 
             // Flags specific to exposed dropdown menu.
-            flags = WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            flags = WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH and
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv() or
                 WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
-            flags = if (isTouchExplorationEnabled) {
-                // In order for TalkBack focus to jump to the menu when opened, it needs to be
-                // focusable and touch modal (NOT_FOCUSABLE and NOT_TOUCH_MODAL are *not* set)
-                flags and WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL.inv()
+            flags = if (focusable) {
+                flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
             } else {
-                flags
+                flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
             }
 
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_UNCHANGED

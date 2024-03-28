@@ -59,7 +59,7 @@ dependencies {
     compileOnly(libs.kotlinCompiler)
 
     // Align dependencies in debugRuntimeClasspath and debugAndroidTestRuntimeClasspath.
-    androidTestImplementation("androidx.annotation:annotation-experimental:1.4.0")
+    androidTestImplementation(project(":annotation:annotation-experimental"))
 
     // Testing framework
     androidTestImplementation(libs.testExtJunit)
