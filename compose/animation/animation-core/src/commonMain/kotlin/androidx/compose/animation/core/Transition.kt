@@ -19,6 +19,7 @@
 package androidx.compose.animation.core
 
 import androidx.annotation.FloatRange
+import androidx.compose.animation.core.internal.JvmDefaultWithCompatibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastFold
 import androidx.compose.ui.util.fastForEach
+import kotlin.jvm.JvmName
 import kotlin.math.max
 import kotlin.math.roundToLong
 
@@ -218,7 +220,7 @@ class SeekableTransitionState<S>(
      * transition, the [Transition.totalDurationNanos] will change, so the same [fraction] value
      * will snap to a different position in the transition.
      */
-    suspend fun snapToFraction(@FloatRange(0.0, 1.0) fraction: Float) {
+    suspend fun snapToFraction(@FloatRange(from = 0.0, to = 1.0) fraction: Float) {
         require(fraction in 0f..1f) {
             "Expecting fraction between 0 and 1. Got $fraction"
         }

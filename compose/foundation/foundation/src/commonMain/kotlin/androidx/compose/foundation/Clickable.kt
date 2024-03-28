@@ -26,6 +26,8 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.focus.FocusRequesterModifierNode
+import androidx.compose.ui.focus.requestFocus
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -151,8 +153,8 @@ fun Modifier.clickable(
     Modifier
         .indication(interactionSource, indication)
         .hoverable(enabled = enabled, interactionSource = interactionSource)
-        .focusableInNonTouchMode(enabled = enabled, interactionSource = interactionSource)
         .then(ClickableElement(interactionSource, enabled, onClickLabel, role, onClick))
+        .focusable(enabled = enabled, interactionSource = interactionSource)
 }
 /**
  * Configure component to receive clicks, double clicks and long clicks via input or accessibility
@@ -274,7 +276,6 @@ fun Modifier.combinedClickable(
     Modifier
         .indication(interactionSource, indication)
         .hoverable(enabled = enabled, interactionSource = interactionSource)
-        .focusableInNonTouchMode(enabled = enabled, interactionSource = interactionSource)
         .then(
             CombinedClickableElement(
                 interactionSource,
@@ -287,9 +288,11 @@ fun Modifier.combinedClickable(
                 onDoubleClick
             )
         )
+        .focusable(enabled = enabled, interactionSource = interactionSource)
+
 }
 
-private suspend fun PressGestureScope.handlePressInteraction(
+internal suspend fun PressGestureScope.handlePressInteraction(
     pressPoint: Offset,
     interactionSource: MutableInteractionSource,
     interactionData: AbstractClickableNode.InteractionData,
@@ -411,7 +414,7 @@ internal fun Modifier.genericClickableWithoutGesture(
             .detectPressAndClickFromKey()
             .indication(interactionSource, indication)
             .hoverable(enabled = enabled, interactionSource = interactionSource)
-            .focusableInNonTouchMode(enabled = enabled, interactionSource = interactionSource)
+            .focusable(enabled = enabled, interactionSource = interactionSource)
 }
 
 private class ClickableElement(
@@ -731,7 +734,7 @@ private class CombinedClickableNodeImpl(
     }
 }
 
-private sealed class AbstractClickableNode(
+internal sealed class AbstractClickableNode(
     private var interactionSource: MutableInteractionSource,
     private var enabled: Boolean,
     private var onClickLabel: String?,
@@ -877,7 +880,7 @@ private class ClickableSemanticsElement(
     }
 }
 
-private class ClickableSemanticsNode(
+internal class ClickableSemanticsNode(
     private var enabled: Boolean,
     private var onClickLabel: String?,
     private var role: Role?,
@@ -923,13 +926,13 @@ private class ClickableSemanticsNode(
     }
 }
 
-private sealed class AbstractClickablePointerInputNode(
+internal sealed class AbstractClickablePointerInputNode(
     protected var enabled: Boolean,
     protected var interactionSource: MutableInteractionSource?,
     protected var onClick: () -> Unit,
     protected val interactionData: AbstractClickableNode.InteractionData
 ) : DelegatingNode(), ModifierLocalModifierNode, CompositionLocalConsumerModifierNode,
-    PointerInputModifierNode {
+    PointerInputModifierNode, FocusRequesterModifierNode {
 
     private val delayPressInteraction = {
         ModifierLocalScrollableContainer.current || isComposeRootInScrollableContainer()
@@ -981,6 +984,7 @@ private class ClickablePointerInputNode(
         detectTapAndPress(
             onPress = { offset ->
                 if (enabled) {
+                    requestFocusWhenInMouseInputMode()
                     handlePressInteraction(offset)
                 }
             },
@@ -1018,13 +1022,14 @@ private class CombinedClickablePointerInputNode(
         interactionData.centreOffset = size.center.toOffset()
         detectTapGestures(
             onDoubleTap = if (enabled && onDoubleClick != null) {
-                { onDoubleClick?.invoke() }
+                { requestFocusWhenInMouseInputMode(); onDoubleClick?.invoke() }
             } else null,
             onLongPress = if (enabled && onLongClick != null) {
-                { onLongClick?.invoke() }
+                { requestFocusWhenInMouseInputMode(); onLongClick?.invoke() }
             } else null,
             onPress = { offset ->
                 if (enabled) {
+                    requestFocusWhenInMouseInputMode()
                     handlePressInteraction(offset)
                 }
             },
@@ -1065,5 +1070,11 @@ private class CombinedClickablePointerInputNode(
         }
         this.onDoubleClick = onDoubleClick
         if (changed) resetPointerInputHandler()
+    }
+}
+
+private fun FocusRequesterModifierNode.requestFocusWhenInMouseInputMode() {
+    if (isMouseInputWorkaround()) {
+        requestFocus()
     }
 }
