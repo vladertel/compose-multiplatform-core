@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.expand
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
+import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -365,7 +366,7 @@ private fun BottomSheetScaffoldLayout(
 
         layout(layoutWidth, layoutHeight) {
             val sheetOffsetY = sheetOffset().roundToInt()
-            val sheetOffsetX = Integer.max(0, (layoutWidth - sheetPlaceable.width) / 2)
+            val sheetOffsetX = max(0, (layoutWidth - sheetPlaceable.width) / 2)
 
             val snackbarOffsetX = (layoutWidth - snackbarPlaceable.width) / 2
             val snackbarOffsetY = when (sheetState.currentValue) {
