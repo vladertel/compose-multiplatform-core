@@ -109,13 +109,13 @@ fun DropdownMenu(
  * @param content the content of this dropdown menu, typically a [DropdownMenuItem]
  */
 @Composable
-fun DropdownMenu(
+actual fun DropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
-    modifier: Modifier = Modifier,
-    offset: DpOffset = DpOffset(0.dp, 0.dp),
-    scrollState: ScrollState = rememberScrollState(),
-    properties: PopupProperties = PopupProperties(focusable = true),
+    modifier: Modifier,
+    offset: DpOffset,
+    scrollState: ScrollState,
+    properties: PopupProperties,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val expandedStates = remember { MutableTransitionState(false) }
@@ -165,12 +165,12 @@ fun DropdownMenu(
  * appearance / behavior of this DropdownMenuItem in different [Interaction]s.
  */
 @Composable
-fun DropdownMenuItem(
+actual fun DropdownMenuItem(
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    contentPadding: PaddingValues = MenuDefaults.DropdownMenuItemContentPadding,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    modifier: Modifier,
+    enabled: Boolean,
+    contentPadding: PaddingValues,
+    interactionSource: MutableInteractionSource,
     content: @Composable RowScope.() -> Unit
 ) {
     DropdownMenuItemContent(

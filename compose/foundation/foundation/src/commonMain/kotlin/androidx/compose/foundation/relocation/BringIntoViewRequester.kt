@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.toSize
+import kotlin.js.JsName
 
 /**
  * Can be used to send [bringIntoView] requests. Pass it as a parameter to
@@ -81,6 +82,7 @@ sealed interface BringIntoViewRequester {
  * for it
  */
 @ExperimentalFoundationApi
+@JsName("funBringIntoViewRequester")
 fun BringIntoViewRequester(): BringIntoViewRequester {
     return BringIntoViewRequesterImpl()
 }
@@ -182,10 +184,10 @@ internal class BringIntoViewRequesterNode(
 
     /**
      * Requests that [rect] (if non-null) or the entire bounds of this modifier's node (if [rect]
-     * is null) be brought into view by the [parent]&nbsp;[BringIntoViewParent].
+     * is null) be brought into view by the [bringIntoViewParent]&nbsp;[BringIntoViewParent].
      */
     suspend fun bringIntoView(rect: Rect?) {
-        parent.bringChildIntoView(layoutCoordinates ?: return) {
+        bringIntoViewParent.bringChildIntoView(layoutCoordinates ?: return) {
             // If the rect is not specified, use a rectangle representing the entire composable.
             // If the coordinates are detached when this call is made, we don't bother even
             // submitting the request, but if the coordinates become detached while the request
