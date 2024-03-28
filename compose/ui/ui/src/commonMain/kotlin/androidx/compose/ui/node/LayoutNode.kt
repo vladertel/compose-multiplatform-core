@@ -977,17 +977,16 @@ internal class LayoutNode(
                 // this node was scheduled for remeasure or relayout while it was not
                 // placed. such requests are ignored for non-placed nodes so we have to
                 // re-schedule remeasure or relayout.
-                if (it.lookaheadMeasurePending) {
+                if (it.measurePending) {
+                    it.requestRemeasure(forceRequest = true)
+                } else if (it.layoutPending) {
+                    it.requestRelayout(forceRequest = true)
+                } else if (it.lookaheadMeasurePending) {
                     it.requestLookaheadRemeasure(forceRequest = true)
+                } else if (it.lookaheadLayoutPending) {
+                    it.requestLookaheadRelayout(forceRequest = true)
                 } else {
-                    if (it.lookaheadLayoutPending) {
-                        it.requestLookaheadRelayout(forceRequest = true)
-                    }
-                    if (it.measurePending) {
-                        it.requestRemeasure(forceRequest = true)
-                    } else if (it.layoutPending) {
-                        it.requestRelayout(forceRequest = true)
-                    }
+                    // no extra work required and node is ready to be displayed
                 }
             }
 
@@ -1343,7 +1342,6 @@ internal class LayoutNode(
         semanticsId = generateSemanticsId()
         nodes.markAsAttached()
         nodes.runAttachLifecycle()
-        rescheduleRemeasureOrRelayout(this)
     }
 
     override fun onDeactivate() {
@@ -1351,10 +1349,7 @@ internal class LayoutNode(
         subcompositionsState?.onDeactivate()
         isDeactivated = true
         resetModifierState()
-        // if the node is detached the semantics were already updated without this node.
-        if (isAttached) {
-            invalidateSemantics()
-        }
+        invalidateSemantics()
     }
 
     override fun onRelease() {

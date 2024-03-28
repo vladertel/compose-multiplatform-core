@@ -353,7 +353,7 @@ class IntLongMapTest {
 
         // Make sure reinserting an entry after filling the table
         // with "Deleted" markers works
-        map[1] = 7L
+        map[7] = 7L
 
         assertEquals(1, map.size)
         assertEquals(capacity, map.capacity)

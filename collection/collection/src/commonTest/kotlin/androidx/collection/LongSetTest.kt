@@ -237,7 +237,7 @@ class LongSetTest {
 
         // Make sure reinserting an entry after filling the table
         // with "Deleted" markers works
-        set += 1L
+        set += 3L
 
         assertEquals(1, set.size)
         assertEquals(capacity, set.capacity)

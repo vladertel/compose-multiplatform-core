@@ -40,15 +40,16 @@ internal class TextLayoutResultProxy(val value: TextLayoutResult) {
      * to make a selection.
      */
     fun getOffsetForPosition(position: Offset, coerceInVisibleBounds: Boolean = true): Int {
-        val coercedPosition =
-            if (coerceInVisibleBounds) position.coercedInVisibleBoundsOfInputText() else position
-        val relativePosition = translateDecorationToInnerCoordinates(coercedPosition)
+        val relativePosition = position
+            .let { if (coerceInVisibleBounds) it.coercedInVisibleBoundsOfInputText() else it }
+            .relativeToInputText()
         return value.getOffsetForPosition(relativePosition)
     }
 
     fun getLineForVerticalPosition(vertical: Float): Int {
-        val coercedPosition = Offset(0f, vertical).coercedInVisibleBoundsOfInputText()
-        val relativeVertical = translateDecorationToInnerCoordinates(coercedPosition).y
+        val relativeVertical = Offset(0f, vertical)
+            .coercedInVisibleBoundsOfInputText()
+            .relativeToInputText().y
         return value.getLineForVerticalPosition(relativeVertical)
     }
 
@@ -59,8 +60,7 @@ internal class TextLayoutResultProxy(val value: TextLayoutResult) {
      * in the view. Returns false when the position is in the empty space of left/right of text.
      */
     fun isPositionOnText(offset: Offset): Boolean {
-        val visibleOffset = offset.coercedInVisibleBoundsOfInputText()
-        val relativeOffset = translateDecorationToInnerCoordinates(visibleOffset)
+        val relativeOffset = offset.coercedInVisibleBoundsOfInputText().relativeToInputText()
         val line = value.getLineForVerticalPosition(relativeOffset.y)
         return relativeOffset.x >= value.getLineLeft(line) &&
             relativeOffset.x <= value.getLineRight(line)
@@ -75,23 +75,21 @@ internal class TextLayoutResultProxy(val value: TextLayoutResult) {
     var decorationBoxCoordinates: LayoutCoordinates? = null
 
     /**
-     * Translates the given [offset] from decoration box coordinates
-     * to inner text field coordinates.
+     * Translates the click happened on the decoration box to the position in the inner text
+     * field coordinates. This relative position is then used to determine symbol position in
+     * text using TextLayoutResult object.
      */
-    internal fun translateDecorationToInnerCoordinates(offset: Offset): Offset {
-        val innerCoords = innerTextFieldCoordinates?.takeIf { it.isAttached } ?: return offset
-        val decorationCoords = decorationBoxCoordinates?.takeIf { it.isAttached } ?: return offset
-        return innerCoords.localPositionOf(decorationCoords, offset)
-    }
-
-    /**
-     * Translates the given [offset] from inner text field coordinates
-     * to decoration box coordinates.
-     */
-    internal fun translateInnerToDecorationCoordinates(offset: Offset): Offset {
-        val innerCoords = innerTextFieldCoordinates?.takeIf { it.isAttached } ?: return offset
-        val decorationCoords = decorationBoxCoordinates?.takeIf { it.isAttached } ?: return offset
-        return decorationCoords.localPositionOf(innerCoords, offset)
+    private fun Offset.relativeToInputText(): Offset {
+        // Translates touch to the inner text field coordinates
+        return innerTextFieldCoordinates?.let { innerTextFieldCoordinates ->
+            decorationBoxCoordinates?.let { decorationBoxCoordinates ->
+                if (innerTextFieldCoordinates.isAttached && decorationBoxCoordinates.isAttached) {
+                    innerTextFieldCoordinates.localPositionOf(decorationBoxCoordinates, this)
+                } else {
+                    this
+                }
+            }
+        } ?: this
     }
 
     /**

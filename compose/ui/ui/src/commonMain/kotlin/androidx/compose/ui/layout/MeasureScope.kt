@@ -18,7 +18,6 @@ package androidx.compose.ui.layout
 
 import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 import androidx.compose.ui.node.LookaheadCapablePlaceable
-import androidx.compose.ui.node.checkMeasuredSize
 import androidx.compose.ui.unit.LayoutDirection
 
 /**
@@ -46,23 +45,20 @@ interface MeasureScope : IntrinsicMeasureScope {
         height: Int,
         alignmentLines: Map<AlignmentLine, Int> = emptyMap(),
         placementBlock: Placeable.PlacementScope.() -> Unit
-    ): MeasureResult {
-        checkMeasuredSize(width, height)
-        return object : MeasureResult {
-            override val width = width
-            override val height = height
-            override val alignmentLines = alignmentLines
-            override fun placeChildren() {
-                // This isn't called from anywhere inside the compose framework. This might
-                // be called by tests or external frameworks.
-                if (this@MeasureScope is LookaheadCapablePlaceable) {
-                    placementScope.placementBlock()
-                } else {
-                    SimplePlacementScope(
-                        width,
-                        layoutDirection
-                    ).placementBlock()
-                }
+    ) = object : MeasureResult {
+        override val width = width
+        override val height = height
+        override val alignmentLines = alignmentLines
+        override fun placeChildren() {
+            // This isn't called from anywhere inside the compose framework. This might
+            // be called by tests or external frameworks.
+            if (this@MeasureScope is LookaheadCapablePlaceable) {
+                placementScope.placementBlock()
+            } else {
+                SimplePlacementScope(
+                    width,
+                    layoutDirection
+                ).placementBlock()
             }
         }
     }

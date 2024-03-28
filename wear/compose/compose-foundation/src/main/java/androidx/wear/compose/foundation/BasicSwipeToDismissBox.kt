@@ -38,7 +38,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
@@ -146,19 +145,6 @@ fun BasicSwipeToDismissBox(
             derivedStateOf { ((state.swipeableState.offset ?: 0f) / maxWidthPx).coerceIn(0f, 1f) }
         }
         val isSwiping by remember { derivedStateOf { progress > 0 } }
-        var squeezeMode by remember {
-            mutableStateOf(true)
-        }
-        LaunchedEffect(state.isAnimationRunning) {
-            if (state.targetValue == SwipeToDismissValue.Dismissed) {
-                squeezeMode = false
-            }
-        }
-        LaunchedEffect(state.targetValue) {
-            if (!squeezeMode && state.targetValue == SwipeToDismissValue.Default) {
-                squeezeMode = true
-            }
-        }
 
         repeat(2) {
             val isBackground = it == 0
@@ -178,7 +164,9 @@ fun BasicSwipeToDismissBox(
                                                 max(0f, (1f - scale) * maxWidthPx / 2f)
 
                                             val translationX =
-                                                if (squeezeMode) {
+                                                if (state.targetValue
+                                                    != SwipeToDismissValue.Dismissed
+                                                ) {
                                                     // Squeeze
                                                     squeezeOffset
                                                 } else {

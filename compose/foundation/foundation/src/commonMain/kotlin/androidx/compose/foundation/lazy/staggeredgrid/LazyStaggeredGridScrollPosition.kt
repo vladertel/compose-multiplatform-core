@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.layout.LazyLayoutNearestRangeState
 import androidx.compose.foundation.lazy.layout.findIndexByKey
 import androidx.compose.runtime.SnapshotMutationPolicy
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
@@ -36,36 +35,8 @@ internal class LazyStaggeredGridScrollPosition(
 ) : SnapshotMutationPolicy<IntArray> {
     var indices by mutableStateOf(initialIndices, this)
         private set
-    var index by mutableIntStateOf(calculateFirstVisibleIndex(initialIndices))
+    var offsets by mutableStateOf(initialOffsets, this)
         private set
-    var scrollOffsets by mutableStateOf(initialOffsets, this)
-        private set
-    var scrollOffset by mutableIntStateOf(
-        calculateFirstVisibleScrollOffset(initialIndices, initialOffsets)
-    )
-        private set
-
-    private fun calculateFirstVisibleIndex(indices: IntArray): Int {
-        var minIndex = Int.MAX_VALUE
-        indices.forEach { index ->
-            // index array can contain -1, indicating lane being empty (cell number > itemCount)
-            // if any of the lanes are empty, we always on 0th item index
-            if (index <= 0) return 0
-            if (minIndex > index) minIndex = index
-        }
-        return if (minIndex == Int.MAX_VALUE) 0 else minIndex
-    }
-
-    private fun calculateFirstVisibleScrollOffset(indices: IntArray, offsets: IntArray): Int {
-        var minOffset = Int.MAX_VALUE
-        val smallestIndex = calculateFirstVisibleIndex(indices)
-        for (lane in offsets.indices) {
-            if (indices[lane] == smallestIndex) {
-                minOffset = minOf(minOffset, offsets[lane])
-            }
-        }
-        return if (minOffset == Int.MAX_VALUE) 0 else minOffset
-    }
 
     private var hadFirstNotEmptyLayout = false
 
@@ -82,7 +53,9 @@ internal class LazyStaggeredGridScrollPosition(
      * Updates the current scroll position based on the results of the last measurement.
      */
     fun updateFromMeasureResult(measureResult: LazyStaggeredGridMeasureResult) {
-        val firstVisibleIndex = calculateFirstVisibleIndex(measureResult.firstVisibleItemIndices)
+        val firstVisibleIndex = measureResult.firstVisibleItemIndices
+            .minBy { if (it == -1) Int.MAX_VALUE else it }
+            .let { if (it == Int.MAX_VALUE) 0 else it }
 
         lastKnownFirstItemKey = measureResult.visibleItemsInfo
             .fastFirstOrNull { it.index == firstVisibleIndex }
@@ -100,11 +73,6 @@ internal class LazyStaggeredGridScrollPosition(
                 )
             }
         }
-    }
-
-    fun updateScrollOffset(scrollOffsets: IntArray) {
-        this.scrollOffsets = scrollOffsets
-        this.scrollOffset = calculateFirstVisibleScrollOffset(indices, scrollOffsets)
     }
 
     /**
@@ -147,7 +115,6 @@ internal class LazyStaggeredGridScrollPosition(
             nearestRangeState.update(newIndex)
             val newIndices = fillIndices(newIndex, indices.size)
             this.indices = newIndices
-            this.index = calculateFirstVisibleIndex(newIndices)
             newIndices
         } else {
             indices
@@ -156,9 +123,7 @@ internal class LazyStaggeredGridScrollPosition(
 
     private fun update(indices: IntArray, offsets: IntArray) {
         this.indices = indices
-        this.index = calculateFirstVisibleIndex(indices)
-        this.scrollOffsets = offsets
-        this.scrollOffset = calculateFirstVisibleScrollOffset(indices, offsets)
+        this.offsets = offsets
     }
 
     // mutation policy for int arrays

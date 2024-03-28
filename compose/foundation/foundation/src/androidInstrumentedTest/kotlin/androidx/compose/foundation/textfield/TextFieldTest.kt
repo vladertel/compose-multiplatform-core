@@ -66,10 +66,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toPixelMap
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalFontFamilyResolver
@@ -96,11 +93,9 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isNotFocused
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
-import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
@@ -772,50 +767,6 @@ class TextFieldTest : FocusedWindowTest {
                 SemanticsMatcher.expectValue(
                     SemanticsProperties.TextSelectionRange,
                     TextRange(1, 3)
-                )
-            )
-    }
-
-    @Test
-    fun semantics_setTextSetSelection_transformed_invalidIndex() {
-        rule.setContent {
-            var value by remember { mutableStateOf("Hello") }
-            BasicTextField(
-                modifier = Modifier.testTag(Tag),
-                value = value,
-                onValueChange = { value = it }
-            )
-        }
-
-        rule.onNodeWithTag(Tag)
-            .performSemanticsAction(SemanticsActions.SetSelection) { it(0, Int.MAX_VALUE, false) }
-            .assert(
-                // invalid selection should be ignored.
-                SemanticsMatcher.expectValue(
-                    SemanticsProperties.TextSelectionRange,
-                    TextRange(0, 0)
-                )
-            )
-    }
-
-    @Test
-    fun semantics_setTextSetSelection_original_invalidIndex() {
-        rule.setContent {
-            var value by remember { mutableStateOf("Hello") }
-            BasicTextField(
-                modifier = Modifier.testTag(Tag),
-                value = value,
-                onValueChange = { value = it }
-            )
-        }
-
-        rule.onNodeWithTag(Tag)
-            .performSemanticsAction(SemanticsActions.SetSelection) { it(0, Int.MAX_VALUE, true) }
-            .assert(
-                // invalid selection should be ignored.
-                SemanticsMatcher.expectValue(
-                    SemanticsProperties.TextSelectionRange,
-                    TextRange(0, 0)
                 )
             )
     }
@@ -1528,40 +1479,6 @@ class TextFieldTest : FocusedWindowTest {
         assertThat(actual).isEqualTo(TextRange(0))
     }
 
-    // Regression test for b/311834126
-    @Test
-    fun whenPastingTextThatIncreasesEndOffset_noCrashAndCursorAtEndOfPastedText() {
-        val longText = "Text".repeat(4)
-        val shortText = "Text".repeat(2)
-
-        var tfv by mutableStateOf(TextFieldValue(shortText))
-        lateinit var clipboardManager: ClipboardManager
-        rule.setTextFieldTestContent {
-            clipboardManager = LocalClipboardManager.current
-            BasicTextField(
-                value = tfv,
-                onValueChange = { tfv = it },
-                modifier = Modifier.testTag(Tag)
-            )
-        }
-        clipboardManager.setText(AnnotatedString(longText))
-        rule.waitForIdle()
-
-        val node = rule.onNodeWithTag(Tag)
-        node.performTouchInput { longClick(center) }
-        rule.waitForIdle()
-
-        node.performSemanticsAction(SemanticsActions.PasteText) { it() }
-        rule.waitForIdle()
-
-        val expectedTfv = TextFieldValue(
-            text = longText,
-            selection = TextRange(longText.length)
-        )
-        assertThat(tfv.text).isEqualTo(expectedTfv.text)
-        assertThat(tfv.selection).isEqualTo(expectedTfv.selection)
-    }
-
     @Test
     fun decorationBoxIntrinsics() {
         var size: IntSize? = null
@@ -1638,57 +1555,6 @@ class TextFieldTest : FocusedWindowTest {
         rule.onNode(hasSetTextAction()).performTextInput("hello2")
 
         rule.onNodeWithTag(decorationTag, true).assertDoesNotExist()
-    }
-
-    // Regression test for b/311007530
-    @OptIn(ExperimentalTestApi::class)
-    @Test
-    fun whenToggleReadOnly_onEditedTextField_noChangeNorCrash() {
-        val tag = "tag"
-
-        val text = "text"
-        val tfv = TextFieldValue(
-            text = text,
-            selection = TextRange(text.length)
-        )
-
-        val textAfterBackspace = text.run { substring(0, length - 1) }
-        val tfvAfterBackspace = TextFieldValue(
-            text = textAfterBackspace,
-            selection = TextRange(textAfterBackspace.length),
-        )
-
-        var value by mutableStateOf(tfv)
-        var readOnly by mutableStateOf(false)
-        rule.setTextFieldTestContent {
-            BasicTextField(
-                value = value,
-                onValueChange = { value = it },
-                readOnly = readOnly,
-                modifier = Modifier.testTag(tag),
-            )
-        }
-        val node = rule.onNodeWithTag(tag)
-        // gain focus and place cursor at end of text
-        node.performTouchInput { click(centerRight - Offset(5f, 0f)) }
-        rule.waitForIdle()
-        assertThat(value.text).isEqualTo(tfv.text)
-        assertThat(value.selection).isEqualTo(tfv.selection)
-
-        node.performKeyInput { keyDown(Key.Backspace) }
-        rule.waitForIdle()
-        assertThat(value.text).isEqualTo(tfvAfterBackspace.text)
-        assertThat(value.selection).isEqualTo(tfvAfterBackspace.selection)
-
-        rule.runOnUiThread { readOnly = true }
-        rule.waitForIdle()
-        assertThat(value.text).isEqualTo(tfvAfterBackspace.text)
-        assertThat(value.selection).isEqualTo(tfvAfterBackspace.selection)
-
-        rule.runOnUiThread { readOnly = false }
-        rule.waitForIdle()
-        assertThat(value.text).isEqualTo(tfvAfterBackspace.text)
-        assertThat(value.selection).isEqualTo(tfvAfterBackspace.selection)
     }
 }
 

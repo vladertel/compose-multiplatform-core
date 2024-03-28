@@ -16,9 +16,6 @@
 
 package androidx.compose.foundation.lazy.layout
 
-import androidx.collection.MutableObjectIntMap
-import androidx.collection.ObjectIntMap
-import androidx.collection.emptyObjectIntMap
 import androidx.compose.foundation.ExperimentalFoundationApi
 
 /**
@@ -57,7 +54,7 @@ internal class NearestRangeKeyIndexMap(
     nearestRange: IntRange,
     intervalContent: LazyLayoutIntervalContent<*>
 ) : LazyLayoutKeyIndexMap {
-    private val map: ObjectIntMap<Any>
+    private val map: Map<Any, Int>
     private val keys: Array<Any?>
     private val keysStartIndex: Int
 
@@ -69,14 +66,13 @@ internal class NearestRangeKeyIndexMap(
         check(first >= 0) { "negative nearestRange.first" }
         val last = minOf(nearestRange.last, list.size - 1)
         if (last < first) {
-            map = emptyObjectIntMap()
+            map = emptyMap()
             keys = emptyArray()
             keysStartIndex = 0
         } else {
-            val size = last - first + 1
-            keys = arrayOfNulls<Any?>(size)
+            keys = arrayOfNulls<Any?>(last - first + 1)
             keysStartIndex = first
-            map = MutableObjectIntMap<Any>(size).also { map ->
+            map = hashMapOf<Any, Int>().also { map ->
                 list.forEach(
                     fromIndex = first,
                     toIndex = last,

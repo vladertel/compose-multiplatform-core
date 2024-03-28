@@ -81,16 +81,6 @@ class ChipScreenshotTest {
     }
 
     @Test
-    fun chip_multiline_text() = verifyScreenshot(layoutDirection = LayoutDirection.Ltr) {
-        sampleChip(
-            label = "Long label to show truncation which does not fit into 1 line",
-            secondaryLabel =
-                "Long secondary label that will not fit on one single lines and " +
-                "flows onto another line"
-        )
-    }
-
-    @Test
     fun chip_outlined_ltr() = verifyScreenshot(layoutDirection = LayoutDirection.Ltr) {
         sampleOutlinedChip()
     }
@@ -139,16 +129,14 @@ class ChipScreenshotTest {
     @Composable
     private fun sampleChip(
         enabled: Boolean = true,
-        colors: ChipColors = ChipDefaults.primaryChipColors(),
-        label: String = "Standard chip",
-        secondaryLabel: String = "Secondary text",
+        colors: ChipColors = ChipDefaults.primaryChipColors()
     ) {
         Chip(
             enabled = enabled,
             colors = colors,
             onClick = {},
-            label = { Text(label) },
-            secondaryLabel = { Text(secondaryLabel) },
+            label = { Text("Standard chip") },
+            secondaryLabel = { Text("Secondary text") },
             icon = { TestIcon() },
             modifier = Modifier.testTag(TEST_TAG),
         )

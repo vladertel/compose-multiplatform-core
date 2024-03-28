@@ -237,7 +237,7 @@ class PKeySetTest {
 
         // Make sure reinserting an entry after filling the table
         // with "Deleted" markers works
-        set += 1KeySuffix
+        set += 3KeySuffix
 
         assertEquals(1, set.size)
         assertEquals(capacity, set.capacity)

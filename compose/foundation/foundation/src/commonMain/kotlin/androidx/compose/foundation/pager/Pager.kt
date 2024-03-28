@@ -895,7 +895,7 @@ private class DefaultPagerNestedScrollConnection(
         available: Offset,
         source: NestedScrollSource
     ): Offset {
-        if (source == NestedScrollSource.Fling && available.mainAxis() != 0f) {
+        if (source == NestedScrollSource.Fling && available != Offset.Zero) {
             throw CancellationException()
         }
         return Offset.Zero
@@ -904,9 +904,6 @@ private class DefaultPagerNestedScrollConnection(
     override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
         return available.consumeOnOrientation(orientation)
     }
-
-    private fun Offset.mainAxis(): Float =
-        if (orientation == Orientation.Horizontal) this.x else this.y
 }
 
 @OptIn(ExperimentalFoundationApi::class)

@@ -37,7 +37,6 @@ import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
-import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
@@ -408,8 +407,6 @@ private class MockOwner(
         get() = TODO("Not yet implemented")
     @OptIn(ExperimentalComposeUiApi::class)
     override val autofill: Autofill?
-        get() = TODO("Not yet implemented")
-    override val softwareKeyboardController: SoftwareKeyboardController
         get() = TODO("Not yet implemented")
     override suspend fun textInputSession(
         session: suspend PlatformTextInputSessionScope.() -> Nothing

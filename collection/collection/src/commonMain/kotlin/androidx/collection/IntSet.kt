@@ -825,12 +825,10 @@ public class MutableIntSet(
 }
 
 /**
- * Returns the hash code of [k]. The hash spreads low bits to minimize collisions in high
- * 25-bits that are used for probing.
+ * Returns the hash code of [k]. This follows the [HashSet] default behavior on Android
+ * of returning [Object.hashcode()] with the higher bits of hash spread to the lower bits.
  */
 internal inline fun hash(k: Int): Int {
-    // scramble bits to account for collisions between similar hash values.
-    val hash = k.hashCode() * MurmurHashC1
-    // spread low bits into high bits that are used for probing
-    return hash xor (hash shl 16)
+    val hash = k.hashCode()
+    return hash xor (hash ushr 16)
 }

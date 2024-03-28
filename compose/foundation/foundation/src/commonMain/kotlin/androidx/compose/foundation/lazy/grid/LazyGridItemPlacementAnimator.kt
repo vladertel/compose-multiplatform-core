@@ -16,8 +16,6 @@
 
 package androidx.compose.foundation.lazy.grid
 
-import androidx.collection.mutableScatterMapOf
-import androidx.collection.mutableScatterSetOf
 import androidx.compose.foundation.lazy.layout.LazyLayoutAnimation
 import androidx.compose.foundation.lazy.layout.LazyLayoutAnimationSpecsNode
 import androidx.compose.foundation.lazy.layout.LazyLayoutKeyIndexMap
@@ -35,7 +33,7 @@ import kotlinx.coroutines.CoroutineScope
  */
 internal class LazyGridItemPlacementAnimator {
     // state containing relevant info for active items.
-    private val keyToItemInfoMap = mutableScatterMapOf<Any, ItemInfo>()
+    private val keyToItemInfoMap = mutableMapOf<Any, ItemInfo>()
 
     // snapshot of the key to index map used for the last measuring.
     private var keyIndexMap: LazyLayoutKeyIndexMap = LazyLayoutKeyIndexMap.Empty
@@ -44,7 +42,7 @@ internal class LazyGridItemPlacementAnimator {
     private var firstVisibleIndex = 0
 
     // stored to not allocate it every pass.
-    private val movingAwayKeys = mutableScatterSetOf<Any>()
+    private val movingAwayKeys = LinkedHashSet<Any>()
     private val movingInFromStartBound = mutableListOf<LazyGridMeasuredItem>()
     private val movingInFromEndBound = mutableListOf<LazyGridMeasuredItem>()
     private val movingAwayToStartBound = mutableListOf<LazyGridMeasuredItem>()
@@ -86,7 +84,7 @@ internal class LazyGridItemPlacementAnimator {
         }
 
         // first add all items we had in the previous run
-        keyToItemInfoMap.forEachKey { movingAwayKeys.add(it) }
+        movingAwayKeys.addAll(keyToItemInfoMap.keys)
         // iterate through the items which are visible (without animated offsets)
         positionedItems.fastForEach { item ->
             // remove items we have in the current one as they are still visible.
@@ -169,7 +167,7 @@ internal class LazyGridItemPlacementAnimator {
         movingAwayKeys.forEach { key ->
             // found an item which was in our map previously but is not a part of the
             // positionedItems now
-            val itemInfo = keyToItemInfoMap[key]!!
+            val itemInfo = keyToItemInfoMap.getValue(key)
             val newIndex = keyIndexMap.getIndex(key)
 
             if (newIndex == -1) {
@@ -183,7 +181,6 @@ internal class LazyGridItemPlacementAnimator {
                         Constraints.fixedHeight(itemInfo.crossAxisSize)
                     }
                 )
-                item.nonScrollableItem = true
                 // check if we have any active placement animation on the item
                 val inProgress =
                     itemInfo.animations.any { it?.isPlacementAnimationInProgress == true }
@@ -214,7 +211,7 @@ internal class LazyGridItemPlacementAnimator {
             }
             val mainAxisOffset = 0 - accumulatedOffset - item.mainAxisSize
 
-            val itemInfo = keyToItemInfoMap[item.key]!!
+            val itemInfo = keyToItemInfoMap.getValue(item.key)
 
             item.position(
                 mainAxisOffset = mainAxisOffset,
@@ -240,7 +237,7 @@ internal class LazyGridItemPlacementAnimator {
             }
             val mainAxisOffset = mainAxisLayoutSize + accumulatedOffset
 
-            val itemInfo = keyToItemInfoMap[item.key]!!
+            val itemInfo = keyToItemInfoMap.getValue(item.key)
             item.position(
                 mainAxisOffset = mainAxisOffset,
                 crossAxisOffset = itemInfo.crossAxisOffset,
@@ -272,7 +269,7 @@ internal class LazyGridItemPlacementAnimator {
     private fun initializeAnimation(
         item: LazyGridMeasuredItem,
         mainAxisOffset: Int,
-        itemInfo: ItemInfo = keyToItemInfoMap[item.key]!!
+        itemInfo: ItemInfo = keyToItemInfoMap.getValue(item.key)
     ) {
         val firstPlaceableOffset = item.offset
 
@@ -293,7 +290,7 @@ internal class LazyGridItemPlacementAnimator {
     }
 
     private fun startAnimationsIfNeeded(item: LazyGridMeasuredItem) {
-        val itemInfo = keyToItemInfoMap[item.key]!!
+        val itemInfo = keyToItemInfoMap.getValue(item.key)
         itemInfo.animations.forEach { animation ->
             if (animation != null) {
                 val newTarget = item.offset
@@ -308,13 +305,8 @@ internal class LazyGridItemPlacementAnimator {
         }
     }
 
-    fun getAnimation(key: Any, placeableIndex: Int): LazyLayoutAnimation? {
-        return if (keyToItemInfoMap.isEmpty()) {
-            null
-        } else {
-            keyToItemInfoMap[key]?.animations?.get(placeableIndex)
-        }
-    }
+    fun getAnimation(key: Any, placeableIndex: Int): LazyLayoutAnimation? =
+        keyToItemInfoMap[key]?.animations?.get(placeableIndex)
 
     private val LazyGridMeasuredItem.hasAnimations: Boolean
         get() {

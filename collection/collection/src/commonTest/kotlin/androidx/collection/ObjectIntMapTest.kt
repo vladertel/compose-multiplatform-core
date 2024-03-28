@@ -367,7 +367,7 @@ class ObjectIntTest {
 
         // Make sure reinserting an entry after filling the table
         // with "Deleted" markers works
-        map["Hello"] = 7
+        map["Hola"] = 7
 
         assertEquals(1, map.size)
         assertEquals(capacity, map.capacity)

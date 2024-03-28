@@ -44,14 +44,13 @@ import androidx.wear.compose.material.ToggleChipDefaults
 @Composable
 fun ToggleChipWithSwitch() {
     var checked by remember { mutableStateOf(true) }
-    // The primary label should have a maximum 3 lines of text
-    // and the secondary label should have max 2 lines of text.
+    // When we have both label and secondary label present limit both to 1 line of text
     ToggleChip(
         label = {
-            Text("SwitchIcon", maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text("SwitchIcon", maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         secondaryLabel = {
-            Text("With secondary label", maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text("With secondary label", maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         checked = checked,
         // For Switch  toggle controls the Wear Material UX guidance is to set the
@@ -86,14 +85,13 @@ fun ToggleChipWithSwitch() {
 @Composable
 fun ToggleChipWithRadioButton() {
     var selected by remember { mutableStateOf(true) }
-    // The primary label should have a maximum 3 lines of text
-    // and the secondary label should have max 2 lines of text.
+    // When we have both label and secondary label present limit both to 1 line of text
     ToggleChip(
         label = {
-            Text("RadioIcon", maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text("RadioIcon", maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         secondaryLabel = {
-            Text("With secondary label", maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text("With secondary label", maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         checked = selected,
         toggleControl = {
@@ -122,11 +120,10 @@ fun ToggleChipWithRadioButton() {
 @Composable
 fun SplitToggleChipWithCheckbox() {
     var checked by remember { mutableStateOf(true) }
-    // The primary label should have a maximum 3 lines of text
-    // and the secondary label should have max 2 lines of text.
+    // When we have no secondary label we can have up to 2 lines of text
     SplitToggleChip(
         label = {
-            Text("Split with CheckboxIcon", maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text("Split with CheckboxIcon", maxLines = 2, overflow = TextOverflow.Ellipsis)
         },
         checked = checked,
         toggleControl = {

@@ -16,7 +16,7 @@
 
 package androidx.tv.foundation.text
 
-import androidx.compose.ui.text.input.PlatformImeOptions
+import androidx.compose.ui.text.input.AndroidImeOptions
 import androidx.tv.foundation.ExperimentalTvFoundationApi
 
 /**
@@ -28,9 +28,9 @@ import androidx.tv.foundation.ExperimentalTvFoundationApi
  *  keyboard.
  */
 @ExperimentalTvFoundationApi
-fun PlatformImeOptions(
+fun AndroidImeOptions(
     horizontalAlignment: TvKeyboardAlignment
-) = PlatformImeOptions(horizontalAlignment.option)
+) = AndroidImeOptions(horizontalAlignment.option)
 
 /**
  *  Adds the keyboard alignment option to the private IME configuration options.
@@ -41,12 +41,12 @@ fun PlatformImeOptions(
  *  keyboard.
  */
 @ExperimentalTvFoundationApi
-fun PlatformImeOptions.keyboardAlignment(
+fun AndroidImeOptions.keyboardAlignment(
     horizontalAlignment: TvKeyboardAlignment
-): PlatformImeOptions {
+): AndroidImeOptions {
     val privateImeOptions =
         if (!privateImeOptions.isNullOrBlank()) this.privateImeOptions + "," else ""
-    return PlatformImeOptions(privateImeOptions + horizontalAlignment.option)
+    return AndroidImeOptions(privateImeOptions + horizontalAlignment.option)
 }
 
 /**

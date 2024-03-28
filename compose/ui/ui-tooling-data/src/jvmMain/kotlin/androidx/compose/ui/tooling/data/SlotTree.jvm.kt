@@ -557,8 +557,7 @@ private fun CompositionGroup.getGroup(parentContext: SourceInformationContext?):
 }
 
 private fun boundsOfLayoutNode(node: LayoutInfo): IntRect {
-    val coordinates = node.coordinates
-    if (!node.isAttached || !coordinates.isAttached) {
+    if (!node.isAttached) {
         return IntRect(
             left = 0,
             top = 0,
@@ -566,8 +565,8 @@ private fun boundsOfLayoutNode(node: LayoutInfo): IntRect {
             bottom = node.height
         )
     }
-    val position = coordinates.positionInWindow()
-    val size = coordinates.size
+    val position = node.coordinates.positionInWindow()
+    val size = node.coordinates.size
     val left = position.x.roundToInt()
     val top = position.y.roundToInt()
     val right = left + size.width

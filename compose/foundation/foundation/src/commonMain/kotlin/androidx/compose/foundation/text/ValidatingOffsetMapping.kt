@@ -52,14 +52,10 @@ private class ValidatingOffsetMapping(
      */
     override fun originalToTransformed(offset: Int): Int {
         return delegate.originalToTransformed(offset).also { transformedOffset ->
-            // Only validate actually valid requests. The system is responsible for calling
-            // these functions correctly.
-            if (offset in 0..originalLength) {
-                check(transformedOffset in 0..transformedLength) {
-                    "OffsetMapping.originalToTransformed returned invalid mapping: " +
-                        "$offset -> $transformedOffset is not in range of transformed text " +
-                        "[0, $transformedLength]"
-                }
+            check(transformedOffset in 0..transformedLength) {
+                "OffsetMapping.originalToTransformed returned invalid mapping: " +
+                    "$offset -> $transformedOffset is not in range of transformed text " +
+                    "[0, $transformedLength]"
             }
         }
     }
@@ -70,14 +66,10 @@ private class ValidatingOffsetMapping(
      */
     override fun transformedToOriginal(offset: Int): Int {
         return delegate.transformedToOriginal(offset).also { originalOffset ->
-            // Only validate actually valid requests. The system is responsible for calling
-            // these functions correctly.
-            if (offset in 0..transformedLength) {
-                check(originalOffset in 0..originalLength) {
-                    "OffsetMapping.transformedToOriginal returned invalid mapping: " +
-                        "$offset -> $originalOffset is not in range of original text " +
-                        "[0, $originalLength]"
-                }
+            check(originalOffset in 0..originalLength) {
+                "OffsetMapping.transformedToOriginal returned invalid mapping: " +
+                    "$offset -> $originalOffset is not in range of original text " +
+                    "[0, $originalLength]"
             }
         }
     }

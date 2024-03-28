@@ -359,7 +359,6 @@ private fun rememberLazyGridMeasurePolicy(
             spanLayoutProvider = spanLayoutProvider,
             pinnedItems = pinnedItems,
             coroutineScope = coroutineScope,
-            placementScopeInvalidator = state.placementScopeInvalidator,
             layout = { width, height, placement ->
                 layout(
                     containerConstraints.constrainWidth(width + totalHorizontalPadding),

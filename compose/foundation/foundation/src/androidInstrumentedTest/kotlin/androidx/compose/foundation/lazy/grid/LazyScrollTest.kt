@@ -19,9 +19,7 @@ package androidx.compose.foundation.lazy.grid
 import androidx.compose.animation.core.FloatSpringSpec
 import androidx.compose.foundation.AutoTestFrameClock
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -70,18 +68,11 @@ class LazyScrollTest { // (private val orientation: Orientation)
         }
     }
 
-    private fun testScroll(
-        spacingPx: Int = 0,
-        containerSizePx: Int = itemSizePx * 3,
-        afterContentPaddingPx: Int = 0,
-        assertBlock: suspend () -> Unit
-    ) {
+    private fun testScroll(spacingPx: Int = 0, assertBlock: suspend () -> Unit) {
         rule.setContent {
             state = rememberLazyGridState()
             scope = rememberCoroutineScope()
-            with(rule.density) {
-                TestContent(spacingPx.toDp(), containerSizePx.toDp(), afterContentPaddingPx.toDp())
-            }
+            TestContent(with(rule.density) { spacingPx.toDp() })
         }
         runBlocking {
             assertBlock()
@@ -306,85 +297,6 @@ class LazyScrollTest { // (private val orientation: Orientation)
     }
 
     @Test
-    fun canScrollForwardAndBackward_afterSmallScrollFromStart() = testScroll(
-        containerSizePx = (itemSizePx * 1.5f).roundToInt()
-    ) {
-        val delta = (itemSizePx / 3f).roundToInt()
-        withContext(Dispatchers.Main + AutoTestFrameClock()) {
-            // small enough scroll to not cause any new items to be composed or old ones disposed.
-            state.scrollBy(delta.toFloat())
-        }
-        rule.runOnIdle {
-            assertThat(state.firstVisibleItemScrollOffset).isEqualTo(delta)
-            assertThat(state.canScrollForward).isTrue()
-            assertThat(state.canScrollBackward).isTrue()
-        }
-        // and scroll back to start
-        withContext(Dispatchers.Main + AutoTestFrameClock()) {
-            state.scrollBy(-delta.toFloat())
-        }
-        rule.runOnIdle {
-            assertThat(state.canScrollForward).isTrue()
-            assertThat(state.canScrollBackward).isFalse()
-        }
-    }
-
-    @Test
-    fun canScrollForwardAndBackward_afterSmallScrollFromEnd() = testScroll(
-        containerSizePx = (itemSizePx * 1.5f).roundToInt()
-    ) {
-        val delta = -(itemSizePx / 3f).roundToInt()
-        withContext(Dispatchers.Main + AutoTestFrameClock()) {
-            // scroll to the end of the list.
-            state.scrollToItem(itemsCount)
-            // small enough scroll to not cause any new items to be composed or old ones disposed.
-            state.scrollBy(delta.toFloat())
-        }
-        rule.runOnIdle {
-            assertThat(state.canScrollForward).isTrue()
-            assertThat(state.canScrollBackward).isTrue()
-        }
-        // and scroll back to the end
-        withContext(Dispatchers.Main + AutoTestFrameClock()) {
-            state.scrollBy(-delta.toFloat())
-        }
-        rule.runOnIdle {
-            assertThat(state.canScrollForward).isFalse()
-            assertThat(state.canScrollBackward).isTrue()
-        }
-    }
-
-    @Test
-    fun canScrollForwardAndBackward_afterSmallScrollFromEnd_withContentPadding() = testScroll(
-        containerSizePx = (itemSizePx * 1.5f).roundToInt(),
-        afterContentPaddingPx = 2,
-    ) {
-        val delta = -(itemSizePx / 3f).roundToInt()
-        withContext(Dispatchers.Main + AutoTestFrameClock()) {
-            // scroll to the end of the list.
-            state.scrollToItem(itemsCount)
-
-            assertThat(state.canScrollForward).isFalse()
-            assertThat(state.canScrollBackward).isTrue()
-
-            // small enough scroll to not cause any new items to be composed or old ones disposed.
-            state.scrollBy(delta.toFloat())
-        }
-        rule.runOnIdle {
-            assertThat(state.canScrollForward).isTrue()
-            assertThat(state.canScrollBackward).isTrue()
-        }
-        // and scroll back to the end
-        withContext(Dispatchers.Main + AutoTestFrameClock()) {
-            state.scrollBy(-delta.toFloat())
-        }
-        rule.runOnIdle {
-            assertThat(state.canScrollForward).isFalse()
-            assertThat(state.canScrollBackward).isTrue()
-        }
-    }
-
-    @Test
     fun animatePerFrameForwardWithSpacing() = testScroll(spacingPx = 10) {
         assertSpringAnimation(toIndex = 16, spacingPx = 10)
     }
@@ -463,13 +375,12 @@ class LazyScrollTest { // (private val orientation: Orientation)
     }
 
     @Composable
-    private fun TestContent(spacingDp: Dp, containerSizeDp: Dp, afterContentPaddingDp: Dp) {
+    private fun TestContent(spacingDp: Dp) {
         if (vertical) {
             LazyVerticalGrid(
                 GridCells.Fixed(2),
                 Modifier.height(containerSizeDp),
                 state,
-                contentPadding = PaddingValues(bottom = afterContentPaddingDp),
                 verticalArrangement = Arrangement.spacedBy(spacingDp)
             ) {
                 items(itemsCount) {

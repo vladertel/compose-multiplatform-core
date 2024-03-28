@@ -49,10 +49,10 @@ internal fun Modifier.lazyLayoutBeyondBoundsModifier(
     layoutDirection: LayoutDirection,
     orientation: Orientation,
     enabled: Boolean
-): Modifier = if (!enabled) {
+): Modifier = this then if (!enabled) {
     this
 } else {
-    this then remember(state, beyondBoundsInfo, reverseLayout, layoutDirection, orientation) {
+    remember(state, beyondBoundsInfo, reverseLayout, layoutDirection, orientation, enabled) {
         LazyLayoutBeyondBoundsModifierLocal(
             state,
             beyondBoundsInfo,

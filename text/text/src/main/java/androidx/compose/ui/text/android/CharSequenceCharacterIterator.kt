@@ -29,12 +29,11 @@ import java.text.CharacterIterator
  * @param start The index of the beginning of the range.
  * @param end The index of the end of the range.
  */
-@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 internal class CharSequenceCharacterIterator(
     private val charSequence: CharSequence,
     private val start: Int,
     private val end: Int
-) : Object() /* see b/204328129 */, CharacterIterator {
+) : CharacterIterator {
     private var index: Int = start
 
     /**
@@ -174,6 +173,7 @@ internal class CharSequenceCharacterIterator(
      */
     override fun clone(): Any {
         return try {
+            @Suppress("ABSTRACT_SUPER_CALL")
             super.clone()
         } catch (e: CloneNotSupportedException) {
             throw InternalError()

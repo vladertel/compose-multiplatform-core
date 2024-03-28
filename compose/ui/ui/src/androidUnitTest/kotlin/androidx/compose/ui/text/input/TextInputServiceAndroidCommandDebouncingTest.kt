@@ -235,7 +235,7 @@ class TextInputServiceAndroidCommandDebouncingTest {
     }
 
     @Test
-    fun commandsAreNotIgnored_ifFocusLostBeforeProcessing() {
+    fun commandsAreIgnored_ifFocusLostBeforeProcessing() {
         // Send command while view still has focus.
         service.showSoftwareKeyboard()
         // Blur the view.
@@ -243,7 +243,7 @@ class TextInputServiceAndroidCommandDebouncingTest {
         // Process the queued commands.
         scope.advanceUntilIdle()
 
-        assertThat(inputMethodManager.showSoftInputCalls).isEqualTo(1)
+        assertThat(inputMethodManager.showSoftInputCalls).isEqualTo(0)
     }
 
     @Test

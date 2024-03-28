@@ -503,7 +503,7 @@ class LayoutInspectorTree {
         val size = box.size.toSize()
         val coordinates = layoutInfo.coordinates
         var bounds: QuadBounds? = null
-        if (layoutInfo.isAttached && coordinates.isAttached) {
+        if (layoutInfo.isAttached) {
             val topLeft = toIntOffset(coordinates.localToWindow(Offset.Zero))
             val topRight = toIntOffset(coordinates.localToWindow(Offset(size.width, 0f)))
             val bottomRight =

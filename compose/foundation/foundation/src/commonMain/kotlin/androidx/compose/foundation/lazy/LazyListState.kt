@@ -328,17 +328,10 @@ class LazyListState constructor(
             val preScrollToBeConsumed = scrollToBeConsumed
             val intDelta = scrollToBeConsumed.roundToInt()
             val postLookaheadInfo = postLookaheadLayoutInfo
-            var scrolledWithoutRemeasure = layoutInfo.tryToApplyScrollWithoutRemeasure(
-                delta = intDelta,
-                updateAnimations = !hasLookaheadPassOccurred
-            )
-            if (scrolledWithoutRemeasure && postLookaheadInfo != null) {
-                scrolledWithoutRemeasure = postLookaheadInfo.tryToApplyScrollWithoutRemeasure(
-                    delta = intDelta,
-                    updateAnimations = true
-                )
-            }
-            if (scrolledWithoutRemeasure) {
+            if (layoutInfo.tryToApplyScrollWithoutRemeasure(intDelta) &&
+                (postLookaheadInfo == null ||
+                    postLookaheadInfo.tryToApplyScrollWithoutRemeasure(intDelta))
+            ) {
                 applyMeasureResult(
                     result = layoutInfo,
                     isLookingAhead = hasLookaheadPassOccurred,
@@ -458,9 +451,9 @@ class LazyListState constructor(
             } else {
                 scrollPosition.updateFromMeasureResult(result)
                 cancelPrefetchIfVisibleItemsChanged(result)
+                canScrollBackward = result.canScrollBackward
+                canScrollForward = result.canScrollForward
             }
-            canScrollBackward = result.canScrollBackward
-            canScrollForward = result.canScrollForward
             scrollToBeConsumed -= result.consumedScroll
             layoutInfoState.value = result
 

@@ -321,7 +321,7 @@ class ScatterSetTest {
 
         // Make sure reinserting an entry after filling the table
         // with "Deleted" markers works
-        set += "Hello"
+        set += "Hola"
 
         assertEquals(1, set.size)
         assertEquals(capacity, set.capacity)

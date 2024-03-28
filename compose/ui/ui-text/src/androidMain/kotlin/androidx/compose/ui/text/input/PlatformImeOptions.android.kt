@@ -16,7 +16,10 @@
 
 package androidx.compose.ui.text.input
 
-import androidx.compose.runtime.Immutable
+/**
+ * Used to configure the platform specific IME options.
+ */
+actual sealed interface PlatformImeOptions
 
 /**
  * Used to configure Android platform IME options.
@@ -24,13 +27,10 @@ import androidx.compose.runtime.Immutable
  * @param privateImeOptions defines a [String] for supplying additional information options that
  * are private to a particular IME implementation.
  */
-@Immutable
-actual class PlatformImeOptions(
-    val privateImeOptions: String? = null,
-) {
+class AndroidImeOptions(val privateImeOptions: String? = null) : PlatformImeOptions {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is PlatformImeOptions) return false
+        if (other !is AndroidImeOptions) return false
 
         if (privateImeOptions != other.privateImeOptions) return false
 
@@ -42,6 +42,6 @@ actual class PlatformImeOptions(
     }
 
     override fun toString(): String {
-        return "PlatformImeOptions(privateImeOptions=$privateImeOptions)"
+        return "AndroidImeOptions(privateImeOptions=$privateImeOptions)"
     }
 }

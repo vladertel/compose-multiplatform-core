@@ -21,13 +21,10 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.KeyboardHelper
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.TEST_FONT_FAMILY
 import androidx.compose.foundation.text.selection.fetchTextLayoutResult
@@ -47,18 +44,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties.TextSelectionRange
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -67,11 +59,9 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextInputSelection
 import androidx.compose.ui.test.performTextReplacement
@@ -95,8 +85,6 @@ import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.flow.drop
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
@@ -369,63 +357,6 @@ internal class BasicTextField2Test {
         rule.onNodeWithTag(Tag).assertIsFocused()
 
         inputMethodInterceptor.assertNoSessionActive()
-    }
-
-    @Test
-    fun hideKeyboardWhenDisposed() {
-        val keyboardHelper = KeyboardHelper(rule)
-        val state = TextFieldState("initial text")
-        var toggle by mutableStateOf(true)
-        rule.setContent {
-            keyboardHelper.initialize()
-
-            if (toggle) {
-                BasicTextField2(
-                    state = state,
-                    modifier = Modifier.testTag("TextField")
-                )
-            }
-        }
-
-        rule.onNodeWithTag("TextField").requestFocus()
-        keyboardHelper.waitForKeyboardVisibility(true)
-        assertTrue(keyboardHelper.isSoftwareKeyboardShown())
-
-        toggle = false
-        rule.waitForIdle()
-
-        keyboardHelper.waitForKeyboardVisibility(false)
-        assertFalse(keyboardHelper.isSoftwareKeyboardShown())
-    }
-
-    @Test
-    fun hideKeyboardWhenFocusCleared() {
-        val keyboardHelper = KeyboardHelper(rule)
-        val state = TextFieldState("initial text")
-        lateinit var focusManager: FocusManager
-        rule.setContent {
-            keyboardHelper.initialize()
-            focusManager = LocalFocusManager.current
-            Row {
-                // Extra focusable that takes initial focus when focus is cleared.
-                Box(Modifier.size(10.dp).focusable())
-                BasicTextField2(
-                    state = state,
-                    modifier = Modifier.testTag("TextField")
-                )
-            }
-        }
-
-        rule.onNodeWithTag("TextField").requestFocus()
-        keyboardHelper.waitForKeyboardVisibility(true)
-        assertTrue(keyboardHelper.isSoftwareKeyboardShown())
-
-        rule.runOnIdle {
-            focusManager.clearFocus()
-        }
-
-        keyboardHelper.waitForKeyboardVisibility(false)
-        assertFalse(keyboardHelper.isSoftwareKeyboardShown())
     }
 
     @Test
@@ -1217,36 +1148,6 @@ internal class BasicTextField2Test {
         rule.runOnIdle {
             assertThat(onValueChangedCount).isEqualTo(0)
         }
-    }
-
-    // Regression test for b/311834126
-    @Test
-    fun whenPastingTextThatIncreasesEndOffset_noCrashAndCursorAtEndOfPastedText() {
-        val longText = "Text".repeat(4)
-        val shortText = "Text".repeat(2)
-
-        lateinit var tfs: TextFieldState
-        lateinit var clipboardManager: ClipboardManager
-        inputMethodInterceptor.setTextFieldTestContent {
-            tfs = rememberTextFieldState(shortText)
-            clipboardManager = LocalClipboardManager.current
-            BasicTextField2(
-                state = tfs,
-                modifier = Modifier.testTag(Tag),
-            )
-        }
-        clipboardManager.setText(AnnotatedString(longText))
-        rule.waitForIdle()
-
-        val node = rule.onNodeWithTag(Tag)
-        node.performTouchInput { longClick(center) }
-        rule.waitForIdle()
-
-        node.performSemanticsAction(SemanticsActions.PasteText) { it() }
-        rule.waitForIdle()
-
-        assertThat(tfs.text.toString()).isEqualTo(longText)
-        assertThat(tfs.text.selectionInChars).isEqualTo(TextRange(longText.length))
     }
 
     private fun requestFocus(tag: String) =

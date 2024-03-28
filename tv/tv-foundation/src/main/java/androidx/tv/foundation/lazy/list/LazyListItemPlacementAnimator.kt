@@ -16,7 +16,6 @@
 
 package androidx.tv.foundation.lazy.list
 
-import androidx.collection.mutableScatterSetOf
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
@@ -40,7 +39,7 @@ internal class LazyListItemPlacementAnimator {
     private var firstVisibleIndex = 0
 
     // stored to not allocate it every pass.
-    private val movingAwayKeys = mutableScatterSetOf<Any>()
+    private val movingAwayKeys = LinkedHashSet<Any>()
     private val movingInFromStartBound = mutableListOf<LazyListMeasuredItem>()
     private val movingInFromEndBound = mutableListOf<LazyListMeasuredItem>()
     private val movingAwayToStartBound = mutableListOf<LazyListMeasuredItem>()

@@ -126,12 +126,6 @@ private class SizeAnimationModifierNode(
 
     var animData: AnimData? by mutableStateOf(null)
 
-    override fun onReset() {
-        super.onReset()
-        // Reset is an indication that the node may be re-used, in such case, animData becomes stale
-        animData = null
-    }
-
     override fun onAttach() {
         super.onAttach()
         // When re-attached, we may be attached to a tree without lookahead scope.
