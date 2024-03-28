@@ -57,6 +57,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestResult
@@ -3107,7 +3108,7 @@ class CompositionTests {
             }
         }
 
-        val effectiveHash = compositeHash xor (parentHash rol 3)
+        val effectiveHash = compositeHash xor (parentHash rol 6)
         assertEquals(0, effectiveHash)
     }
 
@@ -3122,8 +3123,8 @@ class CompositionTests {
             }
         }
 
-        val effectiveHash = compositeHash xor (parentHash rol 3)
-        assertEquals(1, effectiveHash)
+        val effectiveHash = compositeHash xor (parentHash rol 6)
+        assertEquals(8, effectiveHash)
     }
 
     @Test // regression test for b/188015757
@@ -3947,6 +3948,131 @@ class CompositionTests {
 
         iterations++
         expectChanges()
+    }
+
+    data class Foo(var i: Int = 0)
+    class UnstableCompConsumer(var invokeCount: Int = 0) {
+        @Composable fun UnstableComp(foo: Foo) {
+            use(foo)
+            invokeCount++
+        }
+    }
+    @Test
+    fun composableWithUnstableParameters_skipped() = compositionTest {
+        val consumer = UnstableCompConsumer()
+        var recomposeTrigger by mutableStateOf(0)
+        val data = Foo()
+        compose {
+            Linear {
+                use(recomposeTrigger)
+                consumer.UnstableComp(foo = data)
+            }
+        }
+
+        assertEquals(1, consumer.invokeCount)
+
+        recomposeTrigger = 1
+        data.i++
+        advance()
+
+        assertEquals(1, consumer.invokeCount)
+    }
+
+    // regression test from b/232007227 with forEach
+    @Test
+    fun slotsAreUsedCorrectly_forEach() = compositionTest {
+        class Car(val model: String)
+        class Person(val name: String, val car: MutableStateFlow<Car>)
+
+        val people = mutableListOf<MutableStateFlow<Person?>>(
+            MutableStateFlow(Person("Ford", MutableStateFlow(Car("Model T")))),
+            MutableStateFlow(Person("Musk", MutableStateFlow(Car("Model 3"))))
+        )
+        compose {
+            people.forEach {
+                val person = it.collectAsState().value
+                Text(person?.name ?: "No person")
+                if (person != null) {
+                    val car = person.car.collectAsState().value
+                    Text("    ${car.model}")
+                }
+            }
+        }
+
+        validate {
+            people.forEach {
+                val person = it.value
+                Text(person?.name ?: "No person")
+                if (person != null) {
+                    val car = person.car.value
+                    Text("    ${car.model}")
+                }
+            }
+        }
+
+        advanceTimeBy(16_000L)
+        people[0].value = null
+        advanceTimeBy(16_000L)
+
+        expectChanges()
+        revalidate()
+    }
+
+    @Test
+    fun readingDerivedState_invalidatesWhenValueNotChanged() = compositionTest {
+        var state by mutableStateOf(0)
+        var condition by mutableStateOf(false)
+        val derived by derivedStateOf { if (!condition) 0 else state }
+        compose {
+            Text(derived.toString())
+        }
+        validate {
+            Text(derived.toString())
+        }
+
+        condition = true
+        expectNoChanges()
+        revalidate()
+
+        state++
+        expectChanges()
+        revalidate()
+    }
+
+    @Composable
+    fun goBoom(): Boolean {
+
+        return true
+    }
+
+    @Test
+    fun earlyReturnFromInlined() = compositionTest {
+        compose {
+            run {
+                if (true) {
+                    return@run
+                } else {
+                    Text("")
+                    return@run
+                }
+            }
+        }
+
+        validate { }
+    }
+
+    @Composable private fun key() = "key"
+
+    @Test
+    fun remember_withComposableParam() = compositionTest {
+        compose {
+            val text = remember(key()) { "" }
+            Text(text)
+        }
+
+        validate {
+            Text("")
+        }
     }
 
     private inline fun CoroutineScope.withGlobalSnapshotManager(block: CoroutineScope.() -> Unit) {

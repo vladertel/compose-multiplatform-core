@@ -26,12 +26,14 @@ plugins {
 
 def macEnabled = KmpPlatformsKt.enableMac(project)
 def linuxEnabled = KmpPlatformsKt.enableLinux(project)
+def nativeEnabled = KmpPlatformsKt.enableNative(project)
 
 androidXMultiplatform {
     jvm {}
     mac()
     linux()
     ios()
+    androidNative()
 
     defaultPlatform(PlatformIdentifier.JVM)
 
@@ -45,7 +47,6 @@ androidXMultiplatform {
 
         commonTest {
             dependencies {
-                implementation(libs.kotlinTestCommon)
                 implementation(libs.kotlinTestAnnotationsCommon)
             }
         }
@@ -59,16 +60,13 @@ androidXMultiplatform {
             }
         }
 
-        jvmTest {
-            dependencies {
-                implementation(libs.kotlinStdlib)
-                implementation(libs.kotlinTest)
-            }
-        }
-
-        if (macEnabled || linuxEnabled) {
+        if (macEnabled || linuxEnabled || nativeEnabled) {
             nativeMain {
                 dependsOn(commonMain)
+            }
+
+            nativeTest {
+                dependsOn(commonTest)
             }
         }
 
@@ -76,6 +74,9 @@ androidXMultiplatform {
             if (target.platformType == org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     dependsOn(nativeMain)
+                }
+                target.compilations["test"].defaultSourceSet {
+                    dependsOn(nativeTest)
                 }
             }
         }

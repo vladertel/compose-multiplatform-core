@@ -19,6 +19,7 @@ package androidx.compose.compiler.plugins.kotlin
 import android.widget.TextView
 import androidx.compose.runtime.Composer
 import java.net.URLClassLoader
+import kotlin.test.assertFalse
 import org.jetbrains.kotlin.backend.common.output.OutputFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -1106,6 +1107,53 @@ class KtxCrossModuleTests(useFir: Boolean) : AbstractCodegenTest(useFir) {
     }
 
     @Test
+    fun testComposableFunctionProperty() {
+        compile(
+            mapOf(
+                "Base" to mapOf(
+                    "base/Base.kt" to """
+                    package base
+
+                    import androidx.compose.runtime.Composable
+
+                    open class OpenClassWithComposableVal(
+                        val content: @Composable () -> Unit
+                    )
+                    """
+                ),
+                "Main" to mapOf(
+                    "Main.kt" to """
+                    package main
+
+                    import androidx.compose.runtime.Composable
+                    import base.OpenClassWithComposableVal
+
+                    class OpenClassWithComposableValImpl(
+                        kontent: @Composable () -> Unit
+                    ): OpenClassWithComposableVal(kontent)
+
+                    @Composable
+                    fun test() {
+                        val a = OpenClassWithComposableValImpl {}
+                        a.content()
+                    }
+                    """
+                )
+            ),
+            validate = {
+                assertFalse(
+                   it.contains("setContent"),
+                   message = "Property getter was resolved to a setter name"
+                )
+                assertFalse(
+                    it.contains("Lkotlin/jvm/functions/Function0"),
+                    message = "Composable function types were not remapped"
+                )
+            },
+        )
+    }
+
+    @Test
     fun testFunctionInterfaceReturningComposable() {
         compile(
             mapOf(
@@ -1162,16 +1210,58 @@ class KtxCrossModuleTests(useFir: Boolean) : AbstractCodegenTest(useFir) {
         )
     }
 
+    // Ensure that compose code compiled with K1 can be read by K2 and the other way around.
+    // We do that by forcing the useFir flag to be to opposite of the global flag for the
+    // library module.
+    //
+    // Regression test case for b/312268756.
+    @Test
+    fun testCompatibilityK1andK2() {
+        compile(
+            flipLibraryFirSetting = true,
+            modules = mapOf(
+                "Base" to mapOf(
+                    "base/Base.kt" to """
+                    package base
+
+                    import androidx.compose.runtime.Composable
+
+                    @Composable
+                    fun foo(body: @Composable () -> Unit) {
+                      body()
+                    }
+                    """
+                ),
+                "Main" to mapOf(
+                    "Main.kt" to """
+                    package main
+
+                    import androidx.compose.runtime.Composable
+                    import base.foo
+
+                    @Composable
+                    fun bar() {
+                      foo() {
+                      }
+                    }
+                    """
+                )
+            )
+        )
+    }
+
     private fun compile(
         modules: Map<String, Map<String, String>>,
         dumpClasses: Boolean = false,
+        flipLibraryFirSetting: Boolean = false,
         validate: ((String) -> Unit)? = null
     ): List<OutputFile> {
         val libraryClasses = modules.filter { it.key != "Main" }.flatMap {
             classLoader(
                 it.value,
                 listOf(classesDirectory.root),
-                dumpClasses
+                dumpClasses,
+                if (flipLibraryFirSetting) !useFir else useFir
             ).allGeneratedFiles.also { outputFiles ->
                 // Write the files to the class directory so they can be used by the next module
                 // and the application

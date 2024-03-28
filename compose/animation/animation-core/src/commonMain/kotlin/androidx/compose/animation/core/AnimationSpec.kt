@@ -26,8 +26,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.util.fastRoundToInt
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 object AnimationConstants {
     /**
@@ -446,7 +446,7 @@ sealed class KeyframesSpecBaseConfig<T, E : KeyframeBaseEntity<T>> {
      *  @return an instance of [E] so a custom [Easing] can be added by the [using] method
      */
     infix fun T.atFraction(fraction: Float): E {
-        return at((durationMillis * fraction).roundToInt())
+        return at((durationMillis * fraction).fastRoundToInt())
     }
 
     /**
@@ -581,13 +581,19 @@ class KeyframesWithSplineSpec<T>(val config: KeyframesWithSplineSpecConfig<T>) :
 
     override fun <V : AnimationVector> vectorize(converter: TwoWayConverter<T, V>):
         VectorizedDurationBasedAnimationSpec<V> {
-        // TODO(b/292114811): Finish Easing support, user input is currently ignored
-        val timestamps = MutableIntList()
-        val timeToVectorMap = MutableIntObjectMap<V>()
-
+        // Allocate so that we don't resize the list even if the initial/last timestamps are missing
+        val timestamps = MutableIntList(config.keyframes.size + 2)
+        val timeToVectorMap = MutableIntObjectMap<Pair<V, Easing>>(config.keyframes.size)
         config.keyframes.forEach { key, value ->
             timestamps.add(key)
-            timeToVectorMap[key] = converter.convertToVector(value.value)
+            timeToVectorMap[key] =
+                Pair(converter.convertToVector(value.value), value.easing)
+        }
+        if (!config.keyframes.contains(0)) {
+            timestamps.add(0, 0)
+        }
+        if (!config.keyframes.contains(config.durationMillis)) {
+            timestamps.add(config.durationMillis)
         }
         timestamps.sort()
         return VectorizedMonoSplineKeyframesSpec(

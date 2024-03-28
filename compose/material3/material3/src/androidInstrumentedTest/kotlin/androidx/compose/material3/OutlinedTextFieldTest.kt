@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.compose.material3
 
 import android.os.Build
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -26,6 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -626,6 +630,40 @@ class OutlinedTextFieldTest {
 
         // click to focus
         rule.onNodeWithTag(TextFieldTag).performClick()
+    }
+
+    @Test
+    fun testOutlinedTextField_placeholderColor_whenInputEmptyAndFocused() {
+        var focused = false
+        rule.setMaterialContent(lightColorScheme()) {
+            val text = remember { mutableStateOf("") }
+            OutlinedTextField(
+                modifier = Modifier.testTag(TextFieldTag),
+                value = text.value,
+                onValueChange = { text.value = it },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedPlaceholderColor = Color.Red,
+                    unfocusedPlaceholderColor = Color.Green,
+                ),
+                placeholder = {
+                    Text("Placeholder")
+                    assertThat(LocalContentColor.current)
+                        .isEqualTo(if (focused) Color.Red else Color.Green)
+                },
+            )
+        }
+
+        // click to focus
+        focused = true
+        rule.onNodeWithTag(TextFieldTag).performClick()
+
+        // enter some text (placeholder hidden)
+        rule.onNodeWithTag(TextFieldTag).performTextInput("input")
+        rule.runOnIdle {}
+
+        // delete the text (placeholder shown)
+        rule.onNodeWithTag(TextFieldTag).performTextClearance()
+        rule.runOnIdle {}
     }
 
     @Test
@@ -1786,6 +1824,22 @@ class OutlinedTextFieldTest {
 
         rule.runOnIdle {
             assertThat(callbackCounter).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun testTextFields_noCrashConstraintsInfinity() {
+
+        rule.setMaterialContent(lightColorScheme()) {
+            Column(modifier = Modifier.height(IntrinsicSize.Min).horizontalScroll(
+                rememberScrollState()
+            )) {
+                OutlinedTextField(
+                    value = "Cat",
+                    onValueChange = {},
+                    leadingIcon = { Text("Icon") }
+                )
+            }
         }
     }
 

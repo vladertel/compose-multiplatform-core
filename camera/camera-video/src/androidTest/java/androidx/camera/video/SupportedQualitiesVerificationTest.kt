@@ -34,6 +34,7 @@ package androidx.camera.video
 
 import android.content.Context
 import android.os.Build
+import android.util.Size
 import androidx.camera.camera2.Camera2Config
 import androidx.camera.camera2.pipe.integration.CameraPipeConfig
 import androidx.camera.core.Camera
@@ -43,6 +44,7 @@ import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraXConfig
 import androidx.camera.core.DynamicRange
+import androidx.camera.core.impl.utils.TransformUtils.rotateSize
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
 import androidx.camera.core.processing.DefaultSurfaceProcessor
 import androidx.camera.core.processing.SurfaceProcessorInternal
@@ -203,6 +205,9 @@ class SupportedQualitiesVerificationTest(
 
     private fun testQualityOptionRecordVideo(effect: CameraEffect? = null) {
         // Arrange.
+        val videoCapabilities = Recorder.getVideoCapabilities(cameraInfo)
+        val videoProfile =
+            videoCapabilities.getProfiles(quality, dynamicRange)!!.defaultVideoProfile
         val recorder = Recorder.Builder().setQualitySelector(QualitySelector.from(quality)).build()
         val videoCapture = VideoCapture.withOutput(recorder)
         videoCapture.effect = effect
@@ -246,6 +251,18 @@ class SupportedQualitiesVerificationTest(
         assertThat(latchForRecordingFinalized.await(VIDEO_TIMEOUT_SEC, TimeUnit.SECONDS)).isTrue()
         assertThat(finalizedEvent!!.error).isEqualTo(VideoRecordEvent.Finalize.ERROR_NONE)
 
+        // Verify resolution.
+        if (!hasExtraCroppingQuirk(implName)) {
+            verifyVideoResolution(
+                context,
+                file,
+                rotateSize(
+                    Size(videoProfile.width, videoProfile.height),
+                    getRotationNeeded(videoCapture, cameraInfo)
+                )
+            )
+        }
+
         // Clean up
         file.delete()
     }
@@ -256,15 +273,6 @@ class SupportedQualitiesVerificationTest(
         return FakeSurfaceEffect(
             VIDEO_CAPTURE,
             fakeSurfaceProcessor
-        )
-    }
-
-    /** Skips tests which will enable surface processing and encounter device specific issues. */
-    private fun assumeSuccessfulSurfaceProcessing() {
-        // Skip for b/253211491
-        Assume.assumeFalse(
-            "Skip tests for Cuttlefish API 30 eglCreateWindowSurface issue",
-            Build.MODEL.contains("Cuttlefish") && Build.VERSION.SDK_INT == 30
         )
     }
 

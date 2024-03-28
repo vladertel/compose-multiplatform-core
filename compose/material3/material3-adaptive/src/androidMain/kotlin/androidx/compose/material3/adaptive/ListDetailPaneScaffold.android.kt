@@ -16,21 +16,23 @@
 
 package androidx.compose.material3.adaptive
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.util.fastMap
 
 /**
  * A Material opinionated implementation of [ThreePaneScaffold] that will display the provided three
  * panes in a canonical list-detail layout.
  *
- * @param scaffoldState the state of the scaffold, which will decide the current layout directive
- *        and scaffold layout value, and perform navigation within the scaffold.
  * @param listPane the list pane of the scaffold. See [ListDetailPaneScaffoldRole.List].
  * @param modifier [Modifier] of the scaffold layout.
+ * @param scaffoldState the state of the scaffold, which provides the current scaffold directive
+ *        and scaffold value.
+ * @param windowInsets window insets that the scaffold will respect.
  * @param extraPane the list pane of the scaffold. See [ListDetailPaneScaffoldRole.Extra].
  * @param detailPane the list pane of the scaffold. See [ListDetailPaneScaffoldRole.Detail].
  */
@@ -39,7 +41,8 @@ import androidx.compose.ui.util.fastMap
 fun ListDetailPaneScaffold(
     listPane: @Composable ThreePaneScaffoldScope.() -> Unit,
     modifier: Modifier = Modifier,
-    scaffoldState: ListDetailPaneScaffoldState = rememberListDetailPaneScaffoldState(),
+    scaffoldState: ThreePaneScaffoldState = calculateListDetailPaneScaffoldState(),
+    windowInsets: WindowInsets = ListDetailPaneScaffoldDefaults.windowInsets,
     extraPane: (@Composable ThreePaneScaffoldScope.() -> Unit)? = null,
     detailPane: @Composable ThreePaneScaffoldScope.() -> Unit
 ) {
@@ -48,6 +51,7 @@ fun ListDetailPaneScaffold(
         scaffoldDirective = scaffoldState.scaffoldDirective,
         scaffoldValue = scaffoldState.scaffoldValue,
         paneOrder = ThreePaneScaffoldDefaults.ListDetailLayoutPaneOrder,
+        windowInsets = windowInsets,
         secondaryPane = listPane,
         tertiaryPane = extraPane,
         primaryPane = detailPane
@@ -55,10 +59,47 @@ fun ListDetailPaneScaffold(
 }
 
 /**
+ * This function calculates [ThreePaneScaffoldValue] based on the given [PaneScaffoldDirective],
+ * [ThreePaneScaffoldAdaptStrategies], and the current pane destination of a
+ * [ListDetailPaneScaffold].
+ *
+ * @param scaffoldDirective the layout directives that the associated [ListDetailPaneScaffold]
+ *        needs to follow. The default value will be the calculation result from
+ *        [calculateStandardPaneScaffoldDirective] with the current window configuration, and
+ *        will be automatically updated when the window configuration changes.
+ * @param adaptStrategies the [ThreePaneScaffoldAdaptStrategies] should be used by scaffold panes.
+ * @param currentPaneDestination the current pane destination, which will be guaranteed to have
+ *        highest priority when deciding pane visibility.
+ */
+@ExperimentalMaterial3AdaptiveApi
+@Composable
+fun calculateListDetailPaneScaffoldState(
+    scaffoldDirective: PaneScaffoldDirective =
+        calculateStandardPaneScaffoldDirective(currentWindowAdaptiveInfo()),
+    adaptStrategies: ThreePaneScaffoldAdaptStrategies =
+        ListDetailPaneScaffoldDefaults.adaptStrategies(),
+    currentPaneDestination: ThreePaneScaffoldRole = ListDetailPaneScaffoldRole.List
+): ThreePaneScaffoldState = ThreePaneScaffoldStateImpl(
+    scaffoldDirective,
+    calculateThreePaneScaffoldValue(
+        scaffoldDirective.maxHorizontalPartitions,
+        adaptStrategies,
+        currentPaneDestination
+    )
+)
+
+/**
  * Provides default values of [ListDetailPaneScaffold].
  */
 @ExperimentalMaterial3AdaptiveApi
 object ListDetailPaneScaffoldDefaults {
+    /**
+     * Default insets that will be used and consumed by [ListDetailPaneScaffold]. By default it will
+     * be the union of [WindowInsets.Companion.systemBars] and
+     * [WindowInsets.Companion.displayCutout].
+     */
+    val windowInsets @Composable get() = WindowInsets.systemBars.union(WindowInsets.displayCutout)
+
     /**
      * Creates a default [ThreePaneScaffoldAdaptStrategies] for [ListDetailPaneScaffold].
      *
@@ -79,114 +120,28 @@ object ListDetailPaneScaffoldDefaults {
 }
 
 /**
- * The state of [ListDetailPaneScaffold]. It provides the layout directive and value state that will
- * be updated directly. It also provides functions to perform navigation.
- *
- * Use [rememberListDetailPaneScaffoldState] to get a remembered default instance of this interface,
- * which works independently from any navigation frameworks. Developers can also integrate with
- * other navigation frameworks by implementing this interface.
- *
- * @property scaffoldDirective the current layout directives that the associated
- *           [ListDetailPaneScaffold] needs to follow. It's supposed to be automatically updated
- *           when the window configuration changes.
- * @property scaffoldValue the current layout value of the associated [ListDetailPaneScaffold], which
- *           represents unique layout states of the scaffold.
+ * The set of the available pane roles of [ListDetailPaneScaffold]. Basically those values are
+ * aliases of [ThreePaneScaffoldRole]. We suggest you to use the values defined here instead of
+ * the raw [ThreePaneScaffoldRole] under the context of [ListDetailPaneScaffold] for better
+ * code clarity.
  */
 @ExperimentalMaterial3AdaptiveApi
-@Stable
-interface ListDetailPaneScaffoldState {
-    val scaffoldDirective: PaneScaffoldDirective
-    val scaffoldValue: ThreePaneScaffoldValue
+object ListDetailPaneScaffoldRole {
+    /**
+     * The list pane of [ListDetailPaneScaffold]. It is an alias of
+     * [ThreePaneScaffoldRole.Secondary].
+     */
+    val List = ThreePaneScaffoldRole.Secondary
 
     /**
-     * Navigates to a new focus.
+     * The detail pane of [ListDetailPaneScaffold]. It is an alias of
+     * [ThreePaneScaffoldRole.Primary].
      */
-    fun navigateTo(pane: ListDetailPaneScaffoldRole)
+    val Detail = ThreePaneScaffoldRole.Primary
 
     /**
-     * Returns `true` if there is a previous focus to navigate back to.
-     *
-     * @param scaffoldValueMustChange `true` if the navigation operation should only be performed when
-     *        there are actual layout value changes.
+     * The extra pane of [ListDetailPaneScaffold]. It is an alias of
+     * [ThreePaneScaffoldRole.Tertiary].
      */
-    fun canNavigateBack(scaffoldValueMustChange: Boolean = true): Boolean
-
-    /**
-     * Navigates to the previous focus.
-     *
-     * @param popUntilScaffoldValueChange `true` if the backstack should be popped until the layout
-     *        value changes.
-     */
-    fun navigateBack(popUntilScaffoldValueChange: Boolean = true): Boolean
-}
-
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
-private class DefaultListDetailPaneScaffoldState(
-    val internalState: DefaultThreePaneScaffoldState
-) : ListDetailPaneScaffoldState {
-    override val scaffoldDirective get() = internalState.scaffoldDirective
-    override val scaffoldValue get() = internalState.scaffoldValue
-
-    override fun navigateTo(pane: ListDetailPaneScaffoldRole) {
-        internalState.navigateTo(pane.threePaneScaffoldRole)
-    }
-
-    override fun canNavigateBack(scaffoldValueMustChange: Boolean): Boolean =
-        internalState.canNavigateBack(scaffoldValueMustChange)
-
-    override fun navigateBack(popUntilScaffoldValueChange: Boolean): Boolean =
-        internalState.navigateBack(popUntilScaffoldValueChange)
-}
-
-/**
- * Returns a remembered default implementation of [ListDetailPaneScaffoldState], which will
- * be updated automatically when the input values change. The default state is supposed to be
- * used independently from any navigation frameworks and it will address the navigation purely
- * inside the [ListDetailPaneScaffold].
- *
- * @param scaffoldDirective the current layout directives to follow. The default value will be
- *        Calculated with [calculateStandardPaneScaffoldDirective] using [WindowAdaptiveInfo]
- *        retrieved from the current context.
- * @param adaptStrategies adaptation strategies of each pane.
- * @param initialFocusHistory the initial focus history of the scaffold, by default it will be just
- *        the list pane.
- */
-@ExperimentalMaterial3AdaptiveApi
-@Composable
-fun rememberListDetailPaneScaffoldState(
-    scaffoldDirective: PaneScaffoldDirective =
-        calculateStandardPaneScaffoldDirective(currentWindowAdaptiveInfo()),
-    adaptStrategies: ThreePaneScaffoldAdaptStrategies =
-        ListDetailPaneScaffoldDefaults.adaptStrategies(),
-    initialFocusHistory: List<ListDetailPaneScaffoldRole> = listOf(ListDetailPaneScaffoldRole.List)
-): ListDetailPaneScaffoldState {
-    val internalState = rememberDefaultThreePaneScaffoldState(
-        scaffoldDirective,
-        adaptStrategies,
-        initialFocusHistory.fastMap { it.threePaneScaffoldRole }
-    )
-    return remember(internalState) {
-        DefaultListDetailPaneScaffoldState(internalState)
-    }
-}
-
-/**
- * The set of the available pane roles of [ListDetailPaneScaffold].
- */
-@ExperimentalMaterial3AdaptiveApi
-enum class ListDetailPaneScaffoldRole(internal val threePaneScaffoldRole: ThreePaneScaffoldRole) {
-    /**
-     * The list pane of [ListDetailPaneScaffold]. It is mapped to [ThreePaneScaffoldRole.Secondary].
-     */
-    List(ThreePaneScaffoldRole.Secondary),
-
-    /**
-     * The detail pane of [ListDetailPaneScaffold]. It is mapped to [ThreePaneScaffoldRole.Primary].
-     */
-    Detail(ThreePaneScaffoldRole.Primary),
-
-    /**
-     * The extra pane of [ListDetailPaneScaffold]. It is mapped to [ThreePaneScaffoldRole.Tertiary].
-     */
-    Extra(ThreePaneScaffoldRole.Tertiary);
+    val Extra = ThreePaneScaffoldRole.Tertiary
 }

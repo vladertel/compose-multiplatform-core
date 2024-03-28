@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.layout.LazyLayoutKeyIndexMap
 import androidx.compose.foundation.lazy.layout.LazyLayoutMeasureScope
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridLaneInfo.Companion.FullSpan
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridLaneInfo.Companion.Unset
-import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
@@ -32,13 +31,13 @@ import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastForEachReversed
 import androidx.compose.ui.util.fastMaxOfOrNull
+import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.packInts
 import androidx.compose.ui.util.unpackInt1
 import androidx.compose.ui.util.unpackInt2
 import kotlin.jvm.JvmInline
 import kotlin.math.abs
 import kotlin.math.min
-import kotlin.math.roundToInt
 import kotlin.math.sign
 import kotlinx.coroutines.CoroutineScope
 
@@ -112,62 +111,60 @@ internal fun LazyLayoutMeasureScope.measureStaggeredGrid(
     val initialItemIndices: IntArray
     val initialItemOffsets: IntArray
 
-    Snapshot.withoutReadObservation {
-        // ensure scroll position is up to date
-        val firstVisibleIndices =
-            state.updateScrollPositionIfTheFirstItemWasMoved(
-                itemProvider,
-                state.scrollPosition.indices
-            )
-        val firstVisibleOffsets = state.scrollPosition.offsets
+    // ensure scroll position is up to date
+    val firstVisibleIndices =
+        state.updateScrollPositionIfTheFirstItemWasMoved(
+            itemProvider,
+            state.scrollPosition.indices
+        )
+    val firstVisibleOffsets = state.scrollPosition.scrollOffsets
 
-        initialItemIndices =
-            if (firstVisibleIndices.size == context.laneCount) {
-                firstVisibleIndices
-            } else {
-                // Grid got resized (or we are in a initial state)
-                // Adjust indices accordingly
-                context.laneInfo.reset()
-                IntArray(context.laneCount).apply {
-                    // Try to adjust indices in case grid got resized
-                    for (lane in indices) {
-                        this[lane] = if (
-                            lane < firstVisibleIndices.size && firstVisibleIndices[lane] != Unset
-                        ) {
-                            firstVisibleIndices[lane]
+    initialItemIndices =
+        if (firstVisibleIndices.size == context.laneCount) {
+            firstVisibleIndices
+        } else {
+            // Grid got resized (or we are in a initial state)
+            // Adjust indices accordingly
+            context.laneInfo.reset()
+            IntArray(context.laneCount).apply {
+                // Try to adjust indices in case grid got resized
+                for (lane in indices) {
+                    this[lane] = if (
+                        lane < firstVisibleIndices.size && firstVisibleIndices[lane] != Unset
+                    ) {
+                        firstVisibleIndices[lane]
+                    } else {
+                        if (lane == 0) {
+                            0
                         } else {
-                            if (lane == 0) {
-                                0
-                            } else {
-                                maxInRange(SpanRange(0, lane)) + 1
-                            }
+                            maxInRange(SpanRange(0, lane)) + 1
                         }
-                        // Ensure spans are updated to be in correct range
-                        context.laneInfo.setLane(this[lane], lane)
+                    }
+                    // Ensure spans are updated to be in correct range
+                    context.laneInfo.setLane(this[lane], lane)
+                }
+            }
+        }
+    initialItemOffsets =
+        if (firstVisibleOffsets.size == context.laneCount) {
+            firstVisibleOffsets
+        } else {
+            // Grid got resized (or we are in a initial state)
+            // Adjust offsets accordingly
+            IntArray(context.laneCount).apply {
+                // Adjust offsets to match previously set ones
+                for (lane in indices) {
+                    this[lane] = if (lane < firstVisibleOffsets.size) {
+                        firstVisibleOffsets[lane]
+                    } else {
+                        if (lane == 0) 0 else this[lane - 1]
                     }
                 }
             }
-        initialItemOffsets =
-            if (firstVisibleOffsets.size == context.laneCount) {
-                firstVisibleOffsets
-            } else {
-                // Grid got resized (or we are in a initial state)
-                // Adjust offsets accordingly
-                IntArray(context.laneCount).apply {
-                    // Adjust offsets to match previously set ones
-                    for (lane in indices) {
-                        this[lane] = if (lane < firstVisibleOffsets.size) {
-                            firstVisibleOffsets[lane]
-                        } else {
-                            if (lane == 0) 0 else this[lane - 1]
-                        }
-                    }
-                }
-            }
-    }
+        }
 
     return context.measure(
-        initialScrollDelta = state.scrollToBeConsumed.roundToInt(),
+        initialScrollDelta = state.scrollToBeConsumed.fastRoundToInt(),
         initialItemIndices = initialItemIndices,
         initialItemOffsets = initialItemOffsets,
         canRestartMeasure = true,
@@ -257,9 +254,9 @@ private fun LazyStaggeredGridMeasureContext.measure(
                 consumedScroll = 0f,
                 measureResult = layout(constraints.minWidth, constraints.minHeight) {},
                 canScrollForward = false,
-                canScrollBackward = false,
                 isVertical = isVertical,
                 visibleItemsInfo = emptyList(),
+                remeasureNeeded = false,
                 totalItemsCount = itemCount,
                 viewportSize = IntSize(constraints.minWidth, constraints.minHeight),
                 viewportStartOffset = -beforeContentPadding,
@@ -275,6 +272,11 @@ private fun LazyStaggeredGridMeasureContext.measure(
 
         val firstItemIndices = initialItemIndices.copyOf()
         val firstItemOffsets = initialItemOffsets.copyOf()
+
+        // will be set to true if we composed some items only to know their size and apply scroll,
+        // while in the end this item will not end up in the visible viewport. we will need an
+        // extra remeasure in order to dispose such items.
+        var remeasureNeeded = false
 
         // update spans in case item count is lower than before
         ensureIndicesInRange(firstItemIndices, itemCount)
@@ -353,7 +355,13 @@ private fun LazyStaggeredGridMeasureContext.measure(
             spanRange.forEach { lane ->
                 firstItemIndices[lane] = previousItemIndex
                 val gap = if (gaps == null) 0 else gaps[lane]
-                firstItemOffsets[lane] = offset + measuredItem.sizeWithSpacings + gap
+                val newOffset = offset + measuredItem.sizeWithSpacings + gap
+                firstItemOffsets[lane] = newOffset
+                // newOffset here is negative. if this item will not be inside of the viewport
+                // this means we composed this item, but will not need it.
+                if (mainAxisAvailableSize + newOffset <= 0) {
+                    remeasureNeeded = true
+                }
             }
         }
         debugLog {
@@ -472,6 +480,7 @@ private fun LazyStaggeredGridMeasureContext.measure(
 
             if (currentItemOffsets[spanRange.start] <= minOffset + mainAxisSpacing) {
                 measuredItem.isVisible = false
+                remeasureNeeded = true
             }
 
             if (spanRange.isFullSpan) {
@@ -674,8 +683,8 @@ private fun LazyStaggeredGridMeasureContext.measure(
         // can be larger if items were resized, or if, for example, we were previously
         // displaying the item 15, but now we have only 10 items in total in the data set.
         val consumedScroll = if (
-            state.scrollToBeConsumed.roundToInt().sign == scrollDelta.sign &&
-            abs(state.scrollToBeConsumed.roundToInt()) >= abs(scrollDelta)
+            state.scrollToBeConsumed.fastRoundToInt().sign == scrollDelta.sign &&
+            abs(state.scrollToBeConsumed.fastRoundToInt()) >= abs(scrollDelta)
         ) {
             scrollDelta.toFloat()
         } else {
@@ -816,8 +825,6 @@ private fun LazyStaggeredGridMeasureContext.measure(
 
         // end placement
 
-        // only scroll backward if the first item is not on screen or fully visible
-        val canScrollBackward = !(firstItemIndices[0] == 0 && firstItemOffsets[0] <= 0)
         // only scroll forward if the last item is not on screen or fully visible
         val canScrollForward = currentItemOffsets.any { it > mainAxisAvailableSize } ||
             currentItemIndices.all { it < itemCount - 1 }
@@ -830,11 +837,14 @@ private fun LazyStaggeredGridMeasureContext.measure(
                 positionedItems.fastForEach { item ->
                     item.place(scope = this, context = this@measure)
                 }
+
+                // we attach it during the placement so LazyStaggeredGridState can trigger re-placement
+                state.placementScopeInvalidator.attachToScope()
             },
             canScrollForward = canScrollForward,
-            canScrollBackward = canScrollBackward,
             isVertical = isVertical,
             visibleItemsInfo = visibleItems,
+            remeasureNeeded = remeasureNeeded,
             totalItemsCount = itemCount,
             viewportSize = IntSize(layoutWidth, layoutHeight),
             viewportStartOffset = minOffset,
@@ -1099,6 +1109,12 @@ internal class LazyStaggeredGridMeasuredItem(
     private var minMainAxisOffset: Int = 0
     private var maxMainAxisOffset: Int = 0
 
+    /**
+     * True when this item is not supposed to react on scroll delta. for example items being
+     * animated away out of the bounds are non scrollable.
+     */
+    var nonScrollableItem: Boolean = false
+
     override val size: IntSize = if (isVertical) {
         IntSize(crossAxisSize, mainAxisSize)
     } else {
@@ -1122,6 +1138,7 @@ internal class LazyStaggeredGridMeasuredItem(
         }
     }
 
+    val mainAxisOffset get() = if (!isVertical) offset.x else offset.y
     val crossAxisOffset get() = if (isVertical) offset.x else offset.y
 
     fun place(
@@ -1153,6 +1170,19 @@ internal class LazyStaggeredGridMeasuredItem(
                 }
                 offset += contentOffset
                 placeable.placeRelativeWithLayer(offset)
+            }
+        }
+    }
+
+    fun applyScrollDelta(delta: Int) {
+        if (nonScrollableItem) {
+            return
+        }
+        offset = offset.copy { it + delta }
+        repeat(placeablesCount) { index ->
+            val animation = animator.getAnimation(key, index)
+            if (animation != null) {
+                animation.rawOffset = animation.rawOffset.copy { mainAxis -> mainAxis + delta }
             }
         }
     }

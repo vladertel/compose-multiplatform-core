@@ -35,6 +35,7 @@ import androidx.compose.material3.samples.BottomSheetScaffoldNestedScrollSample
 import androidx.compose.material3.samples.ButtonSample
 import androidx.compose.material3.samples.ButtonWithIconSample
 import androidx.compose.material3.samples.CardSample
+import androidx.compose.material3.samples.CarouselSample
 import androidx.compose.material3.samples.CheckboxSample
 import androidx.compose.material3.samples.CheckboxWithTextSample
 import androidx.compose.material3.samples.ChipGroupReflowSample
@@ -103,11 +104,13 @@ import androidx.compose.material3.samples.PasswordTextField
 import androidx.compose.material3.samples.PermanentNavigationDrawerSample
 import androidx.compose.material3.samples.PinnedTopAppBar
 import androidx.compose.material3.samples.PlainTooltipSample
+import androidx.compose.material3.samples.PlainTooltipWithCaret
 import androidx.compose.material3.samples.PlainTooltipWithManualInvocationSample
 import androidx.compose.material3.samples.PrimaryIconTabs
 import androidx.compose.material3.samples.PrimaryTextTabs
 import androidx.compose.material3.samples.PullToRefreshSample
 import androidx.compose.material3.samples.PullToRefreshSampleCustomState
+import androidx.compose.material3.samples.PullToRefreshScalingSample
 import androidx.compose.material3.samples.RadioButtonSample
 import androidx.compose.material3.samples.RadioGroupSample
 import androidx.compose.material3.samples.RangeSliderSample
@@ -282,6 +285,18 @@ val CardExamples = listOf(
         sourceUrl = CardsExampleSourceUrl
     ) {
         ClickableOutlinedCardSample()
+    }
+)
+
+private const val CarouselExampleDescription = "Carousel examples"
+private const val CarouselExampleSourceUrl = "$SampleSourceUrl/CarouselSamples.kt"
+val CarouselExamples = listOf(
+    Example(
+        name = ::CarouselSample.name,
+        description = CarouselExampleDescription,
+        sourceUrl = CarouselExampleSourceUrl
+    ) {
+        CarouselSample()
     }
 )
 
@@ -790,6 +805,13 @@ val PullToRefreshExamples = listOf(
         PullToRefreshSample()
     },
     Example(
+        name = ::PullToRefreshScalingSample.name,
+        description = PullToRefreshExampleDescription,
+        sourceUrl = PullToRefreshExampleSourceUrl
+    ) {
+        PullToRefreshScalingSample()
+    },
+    Example(
         name = ::PullToRefreshSampleCustomState.name,
         description = PullToRefreshExampleDescription,
         sourceUrl = PullToRefreshExampleSourceUrl
@@ -1200,6 +1222,13 @@ val TooltipsExamples = listOf(
         sourceUrl = TooltipsExampleSourceUrl
     ) {
         PlainTooltipWithManualInvocationSample()
+    },
+    Example(
+        name = ::PlainTooltipWithCaret.name,
+        description = TooltipsExampleDescription,
+        sourceUrl = TooltipsExampleSourceUrl
+    ) {
+        PlainTooltipWithCaret()
     },
     Example(
         name = ::RichTooltipSample.name,

@@ -17,7 +17,11 @@
 package androidx.compose.material3.adaptive
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -106,9 +110,11 @@ class ThreePaneScaffoldTest {
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 private val MockScaffoldDirective = PaneScaffoldDirective(
+    contentPadding = PaddingValues(0.dp),
     maxHorizontalPartitions = 1,
-    gutterSizes = GutterSizes(PaddingValues(0.dp), 0.dp),
+    horizontalPartitionSpacerSize = 0.dp,
     maxVerticalPartitions = 1,
+    verticalPartitionSpacerSize = 0.dp,
     excludedBounds = emptyList()
 )
 
@@ -129,13 +135,15 @@ private fun SampleThreePaneScaffold(scaffoldValue: ThreePaneScaffoldValue) {
 internal fun SampleThreePaneScaffold(
     scaffoldDirective: PaneScaffoldDirective,
     scaffoldValue: ThreePaneScaffoldValue,
-    paneOrder: ThreePaneScaffoldHorizontalOrder
+    paneOrder: ThreePaneScaffoldHorizontalOrder,
+    windowInsets: WindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
 ) {
     ThreePaneScaffold(
         modifier = Modifier.fillMaxSize().testTag(ThreePaneScaffoldTestTag),
         scaffoldDirective = scaffoldDirective,
         scaffoldValue = scaffoldValue,
         paneOrder = paneOrder,
+        windowInsets = windowInsets,
         secondaryPane = {
             AnimatedPane(
                 modifier = Modifier.testTag(tag = "SecondaryPane")

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.compose.ui.node
 
 import androidx.compose.runtime.collection.mutableVectorOf
@@ -29,6 +31,7 @@ import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.focus.FocusOwner
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.KeyEvent
@@ -40,6 +43,7 @@ import androidx.compose.ui.modifier.modifierLocalProvider
 import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
@@ -350,6 +354,8 @@ class ModifierLocalConsumerEntityTest {
             get() = TODO("Not yet implemented")
         override val textInputService: TextInputService
             get() = TODO("Not yet implemented")
+        override val softwareKeyboardController: SoftwareKeyboardController
+            get() = TODO("Not yet implemented")
         override val pointerIconService: PointerIconService
             get() = TODO("Not yet implemented")
         override val focusOwner: FocusOwner
@@ -421,6 +427,18 @@ class ModifierLocalConsumerEntityTest {
         override suspend fun textInputSession(
             session: suspend PlatformTextInputSessionScope.() -> Nothing
         ): Nothing {
+            TODO("Not yet implemented")
+        }
+
+        override fun screenToLocal(positionOnScreen: Offset): Offset {
+            TODO("Not yet implemented")
+        }
+
+        override fun localToScreen(localPosition: Offset): Offset {
+            TODO("Not yet implemented")
+        }
+
+        override fun localToScreen(localTransform: Matrix) {
             TODO("Not yet implemented")
         }
     }

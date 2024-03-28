@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.compose.material3
 
 import android.content.Context
@@ -21,6 +23,7 @@ import android.os.Build
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -32,6 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -78,6 +82,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -585,6 +590,40 @@ class TextFieldTest {
 
         // click to focus
         rule.onNodeWithTag(TextFieldTag).performClick()
+    }
+
+    @Test
+    fun testTextField_placeholderColor_whenInputEmptyAndFocused() {
+        var focused = false
+        rule.setMaterialContent(lightColorScheme()) {
+            val text = remember { mutableStateOf("") }
+            TextField(
+                modifier = Modifier.testTag(TextFieldTag),
+                value = text.value,
+                onValueChange = { text.value = it },
+                colors = TextFieldDefaults.colors(
+                    focusedPlaceholderColor = Color.Red,
+                    unfocusedPlaceholderColor = Color.Green,
+                ),
+                placeholder = {
+                    Text("Placeholder")
+                    assertThat(LocalContentColor.current)
+                        .isEqualTo(if (focused) Color.Red else Color.Green)
+                },
+            )
+        }
+
+        // click to focus
+        focused = true
+        rule.onNodeWithTag(TextFieldTag).performClick()
+
+        // enter some text (placeholder hidden)
+        rule.onNodeWithTag(TextFieldTag).performTextInput("input")
+        rule.runOnIdle {}
+
+        // delete the text (placeholder shown)
+        rule.onNodeWithTag(TextFieldTag).performTextClearance()
+        rule.runOnIdle {}
     }
 
     @Test
@@ -1845,6 +1884,21 @@ class TextFieldTest {
 
         rule.runOnIdle {
             assertThat(callbackCounter).isEqualTo(1)
+        }
+    }
+    @Test
+    fun testTextFields_noCrashConstraintsInfinity() {
+
+        rule.setMaterialContent(lightColorScheme()) {
+            Column(modifier = Modifier.height(IntrinsicSize.Min).horizontalScroll(
+                rememberScrollState()
+            )) {
+                TextField(
+                    value = "Cat",
+                    onValueChange = {},
+                    leadingIcon = { Text("Icon") }
+                )
+            }
         }
     }
 }

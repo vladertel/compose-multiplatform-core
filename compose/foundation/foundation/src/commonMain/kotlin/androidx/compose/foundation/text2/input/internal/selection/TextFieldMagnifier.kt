@@ -44,7 +44,7 @@ internal abstract class TextFieldMagnifierNode : DelegatingNode(),
         textFieldState: TransformedTextFieldState,
         textFieldSelectionState: TextFieldSelectionState,
         textLayoutState: TextLayoutState,
-        isFocused: Boolean
+        visible: Boolean
     )
 
     override fun onGloballyPositioned(coordinates: LayoutCoordinates) {}
@@ -59,7 +59,7 @@ internal expect fun textFieldMagnifierNode(
     textFieldState: TransformedTextFieldState,
     textFieldSelectionState: TextFieldSelectionState,
     textLayoutState: TextLayoutState,
-    isFocused: Boolean
+    visible: Boolean
 ): TextFieldMagnifierNode
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -74,11 +74,11 @@ internal fun calculateSelectionMagnifierCenterAndroid(
 
     // Do not show the magnifier if origin position is already Unspecified.
     // Never show the magnifier in an empty text field.
-    if (localDragPosition.isUnspecified || textFieldState.text.isEmpty()) {
+    if (localDragPosition.isUnspecified || textFieldState.visualText.isEmpty()) {
         return Offset.Unspecified
     }
 
-    val selection = textFieldState.text.selectionInChars
+    val selection = textFieldState.visualText.selectionInChars
     val textOffset = when (selectionState.draggingHandle) {
         null -> return Offset.Unspecified
         Handle.Cursor,

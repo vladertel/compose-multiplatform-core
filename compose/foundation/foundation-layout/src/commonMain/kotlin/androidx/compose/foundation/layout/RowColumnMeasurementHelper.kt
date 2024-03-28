@@ -23,9 +23,9 @@ import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.util.fastRoundToInt
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 import kotlin.math.sign
 
 /**
@@ -109,6 +109,11 @@ internal class RowColumnMeasurementHelper(
                 ++weightChildrenCount
             } else {
                 val mainAxisMax = constraints.mainAxisMax
+                val crossAxisMax = constraints.crossAxisMax
+                val crossAxisDesiredSize = if (crossAxisMax == Constraints.Infinity) null else
+                    parentData?.flowLayoutData?.let {
+                        (it.fillCrossAxisFraction * crossAxisMax).fastRoundToInt()
+                    }
                 val placeable = placeables[i] ?: child.measure(
                     // Ask for preferred main axis size.
                     constraints.copy(
@@ -118,7 +123,8 @@ internal class RowColumnMeasurementHelper(
                         } else {
                             (mainAxisMax - fixedSpace).coerceAtLeast(0).toInt()
                         },
-                        crossAxisMin = 0
+                        crossAxisMin = crossAxisDesiredSize ?: 0,
+                        crossAxisMax = crossAxisDesiredSize ?: constraints.crossAxisMax
                     ).toBoxConstraints(orientation)
                 )
                 spaceAfterLastNoWeight = min(
@@ -151,7 +157,7 @@ internal class RowColumnMeasurementHelper(
 
             val weightUnitSpace = if (totalWeight > 0) remainingToTarget / totalWeight else 0f
             var remainder = remainingToTarget - (startIndex until endIndex).sumOf {
-                (weightUnitSpace * rowColumnParentData[it].weight).roundToInt()
+                (weightUnitSpace * rowColumnParentData[it].weight).fastRoundToInt()
             }
 
             for (i in startIndex until endIndex) {
@@ -159,6 +165,11 @@ internal class RowColumnMeasurementHelper(
                     val child = measurables[i]
                     val parentData = rowColumnParentData[i]
                     val weight = parentData.weight
+                    val crossAxisMax = constraints.crossAxisMax
+                    val crossAxisDesiredSize = if (crossAxisMax == Constraints.Infinity) null else
+                        parentData?.flowLayoutData?.let {
+                            (it.fillCrossAxisFraction * crossAxisMax).fastRoundToInt()
+                        }
                     check(weight > 0) { "All weights <= 0 should have placeables" }
                     // After the weightUnitSpace rounding, the total space going to be occupied
                     // can be smaller or larger than remainingToTarget. Here we distribute the
@@ -167,7 +178,7 @@ internal class RowColumnMeasurementHelper(
                     remainder -= remainderUnit
                     val childMainAxisSize = max(
                         0,
-                        (weightUnitSpace * weight).roundToInt() + remainderUnit
+                        (weightUnitSpace * weight).fastRoundToInt() + remainderUnit
                     )
                     val placeable = child.measure(
                         OrientationIndependentConstraints(
@@ -177,8 +188,8 @@ internal class RowColumnMeasurementHelper(
                                 0
                             },
                             childMainAxisSize,
-                            0,
-                            constraints.crossAxisMax
+                            crossAxisMin = crossAxisDesiredSize ?: 0,
+                            crossAxisMax = crossAxisDesiredSize ?: constraints.crossAxisMax
                         ).toBoxConstraints(orientation)
                     )
                     weightedSpace += placeable.mainAxisSize()

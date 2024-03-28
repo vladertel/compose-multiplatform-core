@@ -31,7 +31,8 @@ import androidx.paging.LoadState
 import androidx.paging.LoadStates
 import androidx.paging.NullPaddedList
 import androidx.paging.PagingData
-import androidx.paging.PagingDataDiffer
+import androidx.paging.PagingDataEvent
+import androidx.paging.PagingDataPresenter
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.flow.Flow
@@ -85,10 +86,10 @@ public class LazyPagingItems<T : Any> internal constructor(
     /**
      * If the [flow] is a SharedFlow, it is expected to be the flow returned by from
      * pager.flow.cachedIn(scope) which could contain a cached PagingData. We pass the cached
-     * PagingData to the differ so that if the PagingData contains cached data, the differ can be
-     * initialized with the data prior to collection on pager.
+     * PagingData to the presenter so that if the PagingData contains cached data, the presenter
+     * can be initialized with the data prior to collection on pager.
      */
-    private val pagingDataDiffer = object : PagingDataDiffer<T>(
+    private val pagingDataPresenter = object : PagingDataPresenter<T>(
         differCallback = differCallback,
         mainContext = mainDispatcher,
         cachedPagingData =
@@ -99,10 +100,15 @@ public class LazyPagingItems<T : Any> internal constructor(
             newList: NullPaddedList<T>,
             lastAccessedIndex: Int,
             onListPresentable: () -> Unit
-        ): Int? {
+        ) {
             onListPresentable()
             updateItemSnapshotList()
-            return null
+        }
+
+        override suspend fun presentPagingDataEvent(
+            event: PagingDataEvent<T>,
+        ) {
+            updateItemSnapshotList()
         }
     }
 
@@ -113,7 +119,7 @@ public class LazyPagingItems<T : Any> internal constructor(
      * Use [get] to achieve such behavior.
      */
     var itemSnapshotList by mutableStateOf(
-        pagingDataDiffer.snapshot()
+        pagingDataPresenter.snapshot()
     )
         private set
 
@@ -123,7 +129,7 @@ public class LazyPagingItems<T : Any> internal constructor(
     val itemCount: Int get() = itemSnapshotList.size
 
     private fun updateItemSnapshotList() {
-        itemSnapshotList = pagingDataDiffer.snapshot()
+        itemSnapshotList = pagingDataPresenter.snapshot()
     }
 
     /**
@@ -133,7 +139,7 @@ public class LazyPagingItems<T : Any> internal constructor(
      * @see peek
      */
     operator fun get(index: Int): T? {
-        pagingDataDiffer[index] // this registers the value load
+        pagingDataPresenter[index] // this registers the value load
         return itemSnapshotList[index]
     }
 
@@ -160,7 +166,7 @@ public class LazyPagingItems<T : Any> internal constructor(
      *  * [RemoteMediator.load] returning [RemoteMediator.MediatorResult.Error]
      */
     fun retry() {
-        pagingDataDiffer.retry()
+        pagingDataPresenter.retry()
     }
 
     /**
@@ -178,14 +184,14 @@ public class LazyPagingItems<T : Any> internal constructor(
      * @see PagingSource.invalidate
      */
     fun refresh() {
-        pagingDataDiffer.refresh()
+        pagingDataPresenter.refresh()
     }
 
     /**
      * A [CombinedLoadStates] object which represents the current loading state.
      */
     public var loadState: CombinedLoadStates by mutableStateOf(
-        pagingDataDiffer.loadStateFlow.value
+        pagingDataPresenter.loadStateFlow.value
             ?: CombinedLoadStates(
                 refresh = InitialLoadStates.refresh,
                 prepend = InitialLoadStates.prepend,
@@ -196,14 +202,14 @@ public class LazyPagingItems<T : Any> internal constructor(
         private set
 
     internal suspend fun collectLoadState() {
-        pagingDataDiffer.loadStateFlow.filterNotNull().collect {
+        pagingDataPresenter.loadStateFlow.filterNotNull().collect {
             loadState = it
         }
     }
 
     internal suspend fun collectPagingData() {
         flow.collectLatest {
-            pagingDataDiffer.collectFrom(it)
+            pagingDataPresenter.collectFrom(it)
         }
     }
 }

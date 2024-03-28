@@ -26,7 +26,6 @@ import static androidx.camera.core.impl.ImageOutputConfig.OPTION_MIRROR_MODE;
 import static androidx.camera.core.impl.ImageOutputConfig.OPTION_RESOLUTION_SELECTOR;
 import static androidx.camera.core.impl.ImageOutputConfig.OPTION_SUPPORTED_RESOLUTIONS;
 import static androidx.camera.core.impl.ImageOutputConfig.OPTION_TARGET_ROTATION;
-import static androidx.camera.core.impl.UseCaseConfig.OPTION_CAMERA_SELECTOR;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_CAPTURE_CONFIG_UNPACKER;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_CAPTURE_TYPE;
 import static androidx.camera.core.impl.UseCaseConfig.OPTION_DEFAULT_CAPTURE_CONFIG;
@@ -75,7 +74,6 @@ import androidx.annotation.VisibleForTesting;
 import androidx.arch.core.util.Function;
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.CameraInfo;
-import androidx.camera.core.CameraSelector;
 import androidx.camera.core.DynamicRange;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.Logger;
@@ -126,6 +124,7 @@ import androidx.camera.video.internal.compat.quirk.PreviewDelayWhenVideoCaptureI
 import androidx.camera.video.internal.compat.quirk.PreviewStretchWhenVideoCaptureIsBoundQuirk;
 import androidx.camera.video.internal.compat.quirk.VideoQualityQuirk;
 import androidx.camera.video.internal.config.VideoMimeInfo;
+import androidx.camera.video.internal.encoder.SwappedVideoEncoderInfo;
 import androidx.camera.video.internal.encoder.VideoEncoderConfig;
 import androidx.camera.video.internal.encoder.VideoEncoderInfo;
 import androidx.camera.video.internal.encoder.VideoEncoderInfoImpl;
@@ -575,8 +574,8 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         } else {
             cropRect = new Rect(0, 0, surfaceResolution.getWidth(), surfaceResolution.getHeight());
         }
-        if (videoEncoderInfo == null || videoEncoderInfo.isSizeSupported(cropRect.width(),
-                cropRect.height())) {
+        if (videoEncoderInfo == null || videoEncoderInfo.isSizeSupportedAllowSwapping(
+                cropRect.width(), cropRect.height())) {
             return cropRect;
         }
         return adjustCropRectToValidSize(cropRect, surfaceResolution, videoEncoderInfo);
@@ -952,11 +951,29 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
                 videoEncoderInfo.getSupportedHeights()
         ));
 
-        // Construct all up/down alignment combinations.
+        boolean swapWidthHeightConstraints;
+        if (videoEncoderInfo.getSupportedWidths().contains(cropRect.width())
+                && videoEncoderInfo.getSupportedHeights().contains(cropRect.height())) {
+            swapWidthHeightConstraints = false;
+        } else if (videoEncoderInfo.canSwapWidthHeight()
+                && videoEncoderInfo.getSupportedHeights().contains(cropRect.width())
+                && videoEncoderInfo.getSupportedWidths().contains(cropRect.height())) {
+            swapWidthHeightConstraints = true;
+        } else {
+            // We may need a strategy when both width and height are not within supported widths
+            // and heights. It should be a rare case and for now we leave it no swapping.
+            swapWidthHeightConstraints = false;
+        }
+        if (swapWidthHeightConstraints) {
+            videoEncoderInfo = new SwappedVideoEncoderInfo(videoEncoderInfo);
+        }
+
         int widthAlignment = videoEncoderInfo.getWidthAlignment();
         int heightAlignment = videoEncoderInfo.getHeightAlignment();
         Range<Integer> supportedWidths = videoEncoderInfo.getSupportedWidths();
         Range<Integer> supportedHeights = videoEncoderInfo.getSupportedHeights();
+
+        // Construct all up/down alignment combinations.
         int widthAlignedDown = alignDown(cropRect.width(), widthAlignment, supportedWidths);
         int widthAlignedUp = alignUp(cropRect.width(), widthAlignment, supportedWidths);
         int heightAlignedDown = alignDown(cropRect.height(), heightAlignment, supportedHeights);
@@ -1741,14 +1758,6 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         @NonNull
         public Builder<T> setSurfaceOccupancyPriority(int priority) {
             getMutableConfig().insertOption(OPTION_SURFACE_OCCUPANCY_PRIORITY, priority);
-            return this;
-        }
-
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @Override
-        @NonNull
-        public Builder<T> setCameraSelector(@NonNull CameraSelector cameraSelector) {
-            getMutableConfig().insertOption(OPTION_CAMERA_SELECTOR, cameraSelector);
             return this;
         }
 

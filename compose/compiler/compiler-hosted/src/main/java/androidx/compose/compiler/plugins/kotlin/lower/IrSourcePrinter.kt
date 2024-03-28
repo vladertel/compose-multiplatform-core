@@ -522,8 +522,7 @@ class IrSourcePrinterVisitor(
                 val param = symbol.owner.valueParameters[i]
                 val isLambda = arg is IrFunctionExpression ||
                     (arg is IrBlock &&
-                        (arg.origin == IrStatementOrigin.LAMBDA ||
-                            arg.origin == IrStatementOrigin.ADAPTED_FUNCTION_REFERENCE))
+                        (arg.origin == IrStatementOrigin.LAMBDA))
                 if (isLambda) {
                     arg.unwrapLambda()?.let {
                         returnTargetToCall[it] = this
@@ -881,7 +880,7 @@ class IrSourcePrinterVisitor(
                 lhs.print()
                 print("--")
             }
-            IrStatementOrigin.LAMBDA, IrStatementOrigin.ADAPTED_FUNCTION_REFERENCE -> {
+            IrStatementOrigin.LAMBDA -> {
                 val function = expression.statements[0] as IrFunction
                 function.printAsLambda()
             }
@@ -1303,7 +1302,11 @@ class IrSourcePrinterVisitor(
 
     override fun visitFunctionReference(expression: IrFunctionReference) {
         val function = expression.symbol.owner
+
         expression.printExplicitReceiver("::")
+        if (expression.dispatchReceiver == null && expression.extensionReceiver == null) {
+            print("::")
+        }
 
         val prop = (function as? IrSimpleFunction)?.correspondingPropertySymbol?.owner
 

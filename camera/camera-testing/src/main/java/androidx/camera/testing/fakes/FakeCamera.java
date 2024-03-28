@@ -76,7 +76,7 @@ public class FakeCamera implements CameraInternal {
 
     private List<DeferrableSurface> mConfiguredDeferrableSurfaces = Collections.emptyList();
 
-    private CameraConfig mCameraConfig = CameraConfigs.emptyConfig();
+    private CameraConfig mCameraConfig = CameraConfigs.defaultConfig();
 
     public FakeCamera() {
         this(DEFAULT_CAMERA_ID, /*cameraControl=*/null,
@@ -244,7 +244,7 @@ public class FakeCamera implements CameraInternal {
     }
 
     /**
-     * Sets the use case to be in the state where the capture session will be configured to handle
+     * Sets the use cases to be in the state where the capture session will be configured to handle
      * capture requests from the use case.
      */
     @Override
@@ -258,6 +258,7 @@ public class FakeCamera implements CameraInternal {
         Logger.d(TAG, "Use cases " + useCases + " ATTACHED for camera " + mCameraId);
         for (UseCase useCase : useCases) {
             useCase.onStateAttached();
+            useCase.onCameraControlReady();
             mUseCaseAttachState.setUseCaseAttached(
                     useCase.getName() + useCase.hashCode(),
                     useCase.getSessionConfig(),
@@ -272,7 +273,7 @@ public class FakeCamera implements CameraInternal {
     }
 
     /**
-     * Removes the use case to be in the state where the capture session will be configured to
+     * Removes the use cases to be in the state where the capture session will be configured to
      * handle capture requests from the use case.
      */
     @Override
@@ -298,6 +299,12 @@ public class FakeCamera implements CameraInternal {
         updateCaptureSessionConfig();
     }
 
+    /**
+     * Gets the attached use cases.
+     *
+     * @see #attachUseCases
+     * @see #detachUseCases
+     */
     @NonNull
     public Set<UseCase> getAttachedUseCases() {
         return mAttachedUseCases;

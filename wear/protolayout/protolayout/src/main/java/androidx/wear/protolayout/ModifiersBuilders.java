@@ -35,6 +35,7 @@ import androidx.wear.protolayout.TypeBuilders.StringProp;
 import androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec;
 import androidx.wear.protolayout.expression.Fingerprint;
 import androidx.wear.protolayout.expression.ProtoLayoutExperimental;
+import androidx.wear.protolayout.expression.RequiresSchemaVersion;
 import androidx.wear.protolayout.proto.ModifiersProto;
 import androidx.wear.protolayout.protobuf.ByteString;
 
@@ -60,6 +61,7 @@ public final class ModifiersBuilders {
          * Fade in enter animation that fades in element when entering the layout, from fully
          * invisible to fully visible.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         private static final EnterTransition FADE_IN_ENTER_TRANSITION =
                 new EnterTransition.Builder().setFadeIn(FADE_IN_TRANSITION).build();
 
@@ -69,6 +71,7 @@ public final class ModifiersBuilders {
          *
          * @param direction The direction for sliding in transition.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         private static SlideInTransition slideInTransition(@SlideDirection int direction) {
             return new SlideInTransition.Builder().setDirection(direction).build();
         }
@@ -77,6 +80,7 @@ public final class ModifiersBuilders {
          * Enter content transition animation that fades in element when entering the layout, from
          * fully invisible to fully visible.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static EnterTransition fadeIn() {
             return FADE_IN_ENTER_TRANSITION;
@@ -86,6 +90,7 @@ public final class ModifiersBuilders {
          * Enter content transition animation that slides in element when entering the layout into
          * its position from the parent edge in the given direction.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static EnterTransition slideIn(@SlideDirection int slideDirection) {
             return new EnterTransition.Builder()
@@ -100,6 +105,7 @@ public final class ModifiersBuilders {
          *
          * @param slideDirection The direction for sliding in part of transition.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static EnterTransition fadeInSlideIn(@SlideDirection int slideDirection) {
             return new EnterTransition.Builder()
@@ -119,6 +125,7 @@ public final class ModifiersBuilders {
          * Fade out exit animation that fades out element when exiting the layout, from fully
          * visible to fully invisible.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         private static final ExitTransition FADE_OUT_EXIT_TRANSITION =
                 new ExitTransition.Builder().setFadeOut(FADE_OUT_TRANSITION).build();
 
@@ -128,6 +135,7 @@ public final class ModifiersBuilders {
          *
          * @param direction The direction for sliding out transition.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         private static SlideOutTransition slideOutTransition(@SlideDirection int direction) {
             return new SlideOutTransition.Builder().setDirection(direction).build();
         }
@@ -136,6 +144,7 @@ public final class ModifiersBuilders {
          * Exit content transition animation that fades out element when exiting the layout, from
          * fully visible to fully invisible.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static ExitTransition fadeOut() {
             return FADE_OUT_EXIT_TRANSITION;
@@ -145,6 +154,7 @@ public final class ModifiersBuilders {
          * Exit content transition animation that slides out element when exiting the layout from
          * its position to the parent edge in the given direction.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static ExitTransition slideOut(@SlideDirection int slideDirection) {
             return new ExitTransition.Builder()
@@ -159,6 +169,7 @@ public final class ModifiersBuilders {
          *
          * @param slideDirection The direction for sliding in part of transition.
          */
+        @RequiresSchemaVersion(major = 1, minor = 200)
         @NonNull
         public static ExitTransition fadeOutSlideOut(@SlideDirection int slideDirection) {
             return new ExitTransition.Builder()
@@ -173,9 +184,8 @@ public final class ModifiersBuilders {
     /**
      * The type of user interface element. Accessibility services might use this to describe the
      * element or do customizations.
-     *
-     * @since 1.2
      */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @IntDef({
         SEMANTICS_ROLE_NONE,
@@ -188,56 +198,41 @@ public final class ModifiersBuilders {
     @Retention(RetentionPolicy.SOURCE)
     public @interface SemanticsRole {}
 
-    /**
-     * Role is undefined. It may be automatically populated.
-     *
-     * @since 1.2
-     */
+    /** Role is undefined. It may be automatically populated. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     public static final int SEMANTICS_ROLE_NONE = 0;
 
-    /**
-     * The element is an image.
-     *
-     * @since 1.2
-     */
+    /** The element is an image. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     public static final int SEMANTICS_ROLE_IMAGE = 1;
 
-    /**
-     * The element is a Button control.
-     *
-     * @since 1.2
-     */
+    /** The element is a Button control. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     public static final int SEMANTICS_ROLE_BUTTON = 2;
 
     /**
      * The element is a Checkbox which is a component that represents two states (checked /
      * unchecked).
-     *
-     * @since 1.2
      */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     public static final int SEMANTICS_ROLE_CHECKBOX = 3;
 
     /**
      * The element is a Switch which is a two state toggleable component that provides on/off like
      * options.
-     *
-     * @since 1.2
      */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     public static final int SEMANTICS_ROLE_SWITCH = 4;
 
     /**
      * This element is a RadioButton which is a component to represent two states, selected and not
      * selected.
-     *
-     * @since 1.2
      */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     public static final int SEMANTICS_ROLE_RADIOBUTTON = 5;
 
-    /**
-     * The snap options to use when sliding using parent boundaries.
-     *
-     * @since 1.2
-     */
+    /** The snap options to use when sliding using parent boundaries. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @IntDef({
         SLIDE_PARENT_SNAP_UNDEFINED,
@@ -248,33 +243,26 @@ public final class ModifiersBuilders {
     @ProtoLayoutExperimental
     public @interface SlideParentSnapOption {}
 
-    /**
-     * The undefined snapping option.
-     *
-     * @since 1.2
-     */
-    @ProtoLayoutExperimental public static final int SLIDE_PARENT_SNAP_UNDEFINED = 0;
+    /** The undefined snapping option. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
+    @ProtoLayoutExperimental
+    public static final int SLIDE_PARENT_SNAP_UNDEFINED = 0;
 
-    /**
-     * The option that snaps insides of the element and its parent at start/end.
-     *
-     * @since 1.2
-     */
-    @ProtoLayoutExperimental public static final int SLIDE_PARENT_SNAP_TO_INSIDE = 1;
+    /** The option that snaps insides of the element and its parent at start/end. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
+    @ProtoLayoutExperimental
+    public static final int SLIDE_PARENT_SNAP_TO_INSIDE = 1;
 
-    /**
-     * The option that snaps outsides of the element and its parent at start/end.
-     *
-     * @since 1.2
-     */
-    @ProtoLayoutExperimental public static final int SLIDE_PARENT_SNAP_TO_OUTSIDE = 2;
+    /** The option that snaps outsides of the element and its parent at start/end. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
+    @ProtoLayoutExperimental
+    public static final int SLIDE_PARENT_SNAP_TO_OUTSIDE = 2;
 
     /**
      * The slide direction used for slide animations on any element, from the specified point to its
      * destination in the layout for in animation or reverse for out animation.
-     *
-     * @since 1.2
      */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @RestrictTo(RestrictTo.Scope.LIBRARY)
     @IntDef({
         SLIDE_DIRECTION_UNDEFINED,
@@ -287,47 +275,36 @@ public final class ModifiersBuilders {
     @ProtoLayoutExperimental
     public @interface SlideDirection {}
 
-    /**
-     * The undefined sliding orientation.
-     *
-     * @since 1.2
-     */
-    @ProtoLayoutExperimental public static final int SLIDE_DIRECTION_UNDEFINED = 0;
+    /** The undefined sliding orientation. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
+    @ProtoLayoutExperimental
+    public static final int SLIDE_DIRECTION_UNDEFINED = 0;
 
-    /**
-     * The sliding orientation that moves an element horizontally from left to the right.
-     *
-     * @since 1.2
-     */
-    @ProtoLayoutExperimental public static final int SLIDE_DIRECTION_LEFT_TO_RIGHT = 1;
+    /** The sliding orientation that moves an element horizontally from left to the right. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
+    @ProtoLayoutExperimental
+    public static final int SLIDE_DIRECTION_LEFT_TO_RIGHT = 1;
 
-    /**
-     * The sliding orientation that moves an element horizontally from right to the left.
-     *
-     * @since 1.2
-     */
-    @ProtoLayoutExperimental public static final int SLIDE_DIRECTION_RIGHT_TO_LEFT = 2;
+    /** The sliding orientation that moves an element horizontally from right to the left. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
+    @ProtoLayoutExperimental
+    public static final int SLIDE_DIRECTION_RIGHT_TO_LEFT = 2;
 
-    /**
-     * The sliding orientation that moves an element vertically from top to the bottom.
-     *
-     * @since 1.2
-     */
-    @ProtoLayoutExperimental public static final int SLIDE_DIRECTION_TOP_TO_BOTTOM = 3;
+    /** The sliding orientation that moves an element vertically from top to the bottom. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
+    @ProtoLayoutExperimental
+    public static final int SLIDE_DIRECTION_TOP_TO_BOTTOM = 3;
 
-    /**
-     * The sliding orientation that moves an element vertically from bottom to the top.
-     *
-     * @since 1.2
-     */
-    @ProtoLayoutExperimental public static final int SLIDE_DIRECTION_BOTTOM_TO_TOP = 4;
+    /** The sliding orientation that moves an element vertically from bottom to the top. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
+    @ProtoLayoutExperimental
+    public static final int SLIDE_DIRECTION_BOTTOM_TO_TOP = 4;
 
     /**
      * A modifier for an element which can have associated Actions for click events. When an element
      * with a ClickableModifier is clicked it will fire the associated action.
-     *
-     * @since 1.0
      */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class Clickable {
         private final ModifiersProto.Clickable mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -337,21 +314,13 @@ public final class ModifiersBuilders {
             this.mFingerprint = fingerprint;
         }
 
-        /**
-         * Gets the ID associated with this action.
-         *
-         * @since 1.0
-         */
+        /** Gets the ID associated with this action. */
         @NonNull
         public String getId() {
             return mImpl.getId();
         }
 
-        /**
-         * Gets the action to perform when the element this modifier is attached to is clicked.
-         *
-         * @since 1.0
-         */
+        /** Gets the action to perform when the element this modifier is attached to is clicked. */
         @Nullable
         public Action getOnClick() {
             if (mImpl.hasOnClick()) {
@@ -367,8 +336,6 @@ public final class ModifiersBuilders {
          * <p>The default value is 48dp, following the Material design accessibility guideline. Note
          * that this value does not affect the layout, so the minimum clickable width is not
          * guaranteed unless there is enough space around the element within its parent bounds.
-         *
-         * @since 1.3
          */
         @NonNull
         public DpProp getMinimumClickableWidth() {
@@ -385,8 +352,6 @@ public final class ModifiersBuilders {
          * <p>The default value is 48dp, following the Material design accessibility guideline. Note
          * that this value does not affect the layout, so the minimum clickable height is not
          * guaranteed unless there is enough space around the element within its parent bounds.
-         *
-         * @since 1.3
          */
         @NonNull
         public DpProp getMinimumClickableHeight() {
@@ -439,11 +404,8 @@ public final class ModifiersBuilders {
             /** Creates an instance of {@link Builder}. */
             public Builder() {}
 
-            /**
-             * Sets the ID associated with this action.
-             *
-             * @since 1.0
-             */
+            /** Sets the ID associated with this action. */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setId(@NonNull String id) {
                 mImpl.setId(id);
@@ -453,9 +415,8 @@ public final class ModifiersBuilders {
 
             /**
              * Sets the action to perform when the element this modifier is attached to is clicked.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setOnClick(@NonNull Action onClick) {
                 mImpl.setOnClick(onClick.toActionProto());
@@ -473,15 +434,14 @@ public final class ModifiersBuilders {
              * bounds.
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.3
              */
+            @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
             public Builder setMinimumClickableWidth(@NonNull DpProp minimumClickableWidth) {
                 if (minimumClickableWidth.getDynamicValue() != null) {
                     throw new IllegalArgumentException(
                             "Clickable.Builder.setMinimumClickableWidth doesn't support dynamic"
-                                + " values.");
+                                    + " values.");
                 }
                 mImpl.setMinimumClickableWidth(minimumClickableWidth.toProto());
                 mFingerprint.recordPropertyUpdate(
@@ -499,15 +459,14 @@ public final class ModifiersBuilders {
              * bounds.
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.3
              */
+            @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
             public Builder setMinimumClickableHeight(@NonNull DpProp minimumClickableHeight) {
                 if (minimumClickableHeight.getDynamicValue() != null) {
                     throw new IllegalArgumentException(
                             "Clickable.Builder.setMinimumClickableHeight doesn't support dynamic"
-                                + " values.");
+                                    + " values.");
                 }
                 mImpl.setMinimumClickableHeight(minimumClickableHeight.toProto());
                 mFingerprint.recordPropertyUpdate(
@@ -529,9 +488,8 @@ public final class ModifiersBuilders {
      * A modifier for an element which has accessibility semantics associated with it. This should
      * generally be used sparingly, and in most cases should only be applied to the top-level layout
      * element or to Clickables.
-     *
-     * @since 1.0
      */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class Semantics {
         private final ModifiersProto.Semantics mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -547,8 +505,6 @@ public final class ModifiersBuilders {
          *
          * <p>While this field is statically accessible from 1.0, it's only bindable since version
          * 1.2 and renderers supporting version 1.2 will use the dynamic value (if set).
-         *
-         * @since 1.0
          */
         @Nullable
         public StringProp getContentDescription() {
@@ -562,8 +518,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the type of user interface element. Accessibility services might use this to
          * describe the element or do customizations.
-         *
-         * @since 1.2
          */
         @SemanticsRole
         public int getRole() {
@@ -575,8 +529,6 @@ public final class ModifiersBuilders {
          * This will be dictated when the element is focused by the screen reader.
          *
          * <p>This field is bindable and will use the dynamic value (if set).
-         *
-         * @since 1.2
          */
         @Nullable
         public StringProp getStateDescription() {
@@ -639,9 +591,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the type of user interface element. Accessibility services might use this to
              * describe the element or do customizations.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setRole(@SemanticsRole int role) {
                 mImpl.setRole(ModifiersProto.SemanticsRole.forNumber(role));
@@ -654,9 +605,8 @@ public final class ModifiersBuilders {
              * "off". This will be dictated when the element is focused by the screen reader.
              *
              * <p>This field is bindable and will use the dynamic value (if set).
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setStateDescription(@NonNull StringProp stateDescription) {
                 mImpl.setStateDescription(stateDescription.toProto());
@@ -668,9 +618,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the content description associated with this element. This will be dictated when
              * the element is focused by the screen reader.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             @SuppressWarnings(
                     "deprecation") // Updating a deprecated field for backward compatibility
@@ -684,9 +633,8 @@ public final class ModifiersBuilders {
              *
              * <p>While this field is statically accessible from 1.0, it's only bindable since
              * version 1.2 and renderers supporting version 1.2 will use the dynamic value (if set).
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             @SuppressWarnings(
                     "deprecation") // Updating a deprecated field for backward compatibility
@@ -706,11 +654,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * A modifier to apply padding around an element.
-     *
-     * @since 1.0
-     */
+    /** A modifier to apply padding around an element. */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class Padding {
         private final ModifiersProto.Padding mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -723,8 +668,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the padding on the end of the content, depending on the layout direction, in DP and
          * the value of "rtl_aware".
-         *
-         * @since 1.0
          */
         @Nullable
         public DpProp getEnd() {
@@ -738,8 +681,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the padding on the start of the content, depending on the layout direction, in DP
          * and the value of "rtl_aware".
-         *
-         * @since 1.0
          */
         @Nullable
         public DpProp getStart() {
@@ -750,11 +691,7 @@ public final class ModifiersBuilders {
             }
         }
 
-        /**
-         * Gets the padding at the top, in DP.
-         *
-         * @since 1.0
-         */
+        /** Gets the padding at the top, in DP. */
         @Nullable
         public DpProp getTop() {
             if (mImpl.hasTop()) {
@@ -764,11 +701,7 @@ public final class ModifiersBuilders {
             }
         }
 
-        /**
-         * Gets the padding at the bottom, in DP.
-         *
-         * @since 1.0
-         */
+        /** Gets the padding at the bottom, in DP. */
         @Nullable
         public DpProp getBottom() {
             if (mImpl.hasBottom()) {
@@ -783,8 +716,6 @@ public final class ModifiersBuilders {
          * start/end will follow the layout direction (i.e. start will refer to the right hand side
          * of the container if the device is using an RTL locale). If false, start/end will always
          * map to left/right, accordingly.
-         *
-         * @since 1.0
          */
         @Nullable
         public BoolProp getRtlAware() {
@@ -853,9 +784,8 @@ public final class ModifiersBuilders {
              * and the value of "rtl_aware".
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setEnd(@NonNull DpProp end) {
                 if (end.getDynamicValue() != null) {
@@ -873,9 +803,8 @@ public final class ModifiersBuilders {
              * DP and the value of "rtl_aware".
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setStart(@NonNull DpProp start) {
                 if (start.getDynamicValue() != null) {
@@ -892,9 +821,8 @@ public final class ModifiersBuilders {
              * Sets the padding at the top, in DP.
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setTop(@NonNull DpProp top) {
                 if (top.getDynamicValue() != null) {
@@ -911,9 +839,8 @@ public final class ModifiersBuilders {
              * Sets the padding at the bottom, in DP.
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setBottom(@NonNull DpProp bottom) {
                 if (bottom.getDynamicValue() != null) {
@@ -932,10 +859,15 @@ public final class ModifiersBuilders {
              * side of the container if the device is using an RTL locale). If false, start/end will
              * always map to left/right, accordingly.
              *
-             * @since 1.0
+             * <p>Note that this field only supports static values.
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setRtlAware(@NonNull BoolProp rtlAware) {
+                if (rtlAware.getDynamicValue() != null) {
+                    throw new IllegalArgumentException(
+                            "Padding.Builder.setRtlAware doesn't support dynamic values.");
+                }
                 mImpl.setRtlAware(rtlAware.toProto());
                 mFingerprint.recordPropertyUpdate(
                         5, checkNotNull(rtlAware.getFingerprint()).aggregateValueAsInt());
@@ -947,20 +879,16 @@ public final class ModifiersBuilders {
              * start/end will follow the layout direction (i.e. start will refer to the right hand
              * side of the container if the device is using an RTL locale). If false, start/end will
              * always map to left/right, accordingly.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @SuppressLint("MissingGetterMatchingBuilder")
             @NonNull
             public Builder setRtlAware(boolean rtlAware) {
-                return setRtlAware(new BoolProp.Builder().setValue(rtlAware).build());
+                return setRtlAware(new BoolProp.Builder(rtlAware).build());
             }
 
-            /**
-             * Sets the padding for all sides of the content, in DP.
-             *
-             * @since 1.0
-             */
+            /** Sets the padding for all sides of the content, in DP. */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             @SuppressLint("MissingGetterMatchingBuilder")
             public Builder setAll(@NonNull DpProp value) {
@@ -975,11 +903,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * A modifier to apply a border around an element.
-     *
-     * @since 1.0
-     */
+    /** A modifier to apply a border around an element. */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class Border {
         private final ModifiersProto.Border mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -989,11 +914,7 @@ public final class ModifiersBuilders {
             this.mFingerprint = fingerprint;
         }
 
-        /**
-         * Gets the width of the border, in DP.
-         *
-         * @since 1.0
-         */
+        /** Gets the width of the border, in DP. */
         @Nullable
         public DpProp getWidth() {
             if (mImpl.hasWidth()) {
@@ -1008,8 +929,6 @@ public final class ModifiersBuilders {
          *
          * <p>While this field is statically accessible from 1.0, it's only bindable since version
          * 1.2 and renderers supporting version 1.2 will use the dynamic value (if set).
-         *
-         * @since 1.0
          */
         @Nullable
         public ColorProp getColor() {
@@ -1065,9 +984,8 @@ public final class ModifiersBuilders {
              * Sets the width of the border, in DP.
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setWidth(@NonNull DpProp width) {
                 if (width.getDynamicValue() != null) {
@@ -1085,9 +1003,8 @@ public final class ModifiersBuilders {
              *
              * <p>While this field is statically accessible from 1.0, it's only bindable since
              * version 1.2 and renderers supporting version 1.2 will use the dynamic value (if set).
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setColor(@NonNull ColorProp color) {
                 mImpl.setColor(color.toProto());
@@ -1104,11 +1021,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * The corner of a {@link androidx.wear.protolayout.LayoutElementBuilders.Box} element.
-     *
-     * @since 1.0
-     */
+    /** The corner of a {@link androidx.wear.protolayout.LayoutElementBuilders.Box} element. */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class Corner {
         private final ModifiersProto.Corner mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -1118,11 +1032,7 @@ public final class ModifiersBuilders {
             this.mFingerprint = fingerprint;
         }
 
-        /**
-         * Gets the radius of the corner in DP.
-         *
-         * @since 1.0
-         */
+        /** Gets the radius of the corner in DP. */
         @Nullable
         public DpProp getRadius() {
             if (mImpl.hasRadius()) {
@@ -1177,9 +1087,8 @@ public final class ModifiersBuilders {
              * Sets the radius of the corner in DP.
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setRadius(@NonNull DpProp radius) {
                 if (radius.getDynamicValue() != null) {
@@ -1200,11 +1109,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * A modifier to apply a background to an element.
-     *
-     * @since 1.0
-     */
+    /** A modifier to apply a background to an element. */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class Background {
         private final ModifiersProto.Background mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -1220,8 +1126,6 @@ public final class ModifiersBuilders {
          *
          * <p>While this field is statically accessible from 1.0, it's only bindable since version
          * 1.2 and renderers supporting version 1.2 will use the dynamic value (if set).
-         *
-         * @since 1.0
          */
         @Nullable
         public ColorProp getColor() {
@@ -1236,8 +1140,6 @@ public final class ModifiersBuilders {
          * Gets the corner properties of this element. This only affects the drawing of this element
          * if it has a background color or border. If not defined, defaults to having a square
          * corner.
-         *
-         * @since 1.0
          */
         @Nullable
         public Corner getCorner() {
@@ -1296,9 +1198,8 @@ public final class ModifiersBuilders {
              *
              * <p>While this field is statically accessible from 1.0, it's only bindable since
              * version 1.2 and renderers supporting version 1.2 will use the dynamic value (if set).
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setColor(@NonNull ColorProp color) {
                 mImpl.setColor(color.toProto());
@@ -1311,9 +1212,8 @@ public final class ModifiersBuilders {
              * Sets the corner properties of this element. This only affects the drawing of this
              * element if it has a background color or border. If not defined, defaults to having a
              * square corner.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setCorner(@NonNull Corner corner) {
                 mImpl.setCorner(corner.toProto());
@@ -1333,9 +1233,8 @@ public final class ModifiersBuilders {
     /**
      * Metadata about an element. For use by libraries building higher-level components only. This
      * can be used to track component metadata.
-     *
-     * @since 1.0
      */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class ElementMetadata {
         private final ModifiersProto.ElementMetadata mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -1348,8 +1247,6 @@ public final class ModifiersBuilders {
         /**
          * Gets property describing the element with which it is associated. For use by libraries
          * building higher-level components only. This can be used to track component metadata.
-         *
-         * @since 1.0
          */
         @NonNull
         public byte[] getTagData() {
@@ -1402,9 +1299,8 @@ public final class ModifiersBuilders {
              * Sets property describing the element with which it is associated. For use by
              * libraries building higher-level components only. This can be used to track component
              * metadata.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setTagData(@NonNull byte[] tagData) {
                 mImpl.setTagData(ByteString.copyFrom(tagData));
@@ -1424,9 +1320,8 @@ public final class ModifiersBuilders {
      * {@link Modifiers} for an element. These may change the way they are drawn (e.g. {@link
      * Padding} or {@link Background}), or change their behaviour (e.g. {@link Clickable}, or {@link
      * Semantics}).
-     *
-     * @since 1.0
      */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class Modifiers {
         private final ModifiersProto.Modifiers mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -1439,8 +1334,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the clickable property of the modified element. It allows its wrapped element to
          * have actions associated with it, which will be executed when the element is tapped.
-         *
-         * @since 1.0
          */
         @Nullable
         public Clickable getClickable() {
@@ -1454,8 +1347,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the semantics of the modified element. This can be used to add metadata to the
          * modified element (eg. screen reader content descriptions).
-         *
-         * @since 1.0
          */
         @Nullable
         public Semantics getSemantics() {
@@ -1466,11 +1357,7 @@ public final class ModifiersBuilders {
             }
         }
 
-        /**
-         * Gets the padding of the modified element.
-         *
-         * @since 1.0
-         */
+        /** Gets the padding of the modified element. */
         @Nullable
         public Padding getPadding() {
             if (mImpl.hasPadding()) {
@@ -1480,11 +1367,7 @@ public final class ModifiersBuilders {
             }
         }
 
-        /**
-         * Gets the border of the modified element.
-         *
-         * @since 1.0
-         */
+        /** Gets the border of the modified element. */
         @Nullable
         public Border getBorder() {
             if (mImpl.hasBorder()) {
@@ -1494,11 +1377,7 @@ public final class ModifiersBuilders {
             }
         }
 
-        /**
-         * Gets the background (with optional corner radius) of the modified element.
-         *
-         * @since 1.0
-         */
+        /** Gets the background (with optional corner radius) of the modified element. */
         @Nullable
         public Background getBackground() {
             if (mImpl.hasBackground()) {
@@ -1511,8 +1390,6 @@ public final class ModifiersBuilders {
         /**
          * Gets metadata about an element. For use by libraries building higher-level components
          * only. This can be used to track component metadata.
-         *
-         * @since 1.0
          */
         @Nullable
         public ElementMetadata getMetadata() {
@@ -1526,8 +1403,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the content transition of an element. Any update to the element or its children will
          * trigger this animation for this element and everything underneath it.
-         *
-         * @since 1.2
          */
         @ProtoLayoutExperimental
         @Nullable
@@ -1536,6 +1411,21 @@ public final class ModifiersBuilders {
                 return AnimatedVisibility.fromProto(mImpl.getContentUpdateAnimation());
             } else {
                 return null;
+            }
+        }
+
+        /**
+         * Gets whether the attached element is visible, or hidden. If the element is hidden, then
+         * it will still consume space in the layout, but will not render any contents, nor will any
+         * children render any contents. Defaults to visible.
+         */
+        @ProtoLayoutExperimental
+        @NonNull
+        public BoolProp isVisible() {
+            if (mImpl.hasVisible()) {
+                return BoolProp.fromProto(mImpl.getVisible());
+            } else {
+                return new BoolProp.Builder(true).build();
             }
         }
 
@@ -1590,6 +1480,8 @@ public final class ModifiersBuilders {
                     + getMetadata()
                     + ", contentUpdateAnimation="
                     + getContentUpdateAnimation()
+                    + ", visible="
+                    + isVisible()
                     + "}";
         }
 
@@ -1605,9 +1497,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the clickable property of the modified element. It allows its wrapped element to
              * have actions associated with it, which will be executed when the element is tapped.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setClickable(@NonNull Clickable clickable) {
                 mImpl.setClickable(clickable.toProto());
@@ -1619,9 +1510,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the semantics of the modified element. This can be used to add metadata to the
              * modified element (eg. screen reader content descriptions).
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setSemantics(@NonNull Semantics semantics) {
                 mImpl.setSemantics(semantics.toProto());
@@ -1630,11 +1520,8 @@ public final class ModifiersBuilders {
                 return this;
             }
 
-            /**
-             * Sets the padding of the modified element.
-             *
-             * @since 1.0
-             */
+            /** Sets the padding of the modified element. */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setPadding(@NonNull Padding padding) {
                 mImpl.setPadding(padding.toProto());
@@ -1643,11 +1530,8 @@ public final class ModifiersBuilders {
                 return this;
             }
 
-            /**
-             * Sets the border of the modified element.
-             *
-             * @since 1.0
-             */
+            /** Sets the border of the modified element. */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setBorder(@NonNull Border border) {
                 mImpl.setBorder(border.toProto());
@@ -1656,11 +1540,8 @@ public final class ModifiersBuilders {
                 return this;
             }
 
-            /**
-             * Sets the background (with optional corner radius) of the modified element.
-             *
-             * @since 1.0
-             */
+            /** Sets the background (with optional corner radius) of the modified element. */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setBackground(@NonNull Background background) {
                 mImpl.setBackground(background.toProto());
@@ -1672,9 +1553,8 @@ public final class ModifiersBuilders {
             /**
              * Sets metadata about an element. For use by libraries building higher-level components
              * only. This can be used to track component metadata.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setMetadata(@NonNull ElementMetadata metadata) {
                 mImpl.setMetadata(metadata.toProto());
@@ -1686,9 +1566,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the content transition of an element. Any update to the element or its children
              * will trigger this animation for this element and everything underneath it.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @ProtoLayoutExperimental
             @NonNull
             public Builder setContentUpdateAnimation(
@@ -1698,6 +1577,27 @@ public final class ModifiersBuilders {
                         7,
                         checkNotNull(contentUpdateAnimation.getFingerprint())
                                 .aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets whether the attached element is visible, or hidden. If the element is hidden,
+             * then it will still consume space in the layout, but will not render any contents, nor
+             * will any children render any contents. Defaults to visible.
+             *
+             * <p>Note that a hidden element also cannot be clickable (i.e. a {@link Clickable}
+             * modifier would be ignored).
+             *
+             * <p>This field is bindable and will use the dynamic value (if set).
+             */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            @ProtoLayoutExperimental
+            @SuppressLint("MissingGetterMatchingBuilder")
+            @NonNull
+            public Builder setVisible(@NonNull BoolProp visible) {
+                mImpl.setVisible(visible.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        10, checkNotNull(visible.getFingerprint()).aggregateValueAsInt());
                 return this;
             }
 
@@ -1712,9 +1612,8 @@ public final class ModifiersBuilders {
     /**
      * The content transition of an element. Any update to the element or its children will trigger
      * this animation for this element and everything underneath it.
-     *
-     * @since 1.2
      */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
     public static final class AnimatedVisibility {
         private final ModifiersProto.AnimatedVisibility mImpl;
@@ -1726,11 +1625,7 @@ public final class ModifiersBuilders {
             this.mFingerprint = fingerprint;
         }
 
-        /**
-         * Gets the content transition that is triggered when element enters the layout.
-         *
-         * @since 1.2
-         */
+        /** Gets the content transition that is triggered when element enters the layout. */
         @Nullable
         public EnterTransition getEnterTransition() {
             if (mImpl.hasEnterTransition()) {
@@ -1743,8 +1638,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the content transition that is triggered when element exits the layout. Note that
          * indefinite exit animations are ignored.
-         *
-         * @since 1.2
          */
         @Nullable
         public ExitTransition getExitTransition() {
@@ -1803,11 +1696,8 @@ public final class ModifiersBuilders {
             /** Creates an instance of {@link Builder}. */
             public Builder() {}
 
-            /**
-             * Sets the content transition that is triggered when element enters the layout.
-             *
-             * @since 1.2
-             */
+            /** Sets the content transition that is triggered when element enters the layout. */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setEnterTransition(@NonNull EnterTransition enterTransition) {
                 mImpl.setEnterTransition(enterTransition.toProto());
@@ -1819,9 +1709,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the content transition that is triggered when element exits the layout. Note
              * that indefinite exit animations are ignored.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setExitTransition(@NonNull ExitTransition exitTransition) {
                 mImpl.setExitTransition(exitTransition.toProto());
@@ -1838,11 +1727,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * The content transition that is triggered when element enters the layout.
-     *
-     * @since 1.2
-     */
+    /** The content transition that is triggered when element enters the layout. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
     public static final class EnterTransition {
         private final ModifiersProto.EnterTransition mImpl;
@@ -1856,8 +1742,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the fading in animation for content transition of an element and its children
          * happening when entering the layout.
-         *
-         * @since 1.2
          */
         @Nullable
         public FadeInTransition getFadeIn() {
@@ -1871,8 +1755,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the sliding in animation for content transition of an element and its children
          * happening when entering the layout.
-         *
-         * @since 1.2
          */
         @Nullable
         public SlideInTransition getSlideIn() {
@@ -1928,9 +1810,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the fading in animation for content transition of an element and its children
              * happening when entering the layout.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setFadeIn(@NonNull FadeInTransition fadeIn) {
                 mImpl.setFadeIn(fadeIn.toProto());
@@ -1942,9 +1823,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the sliding in animation for content transition of an element and its children
              * happening when entering the layout.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setSlideIn(@NonNull SlideInTransition slideIn) {
                 mImpl.setSlideIn(slideIn.toProto());
@@ -1964,9 +1844,8 @@ public final class ModifiersBuilders {
     /**
      * The fading animation for content transition of an element and its children, from the
      * specified starting alpha to fully visible.
-     *
-     * @since 1.2
      */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
     public static final class FadeInTransition {
         private final ModifiersProto.FadeInTransition mImpl;
@@ -1980,19 +1859,13 @@ public final class ModifiersBuilders {
         /**
          * Gets the starting alpha of the fade in transition. It should be between 0 and 1. If not
          * set, defaults to fully transparent, i.e. 0.
-         *
-         * @since 1.2
          */
         @FloatRange(from = 0.0, to = 1.0)
         public float getInitialAlpha() {
             return mImpl.getInitialAlpha();
         }
 
-        /**
-         * Gets the animation parameters for duration, delay, etc.
-         *
-         * @since 1.2
-         */
+        /** Gets the animation parameters for duration, delay, etc. */
         @Nullable
         public AnimationSpec getAnimationSpec() {
             if (mImpl.hasAnimationSpec()) {
@@ -2052,9 +1925,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the starting alpha of the fade in transition. It should be between 0 and 1. If
              * not set, defaults to fully transparent, i.e. 0.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setInitialAlpha(@FloatRange(from = 0.0, to = 1.0) float initialAlpha) {
                 mImpl.setInitialAlpha(initialAlpha);
@@ -2062,11 +1934,8 @@ public final class ModifiersBuilders {
                 return this;
             }
 
-            /**
-             * Sets the animation parameters for duration, delay, etc.
-             *
-             * @since 1.2
-             */
+            /** Sets the animation parameters for duration, delay, etc. */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setAnimationSpec(@NonNull AnimationSpec animationSpec) {
                 mImpl.setAnimationSpec(animationSpec.toProto());
@@ -2083,11 +1952,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * The sliding in animation for content transition of an element and its children.
-     *
-     * @since 1.2
-     */
+    /** The sliding in animation for content transition of an element and its children. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
     public static final class SlideInTransition {
         private final ModifiersProto.SlideInTransition mImpl;
@@ -2103,8 +1969,6 @@ public final class ModifiersBuilders {
          * Gets the slide direction used for slide animations on any element, from the specified
          * point to its destination in the layout. If not set, defaults to horizontal from left to
          * the right.
-         *
-         * @since 1.2
          */
         @SlideDirection
         public int getDirection() {
@@ -2116,8 +1980,6 @@ public final class ModifiersBuilders {
          * parent boundary for horizontal orientation and from the top for vertical orientation.
          * Note that sliding from the screen boundaries can only be achieved if all parent's sizes
          * are big enough to accommodate it.
-         *
-         * @since 1.2
          */
         @Nullable
         public SlideBound getInitialSlideBound() {
@@ -2128,11 +1990,7 @@ public final class ModifiersBuilders {
             }
         }
 
-        /**
-         * Gets the animation parameters for duration, delay, etc.
-         *
-         * @since 1.2
-         */
+        /** Gets the animation parameters for duration, delay, etc. */
         @Nullable
         public AnimationSpec getAnimationSpec() {
             if (mImpl.hasAnimationSpec()) {
@@ -2196,9 +2054,8 @@ public final class ModifiersBuilders {
              * Sets the slide direction used for slide animations on any element, from the specified
              * point to its destination in the layout. If not set, defaults to horizontal from left
              * to the right.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setDirection(@SlideDirection int direction) {
                 mImpl.setDirection(ModifiersProto.SlideDirection.forNumber(direction));
@@ -2211,9 +2068,8 @@ public final class ModifiersBuilders {
              * parent boundary for horizontal orientation and from the top for vertical orientation.
              * Note that sliding from the screen boundaries can only be achieved if all parent's
              * sizes are big enough to accommodate it.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setInitialSlideBound(@NonNull SlideBound initialSlideBound) {
                 mImpl.setInitialSlideBound(initialSlideBound.toSlideBoundProto());
@@ -2222,11 +2078,8 @@ public final class ModifiersBuilders {
                 return this;
             }
 
-            /**
-             * Sets the animation parameters for duration, delay, etc.
-             *
-             * @since 1.2
-             */
+            /** Sets the animation parameters for duration, delay, etc. */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setAnimationSpec(@NonNull AnimationSpec animationSpec) {
                 mImpl.setAnimationSpec(animationSpec.toProto());
@@ -2243,11 +2096,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * The content transition that is triggered when element exits the layout.
-     *
-     * @since 1.2
-     */
+    /** The content transition that is triggered when element exits the layout. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
     public static final class ExitTransition {
         private final ModifiersProto.ExitTransition mImpl;
@@ -2261,8 +2111,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the fading out animation for content transition of an element and its children
          * happening when exiting the layout.
-         *
-         * @since 1.2
          */
         @Nullable
         public FadeOutTransition getFadeOut() {
@@ -2276,8 +2124,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the sliding out animation for content transition of an element and its children
          * happening when exiting the layout.
-         *
-         * @since 1.2
          */
         @Nullable
         public SlideOutTransition getSlideOut() {
@@ -2338,9 +2184,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the fading out animation for content transition of an element and its children
              * happening when exiting the layout.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setFadeOut(@NonNull FadeOutTransition fadeOut) {
                 mImpl.setFadeOut(fadeOut.toProto());
@@ -2352,9 +2197,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the sliding out animation for content transition of an element and its children
              * happening when exiting the layout.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setSlideOut(@NonNull SlideOutTransition slideOut) {
                 mImpl.setSlideOut(slideOut.toProto());
@@ -2374,9 +2218,8 @@ public final class ModifiersBuilders {
     /**
      * The fading animation for content transition of an element and its children, from fully
      * visible to the specified target alpha.
-     *
-     * @since 1.2
      */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
     public static final class FadeOutTransition {
         private final ModifiersProto.FadeOutTransition mImpl;
@@ -2391,19 +2234,13 @@ public final class ModifiersBuilders {
         /**
          * Gets the target alpha of the fade out transition. It should be between 0 and 1. If not
          * set, defaults to fully invisible, i.e. 0.
-         *
-         * @since 1.2
          */
         @FloatRange(from = 0.0, to = 1.0)
         public float getTargetAlpha() {
             return mImpl.getTargetAlpha();
         }
 
-        /**
-         * Gets the animation parameters for duration, delay, etc.
-         *
-         * @since 1.2
-         */
+        /** Gets the animation parameters for duration, delay, etc. */
         @Nullable
         public AnimationSpec getAnimationSpec() {
             if (mImpl.hasAnimationSpec()) {
@@ -2464,8 +2301,6 @@ public final class ModifiersBuilders {
             /**
              * Sets the target alpha of the fade out transition. It should be between 0 and 1. If
              * not set, defaults to fully invisible, i.e. 0.
-             *
-             * @since 1.2
              */
             @NonNull
             public Builder setTargetAlpha(@FloatRange(from = 0.0, to = 1.0) float targetAlpha) {
@@ -2474,11 +2309,8 @@ public final class ModifiersBuilders {
                 return this;
             }
 
-            /**
-             * Sets the animation parameters for duration, delay, etc.
-             *
-             * @since 1.2
-             */
+            /** Sets the animation parameters for duration, delay, etc. */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setAnimationSpec(@NonNull AnimationSpec animationSpec) {
                 mImpl.setAnimationSpec(animationSpec.toProto());
@@ -2495,11 +2327,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * The sliding out animation for content transition of an element and its children.
-     *
-     * @since 1.2
-     */
+    /** The sliding out animation for content transition of an element and its children. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
     public static final class SlideOutTransition {
         private final ModifiersProto.SlideOutTransition mImpl;
@@ -2515,8 +2344,6 @@ public final class ModifiersBuilders {
          * Gets the slide direction used for slide animations on any element, from its destination
          * in the layout to the specified point. If not set, defaults to horizontal from right to
          * the left.
-         *
-         * @since 1.2
          */
         @SlideDirection
         public int getDirection() {
@@ -2528,8 +2355,6 @@ public final class ModifiersBuilders {
          * parent boundary for horizontal orientation and at the top for vertical orientation. Note
          * that sliding from the screen boundaries can only be achieved if all parent's sizes are
          * big enough to accommodate it.
-         *
-         * @since 1.2
          */
         @Nullable
         public SlideBound getTargetSlideBound() {
@@ -2540,11 +2365,7 @@ public final class ModifiersBuilders {
             }
         }
 
-        /**
-         * Gets the animation parameters for duration, delay, etc.
-         *
-         * @since 1.2
-         */
+        /** Gets the animation parameters for duration, delay, etc. */
         @Nullable
         public AnimationSpec getAnimationSpec() {
             if (mImpl.hasAnimationSpec()) {
@@ -2608,9 +2429,8 @@ public final class ModifiersBuilders {
              * Sets the slide direction used for slide animations on any element, from its
              * destination in the layout to the specified point. If not set, defaults to horizontal
              * from right to the left.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setDirection(@SlideDirection int direction) {
                 mImpl.setDirection(ModifiersProto.SlideDirection.forNumber(direction));
@@ -2623,8 +2443,6 @@ public final class ModifiersBuilders {
              * parent boundary for horizontal orientation and at the top for vertical orientation.
              * Note that sliding from the screen boundaries can only be achieved if all parent's
              * sizes are big enough to accommodate it.
-             *
-             * @since 1.2
              */
             @NonNull
             public Builder setTargetSlideBound(@NonNull SlideBound targetSlideBound) {
@@ -2634,11 +2452,8 @@ public final class ModifiersBuilders {
                 return this;
             }
 
-            /**
-             * Sets the animation parameters for duration, delay, etc.
-             *
-             * @since 1.2
-             */
+            /** Sets the animation parameters for duration, delay, etc. */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setAnimationSpec(@NonNull AnimationSpec animationSpec) {
                 mImpl.setAnimationSpec(animationSpec.toProto());
@@ -2655,11 +2470,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * Interface defining the boundary that a Slide animation will use for start/end.
-     *
-     * @since 1.2
-     */
+    /** Interface defining the boundary that a Slide animation will use for start/end. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
     public interface SlideBound {
         /** Get the protocol buffer representation of this object. */
@@ -2700,11 +2512,8 @@ public final class ModifiersBuilders {
         return slideBoundFromProto(proto, null);
     }
 
-    /**
-     * The slide animation will animate from/to the parent elements boundaries.
-     *
-     * @since 1.2
-     */
+    /** The slide animation will animate from/to the parent elements boundaries. */
+    @RequiresSchemaVersion(major = 1, minor = 200)
     @ProtoLayoutExperimental
     public static final class SlideParentBound implements SlideBound {
         private final ModifiersProto.SlideParentBound mImpl;
@@ -2718,8 +2527,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the snap options to use when sliding using parent boundaries. Defaults to
          * SLIDE_PARENT_SNAP_TO_INSIDE if not specified.
-         *
-         * @since 1.2
          */
         @SlideParentSnapOption
         public int getSnapTo() {
@@ -2779,9 +2586,8 @@ public final class ModifiersBuilders {
             /**
              * Sets the snap options to use when sliding using parent boundaries. Defaults to
              * SLIDE_PARENT_SNAP_TO_INSIDE if not specified.
-             *
-             * @since 1.2
              */
+            @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setSnapTo(@SlideParentSnapOption int snapTo) {
                 mImpl.setSnapTo(ModifiersProto.SlideParentSnapOption.forNumber(snapTo));
@@ -2801,9 +2607,8 @@ public final class ModifiersBuilders {
     /**
      * {@link Modifiers} that can be used with ArcLayoutElements. These may change the way they are
      * drawn, or change their behaviour.
-     *
-     * @since 1.0
      */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class ArcModifiers {
         private final ModifiersProto.ArcModifiers mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -2816,8 +2621,6 @@ public final class ModifiersBuilders {
         /**
          * Gets allows its wrapped element to have actions associated with it, which will be
          * executed when the element is tapped.
-         *
-         * @since 1.0
          */
         @Nullable
         public Clickable getClickable() {
@@ -2831,8 +2634,6 @@ public final class ModifiersBuilders {
         /**
          * Gets adds metadata for the modified element, for example, screen reader content
          * descriptions.
-         *
-         * @since 1.0
          */
         @Nullable
         public Semantics getSemantics() {
@@ -2893,9 +2694,8 @@ public final class ModifiersBuilders {
             /**
              * Sets allows its wrapped element to have actions associated with it, which will be
              * executed when the element is tapped.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setClickable(@NonNull Clickable clickable) {
                 mImpl.setClickable(clickable.toProto());
@@ -2907,9 +2707,8 @@ public final class ModifiersBuilders {
             /**
              * Sets adds metadata for the modified element, for example, screen reader content
              * descriptions.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setSemantics(@NonNull Semantics semantics) {
                 mImpl.setSemantics(semantics.toProto());
@@ -2930,9 +2729,8 @@ public final class ModifiersBuilders {
      * {@link Modifiers} that can be used with {@link
      * androidx.wear.protolayout.LayoutElementBuilders.Span} elements. These may change the way they
      * are drawn, or change their behaviour.
-     *
-     * @since 1.0
      */
+    @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class SpanModifiers {
         private final ModifiersProto.SpanModifiers mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -2945,8 +2743,6 @@ public final class ModifiersBuilders {
         /**
          * Gets allows its wrapped element to have actions associated with it, which will be
          * executed when the element is tapped.
-         *
-         * @since 1.0
          */
         @Nullable
         public Clickable getClickable() {
@@ -3002,9 +2798,8 @@ public final class ModifiersBuilders {
             /**
              * Sets allows its wrapped element to have actions associated with it, which will be
              * executed when the element is tapped.
-             *
-             * @since 1.0
              */
+            @RequiresSchemaVersion(major = 1, minor = 0)
             @NonNull
             public Builder setClickable(@NonNull Clickable clickable) {
                 mImpl.setClickable(clickable.toProto());
@@ -3021,11 +2816,8 @@ public final class ModifiersBuilders {
         }
     }
 
-    /**
-     * The shadow definition. The shadow is drawn as a blur region around the element.
-     *
-     * @since 1.3
-     */
+    /** The shadow definition. The shadow is drawn as a blur region around the element. */
+    @RequiresSchemaVersion(major = 1, minor = 300)
     public static final class Shadow {
         private final ModifiersProto.Shadow mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -3038,8 +2830,6 @@ public final class ModifiersBuilders {
         /**
          * Gets the blur radius of the shadow. It controls the size of the blur that is drawn. When
          * set to zero, the shadow is not drawn. Defaults to zero.
-         *
-         * @since 1.3
          */
         @NonNull
         public DpProp getBlurRadius() {
@@ -3050,11 +2840,7 @@ public final class ModifiersBuilders {
             }
         }
 
-        /**
-         * Gets the color used in the shadow. Defaults to Black.
-         *
-         * @since 1.3
-         */
+        /** Gets the color used in the shadow. Defaults to Black. */
         @NonNull
         public ColorProp getColor() {
             if (mImpl.hasColor()) {
@@ -3110,9 +2896,8 @@ public final class ModifiersBuilders {
              * When set to zero, the shadow is not drawn. Defaults to zero.
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.3
              */
+            @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
             public Builder setBlurRadius(@NonNull DpProp blurRadius) {
                 if (blurRadius.getDynamicValue() != null) {
@@ -3129,9 +2914,8 @@ public final class ModifiersBuilders {
              * Sets the color used in the shadow. Defaults to Black.
              *
              * <p>Note that this field only supports static values.
-             *
-             * @since 1.3
              */
+            @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
             public Builder setColor(@NonNull ColorProp color) {
                 if (color.getDynamicValue() != null) {

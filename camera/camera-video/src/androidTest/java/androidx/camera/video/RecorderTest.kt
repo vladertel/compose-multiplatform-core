@@ -276,6 +276,13 @@ class RecorderTest(
     fun tearDown() {
         for (recording in recordingsToStop) {
             recording.stop()
+            try {
+                // Wait for recording done to avoid overlapping to next recording test.
+                // Overlapping recording tests may lead to uncertainty and flaky-ness.
+                recording.listener.verifyFinalize(inOrder = false)
+            } catch (e: AssertionError) {
+                // Ignored.
+            }
         }
 
         if (this::cameraUseCaseAdapter.isInitialized) {
@@ -739,6 +746,8 @@ class RecorderTest(
 
     @Test
     fun stop_WhenUseCaseDetached() {
+        assumeStopCodecAfterSurfaceRemovalCrashMediaServerQuirk()
+
         // Arrange.
         val recording = createRecordingProcess()
 
@@ -1246,17 +1255,16 @@ class RecorderTest(
         MediaMetadataRetriever().useAndRelease {
             it.setDataSource(context, uri)
             // Only test on mp4 output format, others will be ignored.
-            val mime = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE)
+            val mime = it.getMimeType()
             assumeTrue(
                 "Unsupported mime = $mime",
                 "video/mp4".equals(mime, ignoreCase = true)
             )
-            val value = it.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)
-            assertThat(value).isNotNull()
+            val value = it.getLocation()
             // ex: (90, 180) => "+90.0000+180.0000/" (ISO-6709 standard)
             val matchGroup =
                 "([+-]?[0-9]+(\\.[0-9]+)?)([+-]?[0-9]+(\\.[0-9]+)?)".toRegex()
-                    .find(value!!) ?: fail("Fail on checking location metadata: $value")
+                    .find(value) ?: fail("Fail on checking location metadata: $value")
             val lat = matchGroup.groupValues[1].toDouble()
             val lon = matchGroup.groupValues[3].toDouble()
 
@@ -1273,10 +1281,9 @@ class RecorderTest(
     private fun checkDurationAtMost(uri: Uri, duration: Long) {
         MediaMetadataRetriever().useAndRelease {
             it.setDataSource(context, uri)
-            val durationFromFile = it.getDuration()
+            val durationFromFile = it.getDurationMs()
 
-            assertThat(durationFromFile).isNotNull()
-            assertThat(durationFromFile!!).isAtMost(duration)
+            assertThat(durationFromFile).isAtMost(duration)
         }
     }
 

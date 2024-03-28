@@ -17,6 +17,9 @@
 package androidx.compose.foundation.text2.input.internal
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.interaction.HoverInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -59,6 +62,7 @@ import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.copyText
 import androidx.compose.ui.semantics.cutText
 import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.editable
 import androidx.compose.ui.semantics.editableText
 import androidx.compose.ui.semantics.getTextLayoutResult
 import androidx.compose.ui.semantics.insertTextAtCursor
@@ -80,6 +84,8 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+private const val MIMETYPE_TEXT = "text/*"
+
 /**
  * Modifier element for most of the functionality of [BasicTextField2] that is attached to the
  * decoration box. This is only half the actual modifiers for the field, the other half are only
@@ -98,6 +104,7 @@ internal data class TextFieldDecoratorModifier(
     private val keyboardOptions: KeyboardOptions,
     private val keyboardActions: KeyboardActions,
     private val singleLine: Boolean,
+    private val interactionSource: MutableInteractionSource
 ) : ModifierNodeElement<TextFieldDecoratorModifierNode>() {
     override fun create(): TextFieldDecoratorModifierNode = TextFieldDecoratorModifierNode(
         textFieldState = textFieldState,
@@ -109,6 +116,7 @@ internal data class TextFieldDecoratorModifier(
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         singleLine = singleLine,
+        interactionSource = interactionSource,
     )
 
     override fun update(node: TextFieldDecoratorModifierNode) {
@@ -122,6 +130,7 @@ internal data class TextFieldDecoratorModifier(
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
             singleLine = singleLine,
+            interactionSource = interactionSource,
         )
     }
 
@@ -142,6 +151,7 @@ internal class TextFieldDecoratorModifierNode(
     keyboardOptions: KeyboardOptions,
     var keyboardActions: KeyboardActions,
     var singleLine: Boolean,
+    var interactionSource: MutableInteractionSource
 ) : DelegatingNode(),
     PlatformTextInputModifierNode,
     SemanticsModifierNode,
@@ -153,6 +163,8 @@ internal class TextFieldDecoratorModifierNode(
     CompositionLocalConsumerModifierNode,
     ObserverModifierNode {
 
+    private val editable get() = enabled && !readOnly
+
     private val pointerInputNode = delegate(SuspendingPointerInputModifierNode {
         with(textFieldSelectionState) {
             textFieldGestures(
@@ -160,11 +172,59 @@ internal class TextFieldDecoratorModifierNode(
                     if (!isFocused) requestFocus()
                 },
                 showKeyboard = {
-                    requireKeyboardController().show()
+                    if (inputSessionJob != null) {
+                        // just reshow the keyboard in existing session
+                        requireKeyboardController().show()
+                    } else {
+                        startInputSession(fromTap = true)
+                    }
                 }
             )
         }
     })
+
+    /**
+     * The last enter event that was submitted to [interactionSource] from [dragAndDropNode]. We
+     * need to keep a reference to this event to send a follow-up exit event.
+     *
+     * We are using interaction source hover state as a hacky capsule to carry dragging events to
+     * core modifier node which draws the cursor and shows the magnifier. TextFields are not
+     * really focused when a dragging text hovers over them. Focused TextFields should have active
+     * input connections that is not required in a drag and drop scenario.
+     *
+     * When proper hover events are implemented for [interactionSource], the below code in
+     * [dragAndDropNode] should be revised.
+     */
+    private var dragEnterEvent: HoverInteraction.Enter? = null
+
+    private val dragAndDropNode = delegate(
+        textFieldDragAndDropNode(
+            acceptedMimeTypes = setOf(MIMETYPE_TEXT),
+            onEntered = {
+                dragEnterEvent = HoverInteraction.Enter().also {
+                    interactionSource.tryEmit(it)
+                }
+            },
+            onMoved = { position ->
+                val positionOnTextField = textLayoutState.fromWindowToDecoration(position)
+                val cursorPosition = textLayoutState.getOffsetForPosition(positionOnTextField)
+                textFieldState.selectCharsIn(TextRange(cursorPosition))
+                textFieldSelectionState.updateHandleDragging(Handle.Cursor, positionOnTextField)
+            },
+            onDrop = {
+                emitDragExitEvent()
+                textFieldSelectionState.clearHandleDragging()
+                textFieldState.replaceSelectedText(it.text)
+                true
+            },
+            onExited = {
+                emitDragExitEvent()
+                textFieldSelectionState.clearHandleDragging()
+            },
+            onEnded = {
+                emitDragExitEvent()
+            })
+    )
 
     var keyboardOptions: KeyboardOptions = keyboardOptions.withDefaultsFrom(filter?.keyboardOptions)
         private set
@@ -243,6 +303,7 @@ internal class TextFieldDecoratorModifierNode(
         keyboardOptions: KeyboardOptions,
         keyboardActions: KeyboardActions,
         singleLine: Boolean,
+        interactionSource: MutableInteractionSource
     ) {
         // Find the diff: current previous and new values before updating current.
         val previousWriteable = this.enabled && !this.readOnly
@@ -264,6 +325,7 @@ internal class TextFieldDecoratorModifierNode(
         this.keyboardOptions = keyboardOptions.withDefaultsFrom(filter?.keyboardOptions)
         this.keyboardActions = keyboardActions
         this.singleLine = singleLine
+        this.interactionSource = interactionSource
 
         // React to diff.
         // Something about the session changed, restart the session.
@@ -274,7 +336,7 @@ internal class TextFieldDecoratorModifierNode(
         ) {
             if (writeable && isFocused) {
                 // The old session will be implicitly disposed.
-                startInputSession()
+                startInputSession(fromTap = false)
             } else if (!writeable) {
                 // We were made read-only or disabled, hide the keyboard.
                 disposeInputSession()
@@ -300,13 +362,14 @@ internal class TextFieldDecoratorModifierNode(
         editableText = AnnotatedString(text.toString())
         textSelectionRange = selection
 
+        if (!enabled) disabled()
+        if (editable) editable()
+
         getTextLayoutResult {
             textLayoutState.layoutResult?.let { result -> it.add(result) } ?: false
         }
-        if (!enabled) disabled()
-
         setText { newText ->
-            if (readOnly || !enabled) return@setText false
+            if (!editable) return@setText false
 
             textFieldState.replaceAll(newText)
             true
@@ -320,7 +383,7 @@ internal class TextFieldDecoratorModifierNode(
             val text = if (relativeToOriginal) {
                 textFieldState.untransformedText
             } else {
-                textFieldState.text
+                textFieldState.visualText
             }
             val selection = text.selectionInChars
 
@@ -352,7 +415,7 @@ internal class TextFieldDecoratorModifierNode(
             return@setSelection true
         }
         insertTextAtCursor { newText ->
-            if (readOnly || !enabled) return@insertTextAtCursor false
+            if (!editable) return@insertTextAtCursor false
 
             // Finish composing text first because when the field is focused the IME
             // might set composition.
@@ -392,7 +455,7 @@ internal class TextFieldDecoratorModifierNode(
                 }
             }
         }
-        if (enabled && !readOnly) {
+        if (editable) {
             pasteText {
                 textFieldSelectionState.paste()
                 true
@@ -409,8 +472,8 @@ internal class TextFieldDecoratorModifierNode(
 
         if (focusState.isFocused) {
             // Deselect when losing focus even if readonly.
-            if (enabled && !readOnly) {
-                startInputSession()
+            if (editable) {
+                startInputSession(fromTap = false)
                 // TODO(halilibo): bringIntoView
             }
         } else {
@@ -472,7 +535,9 @@ internal class TextFieldDecoratorModifierNode(
         }
     }
 
-    private fun startInputSession() {
+    private fun startInputSession(fromTap: Boolean) {
+        if (!fromTap && !keyboardOptions.shouldShowKeyboardOnFocus) return
+
         inputSessionJob = coroutineScope.launch {
             // This will automatically cancel the previous session, if any, so we don't need to
             // cancel the inputSessionJob ourselves.
@@ -484,6 +549,7 @@ internal class TextFieldDecoratorModifierNode(
 
                 platformSpecificTextInputSession(
                     textFieldState,
+                    textLayoutState,
                     keyboardOptions.toImeOptions(singleLine),
                     onImeAction = onImeActionPerformed
                 )
@@ -499,7 +565,7 @@ internal class TextFieldDecoratorModifierNode(
     private fun startOrDisposeInputSessionOnWindowFocusChange() {
         if (windowInfo == null) return
         if (windowInfo?.isWindowFocused == true && isElementFocused) {
-            startInputSession()
+            startInputSession(fromTap = false)
         } else {
             disposeInputSession()
         }
@@ -508,6 +574,13 @@ internal class TextFieldDecoratorModifierNode(
     private fun requireKeyboardController(): SoftwareKeyboardController =
         currentValueOf(LocalSoftwareKeyboardController)
             ?: error("No software keyboard controller")
+
+    private fun emitDragExitEvent() {
+        dragEnterEvent?.let {
+            interactionSource.tryEmit(HoverInteraction.Exit(it))
+            dragEnterEvent = null
+        }
+    }
 }
 
 /**
@@ -515,6 +588,7 @@ internal class TextFieldDecoratorModifierNode(
  */
 internal expect suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
     state: TransformedTextFieldState,
+    layoutState: TextLayoutState,
     imeOptions: ImeOptions,
     onImeAction: ((ImeAction) -> Unit)?
 ): Nothing

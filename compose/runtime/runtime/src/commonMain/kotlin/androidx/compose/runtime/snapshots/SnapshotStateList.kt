@@ -32,7 +32,7 @@ import kotlin.jvm.JvmName
  * @see androidx.compose.runtime.mutableStateListOf
  */
 @Stable
-class SnapshotStateList<T> : MutableList<T>, StateObject, RandomAccess {
+class SnapshotStateList<T> : StateObject, MutableList<T>, RandomAccess {
     override var firstStateRecord: StateRecord =
         StateListStateRecord<T>(persistentListOf())
         private set
@@ -101,6 +101,10 @@ class SnapshotStateList<T> : MutableList<T>, StateObject, RandomAccess {
             "fromIndex or toIndex are out of bounds"
         }
         return SubList(this, fromIndex, toIndex)
+    }
+    @Suppress("UNCHECKED_CAST")
+    override fun toString(): String = (firstStateRecord as StateListStateRecord<T>).withCurrent {
+        "SnapshotStateList(value=${it.list})@${hashCode()}"
     }
 
     override fun add(element: T) = conditionalUpdate { it.add(element) }

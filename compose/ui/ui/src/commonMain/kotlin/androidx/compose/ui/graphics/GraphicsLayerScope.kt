@@ -18,6 +18,7 @@ package androidx.compose.ui.graphics
 
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.internal.JvmDefaultWithCompatibility
+import androidx.compose.ui.layout.PlacementScopeMarker
 import kotlin.js.JsName
 import androidx.compose.ui.unit.Density
 
@@ -37,6 +38,7 @@ val DefaultShadowColor = Color.Black
  * ([shadowElevation], [shape]), and clipping ([clip], [shape]).
  */
 @JvmDefaultWithCompatibility
+@PlacementScopeMarker
 interface GraphicsLayerScope : Density {
     /**
      * The horizontal scale of the drawn area. Default value is `1`.

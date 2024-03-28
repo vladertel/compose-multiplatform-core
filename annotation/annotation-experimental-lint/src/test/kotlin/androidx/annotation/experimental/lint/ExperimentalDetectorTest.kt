@@ -20,6 +20,7 @@ package androidx.annotation.experimental.lint
 
 import com.android.tools.lint.checks.infrastructure.TestFile
 import com.android.tools.lint.checks.infrastructure.TestFiles.base64gzip
+import com.android.tools.lint.checks.infrastructure.TestFiles.java
 import com.android.tools.lint.checks.infrastructure.TestFiles.kotlin
 import com.android.tools.lint.checks.infrastructure.TestFiles.xml
 import com.android.tools.lint.checks.infrastructure.TestLintResult
@@ -342,6 +343,87 @@ src/sample/experimental/UseJavaPackageFromKt.kt:55: Error: This declaration is o
         /* ktlint-enable max-line-length */
 
         check(*input).expect(expected)
+    }
+
+    @Test
+    fun resolveSamWithValueClass() {
+        val input = arrayOf(
+            kotlin(
+                """
+                @JvmInline
+                value class MyValue(val p: Int)
+
+                fun interface FunInterface {
+                  fun sam(): MyValue
+                }
+
+                fun itfConsumer(itf: FunInterface) {
+                  itf.sam().p
+                }
+
+                fun test() {
+                  itfConsumer {
+                    MyValue(42)
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+        check(*input).expectClean()
+    }
+
+    @Test
+    fun resolveSamInJava() {
+        val input = arrayOf(
+            java(
+                """
+                    public interface RunnableDelegate {
+                        boolean show(Runnable positiveCallback, Runnable negativeCallback);
+                    }
+
+                    public interface SomeResponse {}
+                    public interface GetAssertionResponseCallback {
+                        void onSignResponse(int status, SomeResponse response);
+                    }
+
+                    public class SomeRequest {
+                        private GetAssertionResponseCallback mCallback;
+
+                        public void handleGetAssertionRequest(
+                            GetAssertionResponseCallback callback
+                        ) {
+                            mCallback = callback;
+                        }
+
+                        public void onResult(SomeResponse response) {
+                            mCallback.onSignResponse(42, response);
+                        }
+                    }
+
+                    public interface ExtendedCallback extends GetAssertionResponseCallback {}
+
+                    class Test {
+                        private final RunnableDelegate mDelegate;
+                        void test() {
+                            if (mDelegate.show(() -> true, () -> false)) {
+                                return;
+                            }
+
+                            SomeRequest r = SomeRequest();
+                            r.handleGetAssertionRequest(
+                                (status, response) -> onSignResponse(status, response)
+                            );
+
+                            ExtendedCallback e = (status, response) -> {
+                                onSignResponse(status, response);
+                            };
+                        }
+                        void onSignResponse(int status, SomeResponse response) {}
+                    }
+                """.trimIndent()
+            )
+        )
+        check(*input).expectClean()
     }
 
     /* ktlint-disable max-line-length */

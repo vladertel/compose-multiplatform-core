@@ -76,10 +76,11 @@ package androidx.work {
     ctor public Constraints(androidx.work.Constraints other);
     ctor @androidx.room.Ignore public Constraints(optional androidx.work.NetworkType requiredNetworkType, optional boolean requiresCharging, optional boolean requiresBatteryNotLow, optional boolean requiresStorageNotLow);
     ctor @RequiresApi(23) @androidx.room.Ignore public Constraints(optional androidx.work.NetworkType requiredNetworkType, optional boolean requiresCharging, optional boolean requiresDeviceIdle, optional boolean requiresBatteryNotLow, optional boolean requiresStorageNotLow);
-    ctor @RequiresApi(24) public Constraints(optional androidx.work.NetworkType requiredNetworkType, optional boolean requiresCharging, optional boolean requiresDeviceIdle, optional boolean requiresBatteryNotLow, optional boolean requiresStorageNotLow, optional long contentTriggerUpdateDelayMillis, optional long contentTriggerMaxDelayMillis, optional java.util.Set<androidx.work.Constraints.ContentUriTrigger> contentUriTriggers);
+    ctor @RequiresApi(24) @androidx.room.Ignore public Constraints(optional androidx.work.NetworkType requiredNetworkType, optional boolean requiresCharging, optional boolean requiresDeviceIdle, optional boolean requiresBatteryNotLow, optional boolean requiresStorageNotLow, optional long contentTriggerUpdateDelayMillis, optional long contentTriggerMaxDelayMillis, optional java.util.Set<androidx.work.Constraints.ContentUriTrigger> contentUriTriggers);
     method @RequiresApi(24) public long getContentTriggerMaxDelayMillis();
     method @RequiresApi(24) public long getContentTriggerUpdateDelayMillis();
     method @RequiresApi(24) public java.util.Set<androidx.work.Constraints.ContentUriTrigger> getContentUriTriggers();
+    method @RequiresApi(21) public android.net.NetworkRequest? getRequiredNetworkRequest();
     method public androidx.work.NetworkType getRequiredNetworkType();
     method public boolean requiresBatteryNotLow();
     method public boolean requiresCharging();
@@ -88,6 +89,7 @@ package androidx.work {
     property @RequiresApi(24) public final long contentTriggerMaxDelayMillis;
     property @RequiresApi(24) public final long contentTriggerUpdateDelayMillis;
     property @RequiresApi(24) public final java.util.Set<androidx.work.Constraints.ContentUriTrigger> contentUriTriggers;
+    property @RequiresApi(21) public final android.net.NetworkRequest? requiredNetworkRequest;
     property public final androidx.work.NetworkType requiredNetworkType;
     field public static final androidx.work.Constraints.Companion Companion;
     field public static final androidx.work.Constraints NONE;
@@ -97,6 +99,7 @@ package androidx.work {
     ctor public Constraints.Builder();
     method @RequiresApi(24) public androidx.work.Constraints.Builder addContentUriTrigger(android.net.Uri uri, boolean triggerForDescendants);
     method public androidx.work.Constraints build();
+    method @RequiresApi(21) public androidx.work.Constraints.Builder setRequiredNetworkRequest(android.net.NetworkRequest networkRequest, androidx.work.NetworkType networkType);
     method public androidx.work.Constraints.Builder setRequiredNetworkType(androidx.work.NetworkType networkType);
     method public androidx.work.Constraints.Builder setRequiresBatteryNotLow(boolean requiresBatteryNotLow);
     method public androidx.work.Constraints.Builder setRequiresCharging(boolean requiresCharging);
@@ -133,25 +136,27 @@ package androidx.work {
   }
 
   public final class Data {
-    ctor public Data(androidx.work.Data);
-    method @androidx.room.TypeConverter public static androidx.work.Data fromByteArray(byte[]);
-    method public boolean getBoolean(String, boolean);
-    method public boolean[]? getBooleanArray(String);
-    method public byte getByte(String, byte);
-    method public byte[]? getByteArray(String);
-    method public double getDouble(String, double);
-    method public double[]? getDoubleArray(String);
-    method public float getFloat(String, float);
-    method public float[]? getFloatArray(String);
-    method public int getInt(String, int);
-    method public int[]? getIntArray(String);
-    method public java.util.Map<java.lang.String!,java.lang.Object!> getKeyValueMap();
-    method public long getLong(String, long);
-    method public long[]? getLongArray(String);
-    method public String? getString(String);
-    method public String![]? getStringArray(String);
-    method public <T> boolean hasKeyWithValueOfType(String, Class<T!>);
+    ctor public Data(androidx.work.Data other);
+    method @androidx.room.TypeConverter public static androidx.work.Data fromByteArray(byte[] bytes);
+    method public boolean getBoolean(String key, boolean defaultValue);
+    method public boolean[]? getBooleanArray(String key);
+    method public byte getByte(String key, byte defaultValue);
+    method public byte[]? getByteArray(String key);
+    method public double getDouble(String key, double defaultValue);
+    method public double[]? getDoubleArray(String key);
+    method public float getFloat(String key, float defaultValue);
+    method public float[]? getFloatArray(String key);
+    method public int getInt(String key, int defaultValue);
+    method public int[]? getIntArray(String key);
+    method public java.util.Map<java.lang.String,java.lang.Object> getKeyValueMap();
+    method public long getLong(String key, long defaultValue);
+    method public long[]? getLongArray(String key);
+    method public String? getString(String key);
+    method public String[]? getStringArray(String key);
+    method public <T> boolean hasKeyWithValueOfType(String key, Class<T> klass);
     method public byte[] toByteArray();
+    property public final java.util.Map<java.lang.String,java.lang.Object> keyValueMap;
+    field public static final androidx.work.Data.Companion Companion;
     field public static final androidx.work.Data EMPTY;
     field public static final int MAX_DATA_BYTES = 10240; // 0x2800
   }
@@ -159,22 +164,26 @@ package androidx.work {
   public static final class Data.Builder {
     ctor public Data.Builder();
     method public androidx.work.Data build();
-    method public androidx.work.Data.Builder putAll(androidx.work.Data);
-    method public androidx.work.Data.Builder putAll(java.util.Map<java.lang.String!,java.lang.Object!>);
-    method public androidx.work.Data.Builder putBoolean(String, boolean);
-    method public androidx.work.Data.Builder putBooleanArray(String, boolean[]);
-    method public androidx.work.Data.Builder putByte(String, byte);
-    method public androidx.work.Data.Builder putByteArray(String, byte[]);
-    method public androidx.work.Data.Builder putDouble(String, double);
-    method public androidx.work.Data.Builder putDoubleArray(String, double[]);
-    method public androidx.work.Data.Builder putFloat(String, float);
-    method public androidx.work.Data.Builder putFloatArray(String, float[]);
-    method public androidx.work.Data.Builder putInt(String, int);
-    method public androidx.work.Data.Builder putIntArray(String, int[]);
-    method public androidx.work.Data.Builder putLong(String, long);
-    method public androidx.work.Data.Builder putLongArray(String, long[]);
-    method public androidx.work.Data.Builder putString(String, String?);
-    method public androidx.work.Data.Builder putStringArray(String, String![]);
+    method public androidx.work.Data.Builder putAll(androidx.work.Data data);
+    method public androidx.work.Data.Builder putAll(java.util.Map<java.lang.String,?> values);
+    method public androidx.work.Data.Builder putBoolean(String key, boolean value);
+    method public androidx.work.Data.Builder putBooleanArray(String key, boolean[] value);
+    method public androidx.work.Data.Builder putByte(String key, byte value);
+    method public androidx.work.Data.Builder putByteArray(String key, byte[] value);
+    method public androidx.work.Data.Builder putDouble(String key, double value);
+    method public androidx.work.Data.Builder putDoubleArray(String key, double[] value);
+    method public androidx.work.Data.Builder putFloat(String key, float value);
+    method public androidx.work.Data.Builder putFloatArray(String key, float[] value);
+    method public androidx.work.Data.Builder putInt(String key, int value);
+    method public androidx.work.Data.Builder putIntArray(String key, int[] value);
+    method public androidx.work.Data.Builder putLong(String key, long value);
+    method public androidx.work.Data.Builder putLongArray(String key, long[] value);
+    method public androidx.work.Data.Builder putString(String key, String? value);
+    method public androidx.work.Data.Builder putStringArray(String key, String?[] value);
+  }
+
+  public static final class Data.Companion {
+    method @androidx.room.TypeConverter public androidx.work.Data fromByteArray(byte[] bytes);
   }
 
   public final class DataKt {
@@ -331,9 +340,9 @@ package androidx.work {
 
   public static final class PeriodicWorkRequest.Builder extends androidx.work.WorkRequest.Builder<androidx.work.PeriodicWorkRequest.Builder,androidx.work.PeriodicWorkRequest> {
     ctor @RequiresApi(26) public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker> workerClass, java.time.Duration repeatInterval);
-    ctor @RequiresApi(26) public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker> workerClass, java.time.Duration repeatInterval, java.time.Duration flexInterval);
-    ctor public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker> workerClass, long repeatInterval, java.util.concurrent.TimeUnit repeatIntervalTimeUnit);
-    ctor public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker> workerClass, long repeatInterval, java.util.concurrent.TimeUnit repeatIntervalTimeUnit, long flexInterval, java.util.concurrent.TimeUnit flexIntervalTimeUnit);
+    ctor @RequiresApi(26) public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker?> workerClass, java.time.Duration repeatInterval, java.time.Duration flexInterval);
+    ctor public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker?> workerClass, long repeatInterval, java.util.concurrent.TimeUnit repeatIntervalTimeUnit);
+    ctor public PeriodicWorkRequest.Builder(Class<? extends androidx.work.ListenableWorker?> workerClass, long repeatInterval, java.util.concurrent.TimeUnit repeatIntervalTimeUnit, long flexInterval, java.util.concurrent.TimeUnit flexIntervalTimeUnit);
     method public androidx.work.PeriodicWorkRequest.Builder clearNextScheduleTimeOverride();
     method public androidx.work.PeriodicWorkRequest.Builder setNextScheduleTimeOverride(long nextScheduleTimeOverrideMillis);
   }
@@ -457,7 +466,7 @@ package androidx.work {
     method public abstract androidx.work.Operation cancelWorkById(java.util.UUID);
     method public abstract android.app.PendingIntent createCancelPendingIntent(java.util.UUID);
     method public final androidx.work.Operation enqueue(androidx.work.WorkRequest);
-    method public abstract androidx.work.Operation enqueue(java.util.List<? extends androidx.work.WorkRequest>);
+    method public abstract androidx.work.Operation enqueue(java.util.List<? extends androidx.work.WorkRequest!>);
     method public abstract androidx.work.Operation enqueueUniquePeriodicWork(String, androidx.work.ExistingPeriodicWorkPolicy, androidx.work.PeriodicWorkRequest);
     method public androidx.work.Operation enqueueUniqueWork(String, androidx.work.ExistingWorkPolicy, androidx.work.OneTimeWorkRequest);
     method public abstract androidx.work.Operation enqueueUniqueWork(String, androidx.work.ExistingWorkPolicy, java.util.List<androidx.work.OneTimeWorkRequest!>);
@@ -493,7 +502,7 @@ package androidx.work {
   public final class WorkManagerInitializer implements androidx.startup.Initializer<androidx.work.WorkManager> {
     ctor public WorkManagerInitializer();
     method public androidx.work.WorkManager create(android.content.Context);
-    method public java.util.List<java.lang.Class<? extends androidx.startup.Initializer<?>>!> dependencies();
+    method public java.util.List<java.lang.Class<? extends androidx.startup.Initializer<?>!>!> dependencies();
   }
 
   public final class WorkQuery {

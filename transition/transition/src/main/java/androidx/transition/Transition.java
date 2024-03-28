@@ -38,6 +38,7 @@ import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowId;
 import android.view.animation.AnimationUtils;
 import android.widget.ListView;
 import android.widget.Spinner;
@@ -129,6 +130,8 @@ import java.util.StringTokenizer;
 public abstract class Transition implements Cloneable {
 
     private static final String LOG_TAG = "Transition";
+    private static final Animator[] EMPTY_ANIMATOR_ARRAY = new Animator[0];
+
     static final boolean DBG = false;
 
     /**
@@ -227,6 +230,8 @@ public abstract class Transition implements Cloneable {
     // cancel running animators
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     ArrayList<Animator> mCurrentAnimators = new ArrayList<>();
+
+    private Animator[] mAnimatorCache = EMPTY_ANIMATOR_ARRAY;
 
     // Number of per-target instances of this Transition currently running. This count is
     // determined by calls to start() and end()
@@ -834,7 +839,7 @@ public abstract class Transition implements Cloneable {
                             minStartDelay = Math.min(delay, minStartDelay);
                         }
                         AnimationInfo info = new AnimationInfo(view, getName(), this,
-                                ViewUtils.getWindowId(sceneRoot), infoValues, animator);
+                                sceneRoot.getWindowId(), infoValues, animator);
                         if (hasSeekController) {
                             AnimatorSet set = new AnimatorSet();
                             set.play(animator);
@@ -1822,10 +1827,14 @@ public abstract class Transition implements Cloneable {
     public void pause(@Nullable View sceneRoot) {
         if (!mEnded) {
             int numAnimators = mCurrentAnimators.size();
+            Animator[] cache = mCurrentAnimators.toArray(mAnimatorCache);
+            mAnimatorCache = EMPTY_ANIMATOR_ARRAY;
             for (int i = numAnimators - 1; i >= 0; i--) {
-                Animator animator = mCurrentAnimators.get(i);
-                AnimatorUtils.pause(animator);
+                Animator animator = cache[i];
+                cache[i] = null;
+                animator.pause();
             }
+            mAnimatorCache = cache;
             notifyListeners(TransitionNotification.ON_PAUSE, false);
             mPaused = true;
         }
@@ -1842,10 +1851,14 @@ public abstract class Transition implements Cloneable {
         if (mPaused) {
             if (!mEnded) {
                 int numAnimators = mCurrentAnimators.size();
+                Animator[] cache = mCurrentAnimators.toArray(mAnimatorCache);
+                mAnimatorCache = EMPTY_ANIMATOR_ARRAY;
                 for (int i = numAnimators - 1; i >= 0; i--) {
-                    Animator animator = mCurrentAnimators.get(i);
-                    AnimatorUtils.resume(animator);
+                    Animator animator = cache[i];
+                    cache[i] = null;
+                    animator.resume();
                 }
+                mAnimatorCache = cache;
                 notifyListeners(TransitionNotification.ON_RESUME, false);
             }
             mPaused = false;
@@ -1873,7 +1886,7 @@ public abstract class Transition implements Cloneable {
 
         ArrayMap<Animator, AnimationInfo> runningAnimators = getRunningAnimators();
         int numOldAnims = runningAnimators.size();
-        WindowIdImpl windowId = ViewUtils.getWindowId(sceneRoot);
+        WindowId windowId = sceneRoot.getWindowId();
         for (int i = numOldAnims - 1; i >= 0; i--) {
             Animator anim = runningAnimators.keyAt(i);
             if (anim != null) {
@@ -2085,7 +2098,7 @@ public abstract class Transition implements Cloneable {
             return;
         }
 
-        WindowIdImpl windowId = ViewUtils.getWindowId(sceneRoot);
+        WindowId windowId = sceneRoot.getWindowId();
         final ArrayMap<Animator, AnimationInfo> oldAnimators = new ArrayMap<>(runningAnimators);
         runningAnimators.clear();
 
@@ -2105,10 +2118,14 @@ public abstract class Transition implements Cloneable {
     @RestrictTo(LIBRARY_GROUP_PREFIX)
     protected void cancel() {
         int numAnimators = mCurrentAnimators.size();
+        Animator[] cache = mCurrentAnimators.toArray(mAnimatorCache);
+        mAnimatorCache = EMPTY_ANIMATOR_ARRAY;
         for (int i = numAnimators - 1; i >= 0; i--) {
-            Animator animator = mCurrentAnimators.get(i);
+            Animator animator = cache[i];
+            cache[i] = null;
             animator.cancel();
         }
+        mAnimatorCache = cache;
         notifyListeners(TransitionNotification.ON_CANCEL, false);
     }
 
@@ -2394,12 +2411,17 @@ public abstract class Transition implements Cloneable {
             mEnded = false;
             notifyListeners(TransitionNotification.ON_START, isReversed);
         }
-        for (int i = 0; i < mCurrentAnimators.size(); i++) {
-            Animator animator = mCurrentAnimators.get(i);
+        int numAnimators = mCurrentAnimators.size();
+        Animator[] cache = mCurrentAnimators.toArray(mAnimatorCache);
+        mAnimatorCache = EMPTY_ANIMATOR_ARRAY;
+        for (int i = 0; i < numAnimators; i++) {
+            Animator animator = cache[i];
+            cache[i] = null;
             long animDuration = Impl26.getTotalDuration(animator);
             long playTime = Math.min(Math.max(0, playTimeMillis), animDuration);
             Impl26.setCurrentPlayTime(animator, playTime);
         }
+        mAnimatorCache = cache;
 
         if ((playTimeMillis > duration && lastPlayTimeMillis <= duration)
                 || (playTimeMillis < 0 && lastPlayTimeMillis >= 0)
@@ -2557,13 +2579,13 @@ public abstract class Transition implements Cloneable {
 
         TransitionValues mValues;
 
-        WindowIdImpl mWindowId;
+        WindowId mWindowId;
 
         Transition mTransition;
 
         Animator mAnimator;
 
-        AnimationInfo(View view, String name, Transition transition, WindowIdImpl windowId,
+        AnimationInfo(View view, String name, Transition transition, WindowId windowId,
                 TransitionValues values, Animator animator) {
             mView = view;
             mName = name;
@@ -2862,16 +2884,24 @@ public abstract class Transition implements Cloneable {
 
                     if (isReversed) {
                         long duration = getDurationMillis();
-                        Transition.this.setCurrentPlayTimeMillis(duration, mCurrentPlayTime);
+                        // controlDelayedTransition always wraps the transition in a TransitionSet
+                        Transition child = ((TransitionSet) Transition.this).getTransitionAt(0);
+                        Transition cloneParent = child.mCloneParent;
+                        child.mCloneParent = null;
+                        Transition.this.setCurrentPlayTimeMillis(-1, mCurrentPlayTime);
+                        Transition.this.setCurrentPlayTimeMillis(duration, -1);
                         mCurrentPlayTime = duration;
                         if (mResetToStartState != null) {
                             mResetToStartState.run();
                         }
                         mAnimators.clear();
+                        if (cloneParent != null) {
+                            cloneParent.notifyListeners(TransitionNotification.ON_END, true);
+                        }
+                    } else {
+                        notifyListeners(TransitionNotification.ON_END, false);
                     }
-                    notifyListeners(TransitionNotification.ON_END, isReversed);
                 }
-                mSpringAnimation = null;
             });
         }
 
@@ -2885,7 +2915,7 @@ public abstract class Transition implements Cloneable {
         public void animateToStart(@NonNull Runnable resetToStartState) {
             mResetToStartState = resetToStartState;
             ensureAnimation();
-            mSpringAnimation.animateToFinalPosition(-1);
+            mSpringAnimation.animateToFinalPosition(0);
         }
 
         @Override

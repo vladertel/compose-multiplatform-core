@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.internal.checkPrecondition
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.util.fastForEach
 import kotlin.math.abs
@@ -35,6 +36,17 @@ internal expect val HistorySize: Int
 
 // TODO(b/204895043): Keep value in sync with VelocityPathFinder.HorizonMilliSeconds
 private const val HorizonMilliseconds: Int = 100
+
+/**
+ * Selecting flag to enable impulse strategy for the velocity trackers.
+ * This should be removed before the next RC release
+ */
+@Suppress("GetterSetterNames", "OPT_IN_MARKER_ON_WRONG_TARGET")
+@get:Suppress("GetterSetterNames")
+@get:ExperimentalComposeUiApi
+@set:ExperimentalComposeUiApi
+@ExperimentalComposeUiApi
+var VelocityTrackerStrategyUseImpulse by mutableStateOf(false)
 
 /**
  * Computes a pointer's velocity.
@@ -49,8 +61,15 @@ private const val HorizonMilliseconds: Int = 100
  * have been received.
  */
 class VelocityTracker {
-    private val xVelocityTracker = VelocityTracker1D() // non-differential, Lsq2 1D velocity tracker
-    private val yVelocityTracker = VelocityTracker1D() // non-differential, Lsq2 1D velocity tracker
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    private val strategy = if (VelocityTrackerStrategyUseImpulse) {
+        VelocityTracker1D.Strategy.Impulse
+    } else {
+        VelocityTracker1D.Strategy.Lsq2 // non-differential, Lsq2 1D velocity tracker
+    }
+    private val xVelocityTracker = VelocityTracker1D(strategy = strategy)
+    private val yVelocityTracker = VelocityTracker1D(strategy = strategy)
 
     internal var currentPointerPositionAccumulator = Offset.Zero
     internal var lastMoveEventTimeStamp = 0L
@@ -95,7 +114,7 @@ class VelocityTracker {
      * VelocityTracker.
      */
     fun calculateVelocity(maximumVelocity: Velocity): Velocity {
-        check(maximumVelocity.x > 0f && maximumVelocity.y > 0) {
+        checkPrecondition(maximumVelocity.x > 0f && maximumVelocity.y > 0) {
             "maximumVelocity should be a positive value. You specified=$maximumVelocity"
         }
         val velocityX = xVelocityTracker.calculateVelocity(maximumVelocity.x)
@@ -238,7 +257,11 @@ class VelocityTracker1D internal constructor(
             val age: Float = (newestSample.time - sample.time).toFloat()
             val delta: Float =
                 abs(sample.time - previousSample.time).toFloat()
-            previousSample = sample
+            previousSample = if (strategy == Strategy.Lsq2 || isDataDifferential) {
+               sample
+            } else {
+                newestSample
+            }
             if (age > HorizonMilliseconds || delta > AssumePointerMoveStoppedMilliseconds) {
                 break
             }
@@ -281,7 +304,7 @@ class VelocityTracker1D internal constructor(
      * units/second, where `units` is the units of the positions provided to this VelocityTracker.
      */
     fun calculateVelocity(maximumVelocity: Float): Float {
-        check(maximumVelocity > 0f) {
+        checkPrecondition(maximumVelocity > 0f) {
             "maximumVelocity should be a positive value. You specified=$maximumVelocity"
         }
         val velocity = calculateVelocity()

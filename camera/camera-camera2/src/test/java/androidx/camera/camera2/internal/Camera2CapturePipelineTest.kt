@@ -36,6 +36,7 @@ import androidx.camera.camera2.impl.Camera2ImplConfig
 import androidx.camera.camera2.internal.compat.CameraCharacteristicsCompat
 import androidx.camera.camera2.internal.compat.quirk.AutoFlashUnderExposedQuirk
 import androidx.camera.camera2.internal.compat.quirk.CameraQuirks
+import androidx.camera.camera2.internal.compat.quirk.TorchFlashRequiredFor3aUpdateQuirk
 import androidx.camera.camera2.internal.compat.quirk.UseTorchAsFlashQuirk
 import androidx.camera.camera2.internal.compat.workaround.OverrideAeModeForStillCapture
 import androidx.camera.core.ImageCapture
@@ -53,6 +54,7 @@ import androidx.camera.core.impl.CameraControlInternal
 import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.DeferrableSurface
 import androidx.camera.core.impl.ImmediateSurface
+import androidx.camera.core.impl.Quirk
 import androidx.camera.core.impl.Quirks
 import androidx.camera.core.impl.SessionConfig
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
@@ -60,7 +62,7 @@ import androidx.camera.core.impl.utils.futures.Futures
 import androidx.camera.core.internal.CameraCaptureResultImageInfo
 import androidx.camera.testing.impl.fakes.FakeCameraCaptureResult
 import androidx.camera.testing.impl.fakes.FakeImageProxy
-import androidx.camera.testing.impl.mocks.MockScreenFlashUiControl
+import androidx.camera.testing.impl.mocks.MockScreenFlash
 import androidx.concurrent.futures.await
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth
@@ -72,6 +74,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -140,12 +143,12 @@ class Camera2CapturePipelineTest {
             field = value
         }
 
-    private lateinit var screenFlashControl: MockScreenFlashUiControl
+    private lateinit var testScreenFlash: MockScreenFlash
 
     @Before
     fun setUp() {
         initCameras()
-        screenFlashControl = MockScreenFlashUiControl()
+        testScreenFlash = MockScreenFlash()
     }
 
     @After
@@ -183,6 +186,7 @@ class Camera2CapturePipelineTest {
 
         val pipeline = Camera2CapturePipeline.Pipeline(
             CameraDevice.TEMPLATE_PREVIEW,
+            executorService,
             executorService,
             cameraControl,
             false,
@@ -351,17 +355,29 @@ class Camera2CapturePipelineTest {
 
     @Test
     fun minLatency_screenFlashCapture_screenFlashTaskInvokedProperly() {
-        screenFlash_screenFlashUiControlInvokedProperly(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+        screenFlash_screenFlashApisInvokedProperly(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
     }
 
     @Test
     fun maxQuality_screenFlashCapture_screenFlashTaskInvokedProperly() {
-        screenFlash_screenFlashUiControlInvokedProperly(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+        screenFlash_screenFlashApisInvokedProperly(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
     }
 
-    private fun screenFlash_screenFlashUiControlInvokedProperly(imageCaptureMode: Int) {
-        val cameraControl = createCameraControl().apply {
-            // Arrange.
+    @Test
+    fun maxQuality_screenFlashCapture_withFlashModeTorchQuirk_screenFlashTaskInvokedProperly() {
+        screenFlash_screenFlashApisInvokedProperly(
+            ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY,
+            addFlashModeTorchQuirk = true
+        )
+    }
+
+    private fun screenFlash_screenFlashApisInvokedProperly(
+        imageCaptureMode: Int,
+        addFlashModeTorchQuirk: Boolean = false
+    ) {
+        val cameraControl = createCameraControl(
+            addTorchFlashRequiredFor3aUpdateQuirk = addFlashModeTorchQuirk
+        ).apply {
             flashMode = FLASH_MODE_SCREEN
 
             // Act.
@@ -401,6 +417,20 @@ class Camera2CapturePipelineTest {
             }
         }
 
+        if (addFlashModeTorchQuirk) {
+            // Submit a repeating request for FLASH_MODE_TORCH
+            CountDownLatch(5).let {
+                cameraControl.simulateRepeatingResult(
+                    initialDelay = 100,
+                    period = 50,
+                    resultParameters = mapOf(CaptureResult.FLASH_MODE
+                        to CaptureResult.FLASH_MODE_TORCH),
+                    requestCountLatch = it
+                )
+                it.await(1, TimeUnit.SECONDS)
+            }
+        }
+
         // Assert, verify AE precapture is triggered
         immediateCompleteCapture.verifyRequestResult {
             it.requestContains(
@@ -423,12 +453,12 @@ class Camera2CapturePipelineTest {
         // Wait for main thread because ScreenFlashTask invokes callbacks in UI thread
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS)
 
-        // Assert, verify ScreenFlashUiControls are invoked properly
-        assertThat(screenFlashControl.awaitScreenFlashUiClear(1000)).isTrue()
-        assertThat(screenFlashControl.screenFlashUiEvents).isEqualTo(
+        // Assert, verify ScreenFlash APIs are invoked properly
+        assertThat(testScreenFlash.awaitClear(1000)).isTrue()
+        assertThat(testScreenFlash.screenFlashEvents).isEqualTo(
             listOf(
-                MockScreenFlashUiControl.APPLY_SCREEN_FLASH,
-                MockScreenFlashUiControl.CLEAR_SCREEN_FLASH
+                MockScreenFlash.APPLY,
+                MockScreenFlash.CLEAR
             )
         )
 
@@ -1068,6 +1098,99 @@ class Camera2CapturePipelineTest {
         }
     }
 
+    @Test
+    fun waitForResultCompletes_whenCaptureResultProvided_noTimeout_noCheckingCondition() {
+        val cameraControl = createCameraControl().apply {
+            simulateRepeatingResult(initialDelay = 1)
+        }
+
+        val future = Camera2CapturePipeline.waitForResult(cameraControl, null)
+
+        future.get(500, TimeUnit.MILLISECONDS)
+    }
+
+    @Test
+    fun waitForResultCompletes_whenCaptureResultProvided_noTimeout_specificCheckingCondition() {
+        val cameraControl = createCameraControl().apply {
+            simulateRepeatingResult(initialDelay = 1)
+        }
+
+        cameraControl.simulateRepeatingResult(
+            initialDelay = 50,
+            resultParameters = resultConverged
+        )
+
+        val future = Camera2CapturePipeline.waitForResult(cameraControl
+        ) { result -> Camera2CapturePipeline.is3AConverged(result, false) }
+
+        future.get(500, TimeUnit.MILLISECONDS).verifyResultFields(resultConverged)
+    }
+
+    @Test
+    fun waitForResultDoesNotComplete_whenNoResult_noCheckingCondition() {
+        // tested for 500ms
+        Camera2CapturePipeline.waitForResult(createCameraControl(), null)
+            .awaitException(500, TimeoutException::class.java)
+    }
+
+    @Test
+    fun waitForResultDoesNotComplete_whenNoMatchingResult() {
+        // tested for 500ms
+        Camera2CapturePipeline.waitForResult(createCameraControl().apply {
+            simulateRepeatingResult(initialDelay = 1)
+        }) { result ->
+            Camera2CapturePipeline.is3AConverged(result, false)
+        }.awaitException(500, TimeoutException::class.java)
+    }
+
+    @Test
+    fun waitForResultCompletesWithNullResult_whenNoResultWithinTimeout_noCheckingCondition() {
+        val result = Camera2CapturePipeline.waitForResult(
+            TimeUnit.MILLISECONDS.toNanos(500),
+            executorService,
+            createCameraControl(),
+            null
+        ).get(1, TimeUnit.SECONDS) // timeout exception will be thrown if not completed within 1s
+
+        assertThat(result).isNull()
+    }
+
+    @Test
+    fun waitForResultCompletesWithNullResult_whenNoMatchingResultWithinTimeout() {
+        val result = Camera2CapturePipeline.waitForResult(
+            TimeUnit.MILLISECONDS.toNanos(500),
+            executorService,
+            createCameraControl().apply {
+                simulateRepeatingResult(initialDelay = 1)
+            }
+        ) { result ->
+            Camera2CapturePipeline.is3AConverged(result, false)
+        }.get(1, TimeUnit.SECONDS) // timeout exception will be thrown if not completed within 1s
+
+        assertThat(result).isNull()
+    }
+
+    private fun TotalCaptureResult.verifyResultFields(
+        expectedFields: Map<CaptureResult.Key<*>, Any>
+    ) {
+        assertThat(this).isNotNull()
+        expectedFields.forEach { entry ->
+            assertThat(this[entry.key]).isEqualTo(entry.value)
+        }
+    }
+
+    private fun ListenableFuture<*>.awaitException(timeoutMillis: Long, exceptionType: Class<*>) {
+        try {
+            get(timeoutMillis, TimeUnit.MILLISECONDS)
+        } catch (e: ExecutionException) {
+            if (exceptionType != ExecutionException::class.java) {
+                assertThat(e.cause).isInstanceOf(exceptionType)
+            }
+        } catch (e: Exception) {
+            assertThat(e).isInstanceOf(exceptionType)
+        }
+    }
+
     private fun Camera2CameraControlImpl.waitForSessionConfig(
         checkResult: (sessionConfig: SessionConfig) -> Boolean = { true }
     ) {
@@ -1177,12 +1300,23 @@ class Camera2CapturePipelineTest {
         cameraId: String = CAMERA_ID_0,
         quirks: Quirks? = null,
         updateCallback: CameraControlInternal.ControlUpdateCallback = immediateCompleteCapture,
+        addTorchFlashRequiredFor3aUpdateQuirk: Boolean = false,
     ): Camera2CameraControlImpl {
         val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
         val characteristicsCompat = CameraCharacteristicsCompat
             .toCameraCharacteristicsCompat(characteristics, cameraId)
-        val cameraQuirk = quirks ?: CameraQuirks.get(cameraId, characteristicsCompat)
+        var cameraQuirk = quirks ?: CameraQuirks.get(cameraId, characteristicsCompat)
+
+        if (addTorchFlashRequiredFor3aUpdateQuirk) {
+            cameraQuirk = Quirks(cameraQuirk.getAll(Quirk::class.java).apply {
+                add(
+                    TorchFlashRequiredFor3aUpdateQuirk(
+                        characteristicsCompat
+                    )
+                )
+            })
+        }
 
         return Camera2CameraControlImpl(
             characteristicsCompat,
@@ -1193,7 +1327,7 @@ class Camera2CapturePipelineTest {
         ).apply {
             setActive(true)
             incrementUseCount()
-            this.screenFlashUiControl = screenFlashControl
+            this.screenFlash = testScreenFlash
         }
     }
 

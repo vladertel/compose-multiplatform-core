@@ -33,26 +33,32 @@ import androidx.camera.camera2.pipe.StreamFormat
 import androidx.camera.camera2.pipe.core.Log
 import androidx.camera.camera2.pipe.integration.adapter.CameraStateAdapter
 import androidx.camera.camera2.pipe.integration.adapter.EncoderProfilesProviderAdapter
+import androidx.camera.camera2.pipe.integration.adapter.RequestProcessorAdapter
 import androidx.camera.camera2.pipe.integration.adapter.SessionConfigAdapter
 import androidx.camera.camera2.pipe.integration.adapter.SupportedSurfaceCombination
 import androidx.camera.camera2.pipe.integration.compat.quirk.CameraQuirks
 import androidx.camera.camera2.pipe.integration.compat.quirk.CloseCameraDeviceOnCameraGraphCloseQuirk
+import androidx.camera.camera2.pipe.integration.compat.quirk.CloseCaptureSessionOnDisconnectQuirk
 import androidx.camera.camera2.pipe.integration.compat.quirk.CloseCaptureSessionOnVideoQuirk
 import androidx.camera.camera2.pipe.integration.compat.quirk.DeviceQuirks
 import androidx.camera.camera2.pipe.integration.config.CameraConfig
 import androidx.camera.camera2.pipe.integration.config.CameraScope
 import androidx.camera.camera2.pipe.integration.config.UseCaseCameraComponent
 import androidx.camera.camera2.pipe.integration.config.UseCaseCameraConfig
+import androidx.camera.camera2.pipe.integration.config.UseCaseGraphConfig
 import androidx.camera.camera2.pipe.integration.interop.Camera2CameraControl
 import androidx.camera.camera2.pipe.integration.interop.ExperimentalCamera2Interop
 import androidx.camera.core.DynamicRange
 import androidx.camera.core.UseCase
+import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.core.impl.CameraInternal
 import androidx.camera.core.impl.CameraMode
 import androidx.camera.core.impl.DeferrableSurface
 import androidx.camera.core.impl.PreviewConfig
 import androidx.camera.core.impl.SessionConfig
 import androidx.camera.core.impl.SessionConfig.ValidatingBuilder
+import androidx.camera.core.impl.SessionProcessor
+import androidx.camera.core.impl.SessionProcessorSurface
 import androidx.camera.core.impl.stabilization.StabilizationMode
 import javax.inject.Inject
 import javax.inject.Provider
@@ -101,11 +107,32 @@ class UseCaseManager @Inject constructor(
     private val cameraQuirks: CameraQuirks,
     private val cameraGraphFlags: CameraGraph.Flags,
     private val cameraInternal: Provider<CameraInternal>,
+    private val useCaseThreads: Provider<UseCaseThreads>,
+    private val cameraInfoInternal: Provider<CameraInfoInternal>,
     context: Context,
     cameraProperties: CameraProperties,
     displayInfoManager: DisplayInfoManager,
 ) {
     private val lock = Any()
+
+    internal var sessionProcessor: SessionProcessor? = null
+        get() = synchronized(lock) {
+            return field
+        }
+        set(value) = synchronized(lock) {
+            field = value
+            // Only create the SessionProcessorManager when we have a SessionProcessor set.
+            if (field != null) {
+                sessionProcessorManager = SessionProcessorManager(
+                    field!!,
+                    cameraInfoInternal.get(),
+                    useCaseThreads.get().scope
+                )
+            }
+        }
+
+    @GuardedBy("lock")
+    private var sessionProcessorManager: SessionProcessorManager? = null
 
     @GuardedBy("lock")
     private val attachedUseCases = mutableSetOf<UseCase>()
@@ -141,6 +168,8 @@ class UseCaseManager @Inject constructor(
     private var _activeComponent: UseCaseCameraComponent? = null
     val camera: UseCaseCamera?
         get() = _activeComponent?.getUseCaseCamera()
+    val useCaseGraphConfig: UseCaseGraphConfig?
+        get() = _activeComponent?.getUseCaseGraphConfig()
 
     private val closingCameraJobs = mutableListOf<Job>()
 
@@ -316,20 +345,26 @@ class UseCaseManager @Inject constructor(
             return
         }
 
-        val sessionConfigAdapter = SessionConfigAdapter(useCases)
-        val streamConfigMap = mutableMapOf<CameraStream.Config, DeferrableSurface>()
+        if (sessionProcessor != null) {
+            Log.debug { "Setting up UseCaseManager with SessionProcessorManager" }
+            checkNotNull(sessionProcessorManager).initialize(this, useCases)
+            return
+        } else {
+            val sessionConfigAdapter = SessionConfigAdapter(useCases)
+            val streamConfigMap = mutableMapOf<CameraStream.Config, DeferrableSurface>()
+            val graphConfig = createCameraGraphConfig(sessionConfigAdapter, streamConfigMap)
 
-        val graphConfig = createCameraGraphConfig(
-            sessionConfigAdapter, streamConfigMap, callbackMap,
-            requestListener, cameraConfig, cameraQuirks, cameraGraphFlags
-        )
+            val useCaseManagerConfig = UseCaseManagerConfig(
+                useCases,
+                sessionConfigAdapter,
+                graphConfig,
+                streamConfigMap
+            )
+            tryResumeUseCaseManager(useCaseManagerConfig)
+        }
+    }
 
-        val useCaseManagerConfig = UseCaseManagerConfig(
-            useCases,
-            sessionConfigAdapter,
-            graphConfig,
-            streamConfigMap
-        )
+    internal fun tryResumeUseCaseManager(useCaseManagerConfig: UseCaseManagerConfig) {
         if (!shouldCreateCameraGraphImmediately) {
             deferredUseCaseManagerConfig = useCaseManagerConfig
             return
@@ -348,7 +383,23 @@ class UseCaseManager @Inject constructor(
         useCaseManagerConfig: UseCaseManagerConfig,
         cameraGraph: CameraGraph
     ) {
+        val sessionProcessorEnabled =
+            useCaseManagerConfig.sessionConfigAdapter.isSessionProcessorEnabled
         with(useCaseManagerConfig) {
+            var sessionProcessorManager: SessionProcessorManager? = null
+            if (sessionProcessorEnabled) {
+                sessionProcessorManager = SessionProcessorManager(
+                    checkNotNull(sessionProcessor),
+                    cameraInfoInternal.get(),
+                    useCaseThreads.get().scope,
+                )
+                for ((streamConfig, deferrableSurface) in streamConfigMap) {
+                    cameraGraph.streams[streamConfig]?.let {
+                        cameraGraph.setSurface(it.id, deferrableSurface.surface.get())
+                    }
+                }
+            }
+
             // Create and configure the new camera component.
             _activeComponent =
                 builder.config(
@@ -357,12 +408,27 @@ class UseCaseManager @Inject constructor(
                         sessionConfigAdapter,
                         cameraStateAdapter,
                         cameraGraph,
-                        streamConfigMap
+                        streamConfigMap,
+                        sessionProcessorManager,
                     )
-                )
-                    .build()
+                ).build()
+
             for (control in allControls) {
                 control.useCaseCamera = camera
+            }
+
+            if (sessionProcessorEnabled) {
+                val sessionProcessorSurfaces =
+                    sessionConfigAdapter.deferrableSurfaces.map {
+                        it as SessionProcessorSurface
+                    }
+                val requestProcessorAdapter = RequestProcessorAdapter(
+                    useCaseGraphConfig!!,
+                    sessionConfigAdapter.getValidSessionConfigOrNull(),
+                    sessionProcessorSurfaces,
+                    useCaseThreads.get().scope,
+                )
+                checkNotNull(sessionProcessorManager).onCaptureSessionStart(requestProcessorAdapter)
             }
             camera?.setActiveResumeMode(activeResumeEnabled)
 
@@ -431,6 +497,23 @@ class UseCaseManager @Inject constructor(
         deactivate(meteringRepeating)
         detach(listOf(meteringRepeating))
         meteringRepeating.unbindFromCamera(cameraInternal.get())
+    }
+
+    internal fun createCameraGraphConfig(
+        sessionConfigAdapter: SessionConfigAdapter,
+        streamConfigMap: MutableMap<CameraStream.Config, DeferrableSurface>,
+        defaultParameters: Map<*, Any?> = emptyMap<Any, Any?>(),
+    ): CameraGraph.Config {
+        return Companion.createCameraGraphConfig(
+            sessionConfigAdapter,
+            streamConfigMap,
+            callbackMap,
+            requestListener,
+            cameraConfig,
+            cameraQuirks,
+            cameraGraphFlags,
+            defaultParameters,
+        )
     }
 
     private fun Collection<UseCase>.onlyVideoCapture(): Boolean {
@@ -528,10 +611,12 @@ class UseCaseManager @Inject constructor(
             cameraConfig: CameraConfig,
             cameraQuirks: CameraQuirks,
             cameraGraphFlags: CameraGraph.Flags?,
+            defaultParameters: Map<*, Any?> = emptyMap<Any, Any?>(),
         ): CameraGraph.Config {
             var containsVideo = false
-            // TODO: This may need to combine outputs that are (or will) share the same output
-            //  imageReader or surface.
+            // TODO: b/314207980 - Translate [SessionConfig.getSessionType], including highspeed
+            //     sessions and custom session types.
+            // TODO: b/314412743 - Translate [SessionConfig.OutputConfig] and handle stream sharing.
             sessionConfigAdapter.getValidSessionConfigOrNull()?.let { sessionConfig ->
                 sessionConfig.surfaces.forEach { deferrableSurface ->
                     val outputConfig = CameraStream.Config.create(
@@ -573,13 +658,9 @@ class UseCaseManager @Inject constructor(
                         containsVideo
                     ) {
                         true
-                    } else
-                    // TODO(b/277675483): From the current test results, older devices (Android
-                    //  version <= 8.1.0) seem to have a higher chance of encountering an issue where
-                    //  not closing the capture session would lead to CameraDevice.close stalling
-                    //  indefinitely. This version check might need to be further fine-turned down the
-                    //  line.
-                        Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1
+                    } else {
+                        DeviceQuirks[CloseCaptureSessionOnDisconnectQuirk::class.java] != null
+                    }
                 }
             val shouldCloseCameraDeviceOnClose =
                 DeviceQuirks[CloseCameraDeviceOnCameraGraphCloseQuirk::class.java] != null
@@ -603,7 +684,8 @@ class UseCaseManager @Inject constructor(
                 val isVideoStabilizationMode = config.videoStabilizationMode
 
                 if (isPreviewStabilizationMode == StabilizationMode.OFF ||
-                    isVideoStabilizationMode == StabilizationMode.OFF) {
+                    isVideoStabilizationMode == StabilizationMode.OFF
+                ) {
                     videoStabilizationMode = CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF
                 } else if (isPreviewStabilizationMode == StabilizationMode.ON) {
                     videoStabilizationMode =
@@ -618,7 +700,7 @@ class UseCaseManager @Inject constructor(
                 camera = cameraConfig.cameraId,
                 streams = streamConfigMap.keys.toList(),
                 defaultListeners = listOf(callbackMap, requestListener),
-                defaultParameters = mapOf(
+                defaultParameters = defaultParameters + mapOf(
                     CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE to videoStabilizationMode
                 ),
                 flags = combinedFlags,

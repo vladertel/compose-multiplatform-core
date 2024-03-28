@@ -33,7 +33,7 @@ class StandardSubjectBuilder internal constructor(
          * Returns a new instance that invokes the given [FailureStrategy] when a check fails.
          */
         @JvmStatic
-        fun forCustomFailureStrategy(failureStrategy: FailureStrategy): StandardSubjectBuilder? {
+        fun forCustomFailureStrategy(failureStrategy: FailureStrategy): StandardSubjectBuilder {
             return StandardSubjectBuilder(FailureMetadata.forFailureStrategy(failureStrategy))
         }
     }
@@ -61,11 +61,41 @@ class StandardSubjectBuilder internal constructor(
     fun that(actual: Double?): DoubleSubject =
         DoubleSubject(actual = actual, metadata = metadata)
 
+    fun that(actual: Int?): IntegerSubject =
+        IntegerSubject(actual = actual, metadata = metadata)
+
     fun that(actual: String?): StringSubject =
         StringSubject(actual = actual, metadata = metadata)
 
     fun <T> that(actual: Iterable<T>?): IterableSubject<T> =
         IterableSubject(actual = actual, metadata = metadata)
+
+    fun <T> that(actual: Array<out T>?): ObjectArraySubject<T> =
+        ObjectArraySubject(actual = actual, metadata = metadata)
+
+    fun that(actual: BooleanArray?): PrimitiveBooleanArraySubject =
+        PrimitiveBooleanArraySubject(actual = actual, metadata = metadata)
+
+    fun that(actual: ShortArray?): PrimitiveShortArraySubject =
+        PrimitiveShortArraySubject(actual = actual, metadata = metadata)
+
+    fun that(actual: IntArray?): PrimitiveIntArraySubject =
+        PrimitiveIntArraySubject(actual = actual, metadata = metadata)
+
+    fun that(actual: LongArray?): PrimitiveLongArraySubject =
+        PrimitiveLongArraySubject(actual = actual, metadata = metadata)
+
+    fun that(actual: ByteArray?): PrimitiveByteArraySubject =
+        PrimitiveByteArraySubject(actual = actual, metadata = metadata)
+
+    fun that(actual: CharArray?): PrimitiveCharArraySubject =
+        PrimitiveCharArraySubject(actual = actual, metadata = metadata)
+
+    fun that(actual: FloatArray?): PrimitiveFloatArraySubject =
+        PrimitiveFloatArraySubject(actual = actual, metadata = metadata)
+
+    fun that(actual: DoubleArray?): PrimitiveDoubleArraySubject =
+        PrimitiveDoubleArraySubject(actual = actual, metadata = metadata)
 
     fun <K, V> that(actual: Map<K, V>?): MapSubject<K, V> =
         MapSubject(actual = actual, metadata = metadata)

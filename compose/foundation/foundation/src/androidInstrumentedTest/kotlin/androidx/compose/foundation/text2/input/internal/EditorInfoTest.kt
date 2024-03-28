@@ -19,7 +19,7 @@ package androidx.compose.foundation.text2.input.internal
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.text2.input.TextFieldCharSequence
+import androidx.compose.foundation.text.input.internal.update
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
@@ -532,13 +532,13 @@ class EditorInfoTest {
     fun initial_selection_info_is_set() {
         val selection = TextRange(1, 2)
         val info = EditorInfo()
-        info.update(TextFieldCharSequence("abc", selection), ImeOptions.Default)
+        info.update("abc", selection, ImeOptions.Default)
 
         assertThat(info.initialSelStart).isEqualTo(selection.start)
         assertThat(info.initialSelEnd).isEqualTo(selection.end)
     }
 
     private fun EditorInfo.update(imeOptions: ImeOptions) {
-        this.update(TextFieldCharSequence(), imeOptions)
+        this.update("", TextRange.Zero, imeOptions)
     }
 }

@@ -40,9 +40,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.util.fastForEach
 import kotlin.jvm.JvmInline
+import androidx.compose.ui.util.fastRoundToInt
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 internal data class RowColumnMeasurePolicy(
     private val orientation: LayoutOrientation,
@@ -570,10 +570,10 @@ private fun intrinsicMainAxisSize(
             fixedSpace += size
         } else if (weight > 0f) {
             totalWeight += weight
-            weightUnitSpace = max(weightUnitSpace, (size / weight).roundToInt())
+            weightUnitSpace = max(weightUnitSpace, (size / weight).fastRoundToInt())
         }
     }
-    return (weightUnitSpace * totalWeight).roundToInt() + fixedSpace +
+    return (weightUnitSpace * totalWeight).fastRoundToInt() + fixedSpace +
         (children.size - 1) * mainAxisSpacing
 }
 
@@ -593,9 +593,11 @@ private fun intrinsicCrossAxisSize(
         if (weight == 0f) {
             // Ask the child how much main axis space it wants to occupy. This cannot be more
             // than the remaining available space.
+            val remaining = if (mainAxisAvailable == Constraints.Infinity)
+                Constraints.Infinity else mainAxisAvailable - fixedSpace
             val mainAxisSpace = min(
                 child.mainAxisSize(Constraints.Infinity),
-                mainAxisAvailable - fixedSpace
+                remaining
             )
             fixedSpace += mainAxisSpace
             // Now that the assigned main axis space is known, ask about the cross axis space.
@@ -611,7 +613,7 @@ private fun intrinsicCrossAxisSize(
     } else if (mainAxisAvailable == Constraints.Infinity) {
         Constraints.Infinity
     } else {
-        (max(mainAxisAvailable - fixedSpace, 0) / totalWeight).roundToInt()
+        (max(mainAxisAvailable - fixedSpace, 0) / totalWeight).fastRoundToInt()
     }
 
     children.fastForEach { child ->
@@ -622,7 +624,7 @@ private fun intrinsicCrossAxisSize(
                 crossAxisMax,
                 child.crossAxisSize(
                     if (weightUnitSpace != Constraints.Infinity) {
-                        (weightUnitSpace * weight).roundToInt()
+                        (weightUnitSpace * weight).fastRoundToInt()
                     } else {
                         Constraints.Infinity
                     }
@@ -829,7 +831,8 @@ internal class VerticalAlignNode(
 internal data class RowColumnParentData(
     var weight: Float = 0f,
     var fill: Boolean = true,
-    var crossAxisAlignment: CrossAxisAlignment? = null
+    var crossAxisAlignment: CrossAxisAlignment? = null,
+    var flowLayoutData: FlowLayoutData? = null,
 )
 
 /**

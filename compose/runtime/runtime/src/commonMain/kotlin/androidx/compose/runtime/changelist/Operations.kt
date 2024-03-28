@@ -468,6 +468,7 @@ internal class Operations : OperationsDebugStringFormattable {
         }
 }
 
+@JvmDefaultWithCompatibility
 internal sealed interface OperationsDebugStringFormattable {
     fun toDebugString(linePrefix: String = "  "): String
 }

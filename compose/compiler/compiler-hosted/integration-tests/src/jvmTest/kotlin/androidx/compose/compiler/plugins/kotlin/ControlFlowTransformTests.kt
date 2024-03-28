@@ -2227,6 +2227,7 @@ class ControlFlowTransformTests(useFir: Boolean) : AbstractControlFlowTransformT
         """
     )
 
+    @Test
     fun testNothingBody() = verifyGoldenComposeIrTransform(
         source = """
         import androidx.compose.runtime.*
@@ -2289,6 +2290,141 @@ class ControlFlowTransformTests(useFir: Boolean) : AbstractControlFlowTransformT
             import androidx.compose.runtime.*
 
             @Composable fun Text(text: String) {}
+        """
+    )
+
+    @Test
+    fun testComposableInAnonymousObjectDelegate() = verifyGoldenComposeIrTransform(
+        """
+            import androidx.compose.runtime.Composable
+
+                interface A
+
+                interface B {
+                    val property: A @Composable get() = TODO()
+                }
+
+                @Composable fun Test(b: B) {
+                    val a = object : A by b.property {}
+                    println(a)
+                }
+        """
+    )
+
+    @Test
+    fun testReturnNull() = verifyGoldenComposeIrTransform(
+        source = """
+            import androidx.compose.runtime.*
+
+            @Composable
+            fun Test(): String? {
+                return null
+            }
+            @Composable
+            fun Test2(b: Boolean): String? {
+                if (b) return "true"
+                return null
+            }
+            @Composable
+            fun Test3(b: Boolean): String? {
+                if (b) {
+                    return "true"
+                } else {
+                    return null
+                }
+            }
+            @Composable
+            fun Test4(b: Boolean): String? {
+                return if (b) {
+                    "true"
+                } else {
+                    null
+                }
+            }
+            @Composable
+            fun Test5(): String? {
+                var varNull = null
+                return varNull
+            }
+            @Composable
+            fun Test6(): String? {
+                TODO()
+            }
+            @Composable
+            fun Test7(b: Boolean): String? {
+                if (b) {
+                    return null
+                }
+                return "false"
+            }
+            @Composable
+            fun Test8(): Unit? {
+                var unitNull: Unit? = null
+                Test6()
+                return unitNull
+            }
+            @Composable
+            fun Test9(): Unit? {
+                var unitNotNull: Unit? = Unit
+                Test6()
+                return unitNotNull
+            }
+            @Composable
+            fun Test10(): Unit? {
+                Test6()
+                return Unit
+            }
+        """.trimIndent()
+    )
+
+    @Test
+    fun testGroupsInLoops() = verifyGoldenComposeIrTransform(
+        """
+            import androidx.compose.runtime.*
+
+            @Composable
+            private fun KeyContent1(items: List<Int>) {
+                items.forEach { item ->
+                    if (item > -1) {
+                        key(item) {
+                            remember {
+                                item
+                            }
+                        }
+                    }
+                }
+            }
+
+            @Composable
+            private fun KeyContent2(items: List<Int>) {
+                for (item in items) {
+                    if (item > -1) {
+                        key(item) {
+                            remember {
+                                item
+                            }
+                        }
+                    }
+                }
+            }
+        """
+    )
+
+    @Test
+    fun testIfWithEarlyReturnInsideInlineLambda() = verifyGoldenComposeIrTransform(
+        """
+            import androidx.compose.runtime.Composable
+
+            @Composable fun Test() {
+                run {
+                    if (true) {
+                        return@run
+                    } else {
+                        Test()
+                        return@run
+                    }
+                }
+            }
         """
     )
 }

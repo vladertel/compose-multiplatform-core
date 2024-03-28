@@ -20,6 +20,7 @@ import static androidx.wear.protolayout.ColorBuilders.argb;
 import static androidx.wear.protolayout.DimensionBuilders.dp;
 import static androidx.wear.protolayout.DimensionBuilders.expand;
 import static androidx.wear.protolayout.DimensionBuilders.sp;
+import static androidx.wear.protolayout.DimensionBuilders.weight;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -53,10 +54,7 @@ public class LayoutElementBuildersTest {
                     .setDynamicValue(DynamicBuilders.DynamicFloat.from(new AppDataKey<>(STATE_KEY)))
                     .build();
     private static final DimensionBuilders.ExpandedDimensionProp EXPAND_PROP = expand();
-    private static final DimensionBuilders.ExpandedDimensionProp EXPAND_WEIGHT_PROP =
-            new DimensionBuilders.ExpandedDimensionProp.Builder()
-                    .setLayoutWeight(new TypeBuilders.FloatProp.Builder(12).build())
-                    .build();
+    private static final DimensionBuilders.ExpandedDimensionProp EXPAND_WEIGHT_PROP = weight(12);
 
     private static final DimensionBuilders.HorizontalLayoutConstraint HORIZONTAL_LAYOUT_CONSTRAINT =
             new DimensionBuilders.HorizontalLayoutConstraint.Builder(20)
@@ -66,6 +64,8 @@ public class LayoutElementBuildersTest {
             new DimensionBuilders.VerticalLayoutConstraint.Builder(20)
                     .setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_BOTTOM)
                     .build();
+    private static final TypeBuilders.StringProp STATIC_STRING_PROP =
+            new TypeBuilders.StringProp.Builder("string").build();
     private static final TypeBuilders.StringProp STRING_PROP =
             new TypeBuilders.StringProp.Builder("string")
                     .setDynamicValue(
@@ -256,6 +256,67 @@ public class LayoutElementBuildersTest {
     }
 
     @Test
+    public void testTextSetOverflow_ellipsize() {
+        LayoutElementBuilders.Text text =
+                new LayoutElementBuilders.Text.Builder()
+                        .setText(STATIC_STRING_PROP)
+                        .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE)
+                        .build();
+
+        LayoutElementProto.Text textProto = text.toProto();
+
+        assertThat(textProto.getText().getValue()).isEqualTo(STATIC_STRING_PROP.getValue());
+        assertThat(textProto.getOverflow().getValue().getNumber())
+                .isEqualTo(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testTextSetOverflow_ellipsizeEnd() {
+        LayoutElementBuilders.Text text =
+                new LayoutElementBuilders.Text.Builder()
+                        .setText(STATIC_STRING_PROP)
+                        .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE_END)
+                        .build();
+
+        LayoutElementProto.Text textProto = text.toProto();
+
+        assertThat(textProto.getText().getValue()).isEqualTo(STATIC_STRING_PROP.getValue());
+        assertThat(textProto.getOverflow().getValue().getNumber())
+                .isEqualTo(LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE_END);
+    }
+
+    @Test
+    public void testTextSetOverflow_truncate() {
+        LayoutElementBuilders.Text text =
+                new LayoutElementBuilders.Text.Builder()
+                        .setText(STATIC_STRING_PROP)
+                        .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_TRUNCATE)
+                        .build();
+
+        LayoutElementProto.Text textProto = text.toProto();
+
+        assertThat(textProto.getText().getValue()).isEqualTo(STATIC_STRING_PROP.getValue());
+        assertThat(textProto.getOverflow().getValue().getNumber())
+                .isEqualTo(LayoutElementBuilders.TEXT_OVERFLOW_TRUNCATE);
+    }
+
+    @Test
+    public void testTextSetOverflow_marquee() {
+        LayoutElementBuilders.Text text =
+                new LayoutElementBuilders.Text.Builder()
+                        .setText(STATIC_STRING_PROP)
+                        .setOverflow(LayoutElementBuilders.TEXT_OVERFLOW_MARQUEE)
+                        .build();
+
+        LayoutElementProto.Text textProto = text.toProto();
+
+        assertThat(textProto.getText().getValue()).isEqualTo(STATIC_STRING_PROP.getValue());
+        assertThat(textProto.getOverflow().getValue().getNumber())
+                .isEqualTo(LayoutElementBuilders.TEXT_OVERFLOW_MARQUEE);
+    }
+
+    @Test
     public void testFontStyleSetMultipleSizes() {
         int size1 = 12;
         int size2 = 30;
@@ -263,7 +324,7 @@ public class LayoutElementBuildersTest {
         int[] expectedSizes = {size1, size2, lastSize};
         LayoutElementBuilders.FontStyle fontStyle =
                 new LayoutElementBuilders.FontStyle.Builder()
-                        .setSizes(sp(size1), sp(size2), sp(lastSize))
+                        .setSizes(size1, size2, lastSize)
                         .build();
 
         LayoutElementProto.FontStyle fontStyleProto = fontStyle.toProto();
@@ -307,7 +368,7 @@ public class LayoutElementBuildersTest {
         LayoutElementBuilders.FontStyle fontStyle =
                 new LayoutElementBuilders.FontStyle.Builder()
                         .setSize(sp(20))
-                        .setSizes(sp(size1), sp(size2))
+                        .setSizes(size1, size2)
                         .build();
 
         LayoutElementProto.FontStyle fontStyleProto = fontStyle.toProto();
@@ -325,21 +386,30 @@ public class LayoutElementBuildersTest {
 
     @Test
     public void testFontStyleSetSize_tooManySizes_throws() {
-        DimensionBuilders.SpProp[] sizes =
-                new DimensionBuilders.SpProp
-                        [LayoutElementBuilders.FontStyle.Builder.TEXT_SIZES_LIMIT + 1];
+        int[] sizes =
+                new int[LayoutElementBuilders.FontStyle.Builder.TEXT_SIZES_LIMIT + 1];
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new LayoutElementBuilders.FontStyle.Builder().setSizes(sizes).build());
     }
 
     @Test
-    public void testFontStyleSetSize_allNegativeOrZero_throws() {
+    public void testFontStyleSetSize_atLeastOneNegative_throws() {
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
                         new LayoutElementBuilders.FontStyle.Builder()
-                                .setSizes(sp(-1), sp(0))
+                                .setSizes(-1, 5, 1)
+                                .build());
+    }
+
+    @Test
+    public void testFontStyleSetSize_atLeastOneZero_throws() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        new LayoutElementBuilders.FontStyle.Builder()
+                                .setSizes(1, 2, 0)
                                 .build());
     }
 
@@ -372,5 +442,34 @@ public class LayoutElementBuildersTest {
                 .isEqualTo(shadow.getBlurRadius().getValue());
         assertThat(arcLine.getStrokeCap().getShadow().getColor().getArgb())
                 .isEqualTo(shadow.getColor().getArgb());
+    }
+
+    @Test
+    public void arcs_withSetDirection() {
+        int arcLineDirection = LayoutElementBuilders.ARC_DIRECTION_COUNTER_CLOCKWISE;
+        int arcTextDirection = LayoutElementBuilders.ARC_DIRECTION_NORMAL;
+        int arcDirection = LayoutElementBuilders.ARC_DIRECTION_CLOCKWISE;
+
+        LayoutElementBuilders.Arc arc = new LayoutElementBuilders.Arc.Builder()
+                .setArcDirection(arcDirection)
+                .addContent(
+                        new LayoutElementBuilders.ArcLine.Builder()
+                                .setArcDirection(arcLineDirection)
+                                .build())
+                .addContent(
+                        new LayoutElementBuilders.ArcText.Builder()
+                                .setArcDirection(arcTextDirection)
+                                .build())
+                .build();
+
+        assertThat(arc.getArcDirection().getValue()).isEqualTo(arcDirection);
+        assertThat(
+                ((LayoutElementBuilders.ArcLine) arc.getContents().get(0))
+                        .getArcDirection().getValue())
+                .isEqualTo(arcLineDirection);
+        assertThat(
+                ((LayoutElementBuilders.ArcText) arc.getContents().get(1))
+                        .getArcDirection().getValue())
+                .isEqualTo(arcTextDirection);
     }
 }

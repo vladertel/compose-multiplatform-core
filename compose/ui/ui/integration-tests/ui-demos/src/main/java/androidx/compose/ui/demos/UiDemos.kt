@@ -20,6 +20,13 @@ import androidx.compose.foundation.demos.text.SoftwareKeyboardControllerDemo
 import androidx.compose.integration.demos.common.ActivityDemo
 import androidx.compose.integration.demos.common.ComposableDemo
 import androidx.compose.integration.demos.common.DemoCategory
+import androidx.compose.ui.demos.accessibility.LinearProgressIndicatorDemo
+import androidx.compose.ui.demos.accessibility.NestedContainersFalseDemo
+import androidx.compose.ui.demos.accessibility.NestedContainersTrueDemo
+import androidx.compose.ui.demos.accessibility.ScaffoldSampleDemo
+import androidx.compose.ui.demos.accessibility.ScaffoldSampleScrollDemo
+import androidx.compose.ui.demos.accessibility.ScrollingColumnDemo
+import androidx.compose.ui.demos.accessibility.SimpleRtlLayoutDemo
 import androidx.compose.ui.demos.autofill.ExplicitAutofillTypesDemo
 import androidx.compose.ui.demos.focus.AdjacentScrollablesFocusDemo
 import androidx.compose.ui.demos.focus.CancelFocusDemo
@@ -67,7 +74,6 @@ import androidx.compose.ui.demos.input.TouchModeDemo
 import androidx.compose.ui.demos.keyinput.InterceptEnterToSendMessageDemo
 import androidx.compose.ui.demos.keyinput.KeyInputDemo
 import androidx.compose.ui.demos.modifier.CommunicatingModifierDemo
-import androidx.compose.ui.demos.modifier.TraverseModifierDemo
 import androidx.compose.ui.demos.recyclerview.RecyclerViewDemos
 import androidx.compose.ui.demos.viewinterop.AndroidInComposeDemos
 import androidx.compose.ui.demos.viewinterop.BottomSheetFragmentNestedScrollInteropDemo
@@ -84,6 +90,7 @@ import androidx.compose.ui.demos.viewinterop.ScrollingAndroidViewsDemo
 import androidx.compose.ui.demos.viewinterop.ViewComposeViewNestedScrollInteropDemo
 import androidx.compose.ui.demos.viewinterop.ViewInteropDemo
 import androidx.compose.ui.samples.NestedScrollConnectionSample
+import androidx.compose.ui.samples.TraverseModifierDemo
 
 private val GestureDemos = DemoCategory(
     "Gestures",
@@ -266,6 +273,7 @@ val CoreDemos = DemoCategory(
         ViewInteropDemos,
         ComposableDemo("Software Keyboard Controller") { SoftwareKeyboardControllerDemo() },
         RecyclerViewDemos,
-        AccessibilityDemos
+        AccessibilityDemos,
+        ComposableDemo("Screen coordinates") { ScreenCoordinatesDemo(it) },
     )
 )

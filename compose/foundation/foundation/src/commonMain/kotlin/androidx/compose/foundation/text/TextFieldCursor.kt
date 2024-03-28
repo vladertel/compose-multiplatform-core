@@ -36,11 +36,14 @@ import androidx.compose.ui.graphics.isUnspecified
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastCoerceIn
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.unit.Dp
 import kotlin.math.floor
 
 internal fun Modifier.cursor(
-    state: TextFieldState,
+    state: LegacyTextFieldState,
     value: TextFieldValue,
     offsetMapping: OffsetMapping,
     cursorBrush: Brush,

@@ -44,13 +44,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties.TextSelectionRange
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -59,9 +64,11 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextInputSelection
 import androidx.compose.ui.test.performTextReplacement
@@ -357,6 +364,47 @@ internal class BasicTextField2Test {
         rule.onNodeWithTag(Tag).assertIsFocused()
 
         inputMethodInterceptor.assertNoSessionActive()
+    }
+
+    @Test
+    fun textField_focus_doesNotShowSoftwareKeyboard_whenNotShowSoftwareKeyboard() {
+        val state = TextFieldState()
+        val focusRequester = FocusRequester()
+        inputMethodInterceptor.setTextFieldTestContent {
+            BasicTextField2(
+                state = state,
+                keyboardOptions = KeyboardOptions(shouldShowKeyboardOnFocus = false),
+                modifier = Modifier.fillMaxSize().testTag(Tag).focusRequester(focusRequester)
+            )
+        }
+        rule.runOnUiThread {
+            focusRequester.requestFocus()
+        }
+        rule.waitForIdle()
+        rule.onNodeWithTag(Tag).assertIsFocused()
+
+        inputMethodInterceptor.assertNoSessionActive()
+    }
+
+    @Test
+    fun textField_tap_showSoftwareKeyboard_whenNotShowSoftwareKeyboard() {
+        val state = TextFieldState()
+        val focusRequester = FocusRequester()
+        inputMethodInterceptor.setTextFieldTestContent {
+            BasicTextField2(
+                state = state,
+                keyboardOptions = KeyboardOptions(shouldShowKeyboardOnFocus = false),
+                modifier = Modifier.fillMaxSize().testTag(Tag).focusRequester(focusRequester)
+            )
+        }
+        rule.runOnUiThread {
+            focusRequester.requestFocus()
+        }
+        rule.waitForIdle()
+        rule.onNodeWithTag(Tag).assertIsFocused()
+        rule.onNodeWithTag(Tag).performClick()
+
+        inputMethodInterceptor.assertSessionActive()
     }
 
     @Test
@@ -1148,6 +1196,36 @@ internal class BasicTextField2Test {
         rule.runOnIdle {
             assertThat(onValueChangedCount).isEqualTo(0)
         }
+    }
+
+    // Regression test for b/311834126
+    @Test
+    fun whenPastingTextThatIncreasesEndOffset_noCrashAndCursorAtEndOfPastedText() {
+        val longText = "Text".repeat(4)
+        val shortText = "Text".repeat(2)
+
+        lateinit var tfs: TextFieldState
+        lateinit var clipboardManager: ClipboardManager
+        inputMethodInterceptor.setTextFieldTestContent {
+            tfs = rememberTextFieldState(shortText)
+            clipboardManager = LocalClipboardManager.current
+            BasicTextField2(
+                state = tfs,
+                modifier = Modifier.testTag(Tag),
+            )
+        }
+        clipboardManager.setText(AnnotatedString(longText))
+        rule.waitForIdle()
+
+        val node = rule.onNodeWithTag(Tag)
+        node.performTouchInput { longClick(center) }
+        rule.waitForIdle()
+
+        node.performSemanticsAction(SemanticsActions.PasteText) { it() }
+        rule.waitForIdle()
+
+        assertThat(tfs.text.toString()).isEqualTo(longText)
+        assertThat(tfs.text.selectionInChars).isEqualTo(TextRange(longText.length))
     }
 
     private fun requestFocus(tag: String) =

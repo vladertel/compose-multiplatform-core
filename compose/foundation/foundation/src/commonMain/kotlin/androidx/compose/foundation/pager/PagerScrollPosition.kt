@@ -40,7 +40,6 @@ internal class PagerScrollPosition(
     currentPageOffsetFraction: Float = 0.0f,
     val state: PagerState
 ) {
-
     var currentPage by mutableIntStateOf(currentPage)
         private set
 
@@ -87,8 +86,8 @@ internal class PagerScrollPosition(
      * c) there will be not enough pages to fill the viewport after the requested index, so we
      * would have to compose few elements before the asked index, changing the first visible page.
      */
-    fun requestPosition(index: Int, scrollOffsetFraction: Float) {
-        update(index, scrollOffsetFraction)
+    fun requestPosition(index: Int, offsetFraction: Float) {
+        update(index, offsetFraction)
         // clear the stored key as we have a direct request to scroll to [index] position and the
         // next [checkIfFirstVisibleItemWasMoved] shouldn't override this.
         lastKnownCurrentPageKey = null
@@ -106,25 +105,29 @@ internal class PagerScrollPosition(
         return newIndex
     }
 
-    private fun update(page: Int, pageOffsetFraction: Float) {
+    private fun update(page: Int, offsetFraction: Float) {
         currentPage = page
         nearestRangeState.update(page)
-        currentPageOffsetFraction = if (pageOffsetFraction.absoluteValue == 0.0f) {
-            0.0f
-        } else {
-            pageOffsetFraction
-        }
+        currentPageOffsetFraction = offsetFraction
     }
 
-    fun currentScrollOffset(): Int {
-        return ((currentPage + currentPageOffsetFraction) * state.pageSizeWithSpacing).roundToInt()
+    fun updateCurrentPageOffsetFraction(offsetFraction: Float) {
+        currentPageOffsetFraction = offsetFraction
+    }
+
+    fun currentAbsoluteScrollOffset(): Int {
+        return ((currentPage +
+            currentPageOffsetFraction) * state.pageSizeWithSpacing).roundToInt()
     }
 
     fun applyScrollDelta(delta: Int) {
         debugLog { "Applying Delta=$delta" }
-        val fractionDelta = delta / state.pageSizeWithSpacing.toFloat()
-        currentPageOffsetFraction += fractionDelta
-        state.remeasureTrigger = Unit // trigger remeasure
+        val fractionUpdate = if (state.pageSizeWithSpacing == 0) {
+            0.0f
+        } else {
+            delta / state.pageSizeWithSpacing.toFloat()
+        }
+        currentPageOffsetFraction += fractionUpdate
     }
 }
 
@@ -139,9 +142,8 @@ internal const val NearestItemsSlidingWindowSize = 30
  */
 internal const val NearestItemsExtraItemCount = 100
 
-private const val DEBUG = PagerDebugEnable
 private inline fun debugLog(generateMsg: () -> String) {
-    if (DEBUG) {
+    if (PagerDebugConfig.ScrollPosition) {
         println("PagerScrollPosition: ${generateMsg()}")
     }
 }

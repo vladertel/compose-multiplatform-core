@@ -16,14 +16,12 @@
 
 package androidx.compose.compiler.plugins.kotlin
 
-import org.jetbrains.kotlin.backend.common.extensions.FirIncompatiblePluginAPI
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrConstKind
 import org.jetbrains.kotlin.platform.jvm.isJvm
 
-@OptIn(FirIncompatiblePluginAPI::class)
 class VersionChecker(val context: IrPluginContext) {
 
     companion object {
@@ -131,6 +129,7 @@ class VersionChecker(val context: IrPluginContext) {
             11600 to "1.6.0-alpha07",
             11700 to "1.6.0-alpha08",
             11800 to "1.6.0-beta01",
+            12000 to "1.7.0-alpha01",
         )
 
         /**
@@ -143,7 +142,7 @@ class VersionChecker(val context: IrPluginContext) {
          * The maven version string of this compiler. This string should be updated before/after every
          * release.
          */
-        const val compilerVersion: String = "1.5.8.1"
+        const val compilerVersion: String = "1.5.8"
         private val minimumRuntimeVersion: String
             get() = runtimeVersionToMavenVersionTable[minimumRuntimeVersionInt] ?: "unknown"
     }

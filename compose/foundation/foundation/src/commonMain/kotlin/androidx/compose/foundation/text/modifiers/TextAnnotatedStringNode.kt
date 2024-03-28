@@ -55,6 +55,7 @@ import androidx.compose.ui.semantics.showTextSubstitution
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.semantics.textSubstitution
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextLayoutInput
 import androidx.compose.ui.text.TextLayoutResult
@@ -64,7 +65,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
-import kotlin.math.roundToInt
+import androidx.compose.ui.util.fastRoundToInt
 
 /**
  * Node that implements Text for [AnnotatedString] or [onTextLayout] parameters.
@@ -395,8 +396,8 @@ internal class TextAnnotatedStringNode(
             onTextLayout?.invoke(textLayoutResult)
             selectionController?.updateTextLayout(textLayoutResult)
             baselineCache = mapOf(
-                FirstBaseline to textLayoutResult.firstBaseline.roundToInt(),
-                LastBaseline to textLayoutResult.lastBaseline.roundToInt()
+                FirstBaseline to textLayoutResult.firstBaseline.fastRoundToInt(),
+                LastBaseline to textLayoutResult.lastBaseline.fastRoundToInt()
             )
         }
 
@@ -405,9 +406,9 @@ internal class TextAnnotatedStringNode(
 
         // then allow children to measure _inside_ our final box, with the above placeholders
         val placeable = measurable.measure(
-            Constraints.fixed(
-                textLayoutResult.size.width,
-                textLayoutResult.size.height
+            Constraints.fixedCoerceHeightAndWidthForBits(
+                width = textLayoutResult.size.width,
+                height = textLayoutResult.size.height
             )
         )
 
@@ -416,7 +417,6 @@ internal class TextAnnotatedStringNode(
             textLayoutResult.size.height,
             baselineCache!!
         ) {
-            // this is basically a graphicsLayer
             placeable.place(0, 0)
         }
     }
@@ -481,6 +481,7 @@ internal class TextAnnotatedStringNode(
             // no-up for !isAttached. The node will invalidate when attaching again.
             return
         }
+
         selectionController?.draw(this)
         drawIntoCanvas { canvas ->
             val layoutCache = getLayoutCache(this)
@@ -531,9 +532,15 @@ internal class TextAnnotatedStringNode(
                     canvas.restore()
                 }
             }
-        }
-        if (!placeholders.isNullOrEmpty()) {
-            drawContent()
+
+            // draw inline content and links indication
+            if (text.hasLinks() || !placeholders.isNullOrEmpty()) {
+                drawContent()
+            }
         }
     }
 }
+
+@OptIn(ExperimentalTextApi::class)
+// TODO(soboleva) replace with has*Annotations in upcoming CL with API change
+internal fun AnnotatedString.hasLinks() = getUrlAnnotations(0, text.length).isNotEmpty()

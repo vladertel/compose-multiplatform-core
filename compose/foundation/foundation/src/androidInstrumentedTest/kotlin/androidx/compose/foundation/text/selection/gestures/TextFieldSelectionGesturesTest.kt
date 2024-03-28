@@ -31,9 +31,9 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.test.filters.FlakyTest
 import org.junit.Before
 import org.junit.Test
 
@@ -52,7 +52,7 @@ internal abstract class TextFieldSelectionGesturesTest : AbstractSelectionGestur
     protected abstract fun characterPosition(offset: Int): Offset
 
     @Before
-    fun setupAsserter() {
+    fun setupAsserterAndStartInput() {
         asserter = TextFieldSelectionAsserter(
             textContent = textFieldValue.value.text,
             rule = rule,
@@ -60,10 +60,18 @@ internal abstract class TextFieldSelectionGesturesTest : AbstractSelectionGestur
             hapticFeedback = hapticFeedback,
             getActual = { textFieldValue.value }
         )
+
+        rule.waitForIdle()
+        rule.onNodeWithTag(pointerAreaTag).performTouchInput { click(characterPosition(0)) }
+        rule.waitForIdle()
     }
 
     @Test
     fun whenTouch_withLongPressOutOfBounds_nothingHappens() {
+        asserter.applyAndAssert {
+            cursorHandleShown = true
+        }
+
         performTouchGesture {
             longPress(topStart.nudge(yDirection = UP))
         }
@@ -356,7 +364,6 @@ internal abstract class TextFieldSelectionGesturesTest : AbstractSelectionGestur
     }
 
     @Test
-    @FlakyTest(bugId = 302703761)
     fun whenTouch_withLongPressThenDragUpAndBack_selectsWordsThenChars() {
         touchLongPressThenDragForwardAndBackTest(
             forwardOffset = characterPosition(2),
