@@ -38,7 +38,7 @@ import kotlin.jvm.JvmInline
  *
  * `Operations` is not a thread safe data structure.
  */
-internal class Operations : OperationsDebugStringFormattable {
+internal class Operations : OperationsDebugStringFormattable() {
 
     private var opCodes = arrayOfNulls<Operation>(InitialCapacity)
     private var opCodesSize = 0
@@ -468,7 +468,6 @@ internal class Operations : OperationsDebugStringFormattable {
         }
 }
 
-@JvmDefaultWithCompatibility
-internal sealed interface OperationsDebugStringFormattable {
-    fun toDebugString(linePrefix: String = "  "): String
+internal abstract class OperationsDebugStringFormattable {
+    abstract fun toDebugString(linePrefix: String = "  "): String
 }

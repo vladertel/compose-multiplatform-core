@@ -53,7 +53,6 @@ import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.platform.inspectable
-import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.focused
 import androidx.compose.ui.semantics.requestFocus
@@ -362,8 +361,6 @@ private class FocusablePinnableContainerNode : Modifier.Node(),
 
 private class FocusableSemanticsNode : Modifier.Node(), SemanticsModifierNode,
     FocusRequesterModifierNode {
-    private var semanticsConfigurationCache = SemanticsConfiguration()
-
     private var isFocused = false
 
     fun setFocus(focused: Boolean) {

@@ -43,6 +43,7 @@ import androidx.compose.ui.node.ComposeUiNode.Companion.SetResolvedCompositionLo
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.LayoutNode.LayoutState
 import androidx.compose.ui.node.LayoutNode.UsageByParent
+import androidx.compose.ui.node.checkMeasuredSize
 import androidx.compose.ui.node.requireOwner
 import androidx.compose.ui.platform.createSubcomposition
 import androidx.compose.ui.unit.Constraints
@@ -875,8 +876,10 @@ internal class LayoutNodeSubcompositionsState(
             width: Int,
             height: Int,
             alignmentLines: Map<AlignmentLine, Int>,
+            rulers: (RulerScope.() -> Unit)?,
             placementBlock: Placeable.PlacementScope.() -> Unit
         ): MeasureResult {
+            checkMeasuredSize(width, height)
             return object : MeasureResult {
                 override val width: Int
                     get() = width
@@ -884,6 +887,8 @@ internal class LayoutNodeSubcompositionsState(
                     get() = height
                 override val alignmentLines: Map<AlignmentLine, Int>
                     get() = alignmentLines
+                override val rulers: (RulerScope.() -> Unit)?
+                    get() = rulers
 
                 override fun placeChildren() {
                     if (isLookingAhead) {

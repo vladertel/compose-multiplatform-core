@@ -19,14 +19,10 @@ package androidx.compose.foundation.text
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isClick
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +31,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ParentDataModifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
@@ -52,10 +47,21 @@ import kotlin.math.min
 @OptIn(ExperimentalTextApi::class)
 internal typealias LinkRange = AnnotatedString.Range<UrlAnnotation>
 
-/** A scope that provides necessary information to attach a hyperlink to the text range */
+/**
+ * A scope that provides necessary information to attach a hyperlink to the text range.
+ *
+ * This class assumes that links exist and does not perform any additional check inside its methods.
+ * Therefore this class initialisation should be guarded by the `hasLinks` check.
+ */
 @OptIn(ExperimentalTextApi::class)
 internal class TextLinkScope(val text: AnnotatedString) {
     var textLayoutResult: TextLayoutResult? by mutableStateOf(null)
+
+    // indicates whether the links should be measured or not. The latter needed to handle
+    // case where translated string forces measurement before the recomposition. Recomposition in
+    // this case will dispose the links altogether because translator returns plain text
+    val shouldMeasureLinks: () -> Boolean
+        get() = { text == textLayoutResult?.layoutInput?.text }
 
     /**
      * Causes the modified element to be measured with fixed constraints equal to the bounds of the
@@ -83,56 +89,51 @@ internal class TextLinkScope(val text: AnnotatedString) {
             }
         }
 
-    private fun pathForRangeInRangeCoordinates(range: LinkRange): Path? =
-        textLayoutResult?.let {
-            val path = it.getPathForRange(range.start, range.end)
+    private fun pathForRangeInRangeCoordinates(range: LinkRange): Path? {
+        return if (!shouldMeasureLinks()) null else {
+            textLayoutResult?.let {
+                val path = it.getPathForRange(range.start, range.end)
 
-            val firstCharBoundingBox = it.getBoundingBox(range.start)
-            val minTop = firstCharBoundingBox.top
-            var minLeft = firstCharBoundingBox.left
-            val firstLine = it.getLineForOffset(range.start)
-            val lastLine = it.getLineForOffset(range.end)
-            // might be enough to just check if the second line exist
-            // if yes - take it's left bound or even just 0
-            // TODO(soboleva) check in RTL
-            for (line in firstLine + 1..lastLine) {
-                val lineLeft = it.getLineLeft(line)
-                minLeft = min(minLeft, lineLeft)
+                val firstCharBoundingBox = it.getBoundingBox(range.start)
+                val minTop = firstCharBoundingBox.top
+                var minLeft = firstCharBoundingBox.left
+                val firstLine = it.getLineForOffset(range.start)
+                val lastLine = it.getLineForOffset(range.end)
+                // might be enough to just check if the second line exist
+                // if yes - take it's left bound or even just 0
+                // TODO(soboleva) check in RTL
+                for (line in firstLine + 1..lastLine) {
+                    val lineLeft = it.getLineLeft(line)
+                    minLeft = min(minLeft, lineLeft)
+                }
+
+                path.translate(-Offset(minLeft, minTop))
+                return path
             }
-
-            path.translate(-Offset(minLeft, minTop))
-            return path
         }
+    }
 
+    /**
+     * This composable responsible for creating layout nodes for each link annotation. Since
+     * [TextLinkScope] object created *only* when there are links present in the text, we don't
+     * need to do any additional guarding inside this composable function.
+     */
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
-    fun LinksComposables() = with(this) {
+    fun LinksComposables() {
         val indication = LocalIndication.current
         val uriHandler = LocalUriHandler.current
+
         val links = text.getUrlAnnotations(0, text.length)
         links.fastForEach { range ->
-            val interactionSource = remember(range) { MutableInteractionSource() }
             val shape = shapeForRange(range)
             val clipModifier = shape?.let { Modifier.clip(it) } ?: Modifier
             Box(
                 clipModifier
-                    .focusable(true, interactionSource)
                     .textRange(range.start, range.end)
-                    .combinedClickable(interactionSource, indication, onClick = {
+                    .combinedClickable(null, indication, onClick = {
                         uriHandler.openUri(range.item.url)
                     })
-                    .onKeyEvent {
-                        // TODO(soboleva) do we need press indication?
-                        when {
-                            // TODO(soboleva) support Clickables as well
-                            it.isClick -> {
-                                uriHandler.openUri(range.item.url)
-                                true
-                            }
-
-                            else -> false
-                        }
-                    }
             )
         }
     }

@@ -17,6 +17,9 @@
 package androidx.compose.foundation.text2.input.internal
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.content.TransferableContent
+import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
+import androidx.compose.foundation.content.internal.mergeReceiveContentConfiguration
 import androidx.compose.foundation.interaction.HoverInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.Handle
@@ -290,6 +293,10 @@ internal class TextFieldDecoratorModifierNode(
      */
     private var inputSessionJob: Job? = null
 
+    private val receiveContentConfigurationProvider: () -> ReceiveContentConfiguration? = {
+        mergeReceiveContentConfiguration()
+    }
+
     /**
      * Updates all the related properties and invalidates internal state based on the changes.
      */
@@ -349,6 +356,10 @@ internal class TextFieldDecoratorModifierNode(
 
         if (textFieldSelectionState != previousTextFieldSelectionState) {
             pointerInputNode.resetPointerInputHandler()
+            if (isAttached) {
+                textFieldSelectionState.receiveContentConfiguration =
+                    receiveContentConfigurationProvider
+            }
         }
     }
 
@@ -357,7 +368,7 @@ internal class TextFieldDecoratorModifierNode(
 
     // This function is called inside a snapshot observer.
     override fun SemanticsPropertyReceiver.applySemantics() {
-        val text = textFieldState.untransformedText
+        val text = textFieldState.outputText
         val selection = text.selectionInChars
         editableText = AnnotatedString(text.toString())
         textSelectionRange = selection
@@ -484,10 +495,12 @@ internal class TextFieldDecoratorModifierNode(
 
     override fun onAttach() {
         onObservedReadsChanged()
+        textFieldSelectionState.receiveContentConfiguration = receiveContentConfigurationProvider
     }
 
     override fun onDetach() {
         disposeInputSession()
+        textFieldSelectionState.receiveContentConfiguration = null
     }
 
     override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
@@ -538,6 +551,8 @@ internal class TextFieldDecoratorModifierNode(
     private fun startInputSession(fromTap: Boolean) {
         if (!fromTap && !keyboardOptions.shouldShowKeyboardOnFocus) return
 
+        val receiveContentConfiguration = mergeReceiveContentConfiguration()
+
         inputSessionJob = coroutineScope.launch {
             // This will automatically cancel the previous session, if any, so we don't need to
             // cancel the inputSessionJob ourselves.
@@ -551,7 +566,9 @@ internal class TextFieldDecoratorModifierNode(
                     textFieldState,
                     textLayoutState,
                     keyboardOptions.toImeOptions(singleLine),
-                    onImeAction = onImeActionPerformed
+                    acceptedMimeTypes = receiveContentConfiguration?.acceptedMimeTypes,
+                    onImeAction = onImeActionPerformed,
+                    onCommitContent = receiveContentConfiguration?.onCommitContent
                 )
             }
         }
@@ -586,11 +603,14 @@ internal class TextFieldDecoratorModifierNode(
 /**
  * Runs platform-specific text input logic.
  */
+@OptIn(ExperimentalFoundationApi::class)
 internal expect suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
     state: TransformedTextFieldState,
     layoutState: TextLayoutState,
     imeOptions: ImeOptions,
-    onImeAction: ((ImeAction) -> Unit)?
+    acceptedMimeTypes: Set<String>?,
+    onImeAction: ((ImeAction) -> Unit)?,
+    onCommitContent: ((TransferableContent) -> Boolean)?
 ): Nothing
 
 /**

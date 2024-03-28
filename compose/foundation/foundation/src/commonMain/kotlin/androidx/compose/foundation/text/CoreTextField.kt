@@ -122,6 +122,7 @@ import androidx.compose.ui.text.input.TextInputSession
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastRoundToInt
 import kotlin.math.max
@@ -249,6 +250,7 @@ internal fun CoreTextField(
     // State
     val transformedText = remember(value, visualTransformation) {
         val transformed = visualTransformation.filterWithValidation(value.annotatedString)
+
         value.composition?.let {
             TextFieldDelegate.applyCompositionDecoration(it, transformed)
         } ?: transformed
@@ -1156,8 +1158,7 @@ internal fun TextFieldCursorHandle(manager: TextFieldSelectionManager) {
                         anchor = SelectionHandleAnchor.Middle,
                         visible = true,
                     )
-                },
-            content = null
+                }
         )
     }
 }
@@ -1166,7 +1167,7 @@ internal fun TextFieldCursorHandle(manager: TextFieldSelectionManager) {
 internal expect fun CursorHandle(
     handlePosition: Offset,
     modifier: Modifier,
-    content: @Composable (() -> Unit)?
+    minTouchTargetSize: DpSize = DpSize.Unspecified
 )
 
 // TODO(b/262648050) Try to find a better API.

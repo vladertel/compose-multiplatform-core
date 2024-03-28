@@ -35,6 +35,8 @@ import androidx.camera.core.CameraEffect.PREVIEW
 import androidx.camera.core.CameraEffect.VIDEO_CAPTURE
 import androidx.camera.core.CameraSelector.LENS_FACING_FRONT
 import androidx.camera.core.DynamicRange
+import androidx.camera.core.DynamicRange.HLG_10_BIT
+import androidx.camera.core.DynamicRange.SDR
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY
 import androidx.camera.core.ImageProxy
@@ -42,6 +44,7 @@ import androidx.camera.core.Preview
 import androidx.camera.core.SurfaceRequest
 import androidx.camera.core.impl.CameraCaptureCallback
 import androidx.camera.core.impl.CameraCaptureResult
+import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.DeferrableSurface
 import androidx.camera.core.impl.MutableOptionsBundle
 import androidx.camera.core.impl.SessionConfig
@@ -287,7 +290,7 @@ class StreamSharingTest {
         )
         val hdrChild = FakeUseCase(
             FakeUseCaseConfig.Builder().setSurfaceOccupancyPriority(2)
-                .setDynamicRange(DynamicRange.HLG_10_BIT).useCaseConfig
+                .setDynamicRange(HLG_10_BIT).useCaseConfig
         )
         streamSharing =
             StreamSharing(camera, setOf(unspecifiedChild, hdrChild), useCaseConfigFactory)
@@ -295,18 +298,18 @@ class StreamSharingTest {
             streamSharing.mergeConfigs(
                 camera.cameraInfoInternal, /*extendedConfig*/null, /*cameraDefaultConfig*/null
             ).dynamicRange
-        ).isEqualTo(DynamicRange.HLG_10_BIT)
+        ).isEqualTo(HLG_10_BIT)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun getParentDynamicRange_exception_whenChildrenDynamicRangesConflict() {
         val sdrChild = FakeUseCase(
             FakeUseCaseConfig.Builder().setSurfaceOccupancyPriority(1)
-                .setDynamicRange(DynamicRange.SDR).useCaseConfig
+                .setDynamicRange(SDR).useCaseConfig
         )
         val hdrChild = FakeUseCase(
             FakeUseCaseConfig.Builder().setSurfaceOccupancyPriority(2)
-                .setDynamicRange(DynamicRange.HLG_10_BIT).useCaseConfig
+                .setDynamicRange(HLG_10_BIT).useCaseConfig
         )
         streamSharing = StreamSharing(camera, setOf(sdrChild, hdrChild), useCaseConfigFactory)
         streamSharing.mergeConfigs(
@@ -345,7 +348,7 @@ class StreamSharingTest {
         shadowOf(getMainLooper()).idle()
         assertThat(transformationInfo).isNotNull()
         assertThat(transformationInfo!!.rotationDegrees).isEqualTo(SENSOR_ROTATION)
-        assertThat(transformationInfo!!.mirroring).isTrue()
+        assertThat(transformationInfo!!.isMirroring).isTrue()
         // Act: unbind StreamSharing.
         streamSharing.unbindFromCamera(frontCamera)
         shadowOf(getMainLooper()).idle()
@@ -368,7 +371,7 @@ class StreamSharingTest {
 
         // Act: feed metadata to the parent.
         streamSharing.sessionConfig.repeatingCameraCaptureCallbacks.single()
-            .onCaptureCompleted(FakeCameraCaptureResult())
+            .onCaptureCompleted(CaptureConfig.DEFAULT_ID, FakeCameraCaptureResult())
 
         // Assert: children receives the metadata with the tag bundle overridden.
         assertThat(result1.getCompleted().tagBundle.getTag(key)).isEqualTo(value)
@@ -426,6 +429,40 @@ class StreamSharingTest {
         ).isEqualTo(newImplementationOptionValue)
     }
 
+    @Test
+    fun sessionConfigIsSdr_whenUpdateStreamSpecWithDefaultDynamicRangeSettings() {
+        // Arrange.
+        streamSharing = StreamSharing(camera, setOf(child1), useCaseConfigFactory)
+        streamSharing.bindToCamera(camera, null, defaultConfig)
+
+        // Act: update stream specification.
+        streamSharing.onSuggestedStreamSpecUpdated(
+            StreamSpec.builder(size).build()
+        )
+
+        // Assert: the session config gets the correct dynamic range.
+        val outputConfigs = streamSharing.sessionConfig.outputConfigs
+        assertThat(outputConfigs).hasSize(1)
+        assertThat(outputConfigs[0].dynamicRange).isEqualTo(SDR)
+    }
+
+    @Test
+    fun sessionConfigIsHdr_whenUpdateStreamSpecWithHdr() {
+        // Arrange.
+        streamSharing = StreamSharing(camera, setOf(child1), useCaseConfigFactory)
+        streamSharing.bindToCamera(camera, null, defaultConfig)
+
+        // Act: update stream specification.
+        streamSharing.onSuggestedStreamSpecUpdated(
+            StreamSpec.builder(size).setDynamicRange(HLG_10_BIT).build()
+        )
+
+        // Assert: the session config gets the correct dynamic range.
+        val outputConfigs = streamSharing.sessionConfig.outputConfigs
+        assertThat(outputConfigs).hasSize(1)
+        assertThat(outputConfigs[0].dynamicRange).isEqualTo(HLG_10_BIT)
+    }
+
     private fun extendChildAndReturnParentSessionConfig(
         extender: (Camera2Interop.Extender<Preview>) -> Unit
     ): SessionConfig {
@@ -452,7 +489,10 @@ class StreamSharingTest {
             val builder = SessionConfig.Builder()
             builder.addTag(key, value)
             builder.addRepeatingCameraCaptureCallback(object : CameraCaptureCallback() {
-                override fun onCaptureCompleted(cameraCaptureResult: CameraCaptureResult) {
+                override fun onCaptureCompleted(
+                    captureConfig: Int,
+                    cameraCaptureResult: CameraCaptureResult
+                ) {
                     deferredResult.complete(cameraCaptureResult)
                 }
             })

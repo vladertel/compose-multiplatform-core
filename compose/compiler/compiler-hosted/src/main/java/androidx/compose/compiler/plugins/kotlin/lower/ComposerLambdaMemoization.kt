@@ -428,23 +428,23 @@ class ComposerLambdaMemoization(
             !declaration.isInline
 
         val context = FunctionContext(declaration, composable, canRemember)
-        declarationContextStack.push(context)
-        val result = super.visitFunction(declaration)
-        declarationContextStack.pop()
         if (declaration.isLocal) {
             declarationContextStack.recordLocalDeclaration(context)
         }
+        declarationContextStack.push(context)
+        val result = super.visitFunction(declaration)
+        declarationContextStack.pop()
         return result
     }
 
     override fun visitClass(declaration: IrClass): IrStatement {
         val context = ClassContext(declaration)
-        declarationContextStack.push(context)
-        val result = super.visitClass(declaration)
-        declarationContextStack.pop()
         if (declaration.isLocal) {
             declarationContextStack.recordLocalDeclaration(context)
         }
+        declarationContextStack.push(context)
+        val result = super.visitClass(declaration)
+        declarationContextStack.pop()
         return result
     }
 
@@ -1080,6 +1080,7 @@ class ComposerLambdaMemoization(
         irCurrentComposer(),
         value,
         inferredStable = false,
+        compareInstanceForFunctionTypes = false,
         compareInstanceForUnstableValues = strongSkippingModeEnabled
     )
 

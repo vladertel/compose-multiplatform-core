@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material3.tokens.MotionTokens
 import androidx.wear.compose.materialcore.animateSelectionColor
 
 /**
@@ -96,10 +97,10 @@ import androidx.wear.compose.materialcore.animateSelectionColor
  * content color for this button in different states.
  * @param contentPadding The spacing values to apply internally between the container and the
  * content.
- * @param interactionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this button's "selectable" tap area. You can create and pass in your own
- * remembered [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this button in different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this radio button. You can use this to change the radio button's
+ * appearance or preview the radio button in different states. Note that if `null` is provided,
+ * interactions will still happen internally.
  * @param icon An optional slot for providing an icon to indicate the purpose of the button.
  * The contents are expected to be center-aligned, both horizontally and vertically, and should be
  * an icon of size 24.dp. In order to correctly render when the Button is not enabled the
@@ -121,7 +122,7 @@ fun RadioButton(
     shape: Shape = MaterialTheme.shapes.large,
     colors: RadioButtonColors = RadioButtonDefaults.radioButtonColors(),
     contentPadding: PaddingValues = RadioButtonDefaults.ContentPadding,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     icon: @Composable (BoxScope.() -> Unit)? = null,
     secondaryLabel: @Composable (RowScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit
@@ -227,14 +228,14 @@ fun RadioButton(
  * content color for this button in different states.
  * @param contentPadding The spacing values to apply internally between the container and the
  * content.
- * @param selectionInteractionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this button's "selectable" tap area. You can create and pass in your own
- * remembered [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this button in different [Interaction]s.
- * @param clickInteractionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this button's "clickable" tap area. You can create and pass in your own
- * remembered [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this button in different [Interaction]s.
+ * @param selectionInteractionSource an optional hoisted [MutableInteractionSource] for observing
+ * and emitting [Interaction]s for this button's "selectable" tap area. You can use this to change
+ * the button's appearance or preview the button in different states. Note that if `null` is
+ * provided, interactions will still happen internally.
+ * @param clickInteractionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this button's "clickable" tap area. You can use this to change the
+ * button's appearance or preview the button in different states. Note that if `null` is provided,
+ * interactions will still happen internally.
  * @param secondaryLabel A slot for providing the button's secondary label. The contents are
  * expected to be "start" aligned.
  * @param label A slot for providing the button's main label. The contents are expected to be text
@@ -252,8 +253,8 @@ fun SplitRadioButton(
     },
     shape: Shape = MaterialTheme.shapes.large,
     colors: SplitRadioButtonColors = RadioButtonDefaults.splitRadioButtonColors(),
-    selectionInteractionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    clickInteractionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    selectionInteractionSource: MutableInteractionSource? = null,
+    clickInteractionSource: MutableInteractionSource? = null,
     contentPadding: PaddingValues = RadioButtonDefaults.ContentPadding,
     secondaryLabel: @Composable (RowScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit
@@ -861,7 +862,7 @@ private fun PaddingValues.splitHorizontally() =
     )
 
 private val COLOR_ANIMATION_SPEC: AnimationSpec<Color> =
-    tween(MEDIUM_1, 0, STANDARD_DECELERATE)
+    tween(MotionTokens.DurationMedium1, 0, MotionTokens.EasingStandardDecelerate)
 private val SELECTION_CONTROL_WIDTH = 32.dp
 private val SELECTION_CONTROL_HEIGHT = 24.dp
 private val SELECTION_CONTROL_SPACING = 4.dp

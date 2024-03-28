@@ -153,7 +153,8 @@ internal fun rememberPagerMeasurePolicy(
                 beforeContentPadding,
                 afterContentPadding,
                 state.currentPage,
-                state.currentPageOffsetFraction
+                state.currentPageOffsetFraction,
+                state.pageCount
             )
         }
 
@@ -193,11 +194,5 @@ internal fun rememberPagerMeasurePolicy(
         ).also {
             state.applyMeasureResult(it)
         }
-    }
-}
-
-private inline fun debugLog(generateMsg: () -> String) {
-    if (PagerDebugConfig.MeasurePolicy) {
-        println("PagerMeasurePolicy: ${generateMsg()}")
     }
 }

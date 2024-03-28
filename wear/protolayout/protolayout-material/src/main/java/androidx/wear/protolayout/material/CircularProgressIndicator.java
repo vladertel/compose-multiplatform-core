@@ -242,7 +242,11 @@ public class CircularProgressIndicator implements LayoutElement {
             DegreesProp length = getLength();
             Modifiers.Builder modifiers =
                     new Modifiers.Builder()
-                            .setPadding(new Padding.Builder().setAll(DEFAULT_PADDING).build())
+                            .setPadding(
+                                    new Padding.Builder()
+                                            .setRtlAware(true)
+                                            .setAll(DEFAULT_PADDING)
+                                            .build())
                             .setMetadata(
                                     new ElementMetadata.Builder()
                                             .setTagData(getTagBytes(METADATA_TAG))
@@ -255,17 +259,21 @@ public class CircularProgressIndicator implements LayoutElement {
 
             ArcLine.Builder progressArcLineBuilder =
                     new ArcLine.Builder()
+                            .setArcDirection(LayoutElementBuilders.ARC_DIRECTION_CLOCKWISE)
                             .setColor(mCircularProgressIndicatorColors.getIndicatorColor())
                             .setThickness(mStrokeWidth);
             applyCorrectValue(progressArcLineBuilder);
 
             Arc.Builder element =
                     new Arc.Builder()
+                            .setArcDirection(LayoutElementBuilders.ARC_DIRECTION_CLOCKWISE)
                             .setAnchorType(LayoutElementBuilders.ARC_ANCHOR_START)
                             .setAnchorAngle(mStartAngle)
                             .setModifiers(modifiers.build())
                             .addContent(
                                     new ArcLine.Builder()
+                                            .setArcDirection(
+                                                    LayoutElementBuilders.ARC_DIRECTION_CLOCKWISE)
                                             .setColor(
                                                     mCircularProgressIndicatorColors
                                                             .getTrackColor())

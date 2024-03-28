@@ -25,6 +25,7 @@ import android.graphics.SurfaceTexture;
 import android.util.Size;
 import android.view.Surface;
 
+import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -64,7 +65,7 @@ public abstract class Frame {
             @NonNull SurfaceRequest.TransformationInfo transformationInfo) {
         Frame frame = new AutoValue_Frame(transformationInfo.getSensorToBufferTransform(), size,
                 transformationInfo.getCropRect(), transformationInfo.getRotationDegrees(),
-                transformationInfo.getMirroring(), timestampNanos);
+                transformationInfo.isMirroring(), timestampNanos);
         frame.mOverlaySurface = overlaySurface;
         return frame;
     }
@@ -124,21 +125,22 @@ public abstract class Frame {
      *
      * @see SurfaceRequest.TransformationInfo#getRotationDegrees()
      */
+    @IntRange(from = 0, to = 359)
     public abstract int getRotationDegrees();
 
     /**
      * Returns whether the buffer will be mirrored.
      *
-     * <p>This flag indicates whether the buffer will be mirrored vertically by the pipeline. For
-     * example, for front camera preview, the buffer is usually mirrored before displayed to end
-     * users.
+     * <p>This flag indicates whether the buffer will be mirrored across the vertical
+     * axis by the pipeline. For example, for front camera preview, the buffer is usually
+     * mirrored before displayed to end users.
      *
      * <p>The mirroring is applied after the cropping and the rotating. The order of the
      * operations is as follows: 1) cropping, 2) rotating and 3) mirroring.
      *
-     * @see SurfaceRequest.TransformationInfo#getMirroring()
+     * @see SurfaceRequest.TransformationInfo#isMirroring()
      */
-    public abstract boolean getMirroring();
+    public abstract boolean isMirroring();
 
     /**
      * Returns the timestamp of the frame in nanoseconds.

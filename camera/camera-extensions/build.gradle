@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.Publish
 
 plugins {
@@ -40,8 +46,8 @@ dependencies {
     testImplementation(project(":camera:camera-testing"))
     testImplementation(project(":camera:camera-extensions-stub"))
     testImplementation(libs.testCore)
-    // To use the extensions-stub for testing directly.
     testImplementation(libs.testRunner)
+    testImplementation(libs.truth)
 
     androidTestImplementation(libs.testExtJunit)
     androidTestImplementation(libs.testRunner)

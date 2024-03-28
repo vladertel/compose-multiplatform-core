@@ -25,11 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.paging.CombinedLoadStates
-import androidx.paging.DifferCallback
 import androidx.paging.ItemSnapshotList
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
-import androidx.paging.NullPaddedList
 import androidx.paging.PagingData
 import androidx.paging.PagingDataEvent
 import androidx.paging.PagingDataPresenter
@@ -63,26 +61,6 @@ public class LazyPagingItems<T : Any> internal constructor(
 ) {
     private val mainDispatcher = AndroidUiDispatcher.Main
 
-    private val differCallback: DifferCallback = object : DifferCallback {
-        override fun onChanged(position: Int, count: Int) {
-            if (count > 0) {
-                updateItemSnapshotList()
-            }
-        }
-
-        override fun onInserted(position: Int, count: Int) {
-            if (count > 0) {
-                updateItemSnapshotList()
-            }
-        }
-
-        override fun onRemoved(position: Int, count: Int) {
-            if (count > 0) {
-                updateItemSnapshotList()
-            }
-        }
-    }
-
     /**
      * If the [flow] is a SharedFlow, it is expected to be the flow returned by from
      * pager.flow.cachedIn(scope) which could contain a cached PagingData. We pass the cached
@@ -90,21 +68,10 @@ public class LazyPagingItems<T : Any> internal constructor(
      * can be initialized with the data prior to collection on pager.
      */
     private val pagingDataPresenter = object : PagingDataPresenter<T>(
-        differCallback = differCallback,
         mainContext = mainDispatcher,
         cachedPagingData =
             if (flow is SharedFlow<PagingData<T>>) flow.replayCache.firstOrNull() else null
     ) {
-        override suspend fun presentNewList(
-            previousList: NullPaddedList<T>,
-            newList: NullPaddedList<T>,
-            lastAccessedIndex: Int,
-            onListPresentable: () -> Unit
-        ) {
-            onListPresentable()
-            updateItemSnapshotList()
-        }
-
         override suspend fun presentPagingDataEvent(
             event: PagingDataEvent<T>,
         ) {

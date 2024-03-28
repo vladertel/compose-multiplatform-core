@@ -70,12 +70,12 @@ private class HoverableElement(
     }
 }
 
-internal class HoverableNode(
-    private var interactionSource: MutableInteractionSource?
+private class HoverableNode(
+    private var interactionSource: MutableInteractionSource
 ) : PointerInputModifierNode, Modifier.Node() {
     private var hoverInteraction: HoverInteraction.Enter? = null
 
-    fun updateInteractionSource(interactionSource: MutableInteractionSource?) {
+    fun updateInteractionSource(interactionSource: MutableInteractionSource) {
         if (this.interactionSource != interactionSource) {
             tryEmitExit()
             // b/273699888 TODO: Define behavior if there is an ongoing hover
@@ -106,26 +106,18 @@ internal class HoverableNode(
         tryEmitExit()
     }
 
-     private fun emitEnter() {
+    private suspend fun emitEnter() {
         if (hoverInteraction == null) {
             val interaction = HoverInteraction.Enter()
-            interactionSource?.let { interactionSource ->
-                coroutineScope.launch {
-                    interactionSource.emit(interaction)
-                }
-            }
+            interactionSource.emit(interaction)
             hoverInteraction = interaction
         }
     }
 
-    private fun emitExit() {
+    private suspend fun emitExit() {
         hoverInteraction?.let { oldValue ->
             val interaction = HoverInteraction.Exit(oldValue)
-            interactionSource?.let { interactionSource ->
-                coroutineScope.launch {
-                    interactionSource.emit(interaction)
-                }
-            }
+            interactionSource.emit(interaction)
             hoverInteraction = null
         }
     }
@@ -133,7 +125,7 @@ internal class HoverableNode(
     private fun tryEmitExit() {
         hoverInteraction?.let { oldValue ->
             val interaction = HoverInteraction.Exit(oldValue)
-            interactionSource?.tryEmit(interaction)
+            interactionSource.tryEmit(interaction)
             hoverInteraction = null
         }
     }

@@ -1231,6 +1231,7 @@ abstract class AbstractComposeLowering(
         currentComposer: IrExpression,
         value: IrExpression,
         inferredStable: Boolean,
+        compareInstanceForFunctionTypes: Boolean,
         compareInstanceForUnstableValues: Boolean
     ): IrExpression {
         // compose has a unique opportunity to avoid inline class boxing for changed calls, since
@@ -1251,14 +1252,18 @@ abstract class AbstractComposeLowering(
 
         return if (!compareInstanceForUnstableValues) {
             val descriptor = primitiveDescriptor
-                ?: if (type.isFunction()) changedInstanceFunction else changedFunction
+                ?: if (type.isFunction() && compareInstanceForFunctionTypes) {
+                    changedInstanceFunction
+                } else {
+                    changedFunction
+                }
             irMethodCall(currentComposer, descriptor).also {
                 it.putValueArgument(0, expr)
             }
         } else {
             val descriptor = when {
                 primitiveDescriptor != null -> primitiveDescriptor
-                type.isFunction() -> changedInstanceFunction
+                compareInstanceForFunctionTypes && type.isFunction() -> changedInstanceFunction
                 stability.knownStable() -> changedFunction
                 inferredStable -> changedFunction
                 stability.knownUnstable() -> changedInstanceFunction

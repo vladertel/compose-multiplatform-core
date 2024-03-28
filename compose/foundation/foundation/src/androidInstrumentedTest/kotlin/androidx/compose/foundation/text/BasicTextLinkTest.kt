@@ -16,6 +16,7 @@
 
 package androidx.compose.foundation.text
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,18 +24,27 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertIsFocused
@@ -49,11 +59,13 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.UrlAnnotation
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withAnnotation
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -248,6 +260,74 @@ class BasicTextLinkTest {
         }
     }
 
+    @Test
+    fun link_withTranslatedString() {
+        val originalText = buildAnnotatedString {
+            append("text ")
+            withAnnotation(UrlAnnotation(Url1)) {
+                append("link")
+            }
+        }
+        setupContent { BasicText(originalText) }
+
+        // set translated string
+        val node = rule.onFirstText().fetchSemanticsNode()
+        rule.runOnUiThread {
+            val translatedText = buildAnnotatedString { append("text") }
+            node.config[SemanticsActions.SetTextSubstitution].action?.invoke(translatedText)
+        }
+        rule.waitForIdle()
+
+        rule.runOnUiThread {
+            // show the translated text
+            node.config[SemanticsActions.ShowTextSubstitution].action?.invoke(true)
+        }
+        rule.waitForIdle()
+
+        rule.onFirstText().performClick()
+        rule.runOnIdle {
+            assertThat(openedUri).isEqualTo(null)
+        }
+    }
+
+    @Test
+    fun updateColor_insideAnnotation_retainsFocusCorrectly() {
+        setupContent {
+            Column {
+                // initial focus
+                Box(
+                    Modifier
+                        .testTag("box")
+                        .size(10.dp)
+                        .focusRequester(focusRequester)
+                        .focusable()
+                )
+
+                val color = remember { mutableStateOf(Color.Red) }
+                BasicText(
+                    buildAnnotatedString {
+                        withAnnotation(UrlAnnotation(Url1)) {
+                            withStyle(SpanStyle(color = color.value)) {
+                                append("link")
+                            }
+                        }
+                    },
+                    modifier = Modifier.onFocusChanged {
+                        color.value = if (it.hasFocus) Color.Green else Color.Red
+                    }
+                )
+            }
+        }
+
+        rule.runOnIdle {
+            focusRequester.requestFocus()
+            focusManager.moveFocus(FocusDirection.Down)
+        }
+
+        rule.onNodeWithTag("box").assertIsNotFocused()
+        rule.onNode(hasClickAction()).assertIsFocused()
+    }
+
     @Composable
     private fun TextWithLinks() = with(rule.density) {
         Column {
@@ -297,7 +377,12 @@ class BasicTextLinkTest {
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     private fun setupContent(content: @Composable () -> Unit) {
+        val keyboardMockManager = object : InputModeManager {
+            override val inputMode = InputMode.Keyboard
+            override fun requestInputMode(inputMode: InputMode) = true
+        }
         rule.setContent {
             focusManager = LocalFocusManager.current
             val viewConfiguration = DelegatedViewConfiguration(
@@ -307,6 +392,7 @@ class BasicTextLinkTest {
             CompositionLocalProvider(
                 LocalUriHandler provides uriHandler,
                 LocalViewConfiguration provides viewConfiguration,
+                LocalInputModeManager provides keyboardMockManager,
                 content = content
             )
         }

@@ -21,7 +21,6 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.DecayAnimationSpec
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.calculateTargetValue
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.rememberSplineBasedDecay
@@ -29,12 +28,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollScope
-import androidx.compose.foundation.gestures.snapping.FinalSnappingItem
 import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
 import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
 import androidx.compose.foundation.gestures.snapping.SnapPosition
-import androidx.compose.foundation.gestures.snapping.calculateDistanceToDesiredSnapPosition
-import androidx.compose.foundation.gestures.snapping.calculateFinalSnappingItem
+import androidx.compose.foundation.gestures.snapping.calculateFinalSnappingBound
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -54,7 +51,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
-import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import kotlin.math.sign
 import kotlinx.coroutines.CancellationException
@@ -319,9 +315,16 @@ object PagerDefaults {
                 SnapLayoutInfoProvider(
                     state,
                     pagerSnapDistance,
-                    decayAnimationSpec,
-                    snapPositionalThreshold
-                )
+                    decayAnimationSpec
+                ) { flingVelocity, lowerBound, upperBound ->
+                    calculateFinalSnappingBound(
+                        pagerState = state,
+                        snapPositionalThreshold = snapPositionalThreshold,
+                        flingVelocity = flingVelocity,
+                        lowerBoundOffset = lowerBound,
+                        upperBoundOffset = upperBound
+                    )
+                }
 
             SnapFlingBehavior(
                 snapLayoutInfoProvider = snapLayoutInfoProvider,
@@ -436,257 +439,6 @@ object PagerDefaults {
     const val OutOfBoundsPageCount = 0
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-private fun SnapLayoutInfoProvider(
-    pagerState: PagerState,
-    pagerSnapDistance: PagerSnapDistance,
-    decayAnimationSpec: DecayAnimationSpec<Float>,
-    snapPositionalThreshold: Float
-): SnapLayoutInfoProvider {
-    return object : SnapLayoutInfoProvider {
-        val layoutInfo: PagerLayoutInfo
-            get() = pagerState.layoutInfo
-
-        fun Float.isValidDistance(): Boolean {
-            return this != Float.POSITIVE_INFINITY && this != Float.NEGATIVE_INFINITY
-        }
-
-        override fun calculateSnappingOffset(currentVelocity: Float): Float {
-            val snapPosition = pagerState.layoutInfo.snapPosition
-            val (lowerBoundOffset, upperBoundOffset) = searchForSnappingBounds(snapPosition)
-
-            val isForward = pagerState.isScrollingForward(currentVelocity)
-
-            debugLog { "isForward=$isForward" }
-
-            // how many pages have I scrolled using a drag gesture.
-            val offsetFromSnappedPosition =
-                pagerState.dragGestureDelta() / layoutInfo.pageSize.toFloat()
-
-            // we're only interested in the decimal part of the offset.
-            val offsetFromSnappedPositionOverflow =
-                offsetFromSnappedPosition - offsetFromSnappedPosition.toInt().toFloat()
-
-            // If the velocity is not high, use the positional threshold to decide where to go.
-            // This is applicable mainly when the user scrolls and lets go without flinging.
-            val finalSnappingItem =
-                with(pagerState.density) { calculateFinalSnappingItem(currentVelocity) }
-
-            debugLog {
-                "\nfinalSnappingItem=$finalSnappingItem" +
-                    "\nlower=$lowerBoundOffset" +
-                    "\nupper=$upperBoundOffset"
-            }
-
-            val finalDistance = when (finalSnappingItem) {
-                FinalSnappingItem.ClosestItem -> {
-                    if (offsetFromSnappedPositionOverflow.absoluteValue > snapPositionalThreshold) {
-                        // If we crossed the threshold, go to the next bound
-                        debugLog { "Crossed Snap Positional Threshold" }
-                        if (isForward) upperBoundOffset else lowerBoundOffset
-                    } else {
-                        // if we haven't crossed the threshold. but scrolled minimally, we should
-                        // bound to the previous bound
-                        if (abs(pagerState.currentPageOffsetFraction) >=
-                            abs(pagerState.positionThresholdFraction)
-                        ) {
-                            debugLog { "Crossed Positional Threshold Fraction" }
-                            if (isForward) lowerBoundOffset else upperBoundOffset
-                        } else {
-                            // if we haven't scrolled minimally, settle for the closest bound
-                            debugLog { "Snap To Closest" }
-                            if (lowerBoundOffset.absoluteValue < upperBoundOffset.absoluteValue) {
-                                lowerBoundOffset
-                            } else {
-                                upperBoundOffset
-                            }
-                        }
-                    }
-                }
-
-                FinalSnappingItem.NextItem -> upperBoundOffset
-                FinalSnappingItem.PreviousItem -> lowerBoundOffset
-                else -> 0f
-            }
-
-            debugLog { "Snapping to=$finalDistance" }
-
-            return if (finalDistance.isValidDistance()) {
-                finalDistance
-            } else {
-                0f
-            }
-        }
-
-        override fun calculateApproachOffset(initialVelocity: Float): Float {
-            debugLog { "Approach Velocity=$initialVelocity" }
-            val effectivePageSizePx = pagerState.pageSize + pagerState.pageSpacing
-
-            // given this velocity, where can I go with a decay animation.
-            val animationOffsetPx =
-                decayAnimationSpec.calculateTargetValue(0f, initialVelocity)
-
-            val startPage = if (initialVelocity < 0) {
-                pagerState.firstVisiblePage + 1
-            } else {
-                pagerState.firstVisiblePage
-            }
-
-            debugLog {
-                "\nAnimation Offset=$animationOffsetPx " +
-                    "\nFling Start Page=$startPage " +
-                    "\nEffective Page Size=$effectivePageSizePx"
-            }
-
-            // How many pages fit in the animation offset.
-            val pagesInAnimationOffset = animationOffsetPx / effectivePageSizePx
-
-            debugLog { "Pages in Animation Offset=$pagesInAnimationOffset" }
-
-            // Decide where this will get us in terms of target page.
-            val targetPage =
-                (startPage + pagesInAnimationOffset.toInt()).coerceIn(0, pagerState.pageCount)
-
-            debugLog { "Fling Target Page=$targetPage" }
-
-            // Apply the snap distance suggestion.
-            val correctedTargetPage = pagerSnapDistance.calculateTargetPage(
-                startPage,
-                targetPage,
-                initialVelocity,
-                pagerState.pageSize,
-                pagerState.pageSpacing
-            ).coerceIn(0, pagerState.pageCount)
-
-            debugLog { "Fling Corrected Target Page=$correctedTargetPage" }
-
-            // Calculate the offset with the new target page. The offset is the amount of
-            // pixels between the start page and the new target page.
-            val proposedFlingOffset = (correctedTargetPage - startPage) * effectivePageSizePx
-
-            debugLog { "Proposed Fling Approach Offset=$proposedFlingOffset" }
-
-            // We'd like the approach animation to finish right before the last page so we can
-            // use a snapping animation for the rest.
-            val flingApproachOffsetPx = (abs(proposedFlingOffset) - effectivePageSizePx)
-                .coerceAtLeast(0)
-
-            // Apply the correct sign.
-            return if (flingApproachOffsetPx == 0) {
-                flingApproachOffsetPx.toFloat()
-            } else {
-                flingApproachOffsetPx * initialVelocity.sign
-            }.also {
-                debugLog { "Fling Approach Offset=$it" }
-            }
-        }
-
-        private fun searchForSnappingBounds(snapPosition: SnapPosition): Pair<Float, Float> {
-            debugLog { "Calculating Snapping Bounds" }
-            var lowerBoundOffset = Float.NEGATIVE_INFINITY
-            var upperBoundOffset = Float.POSITIVE_INFINITY
-            val totalPageSize = pagerState.pageSize + pagerState.pageSpacing
-            val layoutInfo = pagerState.layoutInfo
-
-            val currentPage = pagerState.currentPage
-            val currentPageScrollOffset = snapPosition.currentPageOffset(
-                layoutInfo.mainAxisViewportSize,
-                layoutInfo.pageSize,
-                layoutInfo.pageSpacing,
-                layoutInfo.beforeContentPadding,
-                layoutInfo.afterContentPadding,
-                pagerState.currentPage,
-                pagerState.currentPageOffsetFraction
-            )
-
-            // the closest page should be close to the current page, we'll start from current page
-            // and search both sides.
-            var page = currentPage
-            var currentOffset = currentPageScrollOffset
-
-            debugLog { "Start Search: Page=$currentPage Offset=$currentOffset" }
-
-            // The snapping bounds will be at most visiblePages/2 from the current page.
-            val maxDistanceFromCurrentPage = layoutInfo.visiblePagesInfo.size / 2
-
-            // go back
-            while (page >= (currentPage - maxDistanceFromCurrentPage).coerceAtLeast(0)) {
-                val offset = calculateDistanceToDesiredSnapPosition(
-                    mainAxisViewPortSize = layoutInfo.mainAxisViewportSize,
-                    beforeContentPadding = layoutInfo.beforeContentPadding,
-                    afterContentPadding = layoutInfo.afterContentPadding,
-                    itemSize = layoutInfo.pageSize,
-                    itemOffset = currentOffset,
-                    itemIndex = page,
-                    snapPosition = snapPosition
-                )
-
-                debugLog { "Snapping Offset=$offset for page=$page" }
-
-                // Find page that is closest to the snap position, but before it
-                if (offset <= 0 && offset > lowerBoundOffset) {
-                    lowerBoundOffset = offset
-                }
-
-                // Find page that is closest to the snap position, but after it
-                if (offset >= 0 && offset < upperBoundOffset) {
-                    upperBoundOffset = offset
-                }
-
-                currentOffset -= totalPageSize
-                page--
-            }
-
-            page = currentPage + 1
-            currentOffset = currentPageScrollOffset + totalPageSize
-
-            // go forward
-            while (page <= (currentPage + maxDistanceFromCurrentPage)
-                    .coerceAtMost(pagerState.pageCount - 1)
-            ) {
-                val offset = calculateDistanceToDesiredSnapPosition(
-                    mainAxisViewPortSize = layoutInfo.mainAxisViewportSize,
-                    beforeContentPadding = layoutInfo.beforeContentPadding,
-                    afterContentPadding = layoutInfo.afterContentPadding,
-                    itemSize = layoutInfo.pageSize,
-                    itemOffset = currentOffset,
-                    itemIndex = page,
-                    snapPosition = snapPosition
-                )
-
-                debugLog {
-                    "Snapping Offset=$offset for page=$page"
-                }
-
-                // Find page that is closest to the snap position, but after it
-                if (offset >= 0 && offset < upperBoundOffset) {
-                    upperBoundOffset = offset
-                }
-
-                // Find page that is closest to the snap position, but before it
-                if (offset <= 0 && offset > lowerBoundOffset) {
-                    lowerBoundOffset = offset
-                }
-
-                currentOffset += totalPageSize
-                page++
-            }
-
-            // If any of the bounds is unavailable, use the other.
-            if (lowerBoundOffset == Float.NEGATIVE_INFINITY) {
-                lowerBoundOffset = upperBoundOffset
-            }
-
-            if (upperBoundOffset == Float.POSITIVE_INFINITY) {
-                upperBoundOffset = lowerBoundOffset
-            }
-
-            return lowerBoundOffset to upperBoundOffset
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
 internal fun SnapPosition.currentPageOffset(
     layoutSize: Int,
     pageSize: Int,
@@ -694,14 +446,16 @@ internal fun SnapPosition.currentPageOffset(
     beforeContentPadding: Int,
     afterContentPadding: Int,
     currentPage: Int,
-    currentPageOffsetFraction: Float
+    currentPageOffsetFraction: Float,
+    pageCount: Int
 ): Int {
     val snapOffset = position(
         layoutSize,
         pageSize,
         beforeContentPadding,
         afterContentPadding,
-        currentPage
+        currentPage,
+        pageCount
     )
 
     return (snapOffset - currentPageOffsetFraction * (pageSize + spaceBetweenPages)).roundToInt()
@@ -840,25 +594,11 @@ private inline fun debugLog(generateMsg: () -> String) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-private fun PagerState.isScrollingForward(velocity: Float) = if (isNotGestureAction()) {
-    velocity
-} else {
-    dragGestureDelta()
-} < 0
-
-@OptIn(ExperimentalFoundationApi::class)
-private fun PagerState.dragGestureDelta() = if (layoutInfo.orientation == Orientation.Horizontal) {
-    upDownDifference.x
-} else {
-    upDownDifference.y
-}
-
 internal object PagerDebugConfig {
     const val MainPagerComposable = false
     const val PagerState = false
-    const val MeasurePolicy = false
     const val MeasureLogic = false
     const val ScrollPosition = false
     const val PagerSnapDistance = false
+    const val PagerSnapLayoutInfoProvider = false
 }

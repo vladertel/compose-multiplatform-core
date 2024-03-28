@@ -3621,7 +3621,7 @@ class AndroidAccessibilityTest {
             assertThat(colAccessibilityNode.childCount).isEqualTo(2)
             assertThat(colSemanticsNode.replacedChildren.size).isEqualTo(2)
             assertThat(buttonHolder.importantForAccessibility)
-                .isEqualTo(ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_YES)
+                .isEqualTo(View.IMPORTANT_FOR_ACCESSIBILITY_YES)
             assertThat((buttonHolder.getChildAt(0) as Button).text)
                 .isEqualTo(buttonText)
         }
@@ -5289,7 +5289,7 @@ class AndroidAccessibilityTest {
             // This test implies that the listener was removed
             // and the enabled services were set to empty.
             assertThat(androidComposeView.isAttachedToWindow).isFalse()
-            assertThat(delegate.isEnabledForAccessibility).isFalse()
+            assertThat(delegate.isEnabled).isFalse()
         }
     }
 
@@ -5307,7 +5307,7 @@ class AndroidAccessibilityTest {
             // This test implies that the listener was removed
             // and the enabled services were set to empty.
             assertThat(androidComposeView.isAttachedToWindow).isFalse()
-            assertThat(delegate.isEnabledForAccessibility).isFalse()
+            assertThat(delegate.isEnabled).isFalse()
         }
     }
 
@@ -5320,7 +5320,7 @@ class AndroidAccessibilityTest {
         rule.runOnIdle {
             // This test implies that UIAutomator is enabled and is the only enabled a11y service
             assertThat(accessibilityManager.isEnabled).isTrue()
-            assertThat(delegate.isEnabledForAccessibility).isFalse()
+            assertThat(delegate.isEnabled).isFalse()
         }
     }
 

@@ -16,14 +16,13 @@
 
 package androidx.room.driver
 
-import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 
 internal class SupportSQLiteDriver(
     val openHelper: SupportSQLiteOpenHelper
 ) : SQLiteDriver {
-    override fun open(): SQLiteConnection {
+    override fun open(): SupportSQLiteConnection {
         return SupportSQLiteConnection(openHelper.writableDatabase)
     }
 }

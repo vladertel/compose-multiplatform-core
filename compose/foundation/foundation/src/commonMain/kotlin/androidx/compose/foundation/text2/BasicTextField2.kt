@@ -41,7 +41,9 @@ import androidx.compose.foundation.text.selection.SelectionHandleInfoKey
 import androidx.compose.foundation.text.textFieldMinSize
 import androidx.compose.foundation.text2.input.CodepointTransformation
 import androidx.compose.foundation.text2.input.InputTransformation
+import androidx.compose.foundation.text2.input.OutputTransformation
 import androidx.compose.foundation.text2.input.SingleLineCodepointTransformation
+import androidx.compose.foundation.text2.input.TextFieldDecorator
 import androidx.compose.foundation.text2.input.TextFieldLineLimits
 import androidx.compose.foundation.text2.input.TextFieldLineLimits.MultiLine
 import androidx.compose.foundation.text2.input.TextFieldLineLimits.SingleLine
@@ -56,6 +58,7 @@ import androidx.compose.foundation.text2.input.internal.syncTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,6 +83,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 
 /**
  * Basic text composable that provides an interactive box that accepts text input through software
@@ -140,7 +145,7 @@ import androidx.compose.ui.unit.Density
  * [KeyboardOptions.imeAction].
  * @param lineLimits Whether the text field should be [SingleLine], scroll horizontally, and
  * ignore newlines; or [MultiLine] and grow and scroll vertically. If [SingleLine] is passed without
- * specifying the [codepointTransformation] parameter, a [CodepointTransformation] is automatically
+ * specifying the [outputTransformation] parameter, a [CodepointTransformation] is automatically
  * applied. This transformation replaces any newline characters ('\n') within the text with regular
  * whitespace (' '), ensuring that the contents of the text field are presented in a single line.
  * @param onTextLayout Callback that is executed when the text layout becomes queryable. The
@@ -159,11 +164,15 @@ import androidx.compose.ui.unit.Density
  * provided, then no cursor will be drawn.
  * @param codepointTransformation Visual transformation interface that provides a 1-to-1 mapping of
  * codepoints.
+ * @param outputTransformation An [OutputTransformation] that transforms how the contents of the
+ * text field are presented.
  * @param decorator Allows to add decorations around text field, such as icon, placeholder, helper
  * messages or similar, and automatically increase the hit target area of the text field.
  * @param scrollState Scroll state that manages either horizontal or vertical scroll of TextField.
  * If [lineLimits] is [SingleLine], this text field is treated as single line with horizontal
  * scroll behavior. In other cases the text field becomes vertically scrollable.
+ * @param outputTransformation An [OutputTransformation] that transforms how the contents of the
+ * text field are presented.
  */
 @ExperimentalFoundationApi
 // This takes a composable lambda, but it is not primarily a container.
@@ -184,6 +193,7 @@ fun BasicTextField2(
     interactionSource: MutableInteractionSource? = null,
     cursorBrush: Brush = SolidColor(Color.Black),
     codepointTransformation: CodepointTransformation? = null,
+    outputTransformation: OutputTransformation? = null,
     decorator: TextFieldDecorator? = null,
     scrollState: ScrollState = rememberScrollState(),
     // Last parameter must not be a function unless it's intended to be commonly used as a trailing
@@ -239,6 +249,7 @@ fun BasicTextField2(
         cursorBrush = cursorBrush,
         scrollState = scrollState,
         codepointTransformation = codepointTransformation,
+        outputTransformation = outputTransformation,
         decorator = decorator,
     )
 }
@@ -309,6 +320,8 @@ fun BasicTextField2(
  * provided, then no cursor will be drawn.
  * @param codepointTransformation Visual transformation interface that provides a 1-to-1 mapping of
  * codepoints.
+ * @param outputTransformation An [OutputTransformation] that transforms how the contents of the
+ * text field are presented.
  * @param decorator Allows to add decorations around text field, such as icon, placeholder, helper
  * messages or similar, and automatically increase the hit target area of the text field.
  * @param scrollState Scroll state that manages either horizontal or vertical scroll of TextField.
@@ -333,6 +346,7 @@ fun BasicTextField2(
     interactionSource: MutableInteractionSource? = null,
     cursorBrush: Brush = SolidColor(Color.Black),
     codepointTransformation: CodepointTransformation? = null,
+    outputTransformation: OutputTransformation? = null,
     decorator: TextFieldDecorator? = null,
     scrollState: ScrollState = rememberScrollState(),
     // Last parameter must not be a function unless it's intended to be commonly used as a trailing
@@ -353,13 +367,23 @@ fun BasicTextField2(
     val isDragHovered = interactionSource.collectIsHoveredAsState().value
     val isWindowFocused = windowInfo.isWindowFocused
 
-    val transformedState = remember(state, inputTransformation, codepointTransformation) {
+    val transformedState = remember(
+        state,
+        inputTransformation,
+        codepointTransformation,
+        outputTransformation
+    ) {
         // First prefer provided codepointTransformation if not null, e.g. BasicSecureTextField
         // would send PasswordTransformation. Second, apply a SingleLineCodepointTransformation if
         // text field is configured to be single line. Else, don't apply any visual transformation.
         val appliedCodepointTransformation = codepointTransformation
             ?: SingleLineCodepointTransformation.takeIf { singleLine }
-        TransformedTextFieldState(state, inputTransformation, appliedCodepointTransformation)
+        TransformedTextFieldState(
+            textFieldState = state,
+            inputTransformation = inputTransformation,
+            codepointTransformation = appliedCodepointTransformation,
+            outputTransformation = outputTransformation
+        )
     }
 
     // Invalidate textLayoutState if TextFieldState itself has changed, since TextLayoutState
@@ -513,7 +537,7 @@ internal fun TextFieldCursorHandle(selectionState: TextFieldSelectionState) {
                 .pointerInput(selectionState) {
                     with(selectionState) { cursorHandleGestures() }
                 },
-            content = null
+            minTouchTargetSize = MinTouchTargetSizeForHandles,
         )
     }
 }
@@ -522,32 +546,63 @@ internal fun TextFieldCursorHandle(selectionState: TextFieldSelectionState) {
 internal fun TextFieldSelectionHandles(
     selectionState: TextFieldSelectionState
 ) {
-    val startHandleState = selectionState.startSelectionHandle
+    // Does not recompose if only position of the handle changes.
+    val startHandleState by remember {
+        derivedStateOf {
+            selectionState.getSelectionHandleState(isStartHandle = true, includePosition = false)
+        }
+    }
     if (startHandleState.visible) {
         SelectionHandle(
-            offsetProvider = { selectionState.startSelectionHandle.position },
+            offsetProvider = {
+                selectionState
+                    .getSelectionHandleState(isStartHandle = true, includePosition = true)
+                    .position
+            },
             isStartHandle = true,
             direction = startHandleState.direction,
             handlesCrossed = startHandleState.handlesCrossed,
             modifier = Modifier.pointerInput(selectionState) {
                 with(selectionState) { selectionHandleGestures(true) }
-            }
+            },
+            minTouchTargetSize = MinTouchTargetSizeForHandles,
         )
     }
 
-    val endHandleState = selectionState.endSelectionHandle
+    // Does not recompose if only position of the handle changes.
+    val endHandleState by remember {
+        derivedStateOf {
+            selectionState.getSelectionHandleState(isStartHandle = false, includePosition = false)
+        }
+    }
     if (endHandleState.visible) {
         SelectionHandle(
-            offsetProvider = { selectionState.endSelectionHandle.position },
+            offsetProvider = {
+                selectionState
+                    .getSelectionHandleState(isStartHandle = false, includePosition = true)
+                    .position
+            },
             isStartHandle = false,
             direction = endHandleState.direction,
             handlesCrossed = endHandleState.handlesCrossed,
             modifier = Modifier.pointerInput(selectionState) {
                 with(selectionState) { selectionHandleGestures(false) }
-            }
+            },
+            minTouchTargetSize = MinTouchTargetSizeForHandles,
         )
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 private val DefaultTextFieldDecorator = TextFieldDecorator { it() }
+
+/**
+ * Defines a minimum touch target area size for Selection and Cursor handles.
+ *
+ * Although BasicTextField is not part of Material spec, this accessibility feature is important
+ * enough to be included at foundation layer, and also TextField cannot change selection handles
+ * provided by BasicTextField to somehow achieve this accessibility requirement.
+ *
+ * This value is adopted from Android platform's TextView implementation.
+ */
+private val MinTouchTargetSizeForHandles = DpSize(40.dp, 40.dp)

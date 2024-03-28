@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.LibraryType
 
 plugins {
@@ -27,6 +34,7 @@ dependencies {
     api("androidx.annotation:annotation:1.6.0")
 
     implementation("androidx.core:core:1.12.0")
+    implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.activity:activity:1.8.0")
 
     // TODO(b/249982004): cleanup dependencies
@@ -48,7 +56,7 @@ android {
     }
 
     namespace "androidx.privacysandbox.sdkruntime.core"
-    compileSdkVersion = "android-34-ext8"
+    compileSdkVersion = "android-34-ext10"
 }
 
 androidx {

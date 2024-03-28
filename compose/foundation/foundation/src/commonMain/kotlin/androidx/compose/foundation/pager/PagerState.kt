@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 import kotlin.math.sign
 
 /**
@@ -186,10 +187,13 @@ abstract class PagerState(
     internal var firstVisiblePageOffset = 0
         private set
 
-    private var maxScrollOffset: Float = Float.MAX_VALUE
+    private var maxScrollOffset: Long = Long.MAX_VALUE
         private set
 
-    private var accumulator: Float = 0f
+    private var minScrollOffset: Long = 0L
+        private set
+
+    private var accumulator: Float = 0.0f
 
     /**
      * The prefetch will act after the measure pass has finished and it needs to know the
@@ -216,20 +220,42 @@ abstract class PagerState(
                 "\nmaxScrollOffset=$maxScrollOffset"
         }
 
-        val absolute = (currentScrollPosition + delta + accumulator)
-        val newValue = absolute.coerceIn(0.0f, maxScrollOffset)
-        val changed = absolute != newValue
-        val consumed = newValue - currentScrollPosition
-        previousPassDelta = consumed
-        if (consumed.absoluteValue != 0.0f) {
-            isScrollingForward = consumed > 0.0f
+        val decimalAccumulation = (delta + accumulator)
+        val decimalAccumulationInt = decimalAccumulation.roundToLong()
+        accumulator = decimalAccumulation - decimalAccumulationInt
+
+        /**
+         * The updated scroll position is the current position with the integer part of the delta
+         * and accumulator applied.
+         */
+        val updatedScrollPosition = (currentScrollPosition + decimalAccumulationInt)
+
+        /**
+         * Check if the scroll position may be larger than the maximum possible scroll.
+         */
+        val coercedScrollPosition = updatedScrollPosition.coerceIn(minScrollOffset, maxScrollOffset)
+
+        /**
+         * Check if we actually coerced.
+         */
+        val changed = updatedScrollPosition != coercedScrollPosition
+
+        /**
+         * Calculated the actual scroll delta to be applied
+         */
+        val scrollDelta = coercedScrollPosition - currentScrollPosition
+
+        previousPassDelta = scrollDelta.toFloat()
+
+        if (scrollDelta.absoluteValue != 0L) {
+            isScrollingForward = scrollDelta > 0.0f
         }
 
-        val consumedInt = consumed.roundToInt()
-
+        /**
+         * Apply the scroll delta
+         */
         val layoutInfo = pagerLayoutInfoState.value
-
-        if (layoutInfo.tryToApplyScrollWithoutRemeasure(-consumedInt)) {
+        if (layoutInfo.tryToApplyScrollWithoutRemeasure(-scrollDelta.toInt())) {
             debugLog { "Will Apply Without Remeasure" }
             applyMeasureResult(
                 result = layoutInfo,
@@ -239,13 +265,12 @@ abstract class PagerState(
             placementScopeInvalidator.invalidateScope()
         } else {
             debugLog { "Will Apply With Remeasure" }
-            scrollPosition.applyScrollDelta(consumedInt)
+            scrollPosition.applyScrollDelta(scrollDelta.toInt())
             remeasurement?.forceRemeasure()
         }
-        accumulator = consumed - consumedInt
 
-        // Avoid floating-point rounding error
-        return if (changed) consumed else delta
+        // Return the consumed value.
+        return (if (changed) scrollDelta else delta).toFloat()
     }
 
     /**
@@ -636,6 +661,7 @@ abstract class PagerState(
         firstVisiblePageOffset = result.firstVisiblePageScrollOffset
         tryRunPrefetch(result)
         maxScrollOffset = result.calculateNewMaxScrollOffset(pageCount)
+        minScrollOffset = result.calculateNewMinScrollOffset(pageCount)
         debugLog {
             "Finished Applying Measure Result" +
                 "\nNew maxScrollOffset=$maxScrollOffset"
@@ -758,7 +784,6 @@ internal val DefaultPositionThreshold = 56.dp
 private const val MaxPagesForAnimateScroll = 3
 internal const val PagesToPrefetch = 1
 
-@OptIn(ExperimentalFoundationApi::class)
 internal val EmptyLayoutInfo = PagerMeasureResult(
     visiblePagesInfo = emptyList(),
     pageSize = 0,
@@ -799,9 +824,46 @@ private inline fun debugLog(generateMsg: () -> String) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-private fun PagerMeasureResult.calculateNewMaxScrollOffset(pageCount: Int): Float {
-    return (beforeContentPadding +
-        (pageCount - 1) * (pageSpacing + pageSize).toFloat() +
-        afterContentPadding).coerceAtLeast(0.0f)
+private fun PagerMeasureResult.calculateNewMaxScrollOffset(pageCount: Int): Long {
+    val pageSizeWithSpacing = pageSpacing + pageSize
+    val maxScrollPossible =
+        (pageCount.toLong()) * pageSizeWithSpacing + beforeContentPadding + afterContentPadding
+    val layoutSize =
+        if (orientation == Orientation.Horizontal) viewportSize.width else viewportSize.height
+
+    /**
+     * We need to take into consideration the snap position for max scroll position.
+     * For instance, if SnapPosition.Start, the max scroll position is
+     * pageCount * pageSize - viewport. Now if SnapPosition.End, it should be pageCount * pageSize.
+     * Therefore, the snap position discount varies between 0 and viewport.
+     */
+    val snapPositionDiscount = layoutSize - (snapPosition.position(
+        layoutSize = layoutSize,
+        itemSize = pageSize,
+        itemIndex = pageCount - 1,
+        beforeContentPadding = beforeContentPadding,
+        afterContentPadding = afterContentPadding,
+        itemCount = pageCount
+    )).coerceIn(0, layoutSize)
+
+    debugLog {
+        "maxScrollPossible=$maxScrollPossible" +
+            "\nsnapPositionDiscount=$snapPositionDiscount" +
+            "\nlayoutSize=$layoutSize"
+    }
+    return (maxScrollPossible - snapPositionDiscount).coerceAtLeast(0L)
+}
+
+private fun PagerMeasureResult.calculateNewMinScrollOffset(pageCount: Int): Long {
+    val layoutSize =
+        if (orientation == Orientation.Horizontal) viewportSize.width else viewportSize.height
+
+    return snapPosition.position(
+        layoutSize = layoutSize,
+        itemSize = pageSize,
+        itemIndex = 0,
+        beforeContentPadding = beforeContentPadding,
+        afterContentPadding = afterContentPadding,
+        itemCount = pageCount
+    ).coerceIn(0, layoutSize).toLong()
 }

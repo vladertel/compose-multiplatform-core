@@ -17,6 +17,7 @@
 package androidx.compose.runtime.snapshots
 
 import androidx.compose.runtime.ExperimentalComposeApi
+import androidx.compose.runtime.SnapshotContextElementImpl
 import kotlin.coroutines.CoroutineContext
 import androidx.compose.runtime.SnapshotContextElementImpl
 

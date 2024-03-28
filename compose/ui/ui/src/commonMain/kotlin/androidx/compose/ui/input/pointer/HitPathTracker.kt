@@ -285,7 +285,6 @@ internal class Node(val modifierNode: Modifier.Node) : NodeParent() {
     private var coordinates: LayoutCoordinates? = null
     private var pointerEvent: PointerEvent? = null
 
-    val vec = mutableVectorOf<Long>()
     override fun dispatchMainEventPass(
         changes: LongSparseArray<PointerInputChange>,
         parentCoordinates: LayoutCoordinates,
