@@ -15,9 +15,10 @@
  */
 package androidx.savedstate
 
-import android.os.Bundle
 import androidx.annotation.MainThread
+import androidx.core.bundle.Bundle
 import androidx.lifecycle.Lifecycle
+import kotlin.jvm.JvmStatic
 
 /**
  * An API for [SavedStateRegistryOwner] implementations to control [SavedStateRegistry].
@@ -45,7 +46,7 @@ class SavedStateRegistryController private constructor(private val owner: SavedS
         check(lifecycle.currentState == Lifecycle.State.INITIALIZED) {
             ("Restarter must be created only during owner's initialization stage")
         }
-        lifecycle.addObserver(Recreator(owner))
+        platformPerformAttach(owner)
         savedStateRegistry.performAttach(lifecycle)
         attached = true
     }
@@ -93,3 +94,6 @@ class SavedStateRegistryController private constructor(private val owner: SavedS
         }
     }
 }
+
+@MainThread
+internal expect fun platformPerformAttach(owner: SavedStateRegistryOwner)
