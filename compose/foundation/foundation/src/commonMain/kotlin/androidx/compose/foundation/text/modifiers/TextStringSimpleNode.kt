@@ -284,6 +284,8 @@ internal class TextStringSimpleNode(
 
         setTextSubstitution { updatedText ->
             setSubstitution(updatedText.text)
+            // TODO: add test to cover the immediate semantics invalidation
+            invalidateSemantics()
 
             true
         }
@@ -340,7 +342,7 @@ internal class TextStringSimpleNode(
 
         // then allow children to measure _inside_ our final box, with the above placeholders
         val placeable = measurable.measure(
-            Constraints.fixed(
+            Constraints.fixedCoerceHeightAndWidthForBits(
                 layoutSize.width,
                 layoutSize.height
             )
@@ -351,7 +353,6 @@ internal class TextStringSimpleNode(
             layoutSize.height,
             baselineCache!!
         ) {
-            // this is basically a graphicsLayer
             placeable.place(0, 0)
         }
     }

@@ -601,6 +601,9 @@ internal class LayoutNodeLayoutDelegate(
          * Return true if the measured size has been changed
          */
         fun remeasure(constraints: Constraints): Boolean {
+            require(!layoutNode.isDeactivated) {
+                "measure is called on a deactivated node"
+            }
             val owner = layoutNode.requireOwner()
             val parent = layoutNode.parent
             @Suppress("Deprecation")
@@ -713,6 +716,10 @@ internal class LayoutNodeLayoutDelegate(
                 }
             }
 
+            require(lookaheadPassDelegate?.placedOnce != false) {
+                "Error: Placement happened before lookahead."
+            }
+
             // Post-lookahead (if any) placement
             placeOuterCoordinator(position, zIndex, layerBlock)
         }
@@ -722,6 +729,9 @@ internal class LayoutNodeLayoutDelegate(
             zIndex: Float,
             layerBlock: (GraphicsLayerScope.() -> Unit)?
         ) {
+            require(!layoutNode.isDeactivated) {
+                "place is called on a deactivated node"
+            }
             layoutState = LayoutState.LayingOut
 
             lastPosition = position
@@ -1027,7 +1037,7 @@ internal class LayoutNodeLayoutDelegate(
         internal val measurePassDelegate: MeasurePassDelegate
             get() = this@LayoutNodeLayoutDelegate.measurePassDelegate
         internal var duringAlignmentLinesQuery: Boolean = false
-        private var placedOnce: Boolean = false
+        internal var placedOnce: Boolean = false
         private var measuredOnce: Boolean = false
         val lastConstraints: Constraints?
             get() = lookaheadConstraints
@@ -1261,6 +1271,9 @@ internal class LayoutNodeLayoutDelegate(
 
         // Lookahead remeasurement with the given constraints.
         fun remeasure(constraints: Constraints): Boolean {
+            require(!layoutNode.isDeactivated) {
+                "measure is called on a deactivated node"
+            }
             val parent = layoutNode.parent
             @Suppress("Deprecation")
             layoutNode.canMultiMeasure = layoutNode.canMultiMeasure ||
@@ -1308,6 +1321,9 @@ internal class LayoutNodeLayoutDelegate(
             zIndex: Float,
             layerBlock: (GraphicsLayerScope.() -> Unit)?
         ) {
+            require(!layoutNode.isDeactivated) {
+                "place is called on a deactivated node"
+            }
             layoutState = LayoutState.LookaheadLayingOut
             placedOnce = true
             onNodePlacedCalled = false

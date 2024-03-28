@@ -49,9 +49,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.collection.ArrayMap
 import androidx.collection.ArraySet
 import androidx.collection.SparseArrayCompat
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.R
 import androidx.compose.ui.geometry.Offset
@@ -313,7 +310,7 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
     // traversal with granularity switches to the next node
     private var previousTraversedNode: Int? = null
     private val subtreeChangedLayoutNodes = ArraySet<LayoutNode>()
-    private val boundsUpdateChannel = Channel<Unit>(Channel.CONFLATED)
+    private val boundsUpdateChannel = Channel<Unit>(1)
     private var currentSemanticsNodesInvalidated = true
     @VisibleForTesting
     internal var contentCaptureForceEnabledForTesting = false
@@ -3516,6 +3513,20 @@ internal class AndroidComposeViewAccessibilityDelegateCompat(val view: AndroidCo
                 return
             }
 
+            // This callback can be invoked from non UI thread.
+            if (Looper.getMainLooper().thread == Thread.currentThread()) {
+                doTranslation(accessibilityDelegateCompat, response)
+            } else {
+                accessibilityDelegateCompat.view.post {
+                    doTranslation(accessibilityDelegateCompat, response)
+                }
+            }
+        }
+
+        private fun doTranslation(
+            accessibilityDelegateCompat: AndroidComposeViewAccessibilityDelegateCompat,
+            response: LongSparseArray<ViewTranslationResponse?>
+        ) {
             for (key in response.keyIterator()) {
                 response.get(key)?.getValue(ViewTranslationRequest.ID_TEXT)?.text?.let {
                     accessibilityDelegateCompat.currentSemanticsNodes[key.toInt()]
@@ -3775,4 +3786,4 @@ private fun LayoutNode.isAncestorOf(node: LayoutNode): Boolean {
 @get:ExperimentalComposeUiApi
 @set:ExperimentalComposeUiApi
 @ExperimentalComposeUiApi
-var DisableContentCapture: Boolean by mutableStateOf(false)
+var DisableContentCapture: Boolean = false
