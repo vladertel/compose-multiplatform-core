@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import androidx.build.KmpPlatformsKt
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 
@@ -21,11 +22,14 @@ plugins {
     id("AndroidXPlugin")
     id("com.android.library")
     id("AndroidXComposePlugin")
+    id("JetbrainsAndroidXPlugin")
 }
+
+def desktopEnabled = KmpPlatformsKt.enableDesktop(project)
 
 androidXMultiplatform {
     android()
-    desktop()
+    if (desktopEnabled) desktop()
 
     defaultPlatform(PlatformIdentifier.ANDROID)
 
@@ -52,10 +56,12 @@ androidXMultiplatform {
             }
         }
 
-        skikoMain {
-            dependsOn(commonMain)
-            dependencies {
-                api(project(":compose:runtime:runtime"))
+        if (desktopEnabled) {
+            skikoMain {
+                dependsOn(commonMain)
+                dependencies {
+                    api(project(":compose:runtime:runtime"))
+                }
             }
         }
 
@@ -75,13 +81,15 @@ androidXMultiplatform {
             }
         }
 
-        desktopMain {
-            dependsOn(skikoMain)
-            dependsOn(jvmMain)
-            dependencies {
-                implementation(libs.kotlinStdlib)
-                implementation(project(":compose:runtime:runtime"))
-                implementation(project(":compose:ui:ui"))
+        if (desktopEnabled) {
+            desktopMain {
+                dependsOn(skikoMain)
+                dependsOn(jvmMain)
+                dependencies {
+                    implementation(libs.kotlinStdlib)
+                    implementation(project(":compose:runtime:runtime"))
+                    implementation(project(":compose:ui:ui"))
+                }
             }
         }
 
@@ -91,7 +99,7 @@ androidXMultiplatform {
             }
         }
 
-        androidInstrumentedTest {
+        androidAndroidTest {
             dependsOn(jvmTest)
             dependencies {
                 implementation(project(":compose:ui:ui-test-junit4"))
@@ -110,16 +118,19 @@ androidXMultiplatform {
             }
         }
 
-        androidUnitTest {
+        androidTest {
             dependsOn(jvmTest)
             dependencies {
             }
         }
 
-        desktopTest {
-            dependsOn(jvmTest)
-            dependencies {
+        if (desktopEnabled) {
+            desktopTest {
+                dependsOn(jvmTest)
+                dependsOn(desktopMain)
+                dependencies {
 
+                }
             }
         }
     }

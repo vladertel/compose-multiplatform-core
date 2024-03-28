@@ -17,12 +17,14 @@
 package androidx.compose.ui.graphics.vector
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.SynchronizedObject
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.synchronized
 import androidx.compose.ui.unit.Dp
 
 /**

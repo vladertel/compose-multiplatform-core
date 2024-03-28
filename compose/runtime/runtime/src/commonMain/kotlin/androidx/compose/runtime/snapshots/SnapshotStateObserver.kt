@@ -31,6 +31,8 @@ import androidx.compose.runtime.currentThreadId
 import androidx.compose.runtime.currentThreadName
 import androidx.compose.runtime.observeDerivedStateRecalculations
 import androidx.compose.runtime.structuralEqualityPolicy
+import androidx.compose.runtime.synchronized
+import androidx.compose.runtime.createSynchronizedObject
 
 /**
  * Helper class to efficiently observe snapshot state reads. See [observeReads] for more details.
@@ -59,7 +61,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
     private fun drainChanges(): Boolean {
         // Don't modify the scope maps while notifications are being sent either by the caller or
         // on another thread
-        if (synchronized(observedScopeMaps) { sendingNotifications }) return false
+        if (synchronized(observedScopeMapsLock) { sendingNotifications }) return false
 
         // Remove all pending changes and return true if any of the objects are observed
         var hasValues = false
@@ -80,7 +82,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
     private fun sendNotifications() {
         onChangedExecutor {
             while (true) {
-                synchronized(observedScopeMaps) {
+                synchronized(observedScopeMapsLock) {
                     if (!sendingNotifications) {
                         sendingNotifications = true
                         try {
@@ -162,7 +164,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      */
     private val readObserver: (Any) -> Unit = { state ->
         if (!isPaused) {
-            synchronized(observedScopeMaps) {
+            synchronized(observedScopeMapsLock) {
                 currentMap!!.recordRead(state)
             }
         }
@@ -181,16 +183,18 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      * synchronization.
      */
     private inline fun forEachScopeMap(block: (ObservedScopeMap) -> Unit) {
-        synchronized(observedScopeMaps) {
+        synchronized(observedScopeMapsLock) {
             observedScopeMaps.forEach(block)
         }
     }
 
     private inline fun removeScopeMapIf(block: (ObservedScopeMap) -> Boolean) {
-        synchronized(observedScopeMaps) {
+        synchronized(observedScopeMapsLock) {
             observedScopeMaps.removeIf(block)
         }
     }
+
+    private val observedScopeMapsLock = createSynchronizedObject()
 
     /**
      * Method to call when unsubscribing from the apply observer.
@@ -229,7 +233,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
      * @param block to observe reads within.
      */
     fun <T : Any> observeReads(scope: T, onValueChangedForScope: (T) -> Unit, block: () -> Unit) {
-        val scopeMap = synchronized(observedScopeMaps) {
+        val scopeMap = synchronized(observedScopeMapsLock) {
             ensureMap(onValueChangedForScope)
         }
 
@@ -251,7 +255,7 @@ class SnapshotStateObserver(private val onChangedExecutor: (callback: () -> Unit
         try {
             isPaused = false
             currentMap = scopeMap
-            currentMapThreadId = Thread.currentThread().id
+            currentMapThreadId = currentThreadId()
 
             scopeMap.observe(scope, readObserver, block)
         } finally {

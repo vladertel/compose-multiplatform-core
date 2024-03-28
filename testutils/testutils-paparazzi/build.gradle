@@ -38,7 +38,7 @@ BundleInsideHelper.forInsideJar(
 
 dependencies {
     api(project(":external:paparazzi:paparazzi"))
-    bundleInside(project(path: ":test:screenshot:screenshot-proto"))
+    bundleInside(androidxArtifact(":test:screenshot:screenshot-proto"))
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinTestJunit)
