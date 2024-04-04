@@ -61,6 +61,7 @@ import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.declarations.IrVariable
+import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.expressions.IrBlock
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrBody
@@ -266,7 +267,7 @@ open class LiveLiteralTransformer(
             }.also { f ->
                 f.correspondingPropertySymbol = p.symbol
                 f.parent = clazz
-                f.initializer = IrExpressionBodyImpl(
+                f.initializer = IrFactoryImpl.createExpressionBody(
                     SYNTHETIC_OFFSET,
                     SYNTHETIC_OFFSET,
                     literalValue
@@ -535,7 +536,7 @@ open class LiveLiteralTransformer(
                             }.also { f ->
                                 f.correspondingPropertySymbol = p.symbol
                                 f.parent = it
-                                f.initializer = IrExpressionBodyImpl(
+                                f.initializer = IrFactoryImpl.createExpressionBody(
                                     SYNTHETIC_OFFSET,
                                     SYNTHETIC_OFFSET,
                                     irConst(false)
