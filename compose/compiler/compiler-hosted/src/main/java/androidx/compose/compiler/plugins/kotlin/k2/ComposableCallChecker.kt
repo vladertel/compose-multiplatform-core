@@ -36,12 +36,7 @@ import org.jetbrains.kotlin.fir.declarations.FirPropertyAccessor
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.declarations.InlineStatus
 import org.jetbrains.kotlin.fir.declarations.utils.isInline
-import org.jetbrains.kotlin.fir.expressions.FirCatch
-import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
-import org.jetbrains.kotlin.fir.expressions.FirLambdaArgumentExpression
-import org.jetbrains.kotlin.fir.expressions.FirPropertyAccessExpression
-import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
-import org.jetbrains.kotlin.fir.expressions.FirTryExpression
+import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirResolvedArgumentList
 import org.jetbrains.kotlin.fir.psi
 import org.jetbrains.kotlin.fir.references.toResolvedCallableSymbol
@@ -343,7 +338,7 @@ private inline fun CheckerContext.visitCurrentScope(
 private fun CheckerContext.findValueParameterForLambdaAtIndex(
     elementIndex: Int
 ): FirValueParameter? {
-    val argument = containingElements.getOrNull(elementIndex - 1) as? FirLambdaArgumentExpression
+    val argument = containingElements.getOrNull(elementIndex - 1) as? FirAnonymousFunctionExpression
         ?: return null
     val argumentList = containingElements.getOrNull(elementIndex - 2) as? FirResolvedArgumentList
         ?: return null

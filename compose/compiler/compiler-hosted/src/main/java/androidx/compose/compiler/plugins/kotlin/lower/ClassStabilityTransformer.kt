@@ -37,9 +37,9 @@ import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.addChild
@@ -206,7 +206,7 @@ class ClassStabilityTransformer(
             fieldName = customStabilityFieldName
         ).apply {
             parent = this@addStabilityMarkerField
-            initializer = IrExpressionBodyImpl(
+            initializer = IrFactoryImpl.createExpressionBody(
                 UNDEFINED_OFFSET,
                 UNDEFINED_OFFSET,
                 stabilityExpression

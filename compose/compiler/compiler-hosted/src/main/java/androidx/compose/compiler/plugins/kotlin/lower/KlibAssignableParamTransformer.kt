@@ -27,6 +27,8 @@ import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.declarations.createBlockBody
+import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrGetValue
@@ -103,7 +105,7 @@ class KlibAssignableParamTransformer(
         }
 
         declaration.body = declaration.body?.let { body ->
-            IrBlockBodyImpl(
+            IrFactoryImpl.createBlockBody(
                 body.startOffset,
                 body.endOffset
             ).apply {
