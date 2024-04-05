@@ -16,6 +16,7 @@
 
 package androidx.compose.material3.carousel
 
+import androidx.collection.IntIntMap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.TargetedFlingBehavior
@@ -44,6 +45,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastFilter
+import androidx.compose.ui.util.fastForEach
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /**
@@ -187,8 +191,9 @@ internal fun Carousel(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val pageSize = remember(keylineList) { CarouselPageSize(keylineList) }
 
-    // TODO: Update beyond bounds numbers according to Strategy
-    val outOfBoundsPageCount = 2
+    val outOfBoundsPageCount = remember(pageSize.strategy.itemMainAxisSize) {
+        calculateOutOfBounds(pageSize.strategy)
+    }
     val carouselScope = CarouselScopeImpl
 
     val snapPositionMap = remember(pageSize.strategy.itemMainAxisSize) {
@@ -198,12 +203,6 @@ internal fun Carousel(
         )
     }
     val snapPosition = remember(snapPositionMap) { KeylineSnapPosition(snapPositionMap) }
-
-    val currentItemScrollOffset =
-        (state.pagerState.currentPage * pageSize.strategy.itemMainAxisSize) +
-            (state.pagerState.currentPageOffsetFraction * pageSize.strategy.itemMainAxisSize)
-    val scrollOffset = currentItemScrollOffset -
-        (if (snapPositionMap.size > 0) snapPositionMap[state.pagerState.currentPage] else 0)
 
     if (orientation == Orientation.Horizontal) {
         HorizontalPager(
@@ -220,7 +219,7 @@ internal fun Carousel(
                     index = page,
                     state = state,
                     strategy = pageSize.strategy,
-                    scrollOffset = scrollOffset,
+                    itemPositionMap = snapPositionMap,
                     isRtl = isRtl
                 )
             ) {
@@ -242,7 +241,7 @@ internal fun Carousel(
                     index = page,
                     state = state,
                     strategy = pageSize.strategy,
-                    scrollOffset = scrollOffset,
+                    itemPositionMap = snapPositionMap,
                     isRtl = isRtl
                 )
             ) {
@@ -250,6 +249,23 @@ internal fun Carousel(
             }
         }
     }
+}
+
+internal fun calculateOutOfBounds(strategy: Strategy): Int {
+    if (!strategy.isValid()) {
+        return PagerDefaults.OutOfBoundsPageCount
+    }
+    var totalKeylineSpace = 0f
+    var totalNonAnchorKeylines = 0
+    strategy.defaultKeylines.fastFilter { !it.isAnchor }.fastForEach {
+        totalKeylineSpace += it.size
+        totalNonAnchorKeylines += 1
+    }
+    val itemsLoaded = ceil(totalKeylineSpace / strategy.itemMainAxisSize).toInt()
+    val itemsToLoad = totalNonAnchorKeylines - itemsLoaded
+
+    // We must also load the next item when scrolling
+    return itemsToLoad + 1
 }
 
 /**
@@ -297,13 +313,15 @@ internal value class CarouselAlignment private constructor(internal val value: I
  * @param index the index of the item in the carousel
  * @param state the carousel state
  * @param strategy the strategy used to mask and translate items in the carousel
+ * @param itemPositionMap the position of each index when it is the current item
+ * @param isRtl whether or not the carousel is rtl
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 internal fun Modifier.carouselItem(
     index: Int,
     state: CarouselState,
     strategy: Strategy,
-    scrollOffset: Float,
+    itemPositionMap: IntIntMap,
     isRtl: Boolean
 ): Modifier {
     val viewportSize = state.pagerState.layoutInfo.viewportSize
@@ -317,21 +335,6 @@ internal fun Modifier.carouselItem(
     val itemsCount = state.pagerState.pageCount
     val maxScrollOffset =
         itemsCount * strategy.itemMainAxisSize - mainAxisCarouselSize
-    val keylines = strategy.getKeylineListForScrollOffset(scrollOffset, maxScrollOffset)
-
-    // Find center of the item at this index
-    val unadjustedCenter =
-        (index * strategy.itemMainAxisSize) + (strategy.itemMainAxisSize / 2f) - scrollOffset
-
-    // Find the keyline before and after this item's center and create an interpolated
-    // keyline that the item should use for its clip shape and offset
-    val keylineBefore =
-        keylines.getKeylineBefore(unadjustedCenter)
-    val keylineAfter =
-        keylines.getKeylineAfter(unadjustedCenter)
-    val progress = getProgress(keylineBefore, keylineAfter, unadjustedCenter)
-    val interpolatedKeyline = lerp(keylineBefore, keylineAfter, progress)
-    val isOutOfKeylineBounds = keylineBefore == keylineAfter
 
     return layout { measurable, constraints ->
         // Force the item to use the strategy's itemMainAxisSize along its main axis
@@ -357,6 +360,27 @@ internal fun Modifier.carouselItem(
             placeable.place(0, 0)
         }
     }.graphicsLayer {
+        val currentItemScrollOffset =
+            (state.pagerState.currentPage * strategy.itemMainAxisSize) +
+                (state.pagerState.currentPageOffsetFraction * strategy.itemMainAxisSize)
+        val scrollOffset = currentItemScrollOffset -
+            (if (itemPositionMap.size > 0) itemPositionMap[state.pagerState.currentPage] else 0)
+        val keylines = strategy.getKeylineListForScrollOffset(scrollOffset, maxScrollOffset)
+
+        // Find center of the item at this index
+        val unadjustedCenter =
+            (index * strategy.itemMainAxisSize) + (strategy.itemMainAxisSize / 2f) - scrollOffset
+
+        // Find the keyline before and after this item's center and create an interpolated
+        // keyline that the item should use for its clip shape and offset
+        val keylineBefore =
+            keylines.getKeylineBefore(unadjustedCenter)
+        val keylineAfter =
+            keylines.getKeylineAfter(unadjustedCenter)
+        val progress = getProgress(keylineBefore, keylineAfter, unadjustedCenter)
+        val interpolatedKeyline = lerp(keylineBefore, keylineAfter, progress)
+        val isOutOfKeylineBounds = keylineBefore == keylineAfter
+
         // Clip the item
         clip = true
         shape = object : Shape {

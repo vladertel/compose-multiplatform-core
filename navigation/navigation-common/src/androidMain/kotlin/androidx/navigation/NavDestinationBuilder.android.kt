@@ -19,7 +19,14 @@
 package androidx.navigation
 
 import androidx.annotation.IdRes
+import androidx.annotation.RestrictTo
 import androidx.core.os.bundleOf
+import androidx.navigation.serialization.generateNavArguments
+import androidx.navigation.serialization.generateRoutePattern
+import kotlin.reflect.KClass
+import kotlin.reflect.KType
+import kotlinx.serialization.InternalSerializationApi
+import kotlinx.serialization.serializer
 
 /**
  * DSL for constructing a new [NavDestination]
@@ -68,6 +75,36 @@ public actual open class NavDestinationBuilder<out D : NavDestination> internal 
      */
     public actual constructor(navigator: Navigator<out D>, route: String?) :
         this(navigator, -1, route)
+
+    /**
+     * DSL for constructing a new [NavDestination] with a serializable [KClass].
+     *
+     * This will also update the [id] of the destination based on KClass's serializer.
+     *
+     * @param navigator navigator used to create the destination
+     * @param route the [KClass] of the destination
+     * @param typeMap map of destination arguments' kotlin type [KType] to its respective custom
+     * [NavType]. Required only when destination contains custom NavTypes.
+     *
+     * @return the newly constructed [NavDestination]
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    @OptIn(InternalSerializationApi::class)
+    public constructor(
+        navigator: Navigator<out D>,
+        route: KClass<*>,
+        typeMap: Map<KType, NavType<*>> = mapOf(),
+    ) : this(
+        navigator,
+        route.serializer().hashCode(),
+        route.serializer().generateRoutePattern(typeMap.ifEmpty { null })
+    ) {
+        route.serializer()
+            .generateNavArguments(typeMap)
+            .forEach {
+                arguments[it.name] = it.argument
+            }
+    }
 
     /**
      * The descriptive label of the destination

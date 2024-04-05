@@ -19,15 +19,19 @@
 package androidx.room
 
 import androidx.annotation.RestrictTo
+import androidx.room.concurrent.CloseBarrier
 import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.room.util.contains
 import androidx.room.util.isAssignableFrom
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
+import kotlin.coroutines.CoroutineContext
 import kotlin.jvm.JvmMultifileClass
 import kotlin.jvm.JvmName
 import kotlin.reflect.KClass
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * Base class for all Room databases. All classes that are annotated with [Database] must
@@ -49,6 +53,22 @@ expect abstract class RoomDatabase {
      * @return The invalidation tracker for the database.
      */
     val invalidationTracker: InvalidationTracker
+
+    /**
+     * A barrier that prevents the database from closing while the [InvalidationTracker] is using
+     * the database asynchronously.
+     *
+     * @return The barrier for [close].
+     */
+    internal val closeBarrier: CloseBarrier
+
+    /**
+     * Called by Room when it is initialized.
+     *
+     * @param configuration The database configuration.
+     * @throws IllegalArgumentException if initialization fails.
+     */
+    internal fun init(configuration: DatabaseConfiguration)
 
     /**
      * Creates a connection manager to manage database connection. Note that this method
@@ -81,6 +101,8 @@ expect abstract class RoomDatabase {
      * @return A new invalidation tracker.
      */
     protected abstract fun createInvalidationTracker(): InvalidationTracker
+
+    internal fun getCoroutineScope(): CoroutineScope
 
     /**
      * Returns a Set of required [AutoMigrationSpec] classes.
@@ -197,6 +219,19 @@ expect abstract class RoomDatabase {
          * @return This builder instance.
          */
         fun setDriver(driver: SQLiteDriver): Builder<T>
+
+        /**
+         * Sets the [CoroutineContext] that will be used to execute all asynchronous queries and
+         * tasks, such as `Flow` emissions and [InvalidationTracker] notifications.
+         *
+         * If no [CoroutineDispatcher] is present in the [context] then this function will throw
+         * an [IllegalArgumentException]
+         *
+         * @param context The context
+         * @return This [Builder] instance
+         * @throws IllegalArgumentException if the [context] has no [CoroutineDispatcher]
+         */
+        fun setQueryCoroutineContext(context: CoroutineContext): Builder<T>
 
         /**
          * Adds a [Callback] to this database.

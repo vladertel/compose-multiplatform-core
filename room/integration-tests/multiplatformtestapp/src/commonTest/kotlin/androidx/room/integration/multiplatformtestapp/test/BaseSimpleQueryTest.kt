@@ -18,16 +18,31 @@ package androidx.room.integration.multiplatformtestapp.test
 
 import androidx.kruth.assertThat
 import androidx.kruth.assertThrows
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.test.runTest
 
 abstract class BaseSimpleQueryTest {
 
+    private lateinit var db: SampleDatabase
+
     abstract fun getRoomDatabase(): SampleDatabase
+
+    @BeforeTest
+    fun before() {
+        db = getRoomDatabase()
+    }
+
+    @AfterTest
+    fun after() {
+        db.close()
+    }
 
     @Test
     fun preparedInsertAndDelete() = runTest {
-        val dao = getRoomDatabase().dao()
+        val dao = db.dao()
         assertThat(dao.insertItem(1)).isEqualTo(1)
         assertThat(dao.getSingleItem().pk).isEqualTo(1)
         assertThat(dao.deleteItem(1)).isEqualTo(1)
@@ -39,7 +54,7 @@ abstract class BaseSimpleQueryTest {
 
     @Test
     fun emptyResult() = runTest {
-        val db = getRoomDatabase()
+        val db = db
         assertThrows<IllegalStateException> {
             db.dao().getSingleItem()
         }.hasMessageThat().contains("The query result was empty")
@@ -47,7 +62,7 @@ abstract class BaseSimpleQueryTest {
 
     @Test
     fun queryList() = runTest {
-        val dao = getRoomDatabase().dao()
+        val dao = db.dao()
         dao.insertItem(1)
         dao.insertItem(2)
         dao.insertItem(3)
@@ -57,7 +72,7 @@ abstract class BaseSimpleQueryTest {
 
     @Test
     fun transactionDelegate() = runTest {
-        val dao = getRoomDatabase().dao()
+        val dao = db.dao()
         dao.insertItem(1)
         dao.insertItem(2)
         dao.insertItem(3)
@@ -79,7 +94,28 @@ abstract class BaseSimpleQueryTest {
     }
 
     @Test
-    fun simpleInsertAndDelete() = runTest {
+    fun queryFlow() = runTest {
+        val dao = getRoomDatabase().dao()
+        dao.insertItem(1)
+
+        val channel = dao.getItemListFlow().produceIn(this)
+
+        assertThat(channel.receive()).containsExactly(SampleEntity(1))
+
+        dao.insertItem(2)
+        dao.insertItem(3)
+
+        assertThat(channel.receive()).containsExactly(
+            SampleEntity(1),
+            SampleEntity(2),
+            SampleEntity(3),
+        )
+
+        channel.cancel()
+    }
+
+    @Test
+    fun insertAndDelete() = runTest {
         val sampleEntity = SampleEntity(1, 1)
         val dao = getRoomDatabase().dao()
 
@@ -93,7 +129,7 @@ abstract class BaseSimpleQueryTest {
     }
 
     @Test
-    fun simpleInsertAndUpdateAndDelete() = runTest {
+    fun insertAndUpdateAndDelete() = runTest {
         val sampleEntity1 = SampleEntity(1, 1)
         val sampleEntity2 = SampleEntity(1, 2)
         val dao = getRoomDatabase().dao()
@@ -111,7 +147,7 @@ abstract class BaseSimpleQueryTest {
     }
 
     @Test
-    fun simpleInsertAndUpsertAndDelete() = runTest {
+    fun insertAndUpsertAndDelete() = runTest {
         val sampleEntity1 = SampleEntity(1, 1)
         val sampleEntity2 = SampleEntity(1, 2)
         val dao = getRoomDatabase().dao()
@@ -126,5 +162,65 @@ abstract class BaseSimpleQueryTest {
         assertThrows<IllegalStateException> {
             dao.getSingleItem()
         }.hasMessageThat().contains("The query result was empty")
+    }
+
+    @Test
+    fun simpleInsertMap() = runTest {
+        val sampleEntity1 = SampleEntity(1, 1)
+        val sampleEntity2 = SampleEntity2(1, 2)
+        val dao = getRoomDatabase().dao()
+
+        dao.insert(sampleEntity1)
+        dao.insert(sampleEntity2)
+        assertThat(dao.getSingleItemWithColumn().data).isEqualTo(1)
+
+        val map = dao.getSimpleMapReturnType()
+        assertThat(map[sampleEntity1]).isEqualTo(sampleEntity2)
+    }
+
+    @Test
+    fun simpleMapWithDupeColumns() = runTest {
+        val sampleEntity1 = SampleEntity(1, 1)
+        val sampleEntity2 = SampleEntityCopy(1, 2)
+        val dao = getRoomDatabase().dao()
+
+        dao.insert(sampleEntity1)
+        dao.insert(sampleEntity2)
+        assertThat(dao.getSingleItemWithColumn().data).isEqualTo(1)
+
+        val map = dao.getMapWithDupeColumns()
+        assertThat(map[sampleEntity1]).isEqualTo(sampleEntity2)
+    }
+
+    @Test
+    fun simpleInsertNestedMap() = runTest {
+        val sampleEntity1 = SampleEntity(1, 1)
+        val sampleEntity2 = SampleEntity2(1, 2)
+        val sampleEntity3 = SampleEntity3(1, 2)
+        val dao = getRoomDatabase().dao()
+
+        dao.insert(sampleEntity1)
+        dao.insert(sampleEntity2)
+        dao.insert(sampleEntity3)
+        assertThat(dao.getSingleItemWithColumn().data).isEqualTo(1)
+
+        val map = dao.getSimpleNestedMapReturnType()
+        assertThat(map[sampleEntity1]).isEqualTo(mapOf(Pair(sampleEntity2, sampleEntity3)))
+    }
+
+    @Test
+    fun simpleInsertNestedMapColumnMap() = runTest {
+        val sampleEntity1 = SampleEntity(1, 1)
+        val sampleEntity2 = SampleEntity2(1, 2)
+        val sampleEntity3 = SampleEntity3(1, 2)
+        val dao = getRoomDatabase().dao()
+
+        dao.insert(sampleEntity1)
+        dao.insert(sampleEntity2)
+        dao.insert(sampleEntity3)
+        assertThat(dao.getSingleItemWithColumn().data).isEqualTo(1)
+
+        val map = dao.getSimpleNestedMapColumnMap()
+        assertThat(map[sampleEntity1]).isEqualTo(mapOf(Pair(sampleEntity2, sampleEntity3.data3)))
     }
 }

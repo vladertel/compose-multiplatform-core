@@ -87,6 +87,7 @@ object RoomTypeNames {
         XClassName.get(ROOM_PACKAGE, "RoomOpenDelegate", "ValidationResult")
     val STATEMENT_UTIL = XClassName.get("$ROOM_PACKAGE.util", "SQLiteStatementUtil")
     val CONNECTION_UTIL = XClassName.get("$ROOM_PACKAGE.util", "SQLiteConnectionUtil")
+    val FLOW_UTIL = XClassName.get("$ROOM_PACKAGE.coroutines", "FlowUtil")
 }
 
 object RoomAnnotationTypeNames {
@@ -295,6 +296,7 @@ object KotlinTypeNames {
     val SETS_KT = XClassName.get("kotlin.collections", "SetsKt")
     val MAPS_KT = XClassName.get("kotlin.collections", "MapsKt")
     val STRING_BUILDER = XClassName.get("kotlin.text", "StringBuilder")
+    val LINKED_HASH_MAP = XClassName.get("kotlin.collections", "LinkedHashMap")
 }
 
 object RoomMemberNames {

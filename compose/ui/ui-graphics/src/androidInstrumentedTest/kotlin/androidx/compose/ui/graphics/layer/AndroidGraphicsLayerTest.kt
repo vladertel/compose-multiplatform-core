@@ -27,12 +27,15 @@ import android.widget.FrameLayout
 import androidx.compose.testutils.assertPixelColor
 import androidx.compose.testutils.captureToImage
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter.Companion.tint
 import androidx.compose.ui.graphics.GraphicsContext
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.TestActivity
 import androidx.compose.ui.graphics.TileMode
@@ -47,6 +50,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection.Ltr
+import androidx.compose.ui.unit.center
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -561,6 +565,159 @@ class AndroidGraphicsLayerTest {
         )
     }
 
+    @Test
+    fun testElevationPath() {
+        var layer: GraphicsLayer?
+        var left = 0
+        var top = 0
+        var right = 0
+        var bottom = 0
+        val targetColor = Color.White
+        graphicsLayerTest(
+            block = { graphicsContext ->
+                val halfSize = IntSize(
+                    (this.size.width / 2f).toInt(),
+                    (this.size.height / 2f).toInt()
+                )
+
+                layer = graphicsContext.createGraphicsLayer().apply {
+                    buildLayer(halfSize) {
+                        drawRect(targetColor)
+                    }
+                    setPathOutline(
+                        Path().apply {
+                            addRect(
+                                Rect(
+                                    0f,
+                                    0f,
+                                    halfSize.width.toFloat(),
+                                    halfSize.height.toFloat()
+                                )
+                            )
+                        }
+                    )
+                    shadowElevation = 10f
+                }
+                drawRect(targetColor)
+
+                left = (this.size.width / 4f).toInt()
+                top = (this.size.width / 4f).toInt()
+                right = left + halfSize.width
+                bottom = top + halfSize.height
+                translate(this.size.width / 4, this.size.height / 4) {
+                    drawLayer(layer!!)
+                }
+            },
+            verify = { pixmap ->
+                var shadowPixelCount = 0
+                with(pixmap) {
+                    for (x in left until right) {
+                        for (y in top until bottom) {
+                            if (this[x, y] != targetColor) {
+                                shadowPixelCount++
+                            }
+                        }
+                    }
+                }
+                Assert.assertTrue(shadowPixelCount > 0)
+            }
+        )
+    }
+
+    @Test
+    fun testElevationRoundRect() {
+        var layer: GraphicsLayer?
+        var left = 0
+        var top = 0
+        var right = 0
+        var bottom = 0
+        val targetColor = Color.White
+        val radius = 50f
+        graphicsLayerTest(
+            block = { graphicsContext ->
+                val halfSize = IntSize(
+                    (this.size.width / 2f).toInt(),
+                    (this.size.height / 2f).toInt()
+                )
+
+                left = (this.size.width / 4f).toInt()
+                top = (this.size.width / 4f).toInt()
+                right = left + halfSize.width
+                bottom = top + halfSize.height
+
+                layer = graphicsContext.createGraphicsLayer().apply {
+                    buildLayer(halfSize) {
+                        drawRect(targetColor)
+                    }
+                    setRoundRectOutline(IntOffset.Zero, halfSize, radius)
+                    shadowElevation = 20f
+                }
+
+                drawRect(targetColor)
+                translate(left.toFloat(), top.toFloat()) {
+                    drawLayer(layer!!)
+                }
+            },
+            verify = { pixmap ->
+                fun PixelMap.hasShadowPixels(
+                    targetColor: Color,
+                    l: Int,
+                    t: Int,
+                    r: Int,
+                    b: Int
+                ): Boolean {
+                    var shadowCount = 0
+                    for (i in l until r) {
+                        for (j in t until b) {
+                            if (this[i, j] != targetColor) {
+                                shadowCount++
+                            }
+                        }
+                    }
+                    return shadowCount > 0
+                }
+                with(pixmap) {
+                    assertTrue(
+                        hasShadowPixels(
+                            targetColor,
+                            left,
+                            top,
+                            left + radius.toInt(),
+                            top + radius.toInt()
+                        )
+                    )
+                    assertTrue(
+                        hasShadowPixels(
+                            targetColor,
+                            right - radius.toInt(),
+                            top,
+                            right,
+                            top + radius.toInt()
+                        )
+                    )
+                    assertTrue(
+                        hasShadowPixels(
+                            targetColor,
+                            left,
+                            bottom - radius.toInt(),
+                            left + radius.toInt(),
+                            bottom
+                        )
+                    )
+                    assertTrue(
+                        hasShadowPixels(
+                            targetColor,
+                            right - radius.toInt(),
+                            bottom - radius.toInt(),
+                            right,
+                            bottom
+                        )
+                    )
+                }
+            }
+        )
+    }
+
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
     @Test
     fun testRenderEffect() {
@@ -808,6 +965,162 @@ class AndroidGraphicsLayerTest {
                     assertPixelColor(Color.Blue, insetLeft, insetBottom)
                     assertPixelColor(Color.Blue, insetRight, insetBottom)
                     assertPixelColor(Color.Blue, width / 2, height / 2)
+                }
+            }
+        )
+    }
+
+    @Test
+    fun testRectOutlineClip() {
+        var layer: GraphicsLayer?
+        var left = 0
+        var top = 0
+        var right = 0
+        var bottom = 0
+        val bgColor = Color.Black
+        val targetColor = Color.Red
+        graphicsLayerTest(
+            block = { graphicsContext ->
+                layer = graphicsContext.createGraphicsLayer().apply {
+                    buildLayer {
+                        drawRect(targetColor)
+                    }
+                    setRectOutline(this.size.center, this.size / 2)
+                    clip = true
+                }
+                drawRect(bgColor)
+
+                left = this.size.center.x.toInt()
+                top = this.size.center.y.toInt()
+                right = this.size.width.toInt()
+                bottom = this.size.height.toInt()
+
+                drawLayer(layer!!)
+            },
+            verify = { pixmap ->
+                with(pixmap) {
+                    for (x in 0 until width) {
+                        for (y in 0 until height) {
+                            val expected = if (x in left until right &&
+                                y in top until bottom) {
+                                targetColor
+                            } else {
+                                bgColor
+                            }
+                            Assert.assertEquals(this[x, y], expected)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    @Test
+    fun testPathOutlineClip() {
+        var layer: GraphicsLayer?
+        var left = 0
+        var top = 0
+        var right = 0
+        var bottom = 0
+        val bgColor = Color.Black
+        val targetColor = Color.Red
+        graphicsLayerTest(
+            block = { graphicsContext ->
+                layer = graphicsContext.createGraphicsLayer().apply {
+                    buildLayer {
+                        drawRect(targetColor)
+                    }
+                    setPathOutline(Path().apply {
+                        addRect(
+                            Rect(
+                                size.center.x.toFloat(),
+                                size.center.y.toFloat(),
+                                size.center.x + size.width.toFloat(),
+                                size.center.y + size.height.toFloat()
+                            )
+                        )
+                    })
+                    clip = true
+                }
+                drawRect(bgColor)
+
+                left = this.size.center.x.toInt()
+                top = this.size.center.y.toInt()
+                right = this.size.width.toInt()
+                bottom = this.size.height.toInt()
+
+                drawLayer(layer!!)
+            },
+            verify = { pixmap ->
+                with(pixmap) {
+                    for (x in 0 until width) {
+                        for (y in 0 until height) {
+                            val expected = if (x in left until right &&
+                                y in top until bottom) {
+                                targetColor
+                            } else {
+                                bgColor
+                            }
+                            Assert.assertEquals(this[x, y], expected)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    @Test
+    fun testRoundRectOutlineClip() {
+        var layer: GraphicsLayer?
+        var left = 0
+        var top = 0
+        var right = 0
+        var bottom = 0
+        val radius = 50
+        val bgColor = Color.Black
+        val targetColor = Color.Red
+        graphicsLayerTest(
+            block = { graphicsContext ->
+                layer = graphicsContext.createGraphicsLayer().apply {
+                    buildLayer {
+                        drawRect(targetColor)
+                    }
+                    setRoundRectOutline(
+                        this.size.center,
+                        this.size / 2,
+                        radius.toFloat()
+                    )
+                    clip = true
+                }
+                drawRect(bgColor)
+
+                left = this.size.center.x.toInt()
+                top = this.size.center.y.toInt()
+                right = (left + this.size.width / 2).toInt()
+                bottom = (top + this.size.height / 2).toInt()
+
+                drawLayer(layer!!)
+            },
+            verify = { pixmap ->
+                with(pixmap) {
+                    val offset = 5
+                    val startX = left + radius + offset
+                    val startY = top + radius + offset
+                    val endX = right - radius - offset
+                    val endY = bottom - radius - offset
+                    for (x in 0 until width) {
+                        for (y in 0 until height) {
+                            if (
+                                x in startX until endX &&
+                                y in startY until endY) {
+                                assertEquals(targetColor, this[x, y])
+                            }
+                        }
+                    }
+                    Assert.assertEquals(bgColor, this[offset, offset])
+                    Assert.assertEquals(bgColor, this[width - offset, offset])
+                    Assert.assertEquals(bgColor, this[offset, height - offset])
+                    Assert.assertEquals(bgColor, this[width - offset, height - offset])
                 }
             }
         )
