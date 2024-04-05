@@ -16,7 +16,7 @@
 
 package androidx.lifecycle.viewmodel.internal
 
-internal actual class Lock actual constructor() {
-    actual inline fun <T> withLockImpl(crossinline block: () -> T): T =
-        synchronized(lock = this, block = block)
-}
+import kotlin.reflect.KClass
+
+internal actual val <T : Any> KClass<T>.canonicalName: String?
+    get() = simpleName // `qualifiedName` reflection API is not supported yet in JavaScript
