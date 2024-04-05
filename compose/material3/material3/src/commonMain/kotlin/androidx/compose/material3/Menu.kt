@@ -195,17 +195,16 @@ class MenuItemColors(
      *
      * @param enabled whether the menu item is enabled
      */
-    @Composable
-    internal fun textColor(enabled: Boolean): State<Color> {
-        return rememberUpdatedState(if (enabled) textColor else disabledTextColor)
-    }
+    @Stable
+    internal fun textColor(enabled: Boolean): Color =
+        if (enabled) textColor else disabledTextColor
 
     /**
      * Represents the leading icon color for a menu item, depending on its [enabled] state.
      *
      * @param enabled whether the menu item is enabled
      */
-    @Composable
+    @Stable
     internal fun leadingIconColor(enabled: Boolean): Color =
         if (enabled) leadingIconColor else disabledLeadingIconColor
 
@@ -214,7 +213,7 @@ class MenuItemColors(
      *
      * @param enabled whether the menu item is enabled
      */
-    @Composable
+    @Stable
     internal fun trailingIconColor(enabled: Boolean): Color =
         if (enabled) trailingIconColor else disabledTrailingIconColor
 
@@ -456,7 +455,7 @@ internal fun DropdownMenuItemContent(
                     }
                 }
             }
-            CompositionLocalProvider(LocalContentColor provides colors.textColor(enabled).value) {
+            CompositionLocalProvider(LocalContentColor provides colors.textColor(enabled)) {
                 Box(
                     Modifier
                         .weight(1f)

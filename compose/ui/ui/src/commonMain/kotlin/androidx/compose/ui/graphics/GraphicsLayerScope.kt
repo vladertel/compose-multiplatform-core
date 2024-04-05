@@ -16,11 +16,17 @@
 
 package androidx.compose.ui.graphics
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ComposableOpenTarget
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.internal.JvmDefaultWithCompatibility
 import androidx.compose.ui.layout.PlacementScopeMarker
-import kotlin.js.JsName
+import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.unit.Density
+import kotlin.js.JsName
 
 /**
  * Default camera distance for all layers
@@ -218,6 +224,27 @@ interface GraphicsLayerScope : Density {
      */
     val size: Size
         get() = Size.Unspecified
+}
+
+/**
+ * Create a new [GraphicsLayer] instance that will automatically be released when the Composable
+ * is disposed.
+ *
+ * @return a GraphicsLayer instance
+ */
+@Composable
+@ComposableOpenTarget(-1)
+fun rememberGraphicsLayer(): GraphicsLayer {
+    val graphicsContext = LocalGraphicsContext.current
+    val layer = remember {
+        graphicsContext.createGraphicsLayer()
+    }
+    DisposableEffect(layer) {
+        onDispose {
+            graphicsContext.releaseGraphicsLayer(layer)
+        }
+    }
+    return layer
 }
 
 /**

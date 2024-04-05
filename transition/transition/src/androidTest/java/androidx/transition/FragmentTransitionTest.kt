@@ -155,6 +155,7 @@ class FragmentTransitionTest(
         assertThat(fragment.requireView()).isEqualTo(view1)
         verifyNoOtherTransitions(fragment)
     }
+
     @Test
     fun testTimedPostponeImmediateStartNotCanceled() {
         val fm = activityRule.activity.supportFragmentManager

@@ -29,6 +29,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -142,7 +143,7 @@ internal class NavigationItemColors constructor(
      * @param selected whether the item is selected
      * @param enabled whether the item is enabled
      */
-    @Composable
+    @Stable
     fun iconColor(selected: Boolean, enabled: Boolean): Color {
         return when {
             !enabled -> disabledIconColor
@@ -157,7 +158,7 @@ internal class NavigationItemColors constructor(
      * @param selected whether the item is selected
      * @param enabled whether the item is enabled
      */
-    @Composable
+    @Stable
     fun textColor(selected: Boolean, enabled: Boolean): Color {
         return when {
             !enabled -> disabledTextColor
@@ -649,6 +650,11 @@ private fun MeasureScope.placeLabelAndStartIcon(
     }
 }
 
+/*@VisibleForTesting*/
+internal val NavigationItemMinWidth = NavigationRailItemWidth
+/*@VisibleForTesting*/
+internal val NavigationItemMinHeight = NavigationRailItemHeight
+
 private const val IndicatorRippleLayoutIdTag: String = "indicatorRipple"
 private const val IndicatorLayoutIdTag: String = "indicator"
 private const val IconLayoutIdTag: String = "icon"
@@ -656,5 +662,3 @@ private const val LabelLayoutIdTag: String = "label"
 private const val ItemAnimationDurationMillis: Int = 100
 
 private val IndicatorVerticalOffset: Dp = 12.dp
-private val NavigationItemMinWidth = NavigationRailItemWidth
-private val NavigationItemMinHeight = NavigationRailItemHeight
