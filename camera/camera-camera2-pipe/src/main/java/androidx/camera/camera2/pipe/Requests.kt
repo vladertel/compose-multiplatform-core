@@ -261,16 +261,22 @@ class Request(
  * constructor prevents directly creating an instance of it.
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-interface RequestFailure {
+interface RequestFailure : UnsafeWrapper {
+    /** Metadata about the request that has failed. */
     val requestMetadata: RequestMetadata
 
+    /** The Camera [FrameNumber] for the request that has failed. */
     val frameNumber: FrameNumber
 
+    /** Indicates the reason the particular request failed, see [CaptureFailure] for details. */
     val reason: Int
 
+    /**
+     * Indicates if images were still captured for this request. If this is true, the camera should
+     * invoke [Request.Listener.onBufferLost] individually for each output that failed. If this is
+     * false, these outputs will never arrive, and the individual callbacks will not be invoked.
+     */
     val wasImageCaptured: Boolean
-
-    val captureFailure: CaptureFailure?
 }
 
 /**
@@ -296,14 +302,13 @@ value class RequestTemplate(val value: Int) {
 
 /**
  * The intended use for this class is to submit the input needed for a reprocessing request, the
- * [InputStream], [ImageWrapper] and [FrameMetadata]. Both values are non-nullable because
+ * [ImageWrapper] and [FrameInfo]. Both values are non-nullable because
  * both values are needed for reprocessing.
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 data class InputRequest(
-    val inputStreamId: InputStreamId,
     val image: ImageWrapper,
-    val metadata: FrameMetadata
+    val frameInfo: FrameInfo
 )
 
 /**

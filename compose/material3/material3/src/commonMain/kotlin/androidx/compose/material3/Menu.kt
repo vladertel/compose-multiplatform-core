@@ -21,6 +21,7 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.Interaction
@@ -38,17 +39,21 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.tokens.ElevationTokens
+import androidx.compose.material3.tokens.ListTokens
 import androidx.compose.material3.tokens.MenuTokens
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
@@ -60,9 +65,20 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Contains default values used for [DropdownMenuItem].
+ * Contains default values used for [DropdownMenu] and [DropdownMenuItem].
  */
 object MenuDefaults {
+    /** The default tonal elevation for a menu. */
+    val TonalElevation = ElevationTokens.Level0
+
+    /** The default shadow elevation for a menu. */
+    val ShadowElevation = MenuTokens.ContainerElevation
+
+    /** The default shape for a menu. */
+    val shape @Composable get() = MenuTokens.ContainerShape.value
+
+    /** The default container color for a menu. */
+    val containerColor @Composable get() = MenuTokens.ContainerColor.value
 
     /**
      * Creates a [MenuItemColors] that represents the default text and icon colors used in a
@@ -105,14 +121,15 @@ object MenuDefaults {
     internal val ColorScheme.defaultMenuItemColors: MenuItemColors
         get() {
             return defaultMenuItemColorsCached ?: MenuItemColors(
-                textColor = fromToken(MenuTokens.ListItemLabelTextColor),
-            leadingIconColor = fromToken(MenuTokens.ListItemLeadingIconColor),
-            trailingIconColor = fromToken(MenuTokens.ListItemTrailingIconColor),
-            disabledTextColor = fromToken(MenuTokens.ListItemDisabledLabelTextColor),
-            disabledLeadingIconColor = fromToken(MenuTokens.ListItemDisabledLeadingIconColor)
-            .copy(alpha = MenuTokens.ListItemDisabledLeadingIconOpacity),
-            disabledTrailingIconColor = fromToken(MenuTokens.ListItemDisabledTrailingIconColor)
-            .copy(alpha = MenuTokens.ListItemDisabledTrailingIconOpacity),
+                textColor = fromToken(ListTokens.ListItemLabelTextColor),
+                leadingIconColor = fromToken(ListTokens.ListItemLeadingIconColor),
+                trailingIconColor = fromToken(ListTokens.ListItemTrailingIconColor),
+                disabledTextColor = fromToken(ListTokens.ListItemDisabledLabelTextColor)
+                    .copy(alpha = ListTokens.ListItemDisabledLabelTextOpacity),
+                disabledLeadingIconColor = fromToken(ListTokens.ListItemDisabledLeadingIconColor)
+                    .copy(alpha = ListTokens.ListItemDisabledLeadingIconOpacity),
+                disabledTrailingIconColor = fromToken(ListTokens.ListItemDisabledTrailingIconColor)
+                    .copy(alpha = ListTokens.ListItemDisabledTrailingIconOpacity),
             ).also {
                 defaultMenuItemColorsCached = it
             }
@@ -326,10 +343,15 @@ expect fun DropdownMenuItem(
 @Suppress("ModifierParameter")
 @Composable
 internal fun DropdownMenuContent(
+    modifier: Modifier,
     expandedState: MutableTransitionState<Boolean>,
     transformOriginState: MutableState<TransformOrigin>,
     scrollState: ScrollState,
-    modifier: Modifier = Modifier,
+    shape: Shape,
+    containerColor: Color,
+    tonalElevation: Dp,
+    shadowElevation: Dp,
+    border: BorderStroke?,
     content: @Composable ColumnScope.() -> Unit
 ) {
     // Menu open/close animation.
@@ -377,10 +399,11 @@ internal fun DropdownMenuContent(
             this.alpha = alpha
             transformOrigin = transformOriginState.value
         },
-        shape = MenuTokens.ContainerShape.value,
-        color = MaterialTheme.colorScheme.fromToken(MenuTokens.ContainerColor),
-        tonalElevation = MenuTokens.ContainerElevation,
-        shadowElevation = MenuTokens.ContainerElevation
+        shape = shape,
+        color = containerColor,
+        tonalElevation = tonalElevation,
+        shadowElevation = shadowElevation,
+        border = border,
     ) {
         Column(
             modifier = modifier
@@ -402,33 +425,33 @@ internal fun DropdownMenuItemContent(
     enabled: Boolean,
     colors: MenuItemColors,
     contentPadding: PaddingValues,
-    interactionSource: MutableInteractionSource
+    interactionSource: MutableInteractionSource?
 ) {
-    @Suppress("DEPRECATION_ERROR")
     Row(
         modifier = modifier
             .clickable(
                 enabled = enabled,
                 onClick = onClick,
                 interactionSource = interactionSource,
-                indication = androidx.compose.material.ripple.rememberRipple(true)
+                indication = rippleOrFallbackImplementation(true)
             )
             .fillMaxWidth()
             // Preferred min and max width used during the intrinsic measurement.
             .sizeIn(
                 minWidth = DropdownMenuItemDefaultMinWidth,
                 maxWidth = DropdownMenuItemDefaultMaxWidth,
-                minHeight = MenuTokens.ListItemContainerHeight
+                minHeight = MenuListItemContainerHeight
             )
             .padding(contentPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ProvideTextStyle(MaterialTheme.typography.fromToken(MenuTokens.ListItemLabelTextFont)) {
+        // TODO(b/271818892): Align menu list item style with general list item style.
+        ProvideTextStyle(MaterialTheme.typography.labelLarge) {
             if (leadingIcon != null) {
                 CompositionLocalProvider(
                     LocalContentColor provides colors.leadingIconColor(enabled),
                 ) {
-                    Box(Modifier.defaultMinSize(minWidth = MenuTokens.ListItemLeadingIconSize)) {
+                    Box(Modifier.defaultMinSize(minWidth = ListTokens.ListItemLeadingIconSize)) {
                         leadingIcon()
                     }
                 }
@@ -457,7 +480,7 @@ internal fun DropdownMenuItemContent(
                 CompositionLocalProvider(
                     LocalContentColor provides colors.trailingIconColor(enabled)
                 ) {
-                    Box(Modifier.defaultMinSize(minWidth = MenuTokens.ListItemTrailingIconSize)) {
+                    Box(Modifier.defaultMinSize(minWidth = ListTokens.ListItemTrailingIconSize)) {
                         trailingIcon()
                     }
                 }
@@ -497,6 +520,7 @@ internal fun calculateTransformOrigin(
 
 // Size defaults.
 internal val MenuVerticalMargin = 48.dp
+private val MenuListItemContainerHeight = 48.dp
 private val DropdownMenuItemHorizontalPadding = 12.dp
 internal val DropdownMenuVerticalPadding = 8.dp
 private val DropdownMenuItemDefaultMinWidth = 112.dp

@@ -18,6 +18,7 @@ package androidx.compose.animation.core
 
 import androidx.compose.animation.core.internal.JvmDefaultWithCompatibility
 import kotlin.math.roundToLong
+import androidx.annotation.RestrictTo
 
 /**
  * This interface provides a convenient way to query from an [VectorizedAnimationSpec] or
@@ -117,8 +118,8 @@ fun <T, V : AnimationVector> Animation<T, V>.getVelocityFromNanos(playTimeNanos:
  * @param initialValue the value that the animation will start from
  * @param targetValue the value that the animation will end at
  * @param initialVelocity the initial velocity to start the animation at
- * @suppress
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY)
 fun <V : AnimationVector> VectorizedAnimationSpec<V>.createAnimation(
     initialValue: V,
     targetValue: V,
@@ -275,7 +276,7 @@ class TargetBasedAnimation<T, V : AnimationVector> internal constructor(
             ).let {
                 // TODO: Remove after b/232030217
                 for (i in 0 until it.size) {
-                    check(!it.get(i).isNaN()) {
+                    checkPrecondition(!it.get(i).isNaN()) {
                         "AnimationVector cannot contain a NaN. $it. Animation: $this," +
                             " playTimeNanos: $playTimeNanos"
                     }

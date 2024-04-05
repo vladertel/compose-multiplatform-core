@@ -23,7 +23,9 @@ import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException
 import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException.Companion.LOAD_SDK_NOT_FOUND
 import androidx.privacysandbox.sdkruntime.core.SandboxedSdkCompat
 import androidx.privacysandbox.sdkruntime.core.activity.SdkSandboxActivityHandlerCompat
+import androidx.privacysandbox.sdkruntime.core.controller.LoadSdkCallback
 import androidx.privacysandbox.sdkruntime.core.controller.SdkSandboxControllerCompat
+import java.util.concurrent.Executor
 
 /**
  * Wrapper for client provided implementation of [SdkSandboxControllerCompat].
@@ -34,11 +36,24 @@ internal class LocalImpl(
     private val clientVersion: Int
 ) : SdkSandboxControllerCompat.SandboxControllerImpl {
 
-    override suspend fun loadSdk(sdkName: String, params: Bundle): SandboxedSdkCompat {
-        throw LoadSdkCompatException(
-            LOAD_SDK_NOT_FOUND,
-            "Not supported for locally loaded SDKs yet"
-        )
+    override fun loadSdk(
+        sdkName: String,
+        params: Bundle,
+        executor: Executor,
+        callback: LoadSdkCallback
+    ) {
+        if (clientVersion >= 5) {
+            implFromClient.loadSdk(sdkName, params, executor, callback)
+        } else {
+            executor.execute {
+                callback.onError(
+                    LoadSdkCompatException(
+                        LOAD_SDK_NOT_FOUND,
+                        "Client library version doesn't support locally loaded SDKs"
+                    )
+                )
+            }
+        }
     }
 
     override fun getSandboxedSdks(): List<SandboxedSdkCompat> {

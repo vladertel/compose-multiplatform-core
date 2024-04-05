@@ -123,7 +123,11 @@ public final class DimensionBuilders {
     @RequiresSchemaVersion(major = 1, minor = 0)
     @OptIn(markerClass = ExperimentalProtoLayoutExtensionApi.class)
     public static final class DpProp
-            implements ContainerDimension, ImageDimension, SpacerDimension, ExtensionDimension {
+            implements ContainerDimension,
+                ImageDimension,
+                SpacerDimension,
+                ExtensionDimension,
+                PivotDimension {
         private final DimensionProto.DpProp mImpl;
         @Nullable private final Fingerprint mFingerprint;
 
@@ -214,17 +218,26 @@ public final class DimensionBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DimensionProto.PivotDimension toPivotDimensionProto() {
+            return DimensionProto.PivotDimension.newBuilder().setOffsetDp(mImpl).build();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "DpProp{" + "value=" + getValue() + ", dynamicValue=" + getDynamicValue() + "}";
         }
 
         /** Builder for {@link DpProp}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder
                 implements ContainerDimension.Builder,
                         ImageDimension.Builder,
                         SpacerDimension.Builder,
-                        ExtensionDimension.Builder {
+                        ExtensionDimension.Builder,
+                        PivotDimension.Builder {
             private final DimensionProto.DpProp.Builder mImpl = DimensionProto.DpProp.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(756413087);
 
@@ -363,6 +376,7 @@ public final class DimensionBuilders {
      * bindable layout element.
      */
     @RequiresSchemaVersion(major = 1, minor = 200)
+    @SuppressWarnings("PrivateSuperclass")
     public static final class HorizontalLayoutConstraint extends DpPropLayoutConstraint {
         HorizontalLayoutConstraint(DimensionProto.DpProp impl, @Nullable Fingerprint fingerprint) {
             super(impl, fingerprint);
@@ -421,6 +435,7 @@ public final class DimensionBuilders {
      * bindable layout element.
      */
     @RequiresSchemaVersion(major = 1, minor = 200)
+    @SuppressWarnings("PrivateSuperclass")
     public static final class VerticalLayoutConstraint extends DpPropLayoutConstraint {
         VerticalLayoutConstraint(DimensionProto.DpProp impl, @Nullable Fingerprint fingerprint) {
             super(impl, fingerprint);
@@ -949,6 +964,7 @@ public final class DimensionBuilders {
         }
 
         /** Builder for {@link ExpandedDimensionProp}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder
                 implements ContainerDimension.Builder,
                         ImageDimension.Builder,
@@ -1062,6 +1078,7 @@ public final class DimensionBuilders {
         }
 
         /** Builder for {@link WrappedDimensionProp}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements ContainerDimension.Builder {
             private final DimensionProto.WrappedDimensionProp.Builder mImpl =
                     DimensionProto.WrappedDimensionProp.newBuilder();
@@ -1180,6 +1197,7 @@ public final class DimensionBuilders {
         }
 
         /** Builder for {@link ProportionalDimensionProp}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements ImageDimension.Builder {
             private final DimensionProto.ProportionalDimensionProp.Builder mImpl =
                     DimensionProto.ProportionalDimensionProp.newBuilder();
@@ -1393,5 +1411,154 @@ public final class DimensionBuilders {
     static ExtensionDimension extensionDimensionFromProto(
             @NonNull DimensionProto.ExtensionDimension proto) {
         return extensionDimensionFromProto(proto, null);
+    }
+
+    /** Provide a length measurement proportional to the element's bounding box. */
+    @RequiresSchemaVersion(major = 1, minor = 400)
+    public static final class BoundingBoxRatio implements PivotDimension {
+        private final DimensionProto.BoundingBoxRatio mImpl;
+        @Nullable private final Fingerprint mFingerprint;
+
+        BoundingBoxRatio(DimensionProto.BoundingBoxRatio impl, @Nullable Fingerprint fingerprint) {
+            this.mImpl = impl;
+            this.mFingerprint = fingerprint;
+        }
+
+        /**
+         * Gets the ratio relative to the bounding box width/height, with the bounding box
+         * top / start as 0 and bottom / end as 1. Values outside [0, 1] are also valid.
+         * Dynamic value is supported. If not set, defaults to the middle of the element.
+         */
+        @NonNull
+        public FloatProp getRatio() {
+            if (mImpl.hasRatio()) {
+                return FloatProp.fromProto(mImpl.getRatio());
+            } else {
+                return new FloatProp.Builder(0.5f).build();
+            }
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Nullable
+        public Fingerprint getFingerprint() {
+            return mFingerprint;
+        }
+
+        /** Creates a new wrapper instance from the proto. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public static BoundingBoxRatio fromProto(
+                @NonNull DimensionProto.BoundingBoxRatio proto, @Nullable Fingerprint fingerprint) {
+            return new BoundingBoxRatio(proto, fingerprint);
+        }
+
+        @NonNull
+        static BoundingBoxRatio fromProto(@NonNull DimensionProto.BoundingBoxRatio proto) {
+            return fromProto(proto, null);
+        }
+
+        /** Returns the internal proto instance. */
+        @NonNull
+        DimensionProto.BoundingBoxRatio toProto() {
+            return mImpl;
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DimensionProto.PivotDimension toPivotDimensionProto() {
+            return DimensionProto.PivotDimension.newBuilder().setLocationRatio(mImpl).build();
+        }
+
+        @Override
+        @NonNull
+        public String toString() {
+            return "BoundingBoxRatio{" + "ratio=" + getRatio() + "}";
+        }
+
+        /** Builder for {@link BoundingBoxRatio}. */
+        @SuppressWarnings("HiddenSuperclass")
+        public static final class Builder implements PivotDimension.Builder {
+            private final DimensionProto.BoundingBoxRatio.Builder mImpl =
+                    DimensionProto.BoundingBoxRatio.newBuilder();
+            private final Fingerprint mFingerprint = new Fingerprint(-1387873430);
+
+            /**
+             * Creates an instance of {@link Builder}.
+             * @param ratio the ratio relative to the bounding box width/height, with the bounding
+             *      box top / start as 0 and bottom / end as 1. Values outside [0, 1] are also
+             *      valid. Dynamic value is supported.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            public Builder(@NonNull FloatProp ratio) {
+               setRatio(ratio);
+            }
+
+            /**
+             * Sets the ratio relative to the bounding box width/height, with the bounding box
+             * top / start as 0 and bottom / end as 1. Values outside [0, 1] are also valid. Dynamic
+             * value is supported. If not set, defaults to the middle of the element.
+             */
+            @NonNull
+            private Builder setRatio(@NonNull FloatProp ratio) {
+                mImpl.setRatio(ratio.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        1, checkNotNull(ratio.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /** Builds an instance from accumulated values. */
+            @Override
+            @NonNull
+            public BoundingBoxRatio build() {
+                return new BoundingBoxRatio(mImpl.build(), mFingerprint);
+            }
+        }
+    }
+
+    /**
+     * Interface defining a dimension that can be applied to a pivot location for scale and rotate
+     * transformations.
+     */
+    @RequiresSchemaVersion(major = 1, minor = 400)
+    public interface PivotDimension {
+        /** Get the protocol buffer representation of this object. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        DimensionProto.PivotDimension toPivotDimensionProto();
+
+        /** Get the fingerprint for this object or null if unknown. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Nullable
+        Fingerprint getFingerprint();
+
+        /** Builder to create {@link PivotDimension} objects. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        interface Builder {
+
+            /** Builds an instance with values accumulated in this Builder. */
+            @NonNull
+            PivotDimension build();
+        }
+    }
+
+    /** Creates a new wrapper instance from the proto. */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
+    public static PivotDimension pivotDimensionFromProto(
+            @NonNull DimensionProto.PivotDimension proto, @Nullable Fingerprint fingerprint) {
+        if (proto.hasOffsetDp()) {
+            return DpProp.fromProto(proto.getOffsetDp(), fingerprint);
+        }
+        if (proto.hasLocationRatio()) {
+            return BoundingBoxRatio.fromProto(proto.getLocationRatio(), fingerprint);
+        }
+        throw new IllegalStateException("Proto was not a recognised instance of PivotDimension");
+    }
+
+    @NonNull
+    static PivotDimension pivotDimensionFromProto(@NonNull DimensionProto.PivotDimension proto) {
+        return pivotDimensionFromProto(proto, null);
     }
 }

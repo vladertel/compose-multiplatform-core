@@ -85,6 +85,11 @@ public class MacrobenchmarkScope(
     internal var flushArtProfiles: Boolean = false
 
     /**
+     * `true` if the app is a system app.
+     */
+    internal var isSystemApp: Boolean = false
+
+    /**
      * Current Macrobenchmark measurement iteration, or null if measurement is not yet enabled.
      *
      * Non-measurement iterations can occur due to warmup a [CompilationMode], or prior to the first
@@ -299,12 +304,20 @@ public class MacrobenchmarkScope(
      * signalled to drop its shader cache.
      */
     public fun dropShaderCache() {
-        Log.d(TAG, "Dropping shader cache for $packageName")
-        val dropError = ProfileInstallBroadcast.dropShaderCache(packageName)
-        if (dropError != null && !DeviceInfo.isEmulator) {
-            if (!dropShaderCacheRoot()) {
-                throw IllegalStateException(dropError)
+        if (Arguments.dropShadersEnable) {
+            Log.d(TAG, "Dropping shader cache for $packageName")
+            val dropError = ProfileInstallBroadcast.dropShaderCache(packageName)
+            if (dropError != null && !DeviceInfo.isEmulator) {
+                if (!dropShaderCacheRoot()) {
+                    if (Arguments.dropShadersThrowOnFailure) {
+                        throw IllegalStateException(dropError)
+                    } else {
+                        Log.d(TAG, dropError)
+                    }
+                }
             }
+        } else {
+            Log.d(TAG, "Skipping drop shader cache for $packageName")
         }
     }
 
@@ -430,11 +443,13 @@ public class MacrobenchmarkScope(
      * Force-stop the process being measured.
      */
     private fun killProcessImpl() {
-        val useKillAll = Shell.isSessionRooted()
+        val isRooted = Shell.isSessionRooted()
         Log.d(TAG, "Killing process $packageName")
-        if (useKillAll) {
+        if (isRooted && isSystemApp) {
             device.executeShellCommand("killall $packageName")
         } else {
+            // We want to use `am force-stop` for apps that are not system apps
+            // to make sure app components are not automatically restarted by system_server.
             device.executeShellCommand("am force-stop $packageName")
         }
         // System Apps need an additional Thread.sleep() to ensure that the process is killed.

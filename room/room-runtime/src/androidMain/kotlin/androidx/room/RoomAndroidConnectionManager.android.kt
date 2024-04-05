@@ -17,6 +17,7 @@
 package androidx.room
 
 import androidx.room.coroutines.ConnectionPool
+import androidx.room.coroutines.RawConnectionAccessor
 import androidx.room.coroutines.newConnectionPool
 import androidx.room.coroutines.newSingleConnectionPool
 import androidx.room.driver.SupportSQLiteConnection
@@ -25,6 +26,7 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.use
 
 /**
  * An Android platform specific [RoomConnectionManager] with backwards compatibility with
@@ -35,8 +37,7 @@ internal class RoomAndroidConnectionManager : RoomConnectionManager {
     override val configuration: DatabaseConfiguration
     override val connectionPool: ConnectionPool
     override val openDelegate: RoomOpenDelegate
-
-    private val callbacks: List<RoomDatabase.Callback>
+    override val callbacks: List<RoomDatabase.Callback>
 
     internal val supportOpenHelper: SupportSQLiteOpenHelper?
         get() = (connectionPool as? SupportConnectionPool)?.supportDriver?.openHelper
@@ -85,14 +86,17 @@ internal class RoomAndroidConnectionManager : RoomConnectionManager {
 
     constructor(
         config: DatabaseConfiguration,
-        supportOpenHelper: SupportSQLiteOpenHelper
+        supportOpenHelperFactory: (DatabaseConfiguration) -> SupportSQLiteOpenHelper
     ) {
         this.configuration = config
         this.openDelegate = NoOpOpenDelegate()
         // Compatibility mode due to no driver provided, the SupportSQLiteDriver and
-        // SupportConnectionPool are created.
+        // SupportConnectionPool are created. A Room onOpen callback is installed so that the
+        // SupportSQLiteDatabase is extracted out of the RoomOpenHelper installed.
+        val configWithCompatibilityCallback =
+            config.installOnOpenCallback { db -> supportDatabase = db }
         this.connectionPool = SupportConnectionPool(
-            SupportSQLiteDriver(supportOpenHelper)
+            SupportSQLiteDriver(supportOpenHelperFactory.invoke(configWithCompatibilityCallback))
         )
         this.callbacks = config.callbacks ?: emptyList()
         init()
@@ -120,33 +124,6 @@ internal class RoomAndroidConnectionManager : RoomConnectionManager {
 
     fun close() {
         connectionPool.close()
-    }
-
-    override fun invokeCreateCallback(connection: SQLiteConnection) {
-        // TODO(b/316944352): Add callback mirror of SQLiteConnection
-        callbacks.forEach {
-            if (connection is SupportSQLiteConnection) {
-                it.onCreate(connection.db)
-            }
-        }
-    }
-
-    override fun invokeDestructiveMigrationCallback(connection: SQLiteConnection) {
-        // TODO(b/316944352): Add callback mirror of SQLiteConnection
-        callbacks.forEach {
-            if (connection is SupportSQLiteConnection) {
-                it.onDestructiveMigration(connection.db)
-            }
-        }
-    }
-
-    override fun invokeOpenCallback(connection: SQLiteConnection) {
-        // TODO(b/316944352): Add callback mirror of SQLiteConnection
-        callbacks.forEach {
-            if (connection is SupportSQLiteConnection) {
-                it.onOpen(connection.db)
-            }
-        }
     }
 
     // TODO(b/316944352): Figure out auto-close with driver APIs
@@ -235,12 +212,15 @@ internal class RoomAndroidConnectionManager : RoomConnectionManager {
      */
     private class SupportPooledConnection(
         val delegate: SupportSQLiteConnection
-    ) : Transactor {
+    ) : Transactor, RawConnectionAccessor {
 
         private var currentTransactionType: Transactor.SQLiteTransactionType? = null
 
+        override val rawConnection: SQLiteConnection
+            get() = delegate
+
         override suspend fun <R> usePrepared(sql: String, block: (SQLiteStatement) -> R): R {
-            return block.invoke(delegate.prepare(sql))
+            return delegate.prepare(sql).use { block.invoke(it) }
         }
 
         // TODO(b/318767291): Add coroutine confinement like RoomDatabase.withTransaction
@@ -265,7 +245,9 @@ internal class RoomAndroidConnectionManager : RoomConnectionManager {
                 Transactor.SQLiteTransactionType.EXCLUSIVE -> db.beginTransaction()
             }
             try {
-                return SupportTransactor<R>().block()
+                val result = SupportTransactor<R>().block()
+                db.setTransactionSuccessful()
+                return result
             } catch (rollback: RollbackException) {
                 @Suppress("UNCHECKED_CAST")
                 return rollback.result as R
@@ -283,7 +265,10 @@ internal class RoomAndroidConnectionManager : RoomConnectionManager {
 
         private class RollbackException(val result: Any?) : Throwable()
 
-        private inner class SupportTransactor<T> : TransactionScope<T> {
+        private inner class SupportTransactor<T> : TransactionScope<T>, RawConnectionAccessor {
+
+            override val rawConnection: SQLiteConnection
+                get() = this@SupportPooledConnection.rawConnection
 
             override suspend fun <R> usePrepared(sql: String, block: (SQLiteStatement) -> R): R {
                 return this@SupportPooledConnection.usePrepared(sql, block)
@@ -299,5 +284,16 @@ internal class RoomAndroidConnectionManager : RoomConnectionManager {
                 throw RollbackException(result)
             }
         }
+    }
+
+    private fun DatabaseConfiguration.installOnOpenCallback(
+        onOpen: (SupportSQLiteDatabase) -> Unit
+    ): DatabaseConfiguration {
+        val newCallbacks = (this.callbacks ?: emptyList()) + object : RoomDatabase.Callback() {
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                onOpen.invoke(db)
+            }
+        }
+        return this.copy(callbacks = newCallbacks)
     }
 }

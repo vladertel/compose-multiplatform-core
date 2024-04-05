@@ -154,14 +154,14 @@ public fun Button(
     border: ButtonBorder = ButtonDefaults.buttonBorder(),
     content: @Composable BoxScope.() -> Unit,
 ) {
-    androidx.wear.compose.materialcore.Button(
+    androidx.wear.compose.materialcore.RoundButton(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        backgroundColor = { colors.backgroundColor(it) },
+        backgroundColor = { colors.backgroundColor(it).value },
         interactionSource = interactionSource,
         shape = shape,
-        border = { border.borderStroke(enabled = it) },
+        border = { border.borderStroke(enabled = it).value },
         buttonSize = ButtonDefaults.DefaultButtonSize,
         ripple = rippleOrFallbackImplementation(),
         content = provideScopeContent(
@@ -335,16 +335,16 @@ public fun CompactButton(
     border: ButtonBorder = ButtonDefaults.buttonBorder(),
     content: @Composable BoxScope.() -> Unit,
 ) {
-    androidx.wear.compose.materialcore.Button(
+    androidx.wear.compose.materialcore.RoundButton(
         onClick = onClick,
         modifier = modifier
             .padding(backgroundPadding)
             .requiredSize(ButtonDefaults.ExtraSmallButtonSize),
         enabled = enabled,
-        backgroundColor = { colors.backgroundColor(it) },
+        backgroundColor = { colors.backgroundColor(it).value },
         interactionSource = interactionSource,
         shape = shape,
-        border = { border.borderStroke(it) },
+        border = { border.borderStroke(it).value },
         buttonSize = ButtonDefaults.ExtraSmallButtonSize,
         ripple = rippleOrFallbackImplementation(),
         content = provideScopeContent(

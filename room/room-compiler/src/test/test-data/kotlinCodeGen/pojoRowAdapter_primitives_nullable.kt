@@ -1,10 +1,8 @@
-import android.database.Cursor
 import androidx.room.EntityInsertionAdapter
 import androidx.room.RoomDatabase
-import androidx.room.RoomSQLiteQuery
-import androidx.room.RoomSQLiteQuery.Companion.acquire
 import androidx.room.util.getColumnIndexOrThrow
-import androidx.room.util.query
+import androidx.room.util.performBlocking
+import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.db.SupportSQLiteStatement
 import javax.`annotation`.processing.Generated
 import kotlin.Byte
@@ -17,7 +15,6 @@ import kotlin.Short
 import kotlin.String
 import kotlin.Suppress
 import kotlin.collections.List
-import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 @Generated(value = ["androidx.room.RoomProcessor"])
@@ -27,10 +24,10 @@ public class MyDao_Impl(
 ) : MyDao {
   private val __db: RoomDatabase
 
-  private val __insertionAdapterOfMyEntity: EntityInsertionAdapter<MyEntity>
+  private val __insertAdapterOfMyEntity: EntityInsertionAdapter<MyEntity>
   init {
     this.__db = __db
-    this.__insertionAdapterOfMyEntity = object : EntityInsertionAdapter<MyEntity>(__db) {
+    this.__insertAdapterOfMyEntity = object : EntityInsertionAdapter<MyEntity>(__db) {
       protected override fun createQuery(): String =
           "INSERT OR ABORT INTO `MyEntity` (`int`,`short`,`byte`,`long`,`char`,`float`,`double`) VALUES (?,?,?,?,?,?,?)"
 
@@ -85,7 +82,7 @@ public class MyDao_Impl(
     __db.assertNotSuspendingTransaction()
     __db.beginTransaction()
     try {
-      __insertionAdapterOfMyEntity.insert(item)
+      __insertAdapterOfMyEntity.insert(item)
       __db.setTransactionSuccessful()
     } finally {
       __db.endTransaction()
@@ -94,74 +91,72 @@ public class MyDao_Impl(
 
   public override fun getEntity(): MyEntity {
     val _sql: String = "SELECT * FROM MyEntity"
-    val _statement: RoomSQLiteQuery = acquire(_sql, 0)
-    __db.assertNotSuspendingTransaction()
-    val _cursor: Cursor = query(__db, _statement, false, null)
-    try {
-      val _cursorIndexOfInt: Int = getColumnIndexOrThrow(_cursor, "int")
-      val _cursorIndexOfShort: Int = getColumnIndexOrThrow(_cursor, "short")
-      val _cursorIndexOfByte: Int = getColumnIndexOrThrow(_cursor, "byte")
-      val _cursorIndexOfLong: Int = getColumnIndexOrThrow(_cursor, "long")
-      val _cursorIndexOfChar: Int = getColumnIndexOrThrow(_cursor, "char")
-      val _cursorIndexOfFloat: Int = getColumnIndexOrThrow(_cursor, "float")
-      val _cursorIndexOfDouble: Int = getColumnIndexOrThrow(_cursor, "double")
-      val _result: MyEntity
-      if (_cursor.moveToFirst()) {
-        val _tmpInt: Int?
-        if (_cursor.isNull(_cursorIndexOfInt)) {
-          _tmpInt = null
+    return performBlocking(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        val _cursorIndexOfInt: Int = getColumnIndexOrThrow(_stmt, "int")
+        val _cursorIndexOfShort: Int = getColumnIndexOrThrow(_stmt, "short")
+        val _cursorIndexOfByte: Int = getColumnIndexOrThrow(_stmt, "byte")
+        val _cursorIndexOfLong: Int = getColumnIndexOrThrow(_stmt, "long")
+        val _cursorIndexOfChar: Int = getColumnIndexOrThrow(_stmt, "char")
+        val _cursorIndexOfFloat: Int = getColumnIndexOrThrow(_stmt, "float")
+        val _cursorIndexOfDouble: Int = getColumnIndexOrThrow(_stmt, "double")
+        val _result: MyEntity
+        if (_stmt.step()) {
+          val _tmpInt: Int?
+          if (_stmt.isNull(_cursorIndexOfInt)) {
+            _tmpInt = null
+          } else {
+            _tmpInt = _stmt.getLong(_cursorIndexOfInt).toInt()
+          }
+          val _tmpShort: Short?
+          if (_stmt.isNull(_cursorIndexOfShort)) {
+            _tmpShort = null
+          } else {
+            _tmpShort = _stmt.getLong(_cursorIndexOfShort).toShort()
+          }
+          val _tmpByte: Byte?
+          if (_stmt.isNull(_cursorIndexOfByte)) {
+            _tmpByte = null
+          } else {
+            _tmpByte = _stmt.getLong(_cursorIndexOfByte).toByte()
+          }
+          val _tmpLong: Long?
+          if (_stmt.isNull(_cursorIndexOfLong)) {
+            _tmpLong = null
+          } else {
+            _tmpLong = _stmt.getLong(_cursorIndexOfLong)
+          }
+          val _tmpChar: Char?
+          if (_stmt.isNull(_cursorIndexOfChar)) {
+            _tmpChar = null
+          } else {
+            _tmpChar = _stmt.getLong(_cursorIndexOfChar).toChar()
+          }
+          val _tmpFloat: Float?
+          if (_stmt.isNull(_cursorIndexOfFloat)) {
+            _tmpFloat = null
+          } else {
+            _tmpFloat = _stmt.getDouble(_cursorIndexOfFloat).toFloat()
+          }
+          val _tmpDouble: Double?
+          if (_stmt.isNull(_cursorIndexOfDouble)) {
+            _tmpDouble = null
+          } else {
+            _tmpDouble = _stmt.getDouble(_cursorIndexOfDouble)
+          }
+          _result = MyEntity(_tmpInt,_tmpShort,_tmpByte,_tmpLong,_tmpChar,_tmpFloat,_tmpDouble)
         } else {
-          _tmpInt = _cursor.getInt(_cursorIndexOfInt)
+          error("The query result was empty, but expected a single row to return a NON-NULL object of type <MyEntity>.")
         }
-        val _tmpShort: Short?
-        if (_cursor.isNull(_cursorIndexOfShort)) {
-          _tmpShort = null
-        } else {
-          _tmpShort = _cursor.getShort(_cursorIndexOfShort)
-        }
-        val _tmpByte: Byte?
-        if (_cursor.isNull(_cursorIndexOfByte)) {
-          _tmpByte = null
-        } else {
-          _tmpByte = _cursor.getShort(_cursorIndexOfByte).toByte()
-        }
-        val _tmpLong: Long?
-        if (_cursor.isNull(_cursorIndexOfLong)) {
-          _tmpLong = null
-        } else {
-          _tmpLong = _cursor.getLong(_cursorIndexOfLong)
-        }
-        val _tmpChar: Char?
-        if (_cursor.isNull(_cursorIndexOfChar)) {
-          _tmpChar = null
-        } else {
-          _tmpChar = _cursor.getInt(_cursorIndexOfChar).toChar()
-        }
-        val _tmpFloat: Float?
-        if (_cursor.isNull(_cursorIndexOfFloat)) {
-          _tmpFloat = null
-        } else {
-          _tmpFloat = _cursor.getFloat(_cursorIndexOfFloat)
-        }
-        val _tmpDouble: Double?
-        if (_cursor.isNull(_cursorIndexOfDouble)) {
-          _tmpDouble = null
-        } else {
-          _tmpDouble = _cursor.getDouble(_cursorIndexOfDouble)
-        }
-        _result = MyEntity(_tmpInt,_tmpShort,_tmpByte,_tmpLong,_tmpChar,_tmpFloat,_tmpDouble)
-      } else {
-        error("The query result was empty, but expected a single row to return a NON-NULL object of type <MyEntity>.")
+        _result
+      } finally {
+        _stmt.close()
       }
-      return _result
-    } finally {
-      _cursor.close()
-      _statement.release()
     }
   }
 
   public companion object {
-    @JvmStatic
     public fun getRequiredConverters(): List<KClass<*>> = emptyList()
   }
 }

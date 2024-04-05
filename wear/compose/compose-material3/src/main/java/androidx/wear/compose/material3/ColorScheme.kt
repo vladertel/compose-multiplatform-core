@@ -195,6 +195,37 @@ public class ColorScheme(
             "onError=$onError" +
             ")"
     }
+
+    // Button Colors
+    internal var defaultButtonColorsCached: ButtonColors? = null
+    internal var defaultFilledButtonColorsCached: ButtonColors? = null
+    internal var defaultFilledTonalButtonColorsCached: ButtonColors? = null
+    internal var defaultOutlinedButtonColorsCached: ButtonColors? = null
+    internal var defaultChildButtonColorsCached: ButtonColors? = null
+
+    // Icon Button
+    internal var defaultIconButtonColorsCached: IconButtonColors? = null
+    internal var defaultFilledIconButtonColorsCached: IconButtonColors? = null
+    internal var defaultFilledTonalIconButtonColorsCached: IconButtonColors? = null
+    internal var defaultOutlinedIconButtonColorsCached: IconButtonColors? = null
+
+    // Text Button
+    internal var defaultTextButtonColorsCached: TextButtonColors? = null
+    internal var defaultFilledTextButtonColorsCached: TextButtonColors? = null
+    internal var defaultFilledTonalTextButtonColorsCached: TextButtonColors? = null
+    internal var defaultOutlinedTextButtonColorsCached: TextButtonColors? = null
+
+    // Card
+    internal var defaultCardColorsCached: CardColors? = null
+    internal var defaultOutlinedCardColorsCached: CardColors? = null
+
+    // Toggle Button
+    internal var defaultToggleButtonColorsCached: ToggleButtonColors? = null
+    internal var defaultSplitToggleButtonColorsCached: SplitToggleButtonColors? = null
+
+    // Radio Button
+    internal var defaultRadioButtonColorsCached: RadioButtonColors? = null
+    internal var defaultSplitRadioButtonColorsCached: SplitRadioButtonColors? = null
 }
 
 /**
@@ -302,7 +333,6 @@ internal val LocalColorScheme = staticCompositionLocalOf<ColorScheme> { ColorSch
  * Convert given color to disabled color.
  * @param disabledAlpha Alpha used to represent disabled colors.
  */
-@Composable
 internal fun Color.toDisabledColor(disabledAlpha: Float = DisabledContentAlpha) =
     this.copy(alpha = this.alpha * disabledAlpha)
 

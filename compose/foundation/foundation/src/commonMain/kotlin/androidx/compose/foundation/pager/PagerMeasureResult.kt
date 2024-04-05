@@ -16,14 +16,12 @@
 
 package androidx.compose.foundation.pager
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastForEach
 
-@OptIn(ExperimentalFoundationApi::class)
 internal class PagerMeasureResult(
     override val visiblePagesInfo: List<MeasuredPage>,
     override val pageSize: Int,
@@ -43,6 +41,8 @@ internal class PagerMeasureResult(
     measureResult: MeasureResult,
     /** True when extra remeasure is required. */
     val remeasureNeeded: Boolean,
+    val extraPagesBefore: List<MeasuredPage> = emptyList(),
+    val extraPagesAfter: List<MeasuredPage> = emptyList()
 ) : PagerLayoutInfo, MeasureResult by measureResult {
     override val viewportSize: IntSize
         get() = IntSize(width, height)
@@ -86,8 +86,11 @@ internal class PagerMeasureResult(
             return false
         }
 
-        val first = visiblePagesInfo.first()
-        val last = visiblePagesInfo.last()
+        val first =
+            if (extraPagesBefore.isEmpty()) visiblePagesInfo.first() else extraPagesBefore.first()
+        val last =
+            if (extraPagesAfter.isEmpty()) visiblePagesInfo.last() else extraPagesAfter.last()
+
         val canApply = if (delta < 0) {
             // scrolling forward
             val deltaToFirstItemChange =
@@ -109,8 +112,14 @@ internal class PagerMeasureResult(
             visiblePagesInfo.fastForEach {
                 it.applyScrollDelta(delta)
             }
+            extraPagesBefore.fastForEach {
+                it.applyScrollDelta(delta)
+            }
+            extraPagesAfter.fastForEach {
+                it.applyScrollDelta(delta)
+            }
             if (!canScrollForward && delta > 0) {
-                // we scrolled backward, so now we can scroll forward
+                // we scrolled backward, so now we can scroll forward.
                 canScrollForward = true
             }
             true

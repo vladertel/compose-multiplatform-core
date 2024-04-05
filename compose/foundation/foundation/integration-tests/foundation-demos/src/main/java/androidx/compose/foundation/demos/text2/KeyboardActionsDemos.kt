@@ -21,14 +21,15 @@ import androidx.compose.foundation.demos.text.TagLine
 import androidx.compose.foundation.demos.text.fontSize8
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text2.BasicTextField2
-import androidx.compose.foundation.text2.input.TextFieldLineLimits
-import androidx.compose.foundation.text2.input.TextFieldState
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.Checkbox
 import androidx.compose.material.Snackbar
 import androidx.compose.material.SnackbarDefaults
@@ -53,7 +54,7 @@ import kotlinx.coroutines.launch
 fun KeyboardActionsDemos() {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    Box {
+    Box(Modifier.imePadding()) {
         var executeDefaultActions by remember { mutableStateOf(true) }
         val onImeAction: KeyboardActionScope.(ImeAction) -> Unit = remember(executeDefaultActions) {
             {
@@ -130,7 +131,7 @@ private fun KeyboardActionDemoItem(
 ) {
     TagLine(tag = "Ime Action: $imeAction, singleLine: $singleLine")
     val state = remember { TextFieldState() }
-    BasicTextField2(
+    BasicTextField(
         modifier = demoTextFieldModifiers,
         state = state,
         keyboardOptions = KeyboardOptions(

@@ -22,18 +22,29 @@ import androidx.privacysandbox.sdkruntime.core.AppOwnedSdkSandboxInterfaceCompat
 import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException
 import androidx.privacysandbox.sdkruntime.core.SandboxedSdkCompat
 import androidx.privacysandbox.sdkruntime.core.activity.SdkSandboxActivityHandlerCompat
+import androidx.privacysandbox.sdkruntime.core.controller.LoadSdkCallback
 import androidx.privacysandbox.sdkruntime.core.controller.SdkSandboxControllerCompat
+import java.util.concurrent.Executor
 
 /**
  * NoOp implementation for cases when [SdkSandboxControllerCompat] not supported.
  */
 internal class NoOpImpl : SdkSandboxControllerCompat.SandboxControllerImpl {
 
-    override suspend fun loadSdk(sdkName: String, params: Bundle): SandboxedSdkCompat {
-        throw LoadSdkCompatException(
-            LoadSdkCompatException.LOAD_SDK_NOT_FOUND,
-            "Loading SDK not supported on this device"
-        )
+    override fun loadSdk(
+        sdkName: String,
+        params: Bundle,
+        executor: Executor,
+        callback: LoadSdkCallback
+    ) {
+        executor.execute {
+            callback.onError(
+                LoadSdkCompatException(
+                    LoadSdkCompatException.LOAD_SDK_NOT_FOUND,
+                    "Loading SDK not supported on this device"
+                )
+            )
+        }
     }
 
     override fun getSandboxedSdks(): List<SandboxedSdkCompat> = emptyList()

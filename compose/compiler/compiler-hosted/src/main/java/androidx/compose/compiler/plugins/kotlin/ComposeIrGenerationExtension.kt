@@ -59,6 +59,7 @@ class ComposeIrGenerationExtension(
     private val sourceInformationEnabled: Boolean = true,
     private val traceMarkersEnabled: Boolean = true,
     private val intrinsicRememberEnabled: Boolean = false,
+    private val nonSkippingGroupOptimizationEnabled: Boolean = false,
     private val decoysEnabled: Boolean = false,
     private val metricsDestination: String? = null,
     private val reportsDestination: String? = null,
@@ -149,7 +150,8 @@ class ComposeIrGenerationExtension(
             metrics,
             stabilityInferencer,
             strongSkippingEnabled,
-            intrinsicRememberEnabled
+            intrinsicRememberEnabled,
+            nonSkippingGroupOptimizationEnabled,
         ).lower(moduleFragment)
 
         if (!useK2) {
@@ -225,6 +227,7 @@ class ComposeIrGenerationExtension(
             sourceInformationEnabled,
             traceMarkersEnabled,
             intrinsicRememberEnabled,
+            nonSkippingGroupOptimizationEnabled,
             strongSkippingEnabled
         ).lower(moduleFragment)
 

@@ -32,6 +32,7 @@ import android.database.Cursor;
 
 import androidx.annotation.NonNull;
 import androidx.room.Room;
+import androidx.room.RoomDatabase;
 import androidx.room.migration.Migration;
 import androidx.room.migration.bundle.SchemaBundle;
 import androidx.room.testing.MigrationTestHelper;
@@ -139,7 +140,44 @@ public class MigrationTest {
 
     @Test
     public void addTableFailure() throws IOException {
-        testFailure(1, 2);
+        String errorMsg = """
+                Migration didn't properly handle:  Entity2
+
+                Expected:
+
+                TableInfo {
+                    name = 'Entity2',
+                    columns = {   \s
+                        Column {
+                           name = 'id',
+                           type = 'INTEGER',
+                           affinity = '3',
+                           notNull = 'true',
+                           primaryKeyPosition = '1',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'name',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = 'undefined'
+                        }
+                    },
+                    foreignKeys = { }
+                    indices = { }
+                }
+
+                Found:
+
+                TableInfo {
+                    name = 'Entity2',
+                    columns = { }
+                    foreignKeys = { }
+                    indices = { }
+                }""";
+        testFailure(1, 2, errorMsg);
     }
 
     @Test
@@ -177,7 +215,69 @@ public class MigrationTest {
 
     @Test
     public void failedToRemoveColumn() throws IOException {
-        testFailure(4, 5);
+        String errorMsg = """
+                Migration didn't properly handle:  Entity3
+
+                Expected:
+
+                TableInfo {
+                    name = 'Entity3',
+                    columns = {   \s
+                        Column {
+                           name = 'id',
+                           type = 'INTEGER',
+                           affinity = '3',
+                           notNull = 'true',
+                           primaryKeyPosition = '1',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'name',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = 'undefined'
+                        }
+                    },
+                    foreignKeys = { }
+                    indices = { }
+                }
+
+                Found:
+
+                TableInfo {
+                    name = 'Entity3',
+                    columns = {   \s
+                        Column {
+                           name = 'id',
+                           type = 'INTEGER',
+                           affinity = '3',
+                           notNull = 'true',
+                           primaryKeyPosition = '1',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'name',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'removedInV5',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = 'undefined'
+                        }
+                    },
+                    foreignKeys = { }
+                    indices = { }
+                }""";
+        testFailure(4, 5, errorMsg);
     }
 
     @Test
@@ -200,7 +300,8 @@ public class MigrationTest {
 
     @Test
     public void failedToDropTable() throws IOException {
-        testFailure(5, 6);
+        String errorMsg = "Migration didn't properly handle: Unexpected table Entity3";
+        testFailure(5, 6, errorMsg);
     }
 
     @Test
@@ -259,7 +360,22 @@ public class MigrationTest {
 
     @Test
     public void addViewFailure() throws IOException {
-        testFailure(7, 8);
+        String sql = "CREATE VIEW `View1` AS SELECT Entity4.id, Entity4.name, "
+                     + "Entity1.id AS entity1Id FROM Entity4 INNER JOIN Entity1 "
+                     + "ON Entity4.name = Entity1.name";
+        String errorMsg = ("""
+                Migration didn't properly handle:  View1
+
+                Expected: ViewInfo {
+                   name = 'View1',
+                   sql = '$sql'
+                }
+
+                Found: ViewInfo {
+                   name = 'View1',
+                   sql = 'null'
+                }""").replace("$sql", sql);
+        testFailure(7, 8, errorMsg);
     }
 
     @Test
@@ -298,7 +414,93 @@ public class MigrationTest {
 
     @Test
     public void addDefaultValueFailure() throws IOException {
-        testFailure(10, 11);
+        String errorMsg = """
+                Migration didn't properly handle:  Entity2
+
+                Expected:
+
+                TableInfo {
+                    name = 'Entity2',
+                    columns = {   \s
+                        Column {
+                           name = 'addedInV3',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'addedInV9',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'id',
+                           type = 'INTEGER',
+                           affinity = '3',
+                           notNull = 'true',
+                           primaryKeyPosition = '1',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'name',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = ''Unknown''
+                        }
+                    },
+                    foreignKeys = { }
+                    indices = { }
+                }
+
+                Found:
+
+                TableInfo {
+                    name = 'Entity2',
+                    columns = {   \s
+                        Column {
+                           name = 'addedInV3',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'addedInV9',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'id',
+                           type = 'INTEGER',
+                           affinity = '3',
+                           notNull = 'true',
+                           primaryKeyPosition = '1',
+                           defaultValue = 'undefined'
+                        },
+                        Column {
+                           name = 'name',
+                           type = 'TEXT',
+                           affinity = '2',
+                           notNull = 'false',
+                           primaryKeyPosition = '0',
+                           defaultValue = 'undefined'
+                        }
+                    },
+                    foreignKeys = { }
+                    indices = { }
+                }""";
+        testFailure(10, 11, errorMsg);
     }
 
     @Test
@@ -629,9 +831,17 @@ public class MigrationTest {
         SupportSQLiteDatabase database = helper.createDatabase(TEST_DB, MigrationDb.MAX_VERSION);
         database.close();
 
+        final boolean[] onDestructiveMigrationInvoked = { false };
         Context targetContext = ApplicationProvider.getApplicationContext();
         MigrationDb db = Room.databaseBuilder(targetContext, MigrationDb.class, TEST_DB)
                 .fallbackToDestructiveMigration(true)
+                .addCallback(new RoomDatabase.Callback() {
+                    @Override
+                    public void onDestructiveMigration(@NonNull SupportSQLiteDatabase db) {
+                        super.onDestructiveMigration(db);
+                        onDestructiveMigrationInvoked[0] = true;
+                    }
+                })
                 .build();
         Set<String> tableNames = new HashSet<>();
         Cursor c = db.query("SELECT name FROM sqlite_master WHERE type = 'table'", new Object[0]);
@@ -644,9 +854,11 @@ public class MigrationTest {
         assertThat(tableNames.contains("Extra"), is(false));
         // Android special table is present
         assertThat(tableNames.contains("android_metadata"), is(true));
+
+        assertThat(onDestructiveMigrationInvoked[0], is(true));
     }
 
-    private void testFailure(int startVersion, int endVersion) throws IOException {
+    private void testFailure(int startVersion, int endVersion, String errorMsg) throws IOException {
         final SupportSQLiteDatabase db = helper.createDatabase(TEST_DB, startVersion);
         db.close();
         Throwable throwable = null;
@@ -658,7 +870,7 @@ public class MigrationTest {
         }
         assertThat(throwable, instanceOf(IllegalStateException.class));
         //noinspection ConstantConditions
-        assertThat(throwable.getMessage(), containsString("Migration didn't properly handle"));
+        assertThat(throwable.getMessage(), is(errorMsg));
     }
 
     private static final Migration MIGRATION_1_2 = new Migration(1, 2) {

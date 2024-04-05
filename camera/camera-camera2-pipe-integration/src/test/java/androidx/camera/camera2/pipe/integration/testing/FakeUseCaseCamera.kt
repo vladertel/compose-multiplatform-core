@@ -36,10 +36,12 @@ import androidx.camera.camera2.pipe.integration.config.UseCaseCameraConfig
 import androidx.camera.camera2.pipe.integration.config.UseCaseGraphConfig
 import androidx.camera.camera2.pipe.integration.impl.UseCaseCamera
 import androidx.camera.camera2.pipe.integration.impl.UseCaseCameraRequestControl
+import androidx.camera.core.ImageCapture
 import androidx.camera.core.UseCase
 import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.Config
 import androidx.camera.core.impl.DeferrableSurface
+import androidx.camera.core.impl.SessionConfig
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -110,7 +112,8 @@ open class FakeUseCaseCameraRequestControl : UseCaseCameraRequestControl {
         tags: Map<String, Any>,
         streams: Set<StreamId>?,
         template: RequestTemplate?,
-        listeners: Set<Request.Listener>
+        listeners: Set<Request.Listener>,
+        sessionConfig: SessionConfig?,
     ): Deferred<Unit> {
         setConfigCalls.add(RequestParameters(type, config, tags))
         return CompletableDeferred(Unit)
@@ -162,7 +165,7 @@ open class FakeUseCaseCameraRequestControl : UseCaseCameraRequestControl {
         captureSequence: List<CaptureConfig>,
         captureMode: Int,
         flashType: Int,
-        flashMode: Int,
+        @ImageCapture.FlashMode flashMode: Int,
     ): List<Deferred<Void?>> {
         return captureSequence.map {
             CompletableDeferred<Void?>(null).apply { complete(null) }

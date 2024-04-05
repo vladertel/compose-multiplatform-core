@@ -70,7 +70,6 @@ package androidx.room {
     method public void close();
     method public androidx.sqlite.db.SupportSQLiteStatement compileStatement(String sql);
     method protected abstract androidx.room.InvalidationTracker createInvalidationTracker();
-    method protected androidx.room.RoomOpenDelegateMarker createOpenDelegate();
     method @Deprecated protected androidx.sqlite.db.SupportSQLiteOpenHelper createOpenHelper(androidx.room.DatabaseConfiguration config);
     method @Deprecated public void endTransaction();
     method public androidx.room.InvalidationTracker getInvalidationTracker();
@@ -81,8 +80,7 @@ package androidx.room {
     method @Deprecated public <T> T? getTypeConverter(Class<T> klass);
     method public boolean inTransaction();
     method @CallSuper public void init(androidx.room.DatabaseConfiguration configuration);
-    method protected void internalInitInvalidationTracker(androidx.sqlite.db.SupportSQLiteDatabase db);
-    method protected void internalInitInvalidationTracker(androidx.sqlite.SQLiteConnection connection);
+    method @Deprecated protected void internalInitInvalidationTracker(androidx.sqlite.db.SupportSQLiteDatabase db);
     method public boolean isOpen();
     method public android.database.Cursor query(androidx.sqlite.db.SupportSQLiteQuery query);
     method public android.database.Cursor query(androidx.sqlite.db.SupportSQLiteQuery query, optional android.os.CancellationSignal? signal);
@@ -134,16 +132,17 @@ package androidx.room {
   public abstract static class RoomDatabase.Callback {
     ctor public RoomDatabase.Callback();
     method public void onCreate(androidx.sqlite.db.SupportSQLiteDatabase db);
+    method public void onCreate(androidx.sqlite.SQLiteConnection connection);
     method public void onDestructiveMigration(androidx.sqlite.db.SupportSQLiteDatabase db);
+    method public void onDestructiveMigration(androidx.sqlite.SQLiteConnection connection);
     method public void onOpen(androidx.sqlite.db.SupportSQLiteDatabase db);
+    method public void onOpen(androidx.sqlite.SQLiteConnection connection);
   }
 
   public static final class RoomDatabase.Companion {
   }
 
   public enum RoomDatabase.JournalMode {
-    method public static androidx.room.RoomDatabase.JournalMode valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.room.RoomDatabase.JournalMode[] values();
     enum_constant public static final androidx.room.RoomDatabase.JournalMode AUTOMATIC;
     enum_constant public static final androidx.room.RoomDatabase.JournalMode TRUNCATE;
     enum_constant public static final androidx.room.RoomDatabase.JournalMode WRITE_AHEAD_LOGGING;
@@ -186,8 +185,6 @@ package androidx.room {
   }
 
   public enum Transactor.SQLiteTransactionType {
-    method public static androidx.room.Transactor.SQLiteTransactionType valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.room.Transactor.SQLiteTransactionType[] values();
     enum_constant public static final androidx.room.Transactor.SQLiteTransactionType DEFERRED;
     enum_constant public static final androidx.room.Transactor.SQLiteTransactionType EXCLUSIVE;
     enum_constant public static final androidx.room.Transactor.SQLiteTransactionType IMMEDIATE;

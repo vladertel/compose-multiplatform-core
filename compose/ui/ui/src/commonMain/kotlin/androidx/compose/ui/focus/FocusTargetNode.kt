@@ -18,11 +18,13 @@ package androidx.compose.ui.focus
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection.Companion.Exit
 import androidx.compose.ui.focus.FocusRequester.Companion.Default
 import androidx.compose.ui.focus.FocusStateImpl.Active
 import androidx.compose.ui.focus.FocusStateImpl.ActiveParent
 import androidx.compose.ui.focus.FocusStateImpl.Captured
 import androidx.compose.ui.focus.FocusStateImpl.Inactive
+import androidx.compose.ui.internal.checkPreconditionNotNull
 import androidx.compose.ui.layout.BeyondBoundsLayout
 import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.modifier.ModifierLocalModifierNode
@@ -88,7 +90,8 @@ internal class FocusTargetNode :
                 requireOwner().focusOwner.clearFocus(
                     force = true,
                     refreshFocusEvents = true,
-                    clearOwnerFocus = false
+                    clearOwnerFocus = false,
+                    focusDirection = @OptIn(ExperimentalComposeUiApi::class) Exit
                 )
                 // We don't clear the owner's focus yet, because this could trigger an initial
                 // focus scenario after the focus is cleared. Instead, we schedule invalidation
@@ -174,7 +177,7 @@ internal class FocusTargetNode :
 
     internal fun commitFocusState() {
         with(requireTransactionManager()) {
-            committedFocusState = checkNotNull(uncommittedFocusState) {
+            committedFocusState = checkPreconditionNotNull(uncommittedFocusState) {
                 "committing a node that was not updated in the current transaction"
             }
         }

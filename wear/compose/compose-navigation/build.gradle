@@ -31,13 +31,12 @@ plugins {
 }
 
 dependencies {
-
-    api(project(":compose:ui:ui"))
-    api(project(":compose:runtime:runtime"))
+    api("androidx.compose.ui:ui:1.6.0")
+    api("androidx.compose.runtime:runtime:1.6.0")
     api("androidx.navigation:navigation-runtime:2.6.0")
     api(project(":wear:compose:compose-material"))
     api("androidx.activity:activity-compose:1.7.0")
-    api("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.0")
+    api("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
     implementation(libs.kotlinStdlib)
     implementation("androidx.navigation:navigation-common:2.6.0")
@@ -51,10 +50,8 @@ dependencies {
     androidTestImplementation(project(":wear:compose:compose-material"))
     androidTestImplementation(project(":wear:compose:compose-navigation-samples"))
     androidTestImplementation(libs.truth)
-    androidTestImplementation("androidx.lifecycle:lifecycle-runtime-testing:2.6.0")
+    androidTestImplementation("androidx.lifecycle:lifecycle-runtime-testing:2.7.0")
     androidTestImplementation("androidx.navigation:navigation-testing:2.6.0")
-
-    samples(project(":wear:compose:compose-navigation-samples"))
 }
 
 android {
@@ -71,13 +68,13 @@ android {
 
 androidx {
     name = "Android Wear Compose Navigation"
-    type = LibraryType.PUBLISHED_LIBRARY
+    type = LibraryType.PUBLISHED_KOTLIN_ONLY_LIBRARY
     inceptionYear = "2021"
     description = "WearOS Compose Navigation Library. This library makes it easier for developers" +
             "to write Jetpack Compose applications for Wearable devices by providing " +
             "functionality to support navigation. " +
             "It builds upon the Jetpack Compose libraries."
-    targetsJavaConsumers = false
     metalavaK2UastEnabled = true
+    samples(project(":wear:compose:compose-navigation-samples"))
 }
 

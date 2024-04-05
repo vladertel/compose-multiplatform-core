@@ -302,6 +302,9 @@ val VerticalPagerContent: @Composable PagerRemeasureTestCase.(
     beyondBoundsPageCount: Int
 ) -> Unit =
     { state, useKeys, beyondBoundsPageCount ->
+        val flingBehavior = rememberSnapFlingBehavior(
+            snapLayoutInfoProvider = NoOpInfoProvider
+        )
         VerticalPager(
             state = state, modifier = Modifier
                 .requiredHeight(400.dp)
@@ -313,7 +316,7 @@ val VerticalPagerContent: @Composable PagerRemeasureTestCase.(
             },
             pageSize = PageSize.Fixed(30.dp),
             outOfBoundsPageCount = beyondBoundsPageCount,
-            flingBehavior = rememberSnapFlingBehavior(snapLayoutInfoProvider = NoOpInfoProvider)
+            flingBehavior = flingBehavior
         ) {
             Box(Modifier.fillMaxSize())
         }
@@ -326,6 +329,9 @@ val HorizontalPagerContent: @Composable PagerRemeasureTestCase.(
     beyondBoundsPageCount: Int
 ) -> Unit =
     { state, useKeys, beyondBoundsPageCount ->
+        val flingBehavior = rememberSnapFlingBehavior(
+            snapLayoutInfoProvider = NoOpInfoProvider
+        )
         HorizontalPager(
             state = state, modifier = Modifier
                 .requiredWidth(400.dp)
@@ -337,7 +343,7 @@ val HorizontalPagerContent: @Composable PagerRemeasureTestCase.(
             },
             pageSize = PageSize.Fixed(30.dp),
             outOfBoundsPageCount = beyondBoundsPageCount,
-            flingBehavior = rememberSnapFlingBehavior(snapLayoutInfoProvider = NoOpInfoProvider)
+            flingBehavior = flingBehavior
         ) {
             Box(Modifier.fillMaxSize())
         }

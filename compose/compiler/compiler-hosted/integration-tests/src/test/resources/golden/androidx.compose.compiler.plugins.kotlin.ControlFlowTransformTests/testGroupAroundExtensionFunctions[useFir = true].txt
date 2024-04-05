@@ -35,24 +35,23 @@ fun Test(start: Int, end: Int, %composer: Composer?, %changed: Int) {
       traceEventStart(<>, %dirty, -1, <>)
     }
     val a = <block>{
-      %composer.startReplaceableGroup(<>)
-      sourceInformation(%composer, "CC(remember):Test.kt#9igjgp")
+      sourceInformationMarkerStart(%composer, <>, "CC(remember):Test.kt#9igjgp")
       val tmp0_group = %composer.cache(false) {
         A()
       }
-      %composer.endReplaceableGroup()
+      sourceInformationMarkerEnd(%composer)
       tmp0_group
     }
     val <iterator> = start until end.iterator()
     while (<iterator>.hasNext()) {
       val i = <iterator>.next()
       val b = a.get(bKey, %composer, 0b00110110)
-      %composer.startReplaceableGroup(<>)
+      %composer.startReplaceGroup(<>)
       sourceInformation(%composer, "<get(cK...>")
       if (i == 0b0010) {
         a.get(cKey, %composer, 0b00110110)
       }
-      %composer.endReplaceableGroup()
+      %composer.endReplaceGroup()
     }
     if (isTraceInProgress()) {
       traceEventEnd()

@@ -7,8 +7,6 @@ package androidx.work {
   }
 
   public enum BackoffPolicy {
-    method public static androidx.work.BackoffPolicy valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.work.BackoffPolicy[] values();
     enum_constant public static final androidx.work.BackoffPolicy EXPONENTIAL;
     enum_constant public static final androidx.work.BackoffPolicy LINEAR;
   }
@@ -29,7 +27,10 @@ package androidx.work {
     method public androidx.work.RunnableScheduler getRunnableScheduler();
     method public androidx.core.util.Consumer<java.lang.Throwable>? getSchedulingExceptionHandler();
     method public java.util.concurrent.Executor getTaskExecutor();
+    method public kotlin.coroutines.CoroutineContext getWorkerCoroutineContext();
+    method public androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo>? getWorkerExecutionExceptionHandler();
     method public androidx.work.WorkerFactory getWorkerFactory();
+    method public androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo>? getWorkerInitializationExceptionHandler();
     property public final androidx.work.Clock clock;
     property public final int contentUriTriggerWorkersLimit;
     property public final String? defaultProcessName;
@@ -41,7 +42,10 @@ package androidx.work {
     property public final androidx.work.RunnableScheduler runnableScheduler;
     property public final androidx.core.util.Consumer<java.lang.Throwable>? schedulingExceptionHandler;
     property public final java.util.concurrent.Executor taskExecutor;
+    property public final kotlin.coroutines.CoroutineContext workerCoroutineContext;
+    property public final androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo>? workerExecutionExceptionHandler;
     property public final androidx.work.WorkerFactory workerFactory;
+    property public final androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo>? workerInitializationExceptionHandler;
     field public static final androidx.work.Configuration.Companion Companion;
     field public static final int MIN_SCHEDULER_LIMIT = 20; // 0x14
   }
@@ -61,7 +65,10 @@ package androidx.work {
     method public androidx.work.Configuration.Builder setRunnableScheduler(androidx.work.RunnableScheduler runnableScheduler);
     method public androidx.work.Configuration.Builder setSchedulingExceptionHandler(androidx.core.util.Consumer<java.lang.Throwable> schedulingExceptionHandler);
     method public androidx.work.Configuration.Builder setTaskExecutor(java.util.concurrent.Executor taskExecutor);
+    method public androidx.work.Configuration.Builder setWorkerCoroutineContext(kotlinx.coroutines.CoroutineDispatcher dispatcher);
+    method public androidx.work.Configuration.Builder setWorkerExecutionExceptionHandler(androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo> workerExceptionHandler);
     method public androidx.work.Configuration.Builder setWorkerFactory(androidx.work.WorkerFactory workerFactory);
+    method public androidx.work.Configuration.Builder setWorkerInitializationExceptionHandler(androidx.core.util.Consumer<androidx.work.WorkerExceptionInfo> workerExceptionHandler);
   }
 
   public static final class Configuration.Companion {
@@ -198,8 +205,6 @@ package androidx.work {
   }
 
   public enum ExistingPeriodicWorkPolicy {
-    method public static androidx.work.ExistingPeriodicWorkPolicy valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.work.ExistingPeriodicWorkPolicy[] values();
     enum_constant public static final androidx.work.ExistingPeriodicWorkPolicy CANCEL_AND_REENQUEUE;
     enum_constant public static final androidx.work.ExistingPeriodicWorkPolicy KEEP;
     enum_constant @Deprecated public static final androidx.work.ExistingPeriodicWorkPolicy REPLACE;
@@ -207,8 +212,6 @@ package androidx.work {
   }
 
   public enum ExistingWorkPolicy {
-    method public static androidx.work.ExistingWorkPolicy valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.work.ExistingWorkPolicy[] values();
     enum_constant public static final androidx.work.ExistingWorkPolicy APPEND;
     enum_constant public static final androidx.work.ExistingWorkPolicy APPEND_OR_REPLACE;
     enum_constant public static final androidx.work.ExistingWorkPolicy KEEP;
@@ -266,8 +269,6 @@ package androidx.work {
   }
 
   public enum NetworkType {
-    method public static androidx.work.NetworkType valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.work.NetworkType[] values();
     enum_constant public static final androidx.work.NetworkType CONNECTED;
     enum_constant public static final androidx.work.NetworkType METERED;
     enum_constant public static final androidx.work.NetworkType NOT_REQUIRED;
@@ -321,8 +322,6 @@ package androidx.work {
   }
 
   public enum OutOfQuotaPolicy {
-    method public static androidx.work.OutOfQuotaPolicy valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.work.OutOfQuotaPolicy[] values();
     enum_constant public static final androidx.work.OutOfQuotaPolicy DROP_WORK_REQUEST;
     enum_constant public static final androidx.work.OutOfQuotaPolicy RUN_AS_NON_EXPEDITED_WORK_REQUEST;
   }
@@ -443,9 +442,7 @@ package androidx.work {
   }
 
   public enum WorkInfo.State {
-    method public final boolean isFinished();
-    method public static androidx.work.WorkInfo.State valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.work.WorkInfo.State[] values();
+    method public boolean isFinished();
     property public final boolean isFinished;
     enum_constant public static final androidx.work.WorkInfo.State BLOCKED;
     enum_constant public static final androidx.work.WorkInfo.State CANCELLED;
@@ -588,6 +585,16 @@ package androidx.work {
     method @WorkerThread public abstract androidx.work.ListenableWorker.Result doWork();
     method @WorkerThread public androidx.work.ForegroundInfo getForegroundInfo();
     method public final com.google.common.util.concurrent.ListenableFuture<androidx.work.ListenableWorker.Result> startWork();
+  }
+
+  public final class WorkerExceptionInfo {
+    ctor public WorkerExceptionInfo(String workerClassName, androidx.work.WorkerParameters workerParameters, Throwable throwable);
+    method public Throwable getThrowable();
+    method public String getWorkerClassName();
+    method public androidx.work.WorkerParameters getWorkerParameters();
+    property public final Throwable throwable;
+    property public final String workerClassName;
+    property public final androidx.work.WorkerParameters workerParameters;
   }
 
   public abstract class WorkerFactory {

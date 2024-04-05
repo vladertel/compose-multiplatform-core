@@ -31,7 +31,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -194,10 +193,10 @@ fun Surface(
  * in a darker color in light theme and lighter color in dark theme.
  * @param shadowElevation The size of the shadow below the surface. Note that It will not affect z
  * index of the Surface. If you want to change the drawing order you can use `Modifier.zIndex`.
- * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
- * for this Surface. You can create and pass in your own remembered [MutableInteractionSource] if
- * you want to observe [Interaction]s and customize the appearance / behavior of this Surface in
- * different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this surface. You can use this to change the surface's
+ * appearance or preview the surface in different states. Note that if `null` is provided,
+ * interactions will still happen internally.
  */
 @Composable
 @NonRestartableComposable
@@ -211,7 +210,7 @@ fun Surface(
     tonalElevation: Dp = 0.dp,
     shadowElevation: Dp = 0.dp,
     border: BorderStroke? = null,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     content: @Composable () -> Unit
 ) {
     val absoluteElevation = LocalAbsoluteTonalElevation.current + tonalElevation
@@ -219,7 +218,6 @@ fun Surface(
         LocalContentColor provides contentColor,
         LocalAbsoluteTonalElevation provides absoluteElevation
     ) {
-        @Suppress("DEPRECATION_ERROR")
         Box(
             modifier = modifier
                 .minimumInteractiveComponentSize()
@@ -234,7 +232,7 @@ fun Surface(
                 )
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = androidx.compose.material.ripple.rememberRipple(),
+                    indication = rippleOrFallbackImplementation(),
                     enabled = enabled,
                     onClick = onClick
                 ),
@@ -303,10 +301,10 @@ fun Surface(
  * in a darker color in light theme and lighter color in dark theme.
  * @param shadowElevation The size of the shadow below the surface. Note that It will not affect z
  * index of the Surface. If you want to change the drawing order you can use `Modifier.zIndex`.
- * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
- * for this Surface. You can create and pass in your own remembered [MutableInteractionSource] if
- * you want to observe [Interaction]s and customize the appearance / behavior of this Surface in
- * different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this surface. You can use this to change the surface's
+ * appearance or preview the surface in different states. Note that if `null` is provided,
+ * interactions will still happen internally.
  */
 @Composable
 @NonRestartableComposable
@@ -321,7 +319,7 @@ fun Surface(
     tonalElevation: Dp = 0.dp,
     shadowElevation: Dp = 0.dp,
     border: BorderStroke? = null,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     content: @Composable () -> Unit
 ) {
     val absoluteElevation = LocalAbsoluteTonalElevation.current + tonalElevation
@@ -329,7 +327,6 @@ fun Surface(
         LocalContentColor provides contentColor,
         LocalAbsoluteTonalElevation provides absoluteElevation
     ) {
-        @Suppress("DEPRECATION_ERROR")
         Box(
             modifier = modifier
                 .minimumInteractiveComponentSize()
@@ -345,7 +342,7 @@ fun Surface(
                 .selectable(
                     selected = selected,
                     interactionSource = interactionSource,
-                    indication = androidx.compose.material.ripple.rememberRipple(),
+                    indication = rippleOrFallbackImplementation(),
                     enabled = enabled,
                     onClick = onClick
                 ),
@@ -414,10 +411,10 @@ fun Surface(
  * in a darker color in light theme and lighter color in dark theme.
  * @param shadowElevation The size of the shadow below the surface. Note that It will not affect z
  * index of the Surface. If you want to change the drawing order you can use `Modifier.zIndex`.
- * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
- * for this Surface. You can create and pass in your own remembered [MutableInteractionSource] if
- * you want to observe [Interaction]s and customize the appearance / behavior of this Surface in
- * different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this surface. You can use this to change the surface's
+ * appearance or preview the surface in different states. Note that if `null` is provided,
+ * interactions will still happen internally.
  */
 @Composable
 @NonRestartableComposable
@@ -432,7 +429,7 @@ fun Surface(
     tonalElevation: Dp = 0.dp,
     shadowElevation: Dp = 0.dp,
     border: BorderStroke? = null,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     content: @Composable () -> Unit
 ) {
     val absoluteElevation = LocalAbsoluteTonalElevation.current + tonalElevation
@@ -440,7 +437,6 @@ fun Surface(
         LocalContentColor provides contentColor,
         LocalAbsoluteTonalElevation provides absoluteElevation
     ) {
-        @Suppress("DEPRECATION_ERROR")
         Box(
             modifier = modifier
                 .minimumInteractiveComponentSize()
@@ -456,7 +452,7 @@ fun Surface(
                 .toggleable(
                     value = checked,
                     interactionSource = interactionSource,
-                    indication = androidx.compose.material.ripple.rememberRipple(),
+                    indication = rippleOrFallbackImplementation(),
                     enabled = enabled,
                     onValueChange = onCheckedChange
                 ),

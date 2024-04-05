@@ -1,10 +1,8 @@
-import android.database.Cursor
 import androidx.room.EntityInsertionAdapter
 import androidx.room.RoomDatabase
-import androidx.room.RoomSQLiteQuery
-import androidx.room.RoomSQLiteQuery.Companion.acquire
 import androidx.room.util.getColumnIndexOrThrow
-import androidx.room.util.query
+import androidx.room.util.performBlocking
+import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.db.SupportSQLiteStatement
 import javax.`annotation`.processing.Generated
 import kotlin.Boolean
@@ -12,7 +10,6 @@ import kotlin.Int
 import kotlin.String
 import kotlin.Suppress
 import kotlin.collections.List
-import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 @Generated(value = ["androidx.room.RoomProcessor"])
@@ -22,10 +19,10 @@ public class MyDao_Impl(
 ) : MyDao {
   private val __db: RoomDatabase
 
-  private val __insertionAdapterOfMyEntity: EntityInsertionAdapter<MyEntity>
+  private val __insertAdapterOfMyEntity: EntityInsertionAdapter<MyEntity>
   init {
     this.__db = __db
-    this.__insertionAdapterOfMyEntity = object : EntityInsertionAdapter<MyEntity>(__db) {
+    this.__insertAdapterOfMyEntity = object : EntityInsertionAdapter<MyEntity>(__db) {
       protected override fun createQuery(): String =
           "INSERT OR ABORT INTO `MyEntity` (`pk`,`boolean`,`nullableBoolean`) VALUES (?,?,?)"
 
@@ -48,7 +45,7 @@ public class MyDao_Impl(
     __db.assertNotSuspendingTransaction()
     __db.beginTransaction()
     try {
-      __insertionAdapterOfMyEntity.insert(item)
+      __insertAdapterOfMyEntity.insert(item)
       __db.setTransactionSuccessful()
     } finally {
       __db.endTransaction()
@@ -57,42 +54,40 @@ public class MyDao_Impl(
 
   public override fun getEntity(): MyEntity {
     val _sql: String = "SELECT * FROM MyEntity"
-    val _statement: RoomSQLiteQuery = acquire(_sql, 0)
-    __db.assertNotSuspendingTransaction()
-    val _cursor: Cursor = query(__db, _statement, false, null)
-    try {
-      val _cursorIndexOfPk: Int = getColumnIndexOrThrow(_cursor, "pk")
-      val _cursorIndexOfBoolean: Int = getColumnIndexOrThrow(_cursor, "boolean")
-      val _cursorIndexOfNullableBoolean: Int = getColumnIndexOrThrow(_cursor, "nullableBoolean")
-      val _result: MyEntity
-      if (_cursor.moveToFirst()) {
-        val _tmpPk: Int
-        _tmpPk = _cursor.getInt(_cursorIndexOfPk)
-        val _tmpBoolean: Boolean
-        val _tmp: Int
-        _tmp = _cursor.getInt(_cursorIndexOfBoolean)
-        _tmpBoolean = _tmp != 0
-        val _tmpNullableBoolean: Boolean?
-        val _tmp_1: Int?
-        if (_cursor.isNull(_cursorIndexOfNullableBoolean)) {
-          _tmp_1 = null
+    return performBlocking(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        val _cursorIndexOfPk: Int = getColumnIndexOrThrow(_stmt, "pk")
+        val _cursorIndexOfBoolean: Int = getColumnIndexOrThrow(_stmt, "boolean")
+        val _cursorIndexOfNullableBoolean: Int = getColumnIndexOrThrow(_stmt, "nullableBoolean")
+        val _result: MyEntity
+        if (_stmt.step()) {
+          val _tmpPk: Int
+          _tmpPk = _stmt.getLong(_cursorIndexOfPk).toInt()
+          val _tmpBoolean: Boolean
+          val _tmp: Int
+          _tmp = _stmt.getLong(_cursorIndexOfBoolean).toInt()
+          _tmpBoolean = _tmp != 0
+          val _tmpNullableBoolean: Boolean?
+          val _tmp_1: Int?
+          if (_stmt.isNull(_cursorIndexOfNullableBoolean)) {
+            _tmp_1 = null
+          } else {
+            _tmp_1 = _stmt.getLong(_cursorIndexOfNullableBoolean).toInt()
+          }
+          _tmpNullableBoolean = _tmp_1?.let { it != 0 }
+          _result = MyEntity(_tmpPk,_tmpBoolean,_tmpNullableBoolean)
         } else {
-          _tmp_1 = _cursor.getInt(_cursorIndexOfNullableBoolean)
+          error("The query result was empty, but expected a single row to return a NON-NULL object of type <MyEntity>.")
         }
-        _tmpNullableBoolean = _tmp_1?.let { it != 0 }
-        _result = MyEntity(_tmpPk,_tmpBoolean,_tmpNullableBoolean)
-      } else {
-        error("The query result was empty, but expected a single row to return a NON-NULL object of type <MyEntity>.")
+        _result
+      } finally {
+        _stmt.close()
       }
-      return _result
-    } finally {
-      _cursor.close()
-      _statement.release()
     }
   }
 
   public companion object {
-    @JvmStatic
     public fun getRequiredConverters(): List<KClass<*>> = emptyList()
   }
 }

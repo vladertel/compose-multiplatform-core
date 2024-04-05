@@ -38,10 +38,49 @@ class RoundedPolygon internal constructor(
      * A flattened version of the [Feature]s, as a List<Cubic>.
      */
     val cubics = buildList {
-        // Equivalent to `features.flatMap { it.cubics }` but without Iterator allocation.
-        for (i in features.indices) {
-            addAll(features[i].cubics)
+        // The first/last mechanism here ensures that the final anchor point in the shape
+        // exactly matches the first anchor point. There can be rendering artifacts introduced
+        // by those points being slightly off, even by much less than a pixel
+        var firstCubic: Cubic? = null
+        var lastCubic: Cubic? = null
+        var firstFeatureSplitStart: List<Cubic>? = null
+        var firstFeatureSplitEnd: List<Cubic>? = null
+        if (features.size > 0 && features[0].cubics.size == 3) {
+            val centerCubic = features[0].cubics[1]
+            val (start, end) = centerCubic.split(.5f)
+            firstFeatureSplitStart = mutableListOf(features[0].cubics[0], start)
+            firstFeatureSplitEnd = mutableListOf(end, features[0].cubics[2])
         }
+        // iterating one past the features list size allows us to insert the initial split
+        // cubic if it exists
+        for (i in 0..features.size) {
+            val featureCubics = if (i == 0 && firstFeatureSplitEnd != null) firstFeatureSplitEnd
+            else if (i == features.size) {
+                if (firstFeatureSplitStart != null) firstFeatureSplitStart
+                else break
+            } else features[i].cubics
+            for (j in featureCubics.indices) {
+                // Skip zero-length curves; they add nothing and can trigger rendering artifacts
+                val cubic = featureCubics[j]
+                if (!cubic.zeroLength()) {
+                    if (lastCubic != null) add(lastCubic)
+                    lastCubic = cubic
+                    if (firstCubic == null) firstCubic = cubic
+                } else {
+                    if (lastCubic != null) {
+                        // Dropping several zero-ish length curves in a row can lead to
+                        // enough discontinuity to throw an exception later, even though the
+                        // distances are quite small. Account for that by making the last
+                        // cubic use the latest anchor point, always.
+                        lastCubic.points[6] = cubic.anchor1X
+                        lastCubic.points[7] = cubic.anchor1Y
+                    }
+                }
+            }
+        }
+        if (lastCubic != null && firstCubic != null) add(Cubic(
+            lastCubic.anchor0X, lastCubic.anchor0Y, lastCubic.control0X, lastCubic.control0Y,
+            lastCubic.control1X, lastCubic.control1Y, firstCubic.anchor0X, firstCubic.anchor0Y))
     }
 
     init {
@@ -49,10 +88,10 @@ class RoundedPolygon internal constructor(
         debugLog("RoundedPolygon") { "Cubic-1 = $prevCubic" }
         for (index in cubics.indices) {
             val cubic = cubics[index]
+            debugLog("RoundedPolygon") { "Cubic = $cubic" }
             if (abs(cubic.anchor0X - prevCubic.anchor1X) > DistanceEpsilon ||
                 abs(cubic.anchor0Y - prevCubic.anchor1Y) > DistanceEpsilon
             ) {
-                debugLog("RoundedPolygon") { "Cubic = $cubic" }
                 debugLog("RoundedPolygon") {
                     "Ix: $index | (${cubic.anchor0X},${cubic.anchor0Y}) vs " +
                         "$prevCubic"
@@ -610,4 +649,21 @@ private class RoundedCorner(
         val k = num / den
         return p0 + d0 * k
     }
+}
+
+private fun verticesFromNumVerts(
+    numVertices: Int,
+    radius: Float,
+    centerX: Float,
+    centerY: Float
+): FloatArray {
+    val result = FloatArray(numVertices * 2)
+    var arrayIndex = 0
+    for (i in 0 until numVertices) {
+        val vertex = radialToCartesian(radius, (FloatPi / numVertices * 2 * i)) +
+            Point(centerX, centerY)
+        result[arrayIndex++] = vertex.x
+        result[arrayIndex++] = vertex.y
+    }
+    return result
 }

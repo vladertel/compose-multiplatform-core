@@ -137,62 +137,42 @@ internal sealed class SupportSQLiteStatement(
 
         override fun getColumnCount(): Int {
             throwIfClosed()
+            ensureCursor()
             return cursor?.columnCount ?: 0
         }
 
         override fun getColumnName(index: Int): String {
             throwIfClosed()
-            val c = throwIfNoRow()
+            ensureCursor()
+            val c = checkNotNull(cursor)
             throwIfInvalidColumn(c, index)
             return c.getColumnName(index)
         }
 
         override fun step(): Boolean {
             throwIfClosed()
-            if (cursor == null) {
-                cursor = db.query(
-                    object : SupportSQLiteQuery {
-                        override val sql: String
-                            get() = this@SupportAndroidSQLiteStatement.sql
-
-                        override fun bindTo(statement: SupportSQLiteProgram) {
-                            for (index in 1 until bindingTypes.size) {
-                                when (bindingTypes[index]) {
-                                    COLUMN_TYPE_LONG ->
-                                        statement.bindLong(index, longBindings[index])
-                                    COLUMN_TYPE_DOUBLE ->
-                                        statement.bindDouble(index, doubleBindings[index])
-                                    COLUMN_TYPE_STRING ->
-                                        statement.bindString(index, stringBindings[index]!!)
-                                    COLUMN_TYPE_BLOB ->
-                                        statement.bindBlob(index, blobBindings[index]!!)
-                                    COLUMN_TYPE_NULL ->
-                                        statement.bindNull(index)
-                                }
-                            }
-                        }
-
-                        override val argCount: Int
-                            get() = bindingTypes.size
-                    }
-                )
-            }
-            return requireNotNull(cursor).moveToNext()
+            ensureCursor()
+            return checkNotNull(cursor).moveToNext()
         }
 
         override fun reset() {
+            throwIfClosed()
+            cursor?.close()
+            cursor = null
+        }
+
+        override fun clearBindings() {
             throwIfClosed()
             bindingTypes = IntArray(0)
             longBindings = LongArray(0)
             doubleBindings = DoubleArray(0)
             stringBindings = emptyArray()
             blobBindings = emptyArray()
-            cursor?.close()
-            cursor = null
         }
 
         override fun close() {
             if (!isClosed) {
+                clearBindings()
                 reset()
             }
             isClosed = true
@@ -224,6 +204,37 @@ internal sealed class SupportSQLiteStatement(
                         blobBindings = blobBindings.copyOf(requiredSize)
                     }
                 }
+            }
+        }
+
+        private fun ensureCursor() {
+            if (cursor == null) {
+                cursor = db.query(
+                    object : SupportSQLiteQuery {
+                        override val sql: String
+                            get() = this@SupportAndroidSQLiteStatement.sql
+
+                        override fun bindTo(statement: SupportSQLiteProgram) {
+                            for (index in 1 until bindingTypes.size) {
+                                when (bindingTypes[index]) {
+                                    COLUMN_TYPE_LONG ->
+                                        statement.bindLong(index, longBindings[index])
+                                    COLUMN_TYPE_DOUBLE ->
+                                        statement.bindDouble(index, doubleBindings[index])
+                                    COLUMN_TYPE_STRING ->
+                                        statement.bindString(index, stringBindings[index]!!)
+                                    COLUMN_TYPE_BLOB ->
+                                        statement.bindBlob(index, blobBindings[index]!!)
+                                    COLUMN_TYPE_NULL ->
+                                        statement.bindNull(index)
+                                }
+                            }
+                        }
+
+                        override val argCount: Int
+                            get() = bindingTypes.size
+                    }
+                )
             }
         }
 
@@ -320,6 +331,10 @@ internal sealed class SupportSQLiteStatement(
         }
 
         override fun reset() {
+            // Android executes and releases non-query statements, so there is nothing to 'reset'.
+        }
+
+        override fun clearBindings() {
             throwIfClosed()
             delegate.clearBindings()
         }

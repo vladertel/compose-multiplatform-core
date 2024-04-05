@@ -16,11 +16,14 @@
 
 package androidx.compose.foundation.text
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TextLinkClickHandler
 import androidx.compose.foundation.text.modifiers.SelectableTextAnnotatedStringElement
 import androidx.compose.foundation.text.modifiers.SelectionController
 import androidx.compose.foundation.text.modifiers.TextAnnotatedStringElement
 import androidx.compose.foundation.text.modifiers.TextAnnotatedStringNode
 import androidx.compose.foundation.text.modifiers.TextStringSimpleElement
+import androidx.compose.foundation.text.modifiers.fixedCoerceHeightAndWidthForBits
 import androidx.compose.foundation.text.modifiers.hasLinks
 import androidx.compose.foundation.text.selection.LocalSelectionRegistrar
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
@@ -46,7 +49,6 @@ import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -177,7 +179,6 @@ fun BasicText(
  * used to insert composables into text layout. Check [InlineTextContent] for more information.
  * @param color Overrides the text color provided in [style]
  */
-@OptIn(ExperimentalTextApi::class)
 @Composable
 fun BasicText(
     text: AnnotatedString,
@@ -190,6 +191,74 @@ fun BasicText(
     minLines: Int = 1,
     inlineContent: Map<String, InlineTextContent> = mapOf(),
     color: ColorProducer? = null
+) {
+    @OptIn(ExperimentalFoundationApi::class)
+    BasicText(
+        text,
+        modifier,
+        style,
+        onTextLayout,
+        overflow,
+        softWrap,
+        maxLines,
+        minLines,
+        inlineContent,
+        color,
+        null
+    )
+}
+
+/**
+ * Basic element that displays text and provides semantics / accessibility information.
+ * Typically you will instead want to use [androidx.compose.material.Text], which is
+ * a higher level Text element that contains semantics and consumes style information from a theme.
+ *
+ * To display hyperlinks in text, see example below
+ * @sample androidx.compose.foundation.samples.BasicTextWithLinks
+ *
+ * @param text The text to be displayed.
+ * @param modifier [Modifier] to apply to this layout node.
+ * @param style Style configuration for the text such as color, font, line height etc.
+ * @param onTextLayout Callback that is executed when a new text layout is calculated. A
+ * [TextLayoutResult] object that callback provides contains paragraph information, size of the
+ * text, baselines and other details. The callback can be used to add additional decoration or
+ * functionality to the text. For example, to draw selection around the text.
+ * @param overflow How visual overflow should be handled.
+ * @param softWrap Whether the text should break at soft line breaks. If false, the glyphs in the
+ * text will be positioned as if there was unlimited horizontal space. If [softWrap] is false,
+ * [overflow] and TextAlign may have unexpected effects.
+ * @param maxLines An optional maximum number of lines for the text to span, wrapping if
+ * necessary. If the text exceeds the given number of lines, it will be truncated according to
+ * [overflow] and [softWrap]. It is required that 1 <= [minLines] <= [maxLines].
+ * @param minLines The minimum height in terms of minimum number of visible lines. It is required
+ * that 1 <= [minLines] <= [maxLines].
+ * @param inlineContent A map store composables that replaces certain ranges of the text. It's
+ * used to insert composables into text layout. Check [InlineTextContent] for more information.
+ * @param color Overrides the text color provided in [style]
+ * @param onLinkClicked a handler that is called when a
+ * (link)[androidx.compose.ui.text.LinkAnnotation] inside the text is clicked. If you need to make
+ * part of a text clickable, you can mark that part as a
+ * (Url)[androidx.compose.ui.text.LinkAnnotation.Url] or
+ * (Clickable)[androidx.compose.ui.text.LinkAnnotation.Clickable]. When a user will click on it,
+ * this handler will be triggered. Note that when null is passed, a default link handling mechanism
+ * will be triggered. Which is for (Url)[androidx.compose.ui.text.LinkAnnotation.Url] the system
+ * will try to open the corresponding url and for
+ * (Clickable)[androidx.compose.ui.text.LinkAnnotation.Clickable] it will be a no-op.
+ */
+@ExperimentalFoundationApi
+@Composable
+fun BasicText(
+    text: AnnotatedString,
+    modifier: Modifier = Modifier,
+    style: TextStyle = TextStyle.Default,
+    onTextLayout: ((TextLayoutResult) -> Unit)? = null,
+    overflow: TextOverflow = TextOverflow.Clip,
+    softWrap: Boolean = true,
+    maxLines: Int = Int.MAX_VALUE,
+    minLines: Int = 1,
+    inlineContent: Map<String, InlineTextContent> = mapOf(),
+    color: ColorProducer? = null,
+    onLinkClicked: TextLinkClickHandler? = null
 ) {
     validateMinMaxLines(
         minLines = minLines,
@@ -262,7 +331,8 @@ fun BasicText(
                 } else {
                     substitutionValue.original
                 }
-            }
+            },
+            linkClickHandler = onLinkClicked
         )
     }
 }
@@ -360,8 +430,6 @@ private fun selectionIdSaver(selectionRegistrar: SelectionRegistrar?) = Saver<Lo
     restore = { it }
 )
 
-internal expect fun Modifier.textPointerHoverIcon(selectionRegistrar: SelectionRegistrar?): Modifier
-
 private object EmptyMeasurePolicy : MeasurePolicy {
     private val placementBlock: Placeable.PlacementScope.() -> Unit = {}
     override fun MeasureScope.measure(
@@ -456,7 +524,10 @@ private fun measureWithTextRangeMeasureConstraints(
                 textRangeLayoutMeasureScope.measure()
             }
             val placeable = measurable.measure(
-                Constraints.fixed(rangeMeasureResult.width, rangeMeasureResult.height)
+                Constraints.fixedCoerceHeightAndWidthForBits(
+                    rangeMeasureResult.width,
+                    rangeMeasureResult.height
+                )
             )
             Pair(placeable, rangeMeasureResult.place)
         }
@@ -516,6 +587,7 @@ private fun Modifier.textModifier(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LayoutWithLinksAndInlineContent(
     modifier: Modifier,
@@ -531,10 +603,22 @@ private fun LayoutWithLinksAndInlineContent(
     fontFamilyResolver: FontFamily.Resolver,
     selectionController: SelectionController?,
     color: ColorProducer?,
-    onShowTranslation: ((TextAnnotatedStringNode.TextSubstitutionValue) -> Unit)?
+    onShowTranslation: ((TextAnnotatedStringNode.TextSubstitutionValue) -> Unit)?,
+    linkClickHandler: TextLinkClickHandler?
 ) {
+    // only adds additional span styles to the existing link annotations, doesn't semantically
+    // change the text
+    val styledText = if (text.hasLinks()) {
+        val linkStyle = LocalTextLinkStyle.current
+        remember(text, linkStyle) {
+            text.withLinkStyle(linkStyle)
+        }
+    } else {
+        text
+    }
+
     val textScope = if (text.hasLinks()) {
-        remember(text) { TextLinkScope(text) }
+        remember(text, linkClickHandler) { TextLinkScope(styledText, linkClickHandler) }
     } else null
 
     // do the inline content allocs
@@ -563,7 +647,7 @@ private fun LayoutWithLinksAndInlineContent(
             // TODO(b/274781644): Remove this graphicsLayer
             .graphicsLayer()
             .textModifier(
-                text = text,
+                text = styledText,
                 style = style,
                 onTextLayout = {
                     textScope?.textLayoutResult = it

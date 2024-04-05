@@ -20,11 +20,33 @@
 package androidx.room.util
 
 import androidx.annotation.RestrictTo
+import androidx.room.RoomDatabase
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 import androidx.sqlite.use
 import kotlin.jvm.JvmMultifileClass
 import kotlin.jvm.JvmName
+
+/**
+ * Performs a database operation.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+expect suspend fun <R> performSuspending(
+    db: RoomDatabase,
+    isReadOnly: Boolean,
+    inTransaction: Boolean,
+    block: (SQLiteConnection) -> R
+): R
+
+/**
+ * Utility function to wrap a suspend block in Room's transaction coroutine.
+ *
+ * This function should only be invoked from generated code and is needed to support `@Transaction`
+ * delegates in Java and Kotlin. It is preferred to use the other 'perform' functions.
+ */
+// TODO(b/309996304): Replace with proper suspending transaction API for common.
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+expect suspend fun <R> performInTransactionSuspending(db: RoomDatabase, block: suspend () -> R): R
 
 /**
  * Drops all FTS content sync triggers created by Room.

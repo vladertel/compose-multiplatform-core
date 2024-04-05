@@ -20,7 +20,7 @@ import android.net.Uri
 import android.view.DragEvent
 import androidx.compose.foundation.TestActivity
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.text2.input.internal.DragAndDropTestUtils
+import androidx.compose.foundation.text.input.internal.DragAndDropTestUtils
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -51,7 +51,8 @@ class DragAndDropRequestPermissionTest {
         rule.setContent {
             Box(Modifier.then(TestElement { testNode = it }))
         }
-        val event = DragAndDropEvent(DragAndDropTestUtils.makeImageDragEvent(
+        val event = DragAndDropEvent(
+            DragAndDropTestUtils.makeImageDragEvent(
             DragEvent.ACTION_DROP,
             Uri.parse("content://com.example/content.png")
         ))
@@ -60,7 +61,7 @@ class DragAndDropRequestPermissionTest {
         testNode.dragAndDropRequestPermission(event)
 
         // assert
-        Truth.assertThat(rule.activity.requestedDragAndDropPermission).isNotNull()
+        Truth.assertThat(rule.activity.requestedDragAndDropPermissions).isNotEmpty()
     }
 
     @SdkSuppress(minSdkVersion = 24)
@@ -70,7 +71,8 @@ class DragAndDropRequestPermissionTest {
         rule.setContent {
             Box(Modifier.then(TestElement { testNode = it }))
         }
-        val event = DragAndDropEvent(DragAndDropTestUtils.makeImageDragEvent(
+        val event = DragAndDropEvent(
+            DragAndDropTestUtils.makeImageDragEvent(
             DragEvent.ACTION_DROP,
             Uri.parse("file://com.example/content.png")
         ))
@@ -79,7 +81,7 @@ class DragAndDropRequestPermissionTest {
         testNode.dragAndDropRequestPermission(event)
 
         // assert
-        Truth.assertThat(rule.activity.requestedDragAndDropPermission).isNull()
+        Truth.assertThat(rule.activity.requestedDragAndDropPermissions).isEmpty()
     }
 
     @SdkSuppress(minSdkVersion = 24)
@@ -92,7 +94,8 @@ class DragAndDropRequestPermissionTest {
                 Box(Modifier.then(TestElement { testNode = it }))
             }
         }
-        val event = DragAndDropEvent(DragAndDropTestUtils.makeImageDragEvent(
+        val event = DragAndDropEvent(
+            DragAndDropTestUtils.makeImageDragEvent(
             DragEvent.ACTION_DROP,
             Uri.parse("file://com.example/content.png")
         ))
@@ -103,7 +106,7 @@ class DragAndDropRequestPermissionTest {
         testNode.dragAndDropRequestPermission(event)
 
         // assert
-        Truth.assertThat(rule.activity.requestedDragAndDropPermission).isNull()
+        Truth.assertThat(rule.activity.requestedDragAndDropPermissions).isEmpty()
     }
 
     private data class TestElement(

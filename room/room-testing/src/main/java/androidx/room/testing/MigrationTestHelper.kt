@@ -16,7 +16,6 @@
 
 package androidx.room.testing
 
-import android.annotation.SuppressLint
 import android.app.Instrumentation
 import android.content.Context
 import android.util.Log
@@ -177,7 +176,6 @@ open class MigrationTestHelper : TestWatcher {
      * @param version The version in which the database should be created.
      * @return A database connection which has the schema in the requested version.
      */
-    @SuppressLint("RestrictedApi")
     @Throws(IOException::class)
     open fun createDatabase(name: String, version: Int): SupportSQLiteDatabase {
         val dbPath: File = instrumentation.targetContext.getDatabasePath(name)
@@ -247,7 +245,6 @@ open class MigrationTestHelper : TestWatcher {
      * @param migrations            The list of available migrations.
      * @throws IllegalArgumentException If the schema validation fails.
      */
-    @SuppressLint("RestrictedApi")
     open fun runMigrationsAndValidate(
         name: String,
         version: Int,
@@ -483,11 +480,16 @@ open class MigrationTestHelper : TestWatcher {
                     if (expected != found) {
                         return androidx.room.RoomOpenHelper.ValidationResult(
                             false,
-                            """
-                                ${expected.name}
-                                Expected: $expected
-                                Found: $found
-                            """.trimIndent()
+                            """ ${expected.name.trimEnd()}
+                                |
+                                |Expected:
+                                |
+                                |$expected
+                                |
+                                |Found:
+                                |
+                                |$found
+                            """.trimMargin()
                         )
                     }
                 } else {
@@ -496,11 +498,16 @@ open class MigrationTestHelper : TestWatcher {
                     if (expected != found) {
                         return androidx.room.RoomOpenHelper.ValidationResult(
                             false,
-                            """
-                                ${expected.name}
-                                Expected: $expected
-                                found: $found
-                            """.trimIndent()
+                            """ ${expected.name.trimEnd()}
+                                |
+                                |Expected:
+                                |
+                                |$expected
+                                |
+                                |Found:
+                                |
+                                |$found
+                            """.trimMargin()
                         )
                     }
                 }
@@ -511,11 +518,12 @@ open class MigrationTestHelper : TestWatcher {
                 if (expected != found) {
                     return androidx.room.RoomOpenHelper.ValidationResult(
                         false,
-                            """
-                                ${expected.name}
-                                Expected: $expected
-                                Found: $found
-                            """.trimIndent()
+                        """ ${expected.name.trimEnd()}
+                                |
+                                |Expected: $expected
+                                |
+                                |Found: $found
+                            """.trimMargin()
                     )
                 }
             }

@@ -44,7 +44,6 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
 import androidx.compose.ui.modifier.ModifierLocalModifierNode
-import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.ModifierNodeElement
@@ -53,7 +52,6 @@ import androidx.compose.ui.node.SemanticsModifierNode
 import androidx.compose.ui.node.invalidateSemantics
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.debugInspectorInfo
-import androidx.compose.ui.platform.inspectable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.disabled
@@ -183,31 +181,19 @@ fun Modifier.clickable(
     onClickLabel: String? = null,
     role: Role? = null,
     onClick: () -> Unit
-) = inspectable(
-    inspectorInfo = debugInspectorInfo {
-        name = "clickable"
-        properties["interactionSource"] = interactionSource
-        properties["indication"] = indication
-        properties["enabled"] = enabled
-        properties["onClickLabel"] = onClickLabel
-        properties["role"] = role
-        properties["onClick"] = onClick
-    }
-) {
-    clickableWithIndicationIfNeeded(
+) = clickableWithIndicationIfNeeded(
+    enabled = enabled,
+    interactionSource = interactionSource,
+    indication = indication
+) { intSource, indicationNodeFactory ->
+    ClickableElement(
+        interactionSource = intSource,
+        indicationNodeFactory = indicationNodeFactory,
         enabled = enabled,
-        interactionSource = interactionSource,
-        indication = indication
-    ) { interactionSource, indicationNodeFactory ->
-        ClickableElement(
-            interactionSource = interactionSource,
-            indicationNodeFactory = indicationNodeFactory,
-            enabled = enabled,
-            onClickLabel = onClickLabel,
-            role = role,
-            onClick = onClick
-        )
-    }
+        onClickLabel = onClickLabel,
+        role = role,
+        onClick = onClick
+    )
 }
 
 /**
@@ -350,37 +336,22 @@ fun Modifier.combinedClickable(
     onLongClick: (() -> Unit)? = null,
     onDoubleClick: (() -> Unit)? = null,
     onClick: () -> Unit
-) = inspectable(
-    inspectorInfo = debugInspectorInfo {
-        name = "combinedClickable"
-        properties["indication"] = indication
-        properties["interactionSource"] = interactionSource
-        properties["enabled"] = enabled
-        properties["onClickLabel"] = onClickLabel
-        properties["role"] = role
-        properties["onClick"] = onClick
-        properties["onDoubleClick"] = onDoubleClick
-        properties["onLongClick"] = onLongClick
-        properties["onLongClickLabel"] = onLongClickLabel
-    }
-) {
-    clickableWithIndicationIfNeeded(
+) = clickableWithIndicationIfNeeded(
+    enabled = enabled,
+    interactionSource = interactionSource,
+    indication = indication
+) { intSource, indicationNodeFactory ->
+    CombinedClickableElement(
+        interactionSource = intSource,
+        indicationNodeFactory = indicationNodeFactory,
         enabled = enabled,
-        interactionSource = interactionSource,
-        indication = indication
-    ) { interactionSource, indicationNodeFactory ->
-        CombinedClickableElement(
-            interactionSource = interactionSource,
-            indicationNodeFactory = indicationNodeFactory,
-            enabled = enabled,
-            onClickLabel = onClickLabel,
-            role = role,
-            onClick = onClick,
-            onLongClickLabel = onLongClickLabel,
-            onLongClick = onLongClick,
-            onDoubleClick = onDoubleClick
-        )
-    }
+        onClickLabel = onClickLabel,
+        role = role,
+        onClick = onClick,
+        onLongClickLabel = onLongClickLabel,
+        onLongClick = onLongClick,
+        onDoubleClick = onDoubleClick
+    )
 }
 
 /**
@@ -432,8 +403,7 @@ internal expect val TapIndicationDelay: Long
  * within a scrollable Compose layout, to calculate whether this modifier is within some form of
  * scrollable container, and hence should delay presses.
  */
-internal expect fun CompositionLocalConsumerModifierNode
-    .isComposeRootInScrollableContainer(): Boolean
+internal expect fun DelegatableNode.isComposeRootInScrollableContainer(): Boolean
 
 /**
  * Whether the specified [KeyEvent] should trigger a press for a clickable component.
@@ -527,8 +497,15 @@ private class ClickableElement(
         )
     }
 
-    // Defined in the factory functions with inspectable
-    override fun InspectorInfo.inspectableProperties() = Unit
+    override fun InspectorInfo.inspectableProperties() {
+        name = "clickable"
+        properties["enabled"] = enabled
+        properties["onClick"] = onClick
+        properties["onClickLabel"] = onClickLabel
+        properties["role"] = role
+        properties["interactionSource"] = interactionSource
+        properties["indicationNodeFactory"] = indicationNodeFactory
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -595,8 +572,18 @@ private class CombinedClickableElement(
         )
     }
 
-    // Defined in the factory functions with inspectable
-    override fun InspectorInfo.inspectableProperties() = Unit
+    override fun InspectorInfo.inspectableProperties() {
+        name = "combinedClickable"
+        properties["indicationNodeFactory"] = indicationNodeFactory
+        properties["interactionSource"] = interactionSource
+        properties["enabled"] = enabled
+        properties["onClickLabel"] = onClickLabel
+        properties["role"] = role
+        properties["onClick"] = onClick
+        properties["onDoubleClick"] = onDoubleClick
+        properties["onLongClick"] = onLongClick
+        properties["onLongClickLabel"] = onLongClickLabel
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -891,11 +878,13 @@ internal abstract class AbstractClickableNode(
     private var role: Role?,
     onClick: () -> Unit
 ) : DelegatingNode(), PointerInputModifierNode, KeyInputModifierNode, FocusEventModifierNode,
-    SemanticsModifierNode, CompositionLocalConsumerModifierNode, ModifierLocalModifierNode {
+    SemanticsModifierNode, ModifierLocalModifierNode {
     protected var enabled = enabled
         private set
     protected var onClick = onClick
         private set
+
+    final override val shouldAutoInvalidate: Boolean = false
 
     private val focusableInNonTouchMode: FocusableInNonTouchMode = FocusableInNonTouchMode()
     private val focusableNode: FocusableNode = FocusableNode(interactionSource)
@@ -954,10 +943,17 @@ internal abstract class AbstractClickableNode(
                 undelegate(focusableNode)
                 disposeInteractions()
             }
+            invalidateSemantics()
             this.enabled = enabled
         }
-        this.onClickLabel = onClickLabel
-        this.role = role
+        if (this.onClickLabel != onClickLabel) {
+            this.onClickLabel = onClickLabel
+            invalidateSemantics()
+        }
+        if (this.role != role) {
+            this.role = role
+            invalidateSemantics()
+        }
         this.onClick = onClick
         if (lazilyCreateIndication != shouldLazilyCreateIndication()) {
             lazilyCreateIndication = shouldLazilyCreateIndication()

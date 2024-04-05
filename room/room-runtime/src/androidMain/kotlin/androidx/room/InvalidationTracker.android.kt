@@ -15,7 +15,6 @@
  */
 package androidx.room
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.database.sqlite.SQLiteException
@@ -27,7 +26,10 @@ import androidx.annotation.WorkerThread
 import androidx.arch.core.internal.SafeIterableMap
 import androidx.lifecycle.LiveData
 import androidx.room.Room.LOG_TAG
+import androidx.room.driver.SupportSQLiteConnection
+import androidx.room.support.AutoCloser
 import androidx.room.util.useCursor
+import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteStatement
@@ -36,8 +38,8 @@ import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * InvalidationTracker keeps a list of tables modified by queries and notifies its callbacks about
- * these tables.
+ * The invalidation tracker keeps track of modified tables by queries and notifies its registered
+ * [Observer]s about such modifications.
  */
 // Some details on how the InvalidationTracker works:
 // * An in memory table is created with (table_id, invalidated) table_id is a hardcoded int from
@@ -50,7 +52,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 // memory table table, flipping the invalidated flag ON.
 // * When multi-instance invalidation is turned on, MultiInstanceInvalidationClient will be created.
 // It works as an Observer, and notifies other instances of table invalidation.
-open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX) constructor(
+actual open class InvalidationTracker
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+actual constructor(
     internal val database: RoomDatabase,
     private val shadowTablesMap: Map<String, String>,
     private val viewTables: Map<String, @JvmSuppressWildcards Set<String>>,
@@ -84,6 +88,9 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
     private val syncTriggersLock = Any()
 
     private val trackerLock = Any()
+
+    /** The initialization state for restarting invalidation after auto-close. */
+    private var multiInstanceClientInitState: MultiInstanceClientInitState? = null
 
     init {
         tableIdLookup = mutableMapOf()
@@ -137,14 +144,31 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
 
     /**
      * Internal method to initialize table tracking.
-     *
-     * You should never call this method, it is called by the generated code.
      */
+    internal actual fun internalInit(connection: SQLiteConnection) {
+        if (connection is SupportSQLiteConnection) {
+            @Suppress("DEPRECATION")
+            internalInit(connection.db)
+        } else {
+            Log.e(LOG_TAG, "Invalidation tracker is disabled due to lack of driver " +
+                "support. - b/309990302")
+        }
+    }
+
+    /**
+     * Internal method to initialize table tracking.
+     */
+    @Deprecated("No longer called by generated code")
     internal fun internalInit(database: SupportSQLiteDatabase) {
         synchronized(trackerLock) {
             if (initialized) {
                 Log.e(LOG_TAG, "Invalidation tracker is initialized twice :/.")
                 return
+            }
+
+            multiInstanceClientInitState?.let {
+                // Start multi-instance invalidation, based in info from the saved initState.
+                startMultiInstanceInvalidation()
             }
 
             // These actions are not in a transaction because temp_store is not allowed to be
@@ -160,27 +184,28 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
 
     private fun onAutoCloseCallback() {
         synchronized(trackerLock) {
+            val isObserverMapEmpty = observerMap.filterNot { it.key.isRemote }.isEmpty()
+            if (multiInstanceInvalidationClient != null && isObserverMapEmpty) {
+                stopMultiInstanceInvalidation()
+            }
             initialized = false
             observedTableTracker.resetTriggerState()
             cleanupStatement?.close()
         }
     }
 
-    internal fun startMultiInstanceInvalidation(
-        context: Context,
-        name: String,
-        serviceIntent: Intent
-    ) {
+    private fun startMultiInstanceInvalidation() {
+        val state = checkNotNull(multiInstanceClientInitState)
         multiInstanceInvalidationClient = MultiInstanceInvalidationClient(
-            context = context,
-            name = name,
-            serviceIntent = serviceIntent,
+            context = state.context,
+            name = state.name,
+            serviceIntent = state.serviceIntent,
             invalidationTracker = this,
             executor = database.queryExecutor
         )
     }
 
-    internal fun stopMultiInstanceInvalidation() {
+    private fun stopMultiInstanceInvalidation() {
         multiInstanceInvalidationClient?.stop()
         multiInstanceInvalidationClient = null
     }
@@ -240,7 +265,6 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
      *
      * @param observer The observer which listens the database for changes.
      */
-    @SuppressLint("RestrictedApi")
     @WorkerThread
     open fun addObserver(observer: Observer) {
         val tableNames = resolveViews(observer.tables)
@@ -312,7 +336,6 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
      *
      * @param observer The observer to remove.
      */
-    @SuppressLint("RestrictedApi")
     @WorkerThread
     open fun removeObserver(observer: Observer) {
         val wrapper = synchronized(observerMap) {
@@ -568,6 +591,22 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
         return invalidationLiveDataContainer.create(
             validateAndResolveTableNames(tableNames), inTransaction, computeFunction
         )
+    }
+
+    internal fun initMultiInstanceInvalidation(
+        context: Context,
+        name: String,
+        serviceIntent: Intent
+    ) {
+        multiInstanceClientInitState = MultiInstanceClientInitState(
+            context = context,
+            name = name,
+            serviceIntent = serviceIntent
+        )
+    }
+
+    internal fun stop() {
+        stopMultiInstanceInvalidation()
     }
 
     /**
@@ -832,3 +871,12 @@ open class InvalidationTracker @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX
         }
     }
 }
+
+/**
+ * Stores needed info to restart the invalidation after it was auto-closed.
+ */
+internal data class MultiInstanceClientInitState(
+    val context: Context,
+    val name: String,
+    val serviceIntent: Intent
+)

@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.tokens.ElevationTokens
 import androidx.compose.material3.tokens.NavigationBarTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -156,9 +157,10 @@ fun NavigationBar(
  * only be shown when this item is selected.
  * @param colors [NavigationBarItemColors] that will be used to resolve the colors used for this
  * item in different states. See [NavigationBarItemDefaults.colors].
- * @param interactionSource the [MutableInteractionSource] representing the stream of [Interaction]s
- * for this item. You can create and pass in your own `remember`ed instance to observe
- * [Interaction]s and customize the appearance / behavior of this item in different states.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this item. You can use this to change the item's appearance
+ * or preview the item in different states. Note that if `null` is provided, interactions will
+ * still happen internally.
  */
 @Composable
 fun RowScope.NavigationBarItem(
@@ -170,8 +172,10 @@ fun RowScope.NavigationBarItem(
     label: @Composable (() -> Unit)? = null,
     alwaysShowLabel: Boolean = true,
     colors: NavigationBarItemColors = NavigationBarItemDefaults.colors(),
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
+    interactionSource: MutableInteractionSource? = null
 ) {
+    @Suppress("NAME_SHADOWING")
+    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
     val styledIcon = @Composable {
         val iconColor by colors.iconColor(selected = selected, enabled = enabled)
         // If there's a label, don't have a11y services repeat the icon description.
@@ -236,15 +240,11 @@ fun RowScope.NavigationBarItem(
         // The indicator has a width-expansion animation which interferes with the timing of the
         // ripple, which is why they are separate composables
         val indicatorRipple = @Composable {
-            @Suppress("DEPRECATION_ERROR")
             Box(
                 Modifier
                     .layoutId(IndicatorRippleLayoutIdTag)
                     .clip(NavigationBarTokens.ActiveIndicatorShape.value)
-                    .indication(
-                        offsetInteractionSource,
-                        androidx.compose.material.ripple.rememberRipple()
-                    )
+                    .indication(offsetInteractionSource, rippleOrFallbackImplementation())
             )
         }
         val indicator = @Composable {
@@ -273,7 +273,7 @@ fun RowScope.NavigationBarItem(
 /** Defaults used in [NavigationBar]. */
 object NavigationBarDefaults {
     /** Default elevation for a navigation bar. */
-    val Elevation: Dp = NavigationBarTokens.ContainerElevation
+    val Elevation: Dp = ElevationTokens.Level0
 
     /** Default color for a navigation bar. */
     val containerColor: Color @Composable get() = NavigationBarTokens.ContainerColor.value
@@ -319,7 +319,7 @@ object NavigationBarItemDefaults {
         unselectedTextColor: Color = Color.Unspecified,
         disabledIconColor: Color = Color.Unspecified,
         disabledTextColor: Color = Color.Unspecified,
-    ): NavigationBarItemColors = NavigationBarItemColors(
+    ): NavigationBarItemColors = MaterialTheme.colorScheme.defaultNavigationBarItemColors.copy(
         selectedIconColor = selectedIconColor,
         selectedTextColor = selectedTextColor,
         selectedIndicatorColor = indicatorColor,
@@ -341,8 +341,7 @@ object NavigationBarItemDefaults {
                 fromToken(NavigationBarTokens.InactiveIconColor).copy(alpha = DisabledAlpha),
                 disabledTextColor =
                 fromToken(NavigationBarTokens.InactiveLabelTextColor).copy(alpha = DisabledAlpha),
-
-                ).also {
+            ).also {
                 defaultNavigationBarItemColorsCached = it
             }
         }

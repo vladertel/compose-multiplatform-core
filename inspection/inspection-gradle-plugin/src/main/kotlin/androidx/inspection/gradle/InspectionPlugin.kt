@@ -96,13 +96,15 @@ class InspectionPlugin : Plugin<Project> {
                     }
                 }
             }
-            libExtension.sourceSets.findByName("main")!!.resources.srcDirs(
-                File(project.rootDir, "src/main/proto")
-            )
+            libExtension.sourceSets.named("main").configure {
+                it.resources.srcDirs(
+                    File(project.rootDir, "src/main/proto")
+                )
+            }
         }
 
         project.apply(plugin = "com.google.protobuf")
-        project.plugins.all {
+        project.plugins.configureEach {
             if (it is ProtobufPlugin) {
                 val protobufExtension = project.extensions.getByType(ProtobufExtension::class.java)
                 protobufExtension.apply {
@@ -189,7 +191,7 @@ fun packageInspector(libraryProject: Project, inspectorProjectPath: String) {
 
     generateProguardDetectionFile(libraryProject)
     val libExtension = libraryProject.extensions.getByType(LibraryExtension::class.java)
-    libExtension.libraryVariants.all { variant ->
+    libExtension.libraryVariants.configureEach { variant ->
         variant.packageLibraryProvider.configure { zip ->
             zip.from(consumeInspectorFiles)
             zip.rename {
@@ -259,7 +261,7 @@ private fun Configuration.setupReleaseAttribute() {
 @ExperimentalStdlibApi
 private fun generateProguardDetectionFile(libraryProject: Project) {
     val libExtension = libraryProject.extensions.getByType(LibraryExtension::class.java)
-    libExtension.libraryVariants.all { variant ->
+    libExtension.libraryVariants.configureEach { variant ->
         libraryProject.registerGenerateProguardDetectionFileTask(variant)
     }
 }

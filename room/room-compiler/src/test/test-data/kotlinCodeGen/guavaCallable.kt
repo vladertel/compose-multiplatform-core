@@ -9,11 +9,9 @@ import androidx.room.RoomSQLiteQuery.Companion.acquire
 import androidx.room.guava.GuavaRoom
 import androidx.room.util.appendPlaceholders
 import androidx.room.util.getColumnIndexOrThrow
-import androidx.room.util.newStringBuilder
 import androidx.room.util.query
 import androidx.sqlite.db.SupportSQLiteStatement
 import com.google.common.util.concurrent.ListenableFuture
-import java.lang.StringBuilder
 import java.util.concurrent.Callable
 import javax.`annotation`.processing.Generated
 import kotlin.Int
@@ -21,8 +19,8 @@ import kotlin.Long
 import kotlin.String
 import kotlin.Suppress
 import kotlin.collections.List
-import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
+import kotlin.text.StringBuilder
 
 @Generated(value = ["androidx.room.RoomProcessor"])
 @Suppress(names = ["UNCHECKED_CAST", "DEPRECATION", "REDUNDANT_PROJECTION"])
@@ -31,16 +29,16 @@ public class MyDao_Impl(
 ) : MyDao {
   private val __db: RoomDatabase
 
-  private val __insertionAdapterOfMyEntity: EntityInsertionAdapter<MyEntity>
+  private val __insertAdapterOfMyEntity: EntityInsertionAdapter<MyEntity>
 
-  private val __deletionAdapterOfMyEntity: EntityDeletionOrUpdateAdapter<MyEntity>
+  private val __deleteAdapterOfMyEntity: EntityDeletionOrUpdateAdapter<MyEntity>
 
   private val __updateAdapterOfMyEntity: EntityDeletionOrUpdateAdapter<MyEntity>
 
-  private val __upsertionAdapterOfMyEntity: EntityUpsertionAdapter<MyEntity>
+  private val __upsertAdapterOfMyEntity: EntityUpsertionAdapter<MyEntity>
   init {
     this.__db = __db
-    this.__insertionAdapterOfMyEntity = object : EntityInsertionAdapter<MyEntity>(__db) {
+    this.__insertAdapterOfMyEntity = object : EntityInsertionAdapter<MyEntity>(__db) {
       protected override fun createQuery(): String =
           "INSERT OR ABORT INTO `MyEntity` (`pk`,`other`) VALUES (?,?)"
 
@@ -49,7 +47,7 @@ public class MyDao_Impl(
         statement.bindString(2, entity.other)
       }
     }
-    this.__deletionAdapterOfMyEntity = object : EntityDeletionOrUpdateAdapter<MyEntity>(__db) {
+    this.__deleteAdapterOfMyEntity = object : EntityDeletionOrUpdateAdapter<MyEntity>(__db) {
       protected override fun createQuery(): String = "DELETE FROM `MyEntity` WHERE `pk` = ?"
 
       protected override fun bind(statement: SupportSQLiteStatement, entity: MyEntity) {
@@ -66,7 +64,7 @@ public class MyDao_Impl(
         statement.bindLong(3, entity.pk.toLong())
       }
     }
-    this.__upsertionAdapterOfMyEntity = EntityUpsertionAdapter<MyEntity>(object :
+    this.__upsertAdapterOfMyEntity = EntityUpsertionAdapter<MyEntity>(object :
         EntityInsertionAdapter<MyEntity>(__db) {
       protected override fun createQuery(): String =
           "INSERT INTO `MyEntity` (`pk`,`other`) VALUES (?,?)"
@@ -93,7 +91,7 @@ public class MyDao_Impl(
     public override fun call(): List<Long> {
       __db.beginTransaction()
       try {
-        val _result: List<Long> = __insertionAdapterOfMyEntity.insertAndReturnIdsList(entities)
+        val _result: List<Long> = __insertAdapterOfMyEntity.insertAndReturnIdsList(entities)
         __db.setTransactionSuccessful()
         return _result
       } finally {
@@ -108,7 +106,7 @@ public class MyDao_Impl(
       var _total: Int = 0
       __db.beginTransaction()
       try {
-        _total += __deletionAdapterOfMyEntity.handle(entity)
+        _total += __deleteAdapterOfMyEntity.handle(entity)
         __db.setTransactionSuccessful()
         return _total
       } finally {
@@ -138,7 +136,7 @@ public class MyDao_Impl(
     public override fun call(): List<Long> {
       __db.beginTransaction()
       try {
-        val _result: List<Long> = __upsertionAdapterOfMyEntity.upsertAndReturnIdsList(entities)
+        val _result: List<Long> = __upsertAdapterOfMyEntity.upsertAndReturnIdsList(entities)
         __db.setTransactionSuccessful()
         return _result
       } finally {
@@ -148,7 +146,7 @@ public class MyDao_Impl(
   })
 
   public override fun getListenableFuture(vararg arg: String?): ListenableFuture<MyEntity> {
-    val _stringBuilder: StringBuilder = newStringBuilder()
+    val _stringBuilder: StringBuilder = StringBuilder()
     _stringBuilder.append("SELECT * FROM MyEntity WHERE pk IN (")
     val _inputSize: Int = arg.size
     appendPlaceholders(_stringBuilder, _inputSize)
@@ -192,7 +190,7 @@ public class MyDao_Impl(
 
   public override fun getListenableFutureNullable(vararg arg: String?):
       ListenableFuture<MyEntity?> {
-    val _stringBuilder: StringBuilder = newStringBuilder()
+    val _stringBuilder: StringBuilder = StringBuilder()
     _stringBuilder.append("SELECT * FROM MyEntity WHERE pk IN (")
     val _inputSize: Int = arg.size
     appendPlaceholders(_stringBuilder, _inputSize)
@@ -235,7 +233,6 @@ public class MyDao_Impl(
   }
 
   public companion object {
-    @JvmStatic
     public fun getRequiredConverters(): List<KClass<*>> = emptyList()
   }
 }

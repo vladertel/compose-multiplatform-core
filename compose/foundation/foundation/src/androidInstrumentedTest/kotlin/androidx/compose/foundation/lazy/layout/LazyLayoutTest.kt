@@ -326,6 +326,33 @@ class LazyLayoutTest {
     }
 
     @Test
+    fun prefetchItemWithCustomExecutor() {
+        val itemProvider = itemProvider({ 1 }) { index ->
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .testTag("$index"))
+        }
+
+        val executor = RecordingPrefetchExecutor()
+        val prefetchState = LazyLayoutPrefetchState(executor)
+        rule.setContent {
+            LazyLayout(itemProvider, prefetchState = prefetchState) {
+                layout(100, 100) {}
+            }
+        }
+
+        rule.runOnIdle {
+            prefetchState.schedulePrefetch(0, Constraints.fixed(50, 50))
+        }
+
+        assertThat(executor.requests).hasSize(1)
+
+        // Default PrefetchExecutor behavior should be overridden
+        rule.onNodeWithTag("0").assertDoesNotExist()
+    }
+
+    @Test
     fun keptForReuseItemIsDisposedWhenCanceled() {
         val needChild = mutableStateOf(true)
         var composed = true
@@ -545,5 +572,15 @@ class LazyLayoutTest {
             override val itemCount: Int get() = itemCount()
         }
         return { provider }
+    }
+
+    private class RecordingPrefetchExecutor : PrefetchExecutor {
+
+        private val _requests: MutableList<PrefetchRequest> = mutableListOf()
+        val requests: List<PrefetchRequest> = _requests
+
+        override fun requestPrefetch(prefetchRequest: PrefetchRequest) {
+            _requests.add(prefetchRequest)
+        }
     }
 }

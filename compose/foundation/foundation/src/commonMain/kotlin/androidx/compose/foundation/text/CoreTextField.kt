@@ -374,7 +374,7 @@ internal fun CoreTextField(
                         state,
                         manager.value,
                         imeOptions,
-                        offsetMapping
+                        manager.offsetMapping
                     )
                 } else {
                     endInputSession(state)
@@ -682,9 +682,8 @@ internal fun CoreTextField(
                             measurables: List<Measurable>,
                             constraints: Constraints
                         ): MeasureResult {
-                            val prevResult = Snapshot.withoutReadObservation {
-                                state.layoutResult?.value
-                            }
+                            val prevProxy = Snapshot.withoutReadObservation { state.layoutResult }
+                            val prevResult = prevProxy?.value
                             val (width, height, result) = TextFieldDelegate.layout(
                                 state.textDelegate,
                                 constraints,
@@ -692,7 +691,10 @@ internal fun CoreTextField(
                                 prevResult
                             )
                             if (prevResult != result) {
-                                state.layoutResult = TextLayoutResultProxy(result)
+                                state.layoutResult = TextLayoutResultProxy(
+                                    value = result,
+                                    decorationBoxCoordinates = prevProxy?.decorationBoxCoordinates,
+                                )
                                 onTextLayout(result)
                                 notifyFocusedRect(state, value, offsetMapping)
                             }
@@ -1040,7 +1042,7 @@ private fun endInputSession(state: LegacyTextFieldState) {
 
 /**
  * Calculates the location of the end of the current selection and requests that it be brought into
- * view using [bringIntoView][BringIntoViewRequester.bringIntoView].
+ * view using [bringCursorIntoView][BringIntoViewRequester.bringIntoView].
  *
  * Text fields have a lot of different edge cases where they need to make sure they stay visible:
  *

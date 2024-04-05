@@ -18,8 +18,14 @@ package androidx.compose.animation.core
 
 import androidx.compose.animation.core.internal.binarySearch
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.graphics.IntervalTree
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathIterator
 import androidx.compose.ui.graphics.PathSegment
+import androidx.compose.ui.graphics.computeHorizontalBounds
+import androidx.compose.ui.graphics.evaluateY
+import androidx.compose.ui.graphics.findFirstRoot
+import androidx.compose.ui.util.fastCoerceIn
 
 /**
  * An easing function for an arbitrary [Path].
@@ -68,40 +74,44 @@ class PathEasing(private val path: Path) : Easing {
             // The interval tree allows us to quickly query for the correct segment inside
             // the transform() function.
             val segmentIntervals = IntervalTree<PathSegment>().apply {
-                for (segment in path) {
-                    require(segment.type != PathSegment.Type.Close) {
+                // A path easing curve is defined in the domain 0..1, use an error
+                // appropriate for this domain (the default is 0.25). Conic segments
+                // should be unlikely in path easing curves, but just in case...
+                val iterator = path.iterator(
+                    PathIterator.ConicEvaluation.AsQuadratics,
+                    2e-4f
+                )
+                while (iterator.hasNext()) {
+                    val segment = iterator.next()
+                    requirePrecondition(segment.type != PathSegment.Type.Close) {
                         "The path cannot contain a close() command."
                     }
                     if (segment.type != PathSegment.Type.Move &&
                         segment.type != PathSegment.Type.Done
                     ) {
                         val bounds = computeHorizontalBounds(segment, roots)
-                        this += Interval(bounds.first, bounds.second, segment)
+                        addInterval(bounds.first, bounds.second, segment)
                     }
                 }
             }
 
-            require(0.0f in segmentIntervals) {
-                "The easing path must start at 0.0f."
-            }
-
-            require(1.0f in segmentIntervals) {
-                "The easing path must end at 1.0f."
+            requirePrecondition(0.0f in segmentIntervals && 1.0f in segmentIntervals) {
+                "The easing path must start at 0.0f and end at 1.0f."
             }
 
             intervals = segmentIntervals
         }
 
         val result = intervals.findFirstOverlap(fraction)
-        val segment = checkNotNull(result.data) {
+        val segment = checkPreconditionNotNull(result.data) {
             "The easing path is invalid. Make sure it is continuous on the x axis."
         }
 
         val t = findFirstRoot(segment, fraction)
-        check(!t.isNaN()) {
+        checkPrecondition(!t.isNaN()) {
             "The easing path is invalid. Make sure it does not contain NaN/Infinity values."
         }
 
-        return evaluateY(segment, t).coerceAtLeast(0.0f).coerceAtMost(1.0f)
+        return evaluateY(segment, t).fastCoerceIn(0.0f, 1.0f)
     }
 }

@@ -78,7 +78,6 @@ public class BasicExtenderSessionProcessor extends SessionProcessorBase {
     @NonNull
     private final ImageCaptureExtenderImpl mImageCaptureExtenderImpl;
 
-    final Object mLock = new Object();
     volatile StillCaptureProcessor mStillCaptureProcessor = null;
     volatile PreviewProcessor mPreviewProcessor = null;
     volatile RequestUpdateProcessorImpl mRequestUpdateProcessor = null;
@@ -299,6 +298,8 @@ public class BasicExtenderSessionProcessor extends SessionProcessorBase {
                                 @Nullable String physicalCameraId) {
                             if (mPreviewProcessor != null) {
                                 mPreviewProcessor.notifyImage(imageReference);
+                            } else {
+                                imageReference.decrement();
                             }
                         }
                     });
@@ -596,6 +597,8 @@ public class BasicExtenderSessionProcessor extends SessionProcessorBase {
                                     "onNextImageAvailable  outputStreamId=" + outputStreamId);
                             if (mStillCaptureProcessor != null) {
                                 mStillCaptureProcessor.notifyImage(imageReference);
+                            } else {
+                                imageReference.decrement();
                             }
 
                             if (mIsFirstFrame) {

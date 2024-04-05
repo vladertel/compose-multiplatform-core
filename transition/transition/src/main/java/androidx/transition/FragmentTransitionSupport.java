@@ -39,8 +39,6 @@ import java.util.List;
 // This is instantiated in androidx.fragment.app.FragmentTransition
 @SuppressWarnings("unused")
 @RestrictTo(LIBRARY_GROUP_PREFIX)
-@SuppressLint("RestrictedApi") // remove once fragment lib would be released with the new
-// LIBRARY_GROUP_PREFIX restriction. tracking in b/127286008
 public class FragmentTransitionSupport extends FragmentTransitionImpl {
 
     @Override
@@ -339,6 +337,7 @@ public class FragmentTransitionSupport extends FragmentTransitionImpl {
         signal.setOnCancelListener(() -> {
             if (cancelRunnable == null) {
                 realTransition.cancel();
+                transitionCompleteRunnable.run();
             } else {
                 cancelRunnable.run();
             }

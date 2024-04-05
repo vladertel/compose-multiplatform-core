@@ -2,8 +2,6 @@
 package androidx.benchmark.macro {
 
   public enum BaselineProfileMode {
-    method public static androidx.benchmark.macro.BaselineProfileMode valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.benchmark.macro.BaselineProfileMode[] values();
     enum_constant public static final androidx.benchmark.macro.BaselineProfileMode Disable;
     enum_constant public static final androidx.benchmark.macro.BaselineProfileMode Require;
     enum_constant public static final androidx.benchmark.macro.BaselineProfileMode UseIfAvailable;
@@ -58,6 +56,10 @@ package androidx.benchmark.macro {
   @SuppressCompatibility @kotlin.RequiresOptIn(message="This Metric API is experimental.") @kotlin.annotation.Retention(kotlin.annotation.AnnotationRetention.BINARY) @kotlin.annotation.Target(allowedTargets={kotlin.annotation.AnnotationTarget.CLASS, kotlin.annotation.AnnotationTarget.FUNCTION}) public @interface ExperimentalMetricApi {
   }
 
+  @SuppressCompatibility @androidx.benchmark.macro.ExperimentalMetricApi public final class FrameTimingGfxInfoMetric extends androidx.benchmark.macro.Metric {
+    ctor public FrameTimingGfxInfoMetric();
+  }
+
   public final class FrameTimingMetric extends androidx.benchmark.macro.Metric {
     ctor public FrameTimingMetric();
   }
@@ -92,15 +94,11 @@ package androidx.benchmark.macro {
   }
 
   public enum MemoryUsageMetric.Mode {
-    method public static androidx.benchmark.macro.MemoryUsageMetric.Mode valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.benchmark.macro.MemoryUsageMetric.Mode[] values();
     enum_constant public static final androidx.benchmark.macro.MemoryUsageMetric.Mode Last;
     enum_constant public static final androidx.benchmark.macro.MemoryUsageMetric.Mode Max;
   }
 
   public enum MemoryUsageMetric.SubMetric {
-    method public static androidx.benchmark.macro.MemoryUsageMetric.SubMetric valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.benchmark.macro.MemoryUsageMetric.SubMetric[] values();
     enum_constant public static final androidx.benchmark.macro.MemoryUsageMetric.SubMetric Gpu;
     enum_constant public static final androidx.benchmark.macro.MemoryUsageMetric.SubMetric HeapSize;
     enum_constant public static final androidx.benchmark.macro.MemoryUsageMetric.SubMetric RssAnon;
@@ -148,8 +146,6 @@ package androidx.benchmark.macro {
   }
 
   @SuppressCompatibility @androidx.benchmark.macro.ExperimentalMetricApi public enum PowerCategory {
-    method public static androidx.benchmark.macro.PowerCategory valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.benchmark.macro.PowerCategory[] values();
     enum_constant public static final androidx.benchmark.macro.PowerCategory CPU;
     enum_constant public static final androidx.benchmark.macro.PowerCategory DISPLAY;
     enum_constant public static final androidx.benchmark.macro.PowerCategory GPS;
@@ -161,8 +157,6 @@ package androidx.benchmark.macro {
   }
 
   @SuppressCompatibility @androidx.benchmark.macro.ExperimentalMetricApi public enum PowerCategoryDisplayLevel {
-    method public static androidx.benchmark.macro.PowerCategoryDisplayLevel valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.benchmark.macro.PowerCategoryDisplayLevel[] values();
     enum_constant public static final androidx.benchmark.macro.PowerCategoryDisplayLevel BREAKDOWN;
     enum_constant public static final androidx.benchmark.macro.PowerCategoryDisplayLevel TOTAL;
   }
@@ -205,8 +199,6 @@ package androidx.benchmark.macro {
   }
 
   public enum StartupMode {
-    method public static androidx.benchmark.macro.StartupMode valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.benchmark.macro.StartupMode[] values();
     enum_constant public static final androidx.benchmark.macro.StartupMode COLD;
     enum_constant public static final androidx.benchmark.macro.StartupMode HOT;
     enum_constant public static final androidx.benchmark.macro.StartupMode WARM;
@@ -230,8 +222,6 @@ package androidx.benchmark.macro {
   }
 
   public enum TraceSectionMetric.Mode {
-    method public static androidx.benchmark.macro.TraceSectionMetric.Mode valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.benchmark.macro.TraceSectionMetric.Mode[] values();
     enum_constant public static final androidx.benchmark.macro.TraceSectionMetric.Mode First;
     enum_constant public static final androidx.benchmark.macro.TraceSectionMetric.Mode Max;
     enum_constant public static final androidx.benchmark.macro.TraceSectionMetric.Mode Min;

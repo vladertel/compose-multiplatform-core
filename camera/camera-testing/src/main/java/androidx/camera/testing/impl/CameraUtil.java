@@ -59,6 +59,7 @@ import androidx.camera.core.concurrent.CameraCoordinator;
 import androidx.camera.core.impl.CameraConfig;
 import androidx.camera.core.impl.CameraConfigs;
 import androidx.camera.core.impl.CameraInternal;
+import androidx.camera.core.impl.RestrictedCameraInfo;
 import androidx.camera.core.impl.utils.futures.Futures;
 import androidx.camera.core.internal.CameraUseCaseAdapter;
 import androidx.camera.testing.impl.fakes.FakeCameraCoordinator;
@@ -630,10 +631,10 @@ public final class CameraUtil {
             CameraInternal camera =
                     cameraSelector.select(cameraX.getCameraRepository().getCameras());
             return new CameraUseCaseAdapter(camera,
+                    new RestrictedCameraInfo(camera.getCameraInfoInternal(), cameraConfig),
                     cameraCoordinator,
                     cameraX.getCameraDeviceSurfaceManager(),
-                    cameraX.getDefaultConfigFactory(),
-                    cameraConfig);
+                    cameraX.getDefaultConfigFactory());
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
             throw new RuntimeException("Unable to retrieve CameraX instance");
         }
@@ -1182,7 +1183,8 @@ public final class CameraUtil {
             if (deviceHolder.get() == null) {
                 ret = false;
             }
-            if (Build.MODEL.equalsIgnoreCase("sm-g920v")) {
+            if (Build.HARDWARE.equalsIgnoreCase("universal7420")
+                    || Build.HARDWARE.equalsIgnoreCase("samsungexynos7420")) {
                 // Please see b/305835396
                 TimeUnit.SECONDS.sleep(1);
             }

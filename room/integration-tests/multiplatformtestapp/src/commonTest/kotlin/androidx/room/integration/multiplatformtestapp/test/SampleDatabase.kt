@@ -19,9 +19,10 @@ package androidx.room.integration.multiplatformtestapp.test
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
-import androidx.room.Insert
 import androidx.room.PrimaryKey
+import androidx.room.Query
 import androidx.room.RoomDatabase
+import androidx.room.Transaction
 
 @Entity
 data class SampleEntity(
@@ -31,8 +32,24 @@ data class SampleEntity(
 
 @Dao
 interface SampleDao {
-    @Insert
-    fun insert(item: SampleEntity)
+
+    @Query("INSERT INTO SampleEntity (pk) VALUES (:pk)")
+    suspend fun insertItem(pk: Long): Long
+
+    @Query("DELETE FROM SampleEntity WHERE pk = :pk")
+    suspend fun deleteItem(pk: Long): Int
+
+    @Query("SELECT * FROM SampleEntity")
+    suspend fun getSingleItem(): SampleEntity
+
+    @Query("SELECT * FROM SampleEntity")
+    suspend fun getItemList(): List<SampleEntity>
+
+    @Transaction
+    suspend fun deleteList(pks: List<Long>, withError: Boolean = false) {
+        require(!withError)
+        pks.forEach { deleteItem(it) }
+    }
 }
 
 @Database(

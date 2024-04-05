@@ -31,7 +31,9 @@ import androidx.privacysandbox.sdkruntime.core.AppOwnedSdkSandboxInterfaceCompat
 import androidx.privacysandbox.sdkruntime.core.SandboxedSdkCompat
 import androidx.privacysandbox.sdkruntime.core.activity.ActivityHolder
 import androidx.privacysandbox.sdkruntime.core.activity.SdkSandboxActivityHandlerCompat
+import androidx.privacysandbox.sdkruntime.core.controller.LoadSdkCallback
 import androidx.privacysandbox.sdkruntime.core.controller.SdkSandboxControllerCompat
+import java.util.concurrent.Executor
 
 /**
  * Implementation that delegates to platform [SdkSandboxController] for Android U.
@@ -47,8 +49,14 @@ internal class PlatformUDCImpl(
     private val compatToPlatformMap =
         hashMapOf<SdkSandboxActivityHandlerCompat, SdkSandboxActivityHandler>()
 
-    override suspend fun loadSdk(sdkName: String, params: Bundle): SandboxedSdkCompat =
-        sdkLoader.loadSdk(sdkName, params)
+    override fun loadSdk(
+        sdkName: String,
+        params: Bundle,
+        executor: Executor,
+        callback: LoadSdkCallback
+    ) {
+        sdkLoader.loadSdk(sdkName, params, executor, callback)
+    }
 
     override fun getSandboxedSdks(): List<SandboxedSdkCompat> {
         return controller

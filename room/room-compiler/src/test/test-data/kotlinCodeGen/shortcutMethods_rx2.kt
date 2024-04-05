@@ -13,7 +13,6 @@ import kotlin.Long
 import kotlin.String
 import kotlin.Suppress
 import kotlin.collections.List
-import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 @Generated(value = ["androidx.room.RoomProcessor"])
@@ -23,16 +22,16 @@ public class MyDao_Impl(
 ) : MyDao {
   private val __db: RoomDatabase
 
-  private val __insertionAdapterOfMyEntity: EntityInsertionAdapter<MyEntity>
+  private val __insertAdapterOfMyEntity: EntityInsertionAdapter<MyEntity>
 
-  private val __deletionAdapterOfMyEntity: EntityDeletionOrUpdateAdapter<MyEntity>
+  private val __deleteAdapterOfMyEntity: EntityDeletionOrUpdateAdapter<MyEntity>
 
   private val __updateAdapterOfMyEntity: EntityDeletionOrUpdateAdapter<MyEntity>
 
-  private val __upsertionAdapterOfMyEntity: EntityUpsertionAdapter<MyEntity>
+  private val __upsertAdapterOfMyEntity: EntityUpsertionAdapter<MyEntity>
   init {
     this.__db = __db
-    this.__insertionAdapterOfMyEntity = object : EntityInsertionAdapter<MyEntity>(__db) {
+    this.__insertAdapterOfMyEntity = object : EntityInsertionAdapter<MyEntity>(__db) {
       protected override fun createQuery(): String =
           "INSERT OR ABORT INTO `MyEntity` (`pk`,`other`) VALUES (?,?)"
 
@@ -41,7 +40,7 @@ public class MyDao_Impl(
         statement.bindString(2, entity.other)
       }
     }
-    this.__deletionAdapterOfMyEntity = object : EntityDeletionOrUpdateAdapter<MyEntity>(__db) {
+    this.__deleteAdapterOfMyEntity = object : EntityDeletionOrUpdateAdapter<MyEntity>(__db) {
       protected override fun createQuery(): String = "DELETE FROM `MyEntity` WHERE `pk` = ?"
 
       protected override fun bind(statement: SupportSQLiteStatement, entity: MyEntity) {
@@ -58,7 +57,7 @@ public class MyDao_Impl(
         statement.bindLong(3, entity.pk.toLong())
       }
     }
-    this.__upsertionAdapterOfMyEntity = EntityUpsertionAdapter<MyEntity>(object :
+    this.__upsertAdapterOfMyEntity = EntityUpsertionAdapter<MyEntity>(object :
         EntityInsertionAdapter<MyEntity>(__db) {
       protected override fun createQuery(): String =
           "INSERT INTO `MyEntity` (`pk`,`other`) VALUES (?,?)"
@@ -84,7 +83,7 @@ public class MyDao_Impl(
     public override fun call(): List<Long>? {
       __db.beginTransaction()
       try {
-        val _result: List<Long>? = __insertionAdapterOfMyEntity.insertAndReturnIdsList(entities)
+        val _result: List<Long>? = __insertAdapterOfMyEntity.insertAndReturnIdsList(entities)
         __db.setTransactionSuccessful()
         return _result
       } finally {
@@ -98,7 +97,7 @@ public class MyDao_Impl(
     public override fun call(): Void? {
       __db.beginTransaction()
       try {
-        __insertionAdapterOfMyEntity.insert(entities)
+        __insertAdapterOfMyEntity.insert(entities)
         __db.setTransactionSuccessful()
         return null
       } finally {
@@ -113,7 +112,7 @@ public class MyDao_Impl(
       var _total: Int = 0
       __db.beginTransaction()
       try {
-        _total += __deletionAdapterOfMyEntity.handle(entity)
+        _total += __deleteAdapterOfMyEntity.handle(entity)
         __db.setTransactionSuccessful()
         return _total
       } finally {
@@ -127,7 +126,7 @@ public class MyDao_Impl(
     public override fun call(): Void? {
       __db.beginTransaction()
       try {
-        __deletionAdapterOfMyEntity.handle(entity)
+        __deleteAdapterOfMyEntity.handle(entity)
         __db.setTransactionSuccessful()
         return null
       } finally {
@@ -170,7 +169,7 @@ public class MyDao_Impl(
     public override fun call(): List<Long>? {
       __db.beginTransaction()
       try {
-        val _result: List<Long>? = __upsertionAdapterOfMyEntity.upsertAndReturnIdsList(entities)
+        val _result: List<Long>? = __upsertAdapterOfMyEntity.upsertAndReturnIdsList(entities)
         __db.setTransactionSuccessful()
         return _result
       } finally {
@@ -184,7 +183,7 @@ public class MyDao_Impl(
     public override fun call(): Void? {
       __db.beginTransaction()
       try {
-        __upsertionAdapterOfMyEntity.upsert(entities)
+        __upsertAdapterOfMyEntity.upsert(entities)
         __db.setTransactionSuccessful()
         return null
       } finally {
@@ -194,7 +193,6 @@ public class MyDao_Impl(
   })
 
   public companion object {
-    @JvmStatic
     public fun getRequiredConverters(): List<KClass<*>> = emptyList()
   }
 }

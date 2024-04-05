@@ -25,14 +25,120 @@ import android.database.sqlite.SQLiteConstraintException
 import android.os.Build
 import android.os.CancellationSignal
 import androidx.annotation.RestrictTo
+import androidx.room.PooledConnection
 import androidx.room.RoomDatabase
+import androidx.room.Transactor
+import androidx.room.coroutines.RawConnectionAccessor
 import androidx.room.driver.SupportSQLiteConnection
+import androidx.room.getQueryDispatcher
+import androidx.room.withTransactionContext
+import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.nio.ByteBuffer
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+
+/**
+ * Performs a database operation.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+actual suspend fun <R> performSuspending(
+    db: RoomDatabase,
+    isReadOnly: Boolean,
+    inTransaction: Boolean,
+    block: (SQLiteConnection) -> R
+): R = db.compatCoroutineExecute(inTransaction) {
+    db.internalPerform(isReadOnly, inTransaction) { connection ->
+        val rawConnection = (connection as RawConnectionAccessor).rawConnection
+        block.invoke(rawConnection)
+    }
+}
+
+/**
+ * Blocking version of [performSuspending]
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+fun <R> performBlocking(
+    db: RoomDatabase,
+    isReadOnly: Boolean,
+    inTransaction: Boolean,
+    block: (SQLiteConnection) -> R
+): R {
+    db.assertNotMainThread()
+    db.assertNotSuspendingTransaction()
+    return runBlocking {
+        db.internalPerform(isReadOnly, inTransaction) { connection ->
+            val rawConnection = (connection as RawConnectionAccessor).rawConnection
+            block.invoke(rawConnection)
+        }
+    }
+}
+
+/**
+ * Utility function to wrap a suspend block in Room's transaction coroutine.
+ *
+ * This function should only be invoked from generated code and is needed to support `@Transaction`
+ * delegates in Java and Kotlin. It is preferred to use the other 'perform' functions.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
+actual suspend fun <R> performInTransactionSuspending(
+    db: RoomDatabase,
+    block: suspend () -> R
+): R = db.compatCoroutineExecute(true) {
+    db.internalPerform(isReadOnly = false, inTransaction = true) { block.invoke() }
+}
+
+private suspend inline fun <R> RoomDatabase.internalPerform(
+    isReadOnly: Boolean,
+    inTransaction: Boolean,
+    crossinline block: suspend (PooledConnection) -> R
+): R = useConnection(isReadOnly) { transactor ->
+    if (inTransaction) {
+        val type = if (isReadOnly) {
+            Transactor.SQLiteTransactionType.DEFERRED
+        } else {
+            Transactor.SQLiteTransactionType.IMMEDIATE
+        }
+        // TODO(b/309990302): Commonize Invalidation Tracker
+        if (inCompatibilityMode() && !isReadOnly) {
+            invalidationTracker.syncTriggers(openHelper.writableDatabase)
+        }
+        val result = transactor.withTransaction(type) { block.invoke(this) }
+        if (inCompatibilityMode() && !isReadOnly && !transactor.inTransaction()) {
+            invalidationTracker.refreshVersionsAsync()
+        }
+        result
+    } else {
+        block.invoke(transactor)
+    }
+}
+
+/**
+ * Compatibility dispatcher behaviour in [androidx.room.CoroutinesRoom.execute] for driver codegen
+ * utility functions. With the additional behaviour that it will use [withTransactionContext] if
+ * performing a transaction.
+ */
+private suspend inline fun <R> RoomDatabase.compatCoroutineExecute(
+    inTransaction: Boolean,
+    crossinline block: suspend () -> R
+): R {
+    if (inCompatibilityMode()) {
+        if (isOpenInternal && inTransaction()) {
+            return block.invoke()
+        }
+        if (inTransaction) {
+            return withTransactionContext { block.invoke() }
+        } else {
+            return withContext(getQueryDispatcher()) { block.invoke() }
+        }
+    } else {
+        return block.invoke()
+    }
+}
 
 /**
  * Performs the SQLiteQuery on the given database.

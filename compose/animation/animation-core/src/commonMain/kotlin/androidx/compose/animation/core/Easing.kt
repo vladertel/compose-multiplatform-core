@@ -18,6 +18,8 @@ package androidx.compose.animation.core
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.graphics.evaluateCubic
+import androidx.compose.ui.graphics.findFirstCubicRoot
 import androidx.compose.ui.util.fastCoerceIn
 
 /**
@@ -106,7 +108,7 @@ class CubicBezierEasing(
     private val d: Float
 ) : Easing {
     init {
-        require(!a.isNaN() && !b.isNaN() && !c.isNaN() && !d.isNaN()) {
+        requirePrecondition(!a.isNaN() && !b.isNaN() && !c.isNaN() && !d.isNaN()) {
             "Parameters to CubicBezierEasing cannot be NaN. Actual parameters are: $a, $b, $c, $d."
         }
     }

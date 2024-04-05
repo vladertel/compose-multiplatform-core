@@ -27,21 +27,22 @@ import android.view.translation.ViewTranslationResponse
 import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
-import androidx.collection.ArrayMap
 import androidx.collection.ArraySet
+import androidx.collection.IntObjectMap
 import androidx.collection.MutableIntObjectMap
+import androidx.collection.MutableIntSet
 import androidx.collection.intObjectMapOf
+import androidx.collection.mutableIntObjectMapOf
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.internal.checkPreconditionNotNull
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.platform.AndroidComposeView
-import androidx.compose.ui.platform.ScrollObservationScope
 import androidx.compose.ui.platform.SemanticsNodeCopy
 import androidx.compose.ui.platform.SemanticsNodeWithAdjustedBounds
 import androidx.compose.ui.platform.coreshims.ContentCaptureSessionCompat
 import androidx.compose.ui.platform.coreshims.ViewCompatShims
 import androidx.compose.ui.platform.coreshims.ViewStructureCompat
-import androidx.compose.ui.platform.findById
-import androidx.compose.ui.platform.getAllUncoveredSemanticsNodesToMap
+import androidx.compose.ui.platform.getAllUncoveredSemanticsNodesToIntObjectMap
 import androidx.compose.ui.platform.getTextLayoutResult
 import androidx.compose.ui.platform.toLegacyClassName
 import androidx.compose.ui.semantics.SemanticsActions
@@ -53,7 +54,6 @@ import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastJoinToString
 import androidx.compose.ui.util.fastMap
 import androidx.core.util.keyIterator
-import androidx.core.view.accessibility.AccessibilityNodeProviderCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import java.util.function.Consumer
@@ -65,7 +65,7 @@ import kotlinx.coroutines.delay
 //  would be the AndroidImplementation. When we create a LocalContentCaptureManager in the future,
 //  we would expose the interface but not this implementation.
 @OptIn(ExperimentalComposeUiApi::class)
-@Suppress("PrimitiveInCollection", "NullAnnotationGroup")
+@Suppress("NullAnnotationGroup")
 internal class AndroidContentCaptureManager(
     val view: AndroidComposeView,
     var onContentCaptureSession: () -> ContentCaptureSessionCompat?
@@ -73,8 +73,8 @@ internal class AndroidContentCaptureManager(
 
     @VisibleForTesting
     internal var contentCaptureSession: ContentCaptureSessionCompat? = null
-    private val bufferedAppearedNodes = ArrayMap<Int, ViewStructureCompat>()
-    private val bufferedDisappearedNodes = ArraySet<Int>()
+    private val bufferedAppearedNodes = MutableIntObjectMap<ViewStructureCompat>()
+    private val bufferedDisappearedNodes = MutableIntSet()
 
     /**
      * Delay before dispatching a recurring accessibility event in milliseconds.
@@ -103,11 +103,12 @@ internal class AndroidContentCaptureManager(
      * semantics tree. They key is the virtual view id(the root node has a key of
      * AccessibilityNodeProviderCompat.HOST_VIEW_ID and other node has a key of its id).
      */
-    internal var currentSemanticsNodes: Map<Int, SemanticsNodeWithAdjustedBounds> = mapOf()
+    internal var currentSemanticsNodes:
+        IntObjectMap<SemanticsNodeWithAdjustedBounds> = intObjectMapOf()
         get() {
             if (currentSemanticsNodesInvalidated) { // first instance of retrieving all nodes
                 currentSemanticsNodesInvalidated = false
-                field = view.semanticsOwner.getAllUncoveredSemanticsNodesToMap()
+                field = view.semanticsOwner.getAllUncoveredSemanticsNodesToIntObjectMap()
                 currentSemanticsNodesSnapshotTimestampMillis = System.currentTimeMillis()
             }
             return field
@@ -119,7 +120,7 @@ internal class AndroidContentCaptureManager(
     // SemanticsNode's children are dynamically generated and always reflect the current children.
     // We need to keep a copy of its old structure for comparison.
     private var previousSemanticsNodes:
-        MutableMap<Int, SemanticsNodeCopy> = mutableMapOf()
+        MutableIntObjectMap<SemanticsNodeCopy> = mutableIntObjectMapOf()
     private var previousSemanticsRoot =
         SemanticsNodeCopy(view.semanticsOwner.unmergedRootSemanticsNode, intObjectMapOf())
     private var checkingForSemanticsChanges = false
@@ -228,7 +229,7 @@ internal class AndroidContentCaptureManager(
         newNode: SemanticsNode,
         oldNode: SemanticsNodeCopy
     ) {
-        val newChildren: MutableSet<Int> = mutableSetOf()
+        val newChildren = MutableIntSet()
 
         // If any child is added, clear the subtree rooted at this node and return.
         newNode.replacedChildren.fastForEach { child ->
@@ -251,7 +252,7 @@ internal class AndroidContentCaptureManager(
 
         newNode.replacedChildren.fastForEach { child ->
             if (currentSemanticsNodes.contains(child.id)) {
-                val prevNode = checkNotNull(previousSemanticsNodes[child.id]) {
+                val prevNode = checkPreconditionNotNull(previousSemanticsNodes[child.id]) {
                     "node not present in pruned tree before this change"
                 }
                 sendSemanticsStructureChangeEvents(child, prevNode)
@@ -271,16 +272,16 @@ internal class AndroidContentCaptureManager(
             }
         }
         // Notify content capture disappear
-        for (entry in previousSemanticsNodes.entries) {
-            if (!currentSemanticsNodes.contains(entry.key)) {
-                bufferContentCaptureViewDisappeared(entry.key)
+        previousSemanticsNodes.forEachKey { key ->
+            if (!currentSemanticsNodes.contains(key)) {
+                bufferContentCaptureViewDisappeared(key)
             }
         }
 
         newNode.replacedChildren.fastForEach { child ->
             if (currentSemanticsNodes.contains(child.id) &&
                 previousSemanticsNodes.contains(child.id)) {
-                val prevNodeCopy = checkNotNull(previousSemanticsNodes[child.id]) {
+                val prevNodeCopy = checkPreconditionNotNull(previousSemanticsNodes[child.id]) {
                     "node not present in pruned tree before this change"
                 }
                 sendContentCaptureStructureChangeEvents(child, prevNodeCopy)
@@ -288,20 +289,15 @@ internal class AndroidContentCaptureManager(
         }
     }
 
-    private val scrollObservationScopes = mutableListOf<ScrollObservationScope>()
-    private val scheduleScrollEventIfNeededLambda: (ScrollObservationScope) -> Unit = {
-        this.scheduleScrollEventIfNeeded(it)
-    }
-
     // Analogous to `sendSemanticsPropertyChangeEvents`
     private fun checkForContentCapturePropertyChanges(
-        newSemanticsNodes: Map<Int, SemanticsNodeWithAdjustedBounds>
+        newSemanticsNodes: IntObjectMap<SemanticsNodeWithAdjustedBounds>
     ) {
-        for (id in newSemanticsNodes.keys) {
+        newSemanticsNodes.forEachKey { id ->
             // We do doing this search because the new configuration is set as a whole, so we
             // can't indicate which property is changed when setting the new configuration.
             val oldNode = previousSemanticsNodes[id]
-            val newNode = checkNotNull(newSemanticsNodes[id]?.semanticsNode) {
+            val newNode = checkPreconditionNotNull(newSemanticsNodes[id]?.semanticsNode) {
                 "no value for specified key"
             }
 
@@ -313,7 +309,7 @@ internal class AndroidContentCaptureManager(
                         ?.firstOrNull()
                     sendContentCaptureTextUpdateEvent(newNode.id, newText.toString())
                 }
-                continue
+                return@forEachKey
             }
 
             for (entry in newNode.unmergedConfig) {
@@ -327,79 +323,9 @@ internal class AndroidContentCaptureManager(
                             sendContentCaptureTextUpdateEvent(newNode.id, newText.toString())
                         }
                     }
-                    SemanticsProperties.VerticalScrollAxisRange -> {
-                        notifySubtreeStateChangeIfNeeded(newNode.layoutNode)
-                        val scope = checkNotNull(scrollObservationScopes.findById(id)) {
-                            "scroll observation scope does not exist"
-                        }
-                        scope.horizontalScrollAxisRange = newNode.unmergedConfig.getOrNull(
-                            SemanticsProperties.HorizontalScrollAxisRange
-                        )
-                        scope.verticalScrollAxisRange = newNode.unmergedConfig.getOrNull(
-                            SemanticsProperties.VerticalScrollAxisRange
-                        )
-                        scheduleScrollEventIfNeeded(scope)
-                    }
                 }
             }
         }
-    }
-
-    // TODO(mnuzen): this code is copied over from a11y delegate, we want to centralize some
-    // of it into `SemanticsManager` to keep the code cleaner.
-    private fun scheduleScrollEventIfNeeded(scrollObservationScope: ScrollObservationScope) {
-        if (!scrollObservationScope.isValidOwnerScope) {
-            return
-        }
-        view.snapshotObserver.observeReads(
-            scrollObservationScope,
-            scheduleScrollEventIfNeededLambda
-        ) {
-            val newXState = scrollObservationScope.horizontalScrollAxisRange
-            val newYState = scrollObservationScope.verticalScrollAxisRange
-            val oldXValue = scrollObservationScope.oldXValue
-            val oldYValue = scrollObservationScope.oldYValue
-
-            val deltaX = if (newXState != null && oldXValue != null) {
-                newXState.value() - oldXValue
-            } else {
-                0f
-            }
-            val deltaY = if (newYState != null && oldYValue != null) {
-                newYState.value() - oldYValue
-            } else {
-                0f
-            }
-
-            if (deltaX != 0f || deltaY != 0f) {
-                val scrollerId = semanticsNodeIdToAccessibilityVirtualNodeId(
-                    scrollObservationScope.semanticsNodeId
-                )
-
-                view.invalidate()
-
-                currentSemanticsNodes[scrollerId]?.semanticsNode?.layoutNode?.let { layoutNode ->
-                    // Schedule a content subtree change event for the scroller. As side effects
-                    // this will also schedule a TYPE_VIEW_SCROLLED event, and suppress separate
-                    // events from being sent for each child whose bounds moved.
-                    notifySubtreeStateChangeIfNeeded(layoutNode)
-                }
-            }
-
-            if (newXState != null) {
-                scrollObservationScope.oldXValue = newXState.value()
-            }
-            if (newYState != null) {
-                scrollObservationScope.oldYValue = newYState.value()
-            }
-        }
-    }
-
-    private fun semanticsNodeIdToAccessibilityVirtualNodeId(id: Int): Int {
-        if (id == view.semanticsOwner.unmergedRootSemanticsNode.id) {
-            return AccessibilityNodeProviderCompat.HOST_VIEW_ID
-        }
-        return id
     }
 
     private fun sendContentCaptureTextUpdateEvent(id: Int, newText: String) {
@@ -409,27 +335,20 @@ internal class AndroidContentCaptureManager(
         val session = contentCaptureSession ?: return
         // TODO: consider having a `newContentCaptureId` function to improve readability.
         val autofillId = session.newAutofillId(id.toLong())
-        checkNotNull(autofillId) { "Invalid content capture ID" }
+        checkPreconditionNotNull(autofillId) { "Invalid content capture ID" }
         session.notifyViewTextChanged(autofillId, newText)
     }
 
     private fun updateSemanticsCopy() {
         previousSemanticsNodes.clear()
 
-        // TODO(b/272068594): Will remove this cast from Map to IntObjectMap once
-        // `currentSemanticsNodes` has been refactored and is a `MutableIntObjectMap`
-        val intObjCurrSemanticsNodes = MutableIntObjectMap<SemanticsNodeWithAdjustedBounds>()
-        for (entry in currentSemanticsNodes) {
-            intObjCurrSemanticsNodes[entry.key] = entry.value
-        }
-
-        for (entry in currentSemanticsNodes.entries) {
-            previousSemanticsNodes[entry.key] =
-                SemanticsNodeCopy(entry.value.semanticsNode, intObjCurrSemanticsNodes)
+        currentSemanticsNodes.forEach { key, value ->
+            previousSemanticsNodes[key] =
+                SemanticsNodeCopy(value.semanticsNode, currentSemanticsNodes)
         }
         previousSemanticsRoot =
             SemanticsNodeCopy(
-                view.semanticsOwner.unmergedRootSemanticsNode, intObjCurrSemanticsNodes
+                view.semanticsOwner.unmergedRootSemanticsNode, currentSemanticsNodes
             )
     }
 
@@ -529,17 +448,19 @@ internal class AndroidContentCaptureManager(
 
         if (bufferedAppearedNodes.isNotEmpty()) {
             session.notifyViewsAppeared(
-                bufferedAppearedNodes.values
-                    .toList()
-                    .fastMap { it.toViewStructure() })
+                mutableListOf<ViewStructureCompat>().apply {
+                    bufferedAppearedNodes.forEachValue { add(it) }
+                }
+                .fastMap { it.toViewStructure() })
             bufferedAppearedNodes.clear()
         }
         if (bufferedDisappearedNodes.isNotEmpty()) {
             session.notifyViewsDisappeared(
-                bufferedDisappearedNodes
-                    .toList()
-                    .fastMap { it.toLong() }
-                    .toLongArray())
+                mutableListOf<Int>().apply {
+                    bufferedDisappearedNodes.forEach { add(it) }
+                }
+                .fastMap { it.toLong() }
+                .toLongArray())
             bufferedDisappearedNodes.clear()
         }
     }
@@ -598,7 +519,7 @@ internal class AndroidContentCaptureManager(
     }
 
     private fun showTranslatedText() {
-        for (node in currentSemanticsNodes.values) {
+        currentSemanticsNodes.forEachValue { node ->
             val config = node.semanticsNode.unmergedConfig
             if (config.getOrNull(SemanticsProperties.IsShowingTextSubstitution) == false) {
                 config.getOrNull(SemanticsActions.ShowTextSubstitution)?.action?.invoke(
@@ -609,7 +530,7 @@ internal class AndroidContentCaptureManager(
     }
 
     private fun hideTranslatedText() {
-        for (node in currentSemanticsNodes.values) {
+        currentSemanticsNodes.forEachValue { node ->
             val config = node.semanticsNode.unmergedConfig
             if (config.getOrNull(SemanticsProperties.IsShowingTextSubstitution) == true) {
                 config.getOrNull(SemanticsActions.ShowTextSubstitution)?.action?.invoke(
@@ -620,7 +541,7 @@ internal class AndroidContentCaptureManager(
     }
 
     private fun clearTranslatedText() {
-        for (node in currentSemanticsNodes.values) {
+        currentSemanticsNodes.forEachValue { node ->
             val config = node.semanticsNode.unmergedConfig
             if (config.getOrNull(SemanticsProperties.IsShowingTextSubstitution) != null) {
                 config.getOrNull(SemanticsActions.ClearTextSubstitution)?.action?.invoke()

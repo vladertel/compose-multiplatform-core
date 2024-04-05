@@ -16,18 +16,20 @@
 
 package androidx.benchmark
 
+import android.app.ActivityManager
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.BatteryManager
 import android.os.Build
+import android.util.Log
 import android.util.Printer
 import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
-import java.lang.IllegalStateException
 
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 object DeviceInfo {
@@ -96,28 +98,6 @@ object DeviceInfo {
     val misconfiguredForTracing = !File("/sys/kernel/tracing/trace_marker").exists() &&
         !File("/sys/kernel/debug/tracing/trace_marker").exists()
 
-    val artMainlineVersion = when {
-        Build.VERSION.SDK_INT >= 31 ->
-            queryArtMainlineVersion()
-        Build.VERSION.SDK_INT == 30 ->
-            1
-        else ->
-            -1
-    }
-
-    /**
-     * Starting with the first Android U release, ART mainline drops optimizations after method
-     * tracing occurs, so we disable tracing on those mainline versions.
-     *
-     * TODO: update max value once a fix is released to mainline
-     * See b/303660864
-     */
-    private val ART_MAINLINE_MIN_VERSIONS_AFFECTING_METHOD_TRACING = 340000000L..Long.MAX_VALUE
-
-    val methodTracingAffectsMeasurements =
-        Build.VERSION.SDK_INT in 26..30 || // b/313868903
-            artMainlineVersion in ART_MAINLINE_MIN_VERSIONS_AFFECTING_METHOD_TRACING // b/303660864
-
     private fun getMainlineAppInfo(packageName: String): ApplicationInfo? {
         return try {
             InstrumentationRegistry.getInstrumentation().context.packageManager
@@ -131,8 +111,21 @@ object DeviceInfo {
     private fun queryArtMainlineVersion(): Long {
         val artMainlinePackage = getMainlineAppInfo("com.google.android.art")
             ?: getMainlineAppInfo("com.android.art")
-            ?: throw IllegalStateException("Unable to find installed ART mainline module")
-
+            ?: getMainlineAppInfo("com.google.android.go.art")
+            ?: getMainlineAppInfo("com.android.go.art")
+        if (artMainlinePackage == null) {
+            Log.d(
+                BenchmarkState.TAG,
+                "No ART mainline module found on API ${Build.VERSION.SDK_INT}"
+            )
+            return if (Build.VERSION.SDK_INT >= 34) {
+                // defer error to avoid crashing during init
+                ART_MAINLINE_VERSION_UNDETECTED_ERROR
+            } else {
+                // accept missing module if we can't be sure it would have one installed (e.g. go)
+                ART_MAINLINE_VERSION_UNDETECTED
+            }
+        }
         // This is an EXTREMELY SILLY way to find out ART's versions, but I couldn't find a better
         // one without reflecting into ApplicationInfo.longVersionCode (not allowed in jetpack)
         // or shell commands (slower)
@@ -161,6 +154,8 @@ object DeviceInfo {
         return versionCode
     }
 
+    val isLowRamDevice: Boolean
+
     init {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
 
@@ -175,6 +170,9 @@ object DeviceInfo {
             val scale = getIntExtra(BatteryManager.EXTRA_SCALE, 100)
             level * 100 / scale
         } ?: 100
+
+        isLowRamDevice =
+            (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).isLowRamDevice
 
         deviceSummaryString = "DeviceInfo(Brand=${Build.BRAND}" +
             ", Model=${Build.MODEL}" +
@@ -217,4 +215,39 @@ object DeviceInfo {
             )
         )
     }
+
+    /**
+     * Starting with the first Android U release, ART mainline drops optimizations after method
+     * tracing occurs, so we disable tracing on those mainline versions.
+     *
+     * Fix cherry picked into 341513000, so we exclude that value
+     *
+     * See b/303660864
+     */
+    private val ART_MAINLINE_MIN_VERSIONS_AFFECTING_METHOD_TRACING = 340000000L.until(341513000)
+
+    /**
+     * Used when mainline version failed to detect, but this is accepted due to low API level (<34)
+     * where presence isn't guaranteed (e.g. go devices)
+     */
+    const val ART_MAINLINE_VERSION_UNDETECTED = -1L
+
+    /**
+     * Used when mainline version failed to detect, and should throw an error when
+     * running a microbenchmark
+     */
+    const val ART_MAINLINE_VERSION_UNDETECTED_ERROR = -100L
+
+    val artMainlineVersion = when {
+        Build.VERSION.SDK_INT >= 31 ->
+            queryArtMainlineVersion()
+        Build.VERSION.SDK_INT == 30 ->
+            1
+        else ->
+            ART_MAINLINE_VERSION_UNDETECTED
+    }
+
+    val methodTracingAffectsMeasurements =
+        Build.VERSION.SDK_INT in 26..30 || // b/313868903
+            artMainlineVersion in ART_MAINLINE_MIN_VERSIONS_AFFECTING_METHOD_TRACING // b/303660864
 }

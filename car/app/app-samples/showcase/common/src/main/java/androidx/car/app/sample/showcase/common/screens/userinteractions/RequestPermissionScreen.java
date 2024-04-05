@@ -33,6 +33,7 @@ import androidx.car.app.CarToast;
 import androidx.car.app.Screen;
 import androidx.car.app.model.Action;
 import androidx.car.app.model.CarColor;
+import androidx.car.app.model.Header;
 import androidx.car.app.model.LongMessageTemplate;
 import androidx.car.app.model.MessageTemplate;
 import androidx.car.app.model.OnClickListener;
@@ -43,6 +44,7 @@ import androidx.core.location.LocationManagerCompat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * A screen to show a request for a runtime permission from the user.
@@ -97,7 +99,8 @@ public class RequestPermissionScreen extends Screen {
             // Permission lookup failed. Show error.
             return new MessageTemplate.Builder(
                     getCarContext().getString(R.string.package_not_found_error_msg))
-                    .setHeaderAction(headerAction)
+                    .setHeader(new Header.Builder().setStartHeaderAction(headerAction)
+                            .build())
                     .addAction(mRefreshAction)
                     .build();
         }
@@ -106,11 +109,14 @@ public class RequestPermissionScreen extends Screen {
             // No permissions needed. Prompt the user to exit.
             return new MessageTemplate.Builder(
                     getCarContext().getString(R.string.permissions_granted_msg))
-                    .setHeaderAction(headerAction)
-                    .addAction(new Action.Builder()
-                            .setTitle(getCarContext().getString(R.string.close_action_title))
-                            .setOnClickListener(this::finish)
+                    .setHeader(new Header.Builder().setStartHeaderAction(headerAction)
                             .build())
+                    .addAction(
+                            new Action.Builder()
+                                    .setTitle(
+                                            getCarContext().getString(R.string.close_action_title))
+                                    .setOnClickListener(this::finish)
+                                    .build())
                     .build();
         }
         boolean needsLocationPermission = needsLocationPermission();
@@ -119,15 +125,10 @@ public class RequestPermissionScreen extends Screen {
     }
 
     private Template createPermissionPromptTemplate(
-            List<String> permissions,
-            boolean needsLocationPermission,
-            Action headerAction
-    ) {
+            List<String> permissions, boolean needsLocationPermission, Action headerAction) {
         LongMessageTemplate.Builder builder =
-                new LongMessageTemplate.Builder(createRequiredPermissionsMessage(
-                        permissions,
-                        needsLocationPermission
-                ))
+                new LongMessageTemplate.Builder(
+                        createRequiredPermissionsMessage(permissions, needsLocationPermission))
                         .setTitle(getCarContext().getString(R.string.required_permissions_title))
                         .addAction(createGrantPermissionsButton(permissions))
                         .setHeaderAction(headerAction);
@@ -140,16 +141,13 @@ public class RequestPermissionScreen extends Screen {
     }
 
     private String createRequiredPermissionsMessage(
-            List<String> permissions,
-            boolean needsLocationPermission
-    ) {
+            List<String> permissions, boolean needsLocationPermission) {
         StringBuilder message = new StringBuilder()
                 .append(getCarContext().getString(R.string.needs_access_msg_prefix));
         for (String permission : permissions) {
             message.append(permission);
             message.append("\n");
         }
-
 
         if (needsLocationPermission) {
             message.append(
@@ -163,9 +161,10 @@ public class RequestPermissionScreen extends Screen {
     private List<String> findMissingPermissions() throws PackageManager.NameNotFoundException {
         // Possible NameNotFoundException
         PackageInfo info =
-                getCarContext().getPackageManager().getPackageInfo(
-                        getCarContext().getPackageName(),
-                        PackageManager.GET_PERMISSIONS);
+                getCarContext()
+                        .getPackageManager()
+                        .getPackageInfo(getCarContext().getPackageName(),
+                                PackageManager.GET_PERMISSIONS);
 
         String[] declaredPermissions = info.requestedPermissions;
         if (declaredPermissions == null) {
@@ -178,16 +177,20 @@ public class RequestPermissionScreen extends Screen {
             if (isAppHostPermission(permission)) {
                 // Don't include permissions against the car app host as they are all normal but
                 // show up as ungranted by the system.
-                Log.d(TAG, String.format("Permission ignored (belongs to host): %s", permission));
+                Log.d(
+                        TAG, String.format(Locale.US, "Permission ignored (belongs to host): %s",
+                                permission));
                 continue;
             }
 
             if (isPermissionGranted(permission)) {
-                Log.d(TAG, String.format("Permission ignored (already granted): %s", permission));
+                Log.d(
+                        TAG, String.format(Locale.US, "Permission ignored (already granted): %s",
+                                permission));
                 continue;
             }
 
-            Log.d(TAG, String.format("Found missing permission: %s", permission));
+            Log.d(TAG, String.format(Locale.US, "Found missing permission: %s", permission));
             missingPermissions.add(permission);
         }
 
@@ -220,16 +223,15 @@ public class RequestPermissionScreen extends Screen {
         return new Action.Builder()
                 .setTitle(getCarContext().getString(R.string.enable_location_action_title))
                 .setBackgroundColor(CarColor.BLUE)
-                .setOnClickListener(ParkedOnlyOnClickListener.create(
-                        this::grantLocationPermission))
+                .setOnClickListener(ParkedOnlyOnClickListener.create(this::grantLocationPermission))
                 .build();
     }
 
     private void grantLocationPermission() {
-        getCarContext().startActivity(
-                new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        );
+        getCarContext()
+                .startActivity(
+                        new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
 
         invalidate();
 
@@ -237,9 +239,8 @@ public class RequestPermissionScreen extends Screen {
     }
 
     private Action createGrantPermissionsButton(List<String> permissions) {
-        OnClickListener listener = ParkedOnlyOnClickListener.create(
-                () -> requestPermissions(permissions)
-        );
+        OnClickListener listener =
+                ParkedOnlyOnClickListener.create(() -> requestPermissions(permissions));
 
         return new Action.Builder()
                 .setTitle(getCarContext().getString(R.string.grant_access_action_title))
@@ -249,24 +250,26 @@ public class RequestPermissionScreen extends Screen {
     }
 
     private void requestPermissions(List<String> permissions) {
-        getCarContext().requestPermissions(
-                permissions,
-                (approved, rejected) -> {
-                    // Log debug info
-                    CarToast.makeText(
-                            getCarContext(),
-                            String.format(
-                                    "Approved: %d Rejected: %d",
-                                    approved.size(),
-                                    rejected.size()
-                            ),
-                            CarToast.LENGTH_LONG
-                    ).show();
-                    Log.i(TAG, String.format("Approved: %s Rejected: %s", approved, rejected));
+        getCarContext()
+                .requestPermissions(
+                        permissions,
+                        (approved, rejected) -> {
+                            // Log debug info
+                            CarToast.makeText(
+                                            getCarContext(),
+                                            String.format(
+                                                    Locale.US, "Approved: %d Rejected: %d",
+                                                    approved.size(),
+                                                    rejected.size()),
+                                            CarToast.LENGTH_LONG)
+                                    .show();
+                            Log.i(TAG,
+                                    String.format(Locale.US, "Approved: %s Rejected: %s", approved,
+                                            rejected));
 
-                    // Update the template
-                    invalidate();
-                });
+                            // Update the template
+                            invalidate();
+                        });
 
         // Prompt AAP users to look at their phone, to grant permissions.
         promptAapUsers(getCarContext().getString(R.string.phone_screen_permission_msg));

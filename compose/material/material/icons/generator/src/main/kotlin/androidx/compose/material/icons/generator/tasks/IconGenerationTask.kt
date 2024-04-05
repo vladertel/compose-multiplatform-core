@@ -149,7 +149,7 @@ abstract class IconGenerationTask : DefaultTask() {
             if (isMpp) {
                 CoreIconGenerationTask.register(project, null)
             } else {
-                libraryExtension.libraryVariants.all { variant ->
+                libraryExtension.libraryVariants.configureEach { variant ->
                     CoreIconGenerationTask.register(project, variant)
                 }
             }
@@ -166,7 +166,7 @@ abstract class IconGenerationTask : DefaultTask() {
             project: Project,
             libraryExtension: LibraryExtension
         ) {
-            libraryExtension.libraryVariants.all { variant ->
+            libraryExtension.libraryVariants.configureEach { variant ->
                 if (variant.name == "release") {
                     ExtendedIconGenerationTask.register(project, variant)
                 }
@@ -190,7 +190,7 @@ abstract class IconGenerationTask : DefaultTask() {
             project: Project,
             libraryExtension: LibraryExtension
         ) {
-            libraryExtension.testVariants.all { variant ->
+            libraryExtension.testVariants.configureEach { variant ->
                 IconTestingGenerationTask.register(project, variant)
             }
         }

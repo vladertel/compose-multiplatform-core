@@ -637,18 +637,27 @@ open class ComponentActivity() : androidx.core.app.ComponentActivity(),
                 }
             }
         }.also { dispatcher ->
-            lifecycle.addObserver(LifecycleEventObserver { lifecycleOwner, event ->
-                if (event == Lifecycle.Event.ON_CREATE) {
-                    if (Build.VERSION.SDK_INT >= 33) {
-                        dispatcher.setOnBackInvokedDispatcher(
-                            Api33Impl.getOnBackInvokedDispatcher(
-                                lifecycleOwner as ComponentActivity
-                            )
-                        )
+            if (Build.VERSION.SDK_INT >= 33) {
+                if (Looper.myLooper() != Looper.getMainLooper()) {
+                    Handler(Looper.getMainLooper()).post {
+                        addObserverForBackInvoker(dispatcher)
                     }
+                } else {
+                    addObserverForBackInvoker(dispatcher)
                 }
-            })
+            }
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun addObserverForBackInvoker(dispatcher: OnBackPressedDispatcher) {
+        lifecycle.addObserver(LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_CREATE) {
+                dispatcher.setOnBackInvokedDispatcher(
+                    Api33Impl.getOnBackInvokedDispatcher(this@ComponentActivity)
+                )
+            }
+        })
     }
 
     final override val savedStateRegistry: SavedStateRegistry

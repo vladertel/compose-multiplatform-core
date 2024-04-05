@@ -16,16 +16,20 @@
 
 package androidx.compose.foundation.text
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.testutils.expectError
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -45,6 +49,8 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertIsFocused
@@ -54,15 +60,16 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkAnnotation.Url
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.UrlAnnotation
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withAnnotation
 import androidx.compose.ui.text.withStyle
@@ -77,8 +84,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+@OptIn(ExperimentalFoundationApi::class)
 @RunWith(AndroidJUnit4::class)
-@OptIn(ExperimentalTextApi::class)
 @MediumTest
 class BasicTextLinkTest {
     @get:Rule
@@ -113,7 +120,7 @@ class BasicTextLinkTest {
             focusManager.moveFocus(FocusDirection.Previous)
         }
 
-        rule.onAllNodes(hasClickAction())[2].assertIsFocused()
+        rule.onAllNodes(hasClickAction(), useUnmergedTree = true)[2].assertIsFocused()
     }
 
     @Test
@@ -126,8 +133,8 @@ class BasicTextLinkTest {
             focusManager.moveFocus(FocusDirection.Previous)
         }
 
-        rule.onAllNodes(hasClickAction())[2].assertIsNotFocused()
-        rule.onAllNodes(hasClickAction())[1].assertIsFocused()
+        rule.onAllNodes(hasClickAction(), useUnmergedTree = true)[2].assertIsNotFocused()
+        rule.onAllNodes(hasClickAction(), useUnmergedTree = true)[1].assertIsFocused()
     }
 
     @Test
@@ -141,9 +148,9 @@ class BasicTextLinkTest {
             focusManager.moveFocus(FocusDirection.Previous)
         }
 
-        rule.onAllNodes(hasClickAction())[2].assertIsNotFocused()
-        rule.onAllNodes(hasClickAction())[1].assertIsNotFocused()
-        rule.onAllNodes(hasClickAction())[0].assertIsFocused()
+        rule.onAllNodes(hasClickAction(), useUnmergedTree = true)[2].assertIsNotFocused()
+        rule.onAllNodes(hasClickAction(), useUnmergedTree = true)[1].assertIsNotFocused()
+        rule.onAllNodes(hasClickAction(), useUnmergedTree = true)[0].assertIsFocused()
     }
 
     @Test
@@ -220,6 +227,96 @@ class BasicTextLinkTest {
     }
 
     @Test
+    fun rtlText_onClick_insideFirstLink_opensFirstUrl() {
+        setupContent { RtlTextWithLinks() }
+
+        rule.runOnIdle { assertThat(layoutResult).isNotNull() }
+        rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).performTouchInput {
+            val boundingBox = layoutResult!!.getBoundingBox(3)
+            click(boundingBox.center)
+        }
+
+        rule.runOnIdle {
+            assertThat(openedUri).isEqualTo(Url1)
+        }
+    }
+
+    @Test
+    fun rtlText_onClick_insideSecondLink_opensSecondUrl() {
+        setupContent { RtlTextWithLinks() }
+
+        rule.runOnIdle { assertThat(layoutResult).isNotNull() }
+        rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).performTouchInput {
+            val boundingBox = layoutResult!!.getBoundingBox(30)
+            click(boundingBox.center)
+        }
+
+        rule.runOnIdle {
+            assertThat(openedUri).isEqualTo(Url2)
+        }
+    }
+
+    @Test
+    fun rtlText_onClick_outsideLink_doNothing() {
+        setupContent { RtlTextWithLinks() }
+
+        rule.runOnIdle { assertThat(layoutResult).isNotNull() }
+        rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).performTouchInput {
+            val boundingBox = layoutResult!!.getBoundingBox(35)
+            click(boundingBox.center)
+        }
+
+        rule.runOnIdle {
+            assertThat(openedUri).isEqualTo(null)
+        }
+    }
+
+    @Test
+    fun rtlText_onClick_inBetweenLinks_doNothing() {
+        setupContent { RtlTextWithLinks() }
+
+        rule.runOnIdle { assertThat(layoutResult).isNotNull() }
+        rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).performTouchInput {
+            val boundingBox = layoutResult!!.getBoundingBox(20)
+            click(boundingBox.center)
+        }
+
+        rule.runOnIdle {
+            assertThat(openedUri).isEqualTo(null)
+        }
+    }
+
+    @Test
+    fun bidiText_onClick_insideLink_opensUrl() {
+        setupContent { BidiTextWithLinks() }
+
+        rule.runOnIdle { assertThat(layoutResult).isNotNull() }
+        rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).performTouchInput {
+            val boundingBox = layoutResult!!.getBoundingBox(8)
+            click(boundingBox.center)
+        }
+
+        rule.runOnIdle {
+            assertThat(openedUri).isEqualTo(Url1)
+        }
+    }
+
+    @Test
+    fun bidiText_onClick_outsideLink_doNothing() {
+        setupContent { BidiTextWithLinks() }
+
+        rule.runOnIdle { assertThat(layoutResult).isNotNull() }
+        rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).performTouchInput {
+            val boundingBox = layoutResult!!.getBoundingBox(2)
+            click(boundingBox.center)
+        }
+
+        rule.runOnIdle {
+            assertThat(openedUri).isEqualTo(null)
+        }
+    }
+
+    @Test
     fun link_andInlineContent_onClick_opensUrl() {
         setupContent {
             /***
@@ -228,7 +325,7 @@ class BasicTextLinkTest {
              * +--------------------+
              */
             val text = buildAnnotatedString {
-                withAnnotation(UrlAnnotation(Url1)) { append("link") }
+                withAnnotation(Url(Url1)) { append("link") }
                 append(" text ")
                 appendInlineContent("box")
                 append(" text")
@@ -252,9 +349,9 @@ class BasicTextLinkTest {
             )
         }
 
-        rule.onAllNodes(hasClickAction())[0].performClick()
+        rule.onAllNodes(hasClickAction(), useUnmergedTree = true)[0].performClick()
 
-        rule.onNodeWithTag("box").assertExists()
+        rule.onNodeWithTag("box", useUnmergedTree = true).assertExists()
         rule.runOnIdle {
             assertThat(openedUri).isEqualTo(Url1)
         }
@@ -264,7 +361,7 @@ class BasicTextLinkTest {
     fun link_withTranslatedString() {
         val originalText = buildAnnotatedString {
             append("text ")
-            withAnnotation(UrlAnnotation(Url1)) {
+            withAnnotation(Url(Url1)) {
                 append("link")
             }
         }
@@ -306,7 +403,7 @@ class BasicTextLinkTest {
                 val color = remember { mutableStateOf(Color.Red) }
                 BasicText(
                     buildAnnotatedString {
-                        withAnnotation(UrlAnnotation(Url1)) {
+                        withAnnotation(Url(Url1)) {
                             withStyle(SpanStyle(color = color.value)) {
                                 append("link")
                             }
@@ -325,7 +422,83 @@ class BasicTextLinkTest {
         }
 
         rule.onNodeWithTag("box").assertIsNotFocused()
-        rule.onNode(hasClickAction()).assertIsFocused()
+        rule.onNode(hasClickAction(), useUnmergedTree = true).assertIsFocused()
+    }
+
+    @Test
+    fun link_handler_calledWithoutDefaultBehavior() {
+        var counter = 0
+        setupContent {
+            BasicText(
+                text = buildAnnotatedString {
+                    withAnnotation(Url(Url1)) { append("link") }
+                },
+                onLinkClicked = {
+                    counter++
+                }
+            )
+        }
+
+        rule.onNodeWithText("link").performClick()
+
+        rule.runOnIdle {
+            assertThat(openedUri).isNull()
+            assertThat(counter).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun link_nullHandler_defaultBehavior() {
+        setupContent {
+            BasicText(
+                text = buildAnnotatedString {
+                    withAnnotation(Url(Url1)) { append("link") }
+                },
+                onLinkClicked = null // default
+            )
+        }
+
+        rule.onNodeWithText("link").performClick()
+
+        rule.runOnIdle {
+            assertThat(openedUri).isEqualTo(Url1)
+        }
+    }
+
+    @Test
+    fun clickable_handler_called() {
+        var counter = 0
+        setupContent {
+            BasicText(
+                text = buildAnnotatedString {
+                    withAnnotation(LinkAnnotation.Clickable(Url1)) { append("clickable") }
+                },
+                onLinkClicked = {
+                    counter++
+                }
+            )
+        }
+
+        rule.onNodeWithText("clickable").performClick()
+
+        rule.runOnIdle {
+            assertThat(counter).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun linkMeasure_withExceededMaxConstraintSize_doesNotCrash() {
+        val textWithLink = buildAnnotatedString {
+            withAnnotation(Url("link")) { append("text ".repeat(25_000)) }
+        }
+
+        expectError<IllegalArgumentException>(expectError = false) {
+            setupContent {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    BasicText(text = textWithLink, modifier = Modifier.width(100.dp))
+                }
+            }
+        }
     }
 
     @Composable
@@ -343,11 +516,11 @@ class BasicTextLinkTest {
 
             val text = buildAnnotatedString {
                 append("text ")
-                withAnnotation(UrlAnnotation(Url1)) {
+                withAnnotation(Url(Url1)) {
                     append("link ")
                 }
                 append("text ")
-                withAnnotation(UrlAnnotation(Url2)) {
+                withAnnotation(Url(Url2)) {
                     append("a long link ")
                 }
                 append("text")
@@ -362,7 +535,7 @@ class BasicTextLinkTest {
 
             BasicText(buildAnnotatedString {
                 append("text ")
-                withAnnotation(UrlAnnotation(Url3)) {
+                withAnnotation(Url(Url3)) {
                     append("link ")
                 }
             }, style = style)
@@ -375,6 +548,29 @@ class BasicTextLinkTest {
                     .focusTarget()
             )
         }
+    }
+
+    @Composable
+    private fun BidiTextWithLinks() {
+        val text = buildAnnotatedString {
+            append("\u05D0\u05D1 \u05D2\u05D3")
+            withAnnotation(Url(Url1)) { append(" text ") }
+            append("\u05D0\u05D1 \u05D2\u05D3 \u05D0\u05D1 \u05D2\u05D3")
+        }
+        BasicText(text, onTextLayout = { layoutResult = it })
+    }
+
+    @Composable
+    private fun RtlTextWithLinks() {
+        val text = buildAnnotatedString {
+            withAnnotation(Url(Url1)) { append("\u05D0\u05D1 \u05D2\u05D3 \u05D0\u05D1") }
+            append(" \u05D0\u05D1 \u05D2\u05D3 \u05D0\u05D1 \u05D0\u05D1 \u05D2\u05D3")
+            withAnnotation(Url(Url2)) {
+                append(" \u05D0\u05D1 \u05D2\u05D3 \u05D0\u05D1")
+            }
+            append("\u05D0\u05D1 \u05D2\u05D3")
+        }
+        BasicText(text, onTextLayout = { layoutResult = it })
     }
 
     @OptIn(ExperimentalComposeUiApi::class)

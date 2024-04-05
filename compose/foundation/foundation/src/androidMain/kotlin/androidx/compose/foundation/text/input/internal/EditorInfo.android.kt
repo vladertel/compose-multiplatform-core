@@ -16,13 +16,17 @@
 
 package androidx.compose.foundation.text.input.internal
 
+import android.os.Build
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
+import androidx.annotation.DoNotInline
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.core.view.inputmethod.EditorInfoCompat
 
 /**
@@ -32,7 +36,7 @@ internal fun EditorInfo.update(
     text: CharSequence,
     selection: TextRange,
     imeOptions: ImeOptions,
-    acceptedMimeTypes: Set<String>? = null
+    contentMimeTypes: Array<String>? = null
 ) {
     this.imeOptions = when (imeOptions.imeAction) {
         ImeAction.Default -> {
@@ -58,6 +62,10 @@ internal fun EditorInfo.update(
 
     imeOptions.platformImeOptions?.privateImeOptions?.let {
         privateImeOptions = it
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        LocaleListHelper.setHintLocales(this, imeOptions.hintLocales)
     }
 
     this.inputType = when (imeOptions.keyboardType) {
@@ -139,11 +147,31 @@ internal fun EditorInfo.update(
 
     EditorInfoCompat.setInitialSurroundingText(this, text)
 
-    if (acceptedMimeTypes != null) {
-        EditorInfoCompat.setContentMimeTypes(this, acceptedMimeTypes.toTypedArray())
+    if (contentMimeTypes != null) {
+        EditorInfoCompat.setContentMimeTypes(this, contentMimeTypes)
     }
 
     this.imeOptions = this.imeOptions or EditorInfo.IME_FLAG_NO_FULLSCREEN
 }
 
 private fun hasFlag(bits: Int, flag: Int): Boolean = (bits and flag) == flag
+
+/**
+ * This class is here to ensure that the classes that use this API will get verified and can be
+ * AOT compiled. It is expected that this class will soft-fail verification, but the classes
+ * which use this method will pass.
+ */
+@RequiresApi(24)
+internal object LocaleListHelper {
+    @RequiresApi(24)
+    @DoNotInline
+    fun setHintLocales(editorInfo: EditorInfo, localeList: LocaleList?) {
+        if (localeList == null) {
+            editorInfo.hintLocales = null
+            return
+        }
+        editorInfo.hintLocales = android.os.LocaleList(
+            *localeList.map { it.platformLocale }.toTypedArray()
+        )
+    }
+}

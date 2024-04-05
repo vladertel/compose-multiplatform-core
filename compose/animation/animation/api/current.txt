@@ -62,6 +62,7 @@ package androidx.compose.animation {
   }
 
   public final class AnimationModifierKt {
+    method public static androidx.compose.ui.Modifier animateContentSize(androidx.compose.ui.Modifier, optional androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntSize> animationSpec, optional androidx.compose.ui.Alignment alignment, optional kotlin.jvm.functions.Function2<? super androidx.compose.ui.unit.IntSize,? super androidx.compose.ui.unit.IntSize,kotlin.Unit>? finishedListener);
     method public static androidx.compose.ui.Modifier animateContentSize(androidx.compose.ui.Modifier, optional androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntSize> animationSpec, optional kotlin.jvm.functions.Function2<? super androidx.compose.ui.unit.IntSize,? super androidx.compose.ui.unit.IntSize,kotlin.Unit>? finishedListener);
   }
 
@@ -89,8 +90,6 @@ package androidx.compose.animation {
   }
 
   @SuppressCompatibility @androidx.compose.animation.ExperimentalAnimationApi public enum EnterExitState {
-    method public static androidx.compose.animation.EnterExitState valueOf(String value) throws java.lang.IllegalArgumentException, java.lang.NullPointerException;
-    method public static androidx.compose.animation.EnterExitState[] values();
     enum_constant public static final androidx.compose.animation.EnterExitState PostExit;
     enum_constant public static final androidx.compose.animation.EnterExitState PreEnter;
     enum_constant public static final androidx.compose.animation.EnterExitState Visible;

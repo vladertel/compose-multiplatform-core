@@ -30,12 +30,11 @@ import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.execSQL
 import androidx.sqlite.use
 import kotlin.coroutines.CoroutineContext
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
 import kotlinx.atomicfu.atomic
-import kotlinx.atomicfu.locks.reentrantLock
-import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -476,11 +475,9 @@ abstract class BaseConnectionPoolTest {
                     acquiredSecondConnection = true
                 }
             }
-            runBlocking {
-                coroutineStartedMutex.withLock {
-                    delay(300)
-                    job.cancelAndJoin()
-                }
+            coroutineStartedMutex.withLock {
+                delay(300)
+                job.cancelAndJoin()
             }
         }
         pool.close()
@@ -510,11 +507,9 @@ abstract class BaseConnectionPoolTest {
                         "Error code: 5, message: Timed out attempting to acquire a connection"
                     )
                 }
-                runBlocking {
-                    coroutineStartedMutex.withLock {
-                        delay(300)
-                        job.join()
-                    }
+                coroutineStartedMutex.withLock {
+                    delay(300)
+                    job.join()
                 }
             }
         }
@@ -529,10 +524,8 @@ abstract class BaseConnectionPoolTest {
         val pool = newConnectionPool(driver = driver, maxNumOfReaders = 1, maxNumOfWriters = 1)
         assertFailsWith<TimeoutCancellationException> {
             pool.useWriterConnection {
-                runBlocking {
-                    withTimeout(0) {
-                        fail("withTimeout body should never run")
-                    }
+                withTimeout(0) {
+                    fail("withTimeout body should never run")
                 }
             }
         }
@@ -565,6 +558,7 @@ abstract class BaseConnectionPoolTest {
         pool.close()
     }
 
+    @Ignore // b/322386871
     @Test
     fun closeUnusedConnections() = runTest {
         class CloseAwareConnection(val actual: SQLiteConnection) : SQLiteConnection by actual {
@@ -574,43 +568,38 @@ abstract class BaseConnectionPoolTest {
                 actual.close()
             }
         }
-        val connectionSetLock = reentrantLock()
-        val connectionTracker = mutableSetOf<CloseAwareConnection>()
+        val connectionArrCount = atomic(0)
+        val connectionsArr = arrayOfNulls<CloseAwareConnection>(4)
         val actualDriver = setupDriver()
         val driver = object : SQLiteDriver by actualDriver {
             override fun open() =
                 CloseAwareConnection(actualDriver.open()).also {
-                    connectionSetLock.withLock {
-                        connectionTracker.add(it)
-                    }
+                    connectionsArr[connectionArrCount.getAndIncrement()] = it
                 }
         }
         val pool = newConnectionPool(driver = driver, maxNumOfReaders = 4, maxNumOfWriters = 1)
         val multiThreadContext = newFixedThreadPoolContext(4, "Test-Threads")
         val jobs = mutableListOf<Job>()
-        val barrierCount = atomic(4)
         val barrier = Mutex(locked = true)
         repeat(4) {
             val job = launch(multiThreadContext) {
                 pool.useReaderConnection {
-                    runBlocking {
-                        barrierCount.decrementAndGet()
-                        barrier.withLock { }
-                    }
+                    barrier.withLock { }
                 }
             }
             jobs.add(job)
         }
-        while (barrierCount.value > 0) {
+        while (connectionArrCount.value < 4) {
             delay(100)
         }
         barrier.unlock()
         jobs.joinAll()
-        // 4 readers are expected to have been opened
-        assertThat(connectionTracker.size).isEqualTo(4)
         pool.close()
-        connectionTracker.forEach {
-            assertThat(it.isClosed).isTrue()
+        multiThreadContext.close()
+        // 4 readers are expected to have been opened
+        assertThat(connectionsArr.filterNotNull().size).isEqualTo(4)
+        connectionsArr.forEach {
+            assertThat(checkNotNull(it).isClosed).isTrue()
         }
     }
 

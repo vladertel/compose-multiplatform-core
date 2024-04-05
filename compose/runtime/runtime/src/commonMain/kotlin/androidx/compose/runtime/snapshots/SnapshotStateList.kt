@@ -19,6 +19,7 @@ package androidx.compose.runtime.snapshots
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.external.kotlinx.collections.immutable.PersistentList
 import androidx.compose.runtime.external.kotlinx.collections.immutable.persistentListOf
+import androidx.compose.runtime.requirePrecondition
 import androidx.compose.runtime.synchronized
 import androidx.compose.runtime.createSynchronizedObject
 import kotlin.jvm.JvmName
@@ -97,7 +98,7 @@ class SnapshotStateList<T> : StateObject, MutableList<T>, RandomAccess {
     override fun listIterator(): MutableListIterator<T> = StateListIterator(this, 0)
     override fun listIterator(index: Int): MutableListIterator<T> = StateListIterator(this, index)
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<T> {
-        require(fromIndex in 0..toIndex && toIndex <= size) {
+        requirePrecondition(fromIndex in 0..toIndex && toIndex <= size) {
             "fromIndex or toIndex are out of bounds"
         }
         return SubList(this, fromIndex, toIndex)
@@ -473,7 +474,7 @@ private class SubList<T>(
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<T> {
-        require(fromIndex in 0..toIndex && toIndex <= size) {
+        requirePrecondition(fromIndex in 0..toIndex && toIndex <= size) {
             "fromIndex or toIndex are out of bounds"
         }
         validateModification()

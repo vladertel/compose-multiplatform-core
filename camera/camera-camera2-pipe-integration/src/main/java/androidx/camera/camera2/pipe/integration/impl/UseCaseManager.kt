@@ -20,11 +20,14 @@ package androidx.camera.camera2.pipe.integration.impl
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.params.SessionConfiguration.SESSION_HIGH_SPEED
+import android.hardware.camera2.params.SessionConfiguration.SESSION_REGULAR
 import android.media.MediaCodec
 import android.os.Build
 import androidx.annotation.GuardedBy
 import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraGraph
+import androidx.camera.camera2.pipe.CameraGraph.OperatingMode
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraPipe
 import androidx.camera.camera2.pipe.CameraStream
@@ -33,7 +36,6 @@ import androidx.camera.camera2.pipe.StreamFormat
 import androidx.camera.camera2.pipe.core.Log
 import androidx.camera.camera2.pipe.integration.adapter.CameraStateAdapter
 import androidx.camera.camera2.pipe.integration.adapter.EncoderProfilesProviderAdapter
-import androidx.camera.camera2.pipe.integration.adapter.RequestProcessorAdapter
 import androidx.camera.camera2.pipe.integration.adapter.SessionConfigAdapter
 import androidx.camera.camera2.pipe.integration.adapter.SupportedSurfaceCombination
 import androidx.camera.camera2.pipe.integration.compat.quirk.CameraQuirks
@@ -59,7 +61,6 @@ import androidx.camera.core.impl.SessionConfig
 import androidx.camera.core.impl.SessionConfig.OutputConfig.SURFACE_GROUP_ID_NONE
 import androidx.camera.core.impl.SessionConfig.ValidatingBuilder
 import androidx.camera.core.impl.SessionProcessor
-import androidx.camera.core.impl.SessionProcessorSurface
 import androidx.camera.core.impl.stabilization.StabilizationMode
 import javax.inject.Inject
 import javax.inject.Provider
@@ -122,14 +123,6 @@ class UseCaseManager @Inject constructor(
         }
         set(value) = synchronized(lock) {
             field = value
-            // Only create the SessionProcessorManager when we have a SessionProcessor set.
-            if (field != null) {
-                sessionProcessorManager = SessionProcessorManager(
-                    field!!,
-                    cameraInfoInternal.get(),
-                    useCaseThreads.get().scope
-                )
-            }
         }
 
     @GuardedBy("lock")
@@ -336,6 +329,7 @@ class UseCaseManager @Inject constructor(
                 }
             }
         }
+        sessionProcessorManager = null
 
         // Update list of active useCases
         if (useCases.isEmpty()) {
@@ -348,7 +342,13 @@ class UseCaseManager @Inject constructor(
 
         if (sessionProcessor != null) {
             Log.debug { "Setting up UseCaseManager with SessionProcessorManager" }
-            checkNotNull(sessionProcessorManager).initialize(this, useCases)
+            sessionProcessorManager = SessionProcessorManager(
+                sessionProcessor!!,
+                cameraInfoInternal.get(),
+                useCaseThreads.get().scope,
+            ).also {
+                it.initialize(this, useCases)
+            }
             return
         } else {
             val sessionConfigAdapter = SessionConfigAdapter(useCases)
@@ -387,13 +387,7 @@ class UseCaseManager @Inject constructor(
         val sessionProcessorEnabled =
             useCaseManagerConfig.sessionConfigAdapter.isSessionProcessorEnabled
         with(useCaseManagerConfig) {
-            var sessionProcessorManager: SessionProcessorManager? = null
             if (sessionProcessorEnabled) {
-                sessionProcessorManager = SessionProcessorManager(
-                    checkNotNull(sessionProcessor),
-                    cameraInfoInternal.get(),
-                    useCaseThreads.get().scope,
-                )
                 for ((streamConfig, deferrableSurface) in streamConfigMap) {
                     cameraGraph.streams[streamConfig]?.let {
                         cameraGraph.setSurface(it.id, deferrableSurface.surface.get())
@@ -418,19 +412,6 @@ class UseCaseManager @Inject constructor(
                 control.useCaseCamera = camera
             }
 
-            if (sessionProcessorEnabled) {
-                val sessionProcessorSurfaces =
-                    sessionConfigAdapter.deferrableSurfaces.map {
-                        it as SessionProcessorSurface
-                    }
-                val requestProcessorAdapter = RequestProcessorAdapter(
-                    useCaseGraphConfig!!,
-                    sessionConfigAdapter.getValidSessionConfigOrNull(),
-                    sessionProcessorSurfaces,
-                    useCaseThreads.get().scope,
-                )
-                checkNotNull(sessionProcessorManager).onCaptureSessionStart(requestProcessorAdapter)
-            }
             camera?.setActiveResumeMode(activeResumeEnabled)
 
             refreshRunningUseCases()
@@ -615,10 +596,15 @@ class UseCaseManager @Inject constructor(
             defaultParameters: Map<*, Any?> = emptyMap<Any, Any?>(),
         ): CameraGraph.Config {
             var containsVideo = false
-            // TODO: b/314207980 - Translate [SessionConfig.getSessionType], including highspeed
-            //     sessions and custom session types.
+            var operatingMode = OperatingMode.NORMAL
             val streamGroupMap = mutableMapOf<Int, MutableList<CameraStream.Config>>()
             sessionConfigAdapter.getValidSessionConfigOrNull()?.let { sessionConfig ->
+                operatingMode = when (sessionConfig.sessionType) {
+                    SESSION_REGULAR -> OperatingMode.NORMAL
+                    SESSION_HIGH_SPEED -> OperatingMode.HIGH_SPEED
+                    else -> OperatingMode.custom(sessionConfig.sessionType)
+                }
+
                 val physicalCameraIdForAllStreams =
                     sessionConfig.toCamera2ImplConfig().getPhysicalCameraId(null)
                 for (outputConfig in sessionConfig.outputConfigs) {
@@ -714,6 +700,7 @@ class UseCaseManager @Inject constructor(
                 camera = cameraConfig.cameraId,
                 streams = streamConfigMap.keys.toList(),
                 exclusiveStreamGroups = streamGroupMap.values.toList(),
+                sessionMode = operatingMode,
                 defaultListeners = listOf(callbackMap, requestListener),
                 defaultParameters = defaultParameters + mapOf(
                     CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE to videoStabilizationMode

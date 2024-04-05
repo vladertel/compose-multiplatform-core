@@ -66,7 +66,6 @@ import org.jetbrains.kotlin.ir.expressions.IrBlock
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
@@ -91,6 +90,7 @@ import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.util.isFunctionOrKFunction
 import org.jetbrains.kotlin.ir.util.isLocal
+import org.jetbrains.kotlin.ir.util.isSuspendFunctionOrKFunction
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.util.primaryConstructor
@@ -267,8 +267,8 @@ private class ClassContext(override val declaration: IrClass) : DeclarationConte
     override fun declareLocal(local: IrValueDeclaration?) {}
     override fun recordCapture(local: IrValueDeclaration?): Boolean {
         val isThis = local == thisParam
-        val isCtorParam = (local?.parent as? IrConstructor)?.parent === declaration
-        val isClassParam = isThis || isCtorParam
+        val isConstructorParam = (local?.parent as? IrConstructor)?.parent === declaration
+        val isClassParam = isThis || isConstructorParam
         if (local != null && collectors.isNotEmpty() && isClassParam) {
             for (collector in collectors) {
                 collector.recordCapture(local)
@@ -297,7 +297,8 @@ class ComposerLambdaMemoization(
     metrics: ModuleMetrics,
     stabilityInferencer: StabilityInferencer,
     private val strongSkippingModeEnabled: Boolean,
-    private val intrinsicRememberEnabled: Boolean
+    private val intrinsicRememberEnabled: Boolean,
+    private val nonSkippingGroupOptimizationEnabled: Boolean,
 ) : AbstractComposeLowering(context, symbolRemapper, metrics, stabilityInferencer),
 
     ModuleLoweringPass {
@@ -315,6 +316,37 @@ class ComposerLambdaMemoization(
 
     private val rememberFunctions =
         getTopLevelFunctions(ComposeCallableIds.remember).map { it.owner }
+
+    private val composableLambdaFunction by guardedLazy {
+        getTopLevelFunction(ComposeCallableIds.composableLambda)
+    }
+
+    private val composableLambdaNFunction by guardedLazy {
+        getTopLevelFunction(ComposeCallableIds.composableLambdaN)
+    }
+
+    private val composableLambdaInstanceFunction by guardedLazy {
+        getTopLevelFunction(ComposeCallableIds.composableLambdaInstance)
+    }
+
+    private val composableLambdaInstanceNFunction by guardedLazy {
+        getTopLevelFunction(ComposeCallableIds.composableLambdaNInstance)
+    }
+
+    private val rememberComposableLambdaFunction by guardedLazy {
+        getTopLevelFunctions(ComposeCallableIds.rememberComposableLambda).singleOrNull()
+    }
+
+    private val rememberComposableLambdaNFunction by guardedLazy {
+        getTopLevelFunctions(ComposeCallableIds.rememberComposableLambdaN).singleOrNull()
+    }
+
+    private val useNonSkippingGroupOptimization by guardedLazy {
+        // Uses `rememberComposableLambda` as a indication that the runtime supports
+        // generating remember after call as it was added at the same time as the slot table was
+        // modified to support remember after call.
+        nonSkippingGroupOptimizationEnabled && rememberComposableLambdaFunction != null
+    }
 
     private fun getOrCreateComposableSingletonsClass(): IrClass {
         if (composableSingletonsClass != null) return composableSingletonsClass!!
@@ -338,8 +370,8 @@ class ComposerLambdaMemoization(
             // inside of this class with actual PSI in the editor.
             it.addConstructor {
                 isPrimary = true
-            }.also { ctor ->
-                ctor.body = DeclarationIrBuilder(context, it.symbol).irBlockBody {
+            }.also { constructor ->
+                constructor.body = DeclarationIrBuilder(context, it.symbol).irBlockBody {
                     +irDelegatingConstructorCall(
                         context
                             .irBuiltIns
@@ -847,16 +879,18 @@ class ComposerLambdaMemoization(
 
         val useComposableLambdaN = argumentCount > MAX_RESTART_ARGUMENT_COUNT
         val useComposableFactory = collector.hasCaptures && declarationContext.composable
-        val restartFunctionFactory =
+        val rememberComposableN = rememberComposableLambdaNFunction ?: composableLambdaNFunction
+        val rememberComposable = rememberComposableLambdaFunction ?: composableLambdaFunction
+        val requiresExplicitComposerParameter = useComposableFactory &&
+            rememberComposableLambdaFunction == null
+        val restartFactorySymbol =
             if (useComposableFactory)
                 if (useComposableLambdaN)
-                    ComposeCallableIds.composableLambdaN
-                else ComposeCallableIds.composableLambda
+                    rememberComposableN
+                else rememberComposable
             else if (useComposableLambdaN)
-                ComposeCallableIds.composableLambdaNInstance
-            else ComposeCallableIds.composableLambdaInstance
-        val restartFactorySymbol =
-            getTopLevelFunction(restartFunctionFactory)
+                composableLambdaInstanceNFunction
+            else composableLambdaInstanceFunction
         val irBuilder = DeclarationIrBuilder(
             context,
             symbol = declarationContext.symbol,
@@ -872,7 +906,7 @@ class ComposerLambdaMemoization(
             var index = 0
 
             // first parameter is the composer parameter if we are using the composable factory
-            if (useComposableFactory) {
+            if (requiresExplicitComposerParameter) {
                 putValueArgument(
                     index++,
                     irCurrentComposer()
@@ -992,18 +1026,23 @@ class ComposerLambdaMemoization(
             calculation
         )
 
-        val fqName = currentFunctionContext?.declaration?.kotlinFqName?.asString()
-        val key = fqName.hashCode() + expression.startOffset
-        // Wrap the cached expression in a replaceable group
-        val cacheTmpVar = irTemporary(cache, "tmpCache")
-        return cacheTmpVar.wrap(
-            type = expression.type,
-            before = listOf(irStartReplaceableGroup(irCurrentComposer(), irConst(key))),
-            after = listOf(
-                irEndReplaceableGroup(irCurrentComposer()),
-                irGet(cacheTmpVar)
+        return if (nonSkippingGroupOptimizationEnabled) {
+            cache
+        } else {
+            // If the non-skipping group optimization is disabled then we need to wrap
+            // the call to `cache` in a replaceable group.
+            val fqName = currentFunctionContext?.declaration?.kotlinFqName?.asString()
+            val key = fqName.hashCode() + expression.startOffset
+            val cacheTmpVar = irTemporary(cache, "tmpCache")
+            cacheTmpVar.wrap(
+                type = expression.type,
+                before = listOf(irStartReplaceGroup(irCurrentComposer(), irConst(key))),
+                after = listOf(
+                    irEndReplaceGroup(irCurrentComposer()),
+                    irGet(cacheTmpVar)
+                )
             )
-        )
+        }
     }
 
     private fun irRemember(
@@ -1091,23 +1130,15 @@ class ComposerLambdaMemoization(
         stabilityInferencer.stabilityOf(type).knownStable()
 
     private fun IrValueDeclaration.isInlinedLambda(): Boolean =
-        type.isFunctionOrKFunction() &&
+        isInlineableFunction() &&
             this is IrValueParameter &&
             (parent as? IrFunction)?.isInline == true &&
             !isNoinline
 
-    private fun <T : IrFunctionAccessExpression> T.markAsSynthetic(mark: Boolean): T {
-        if (mark) {
-            // Mark it so the ComposableCallTransformer will insert the correct code around this
-            // call
-            context.irTrace.record(
-                ComposeWritableSlices.IS_SYNTHETIC_COMPOSABLE_CALL,
-                this,
-                true
-            )
-        }
-        return this
-    }
+    private fun IrValueDeclaration.isInlineableFunction(): Boolean =
+        type.isFunctionOrKFunction() ||
+            type.isSyntheticComposableFunction() ||
+            type.isSuspendFunctionOrKFunction()
 
     private fun <T : IrExpression> T.markAsStatic(mark: Boolean): T {
         if (mark) {

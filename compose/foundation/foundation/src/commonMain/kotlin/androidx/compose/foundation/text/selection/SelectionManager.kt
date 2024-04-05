@@ -20,8 +20,8 @@ import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.TextDragObserver
+import androidx.compose.foundation.text.input.internal.coerceIn
 import androidx.compose.foundation.text.selection.Selection.AnchorInfo
-import androidx.compose.foundation.text2.input.internal.coerceIn
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -344,6 +344,8 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
             currentDragPosition = null
         }
 
+        // This function is meant to handle changes in the selectable content,
+        // such as the text changing.
         selectionRegistrar.onSelectableChangeCallback = { selectableKey ->
             if (selectableKey in selectionRegistrar.subselections) {
                 // Clear the selection range of each Selectable.

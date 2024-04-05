@@ -69,8 +69,7 @@ fun Test10(): Unit? {
 
 @Composable
 fun Test(%composer: Composer?, %changed: Int): String? {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "C(Test):Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "C(Test):Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
   }
@@ -78,12 +77,12 @@ fun Test(%composer: Composer?, %changed: Int): String? {
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  sourceInformationMarkerEnd(%composer)
   return tmp0
 }
 @Composable
 fun Test2(b: Boolean, %composer: Composer?, %changed: Int): String? {
-  %composer.startReplaceableGroup(<>)
+  %composer.startReplaceGroup(<>)
   sourceInformation(%composer, "C(Test2):Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
@@ -93,19 +92,19 @@ fun Test2(b: Boolean, %composer: Composer?, %changed: Int): String? {
     if (isTraceInProgress()) {
       traceEventEnd()
     }
-    %composer.endReplaceableGroup()
+    %composer.endReplaceGroup()
     return tmp1_return
   }
   val tmp0 = null
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  %composer.endReplaceGroup()
   return tmp0
 }
 @Composable
 fun Test3(b: Boolean, %composer: Composer?, %changed: Int): String? {
-  %composer.startReplaceableGroup(<>)
+  %composer.startReplaceGroup(<>)
   sourceInformation(%composer, "C(Test3):Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
@@ -115,25 +114,24 @@ fun Test3(b: Boolean, %composer: Composer?, %changed: Int): String? {
     if (isTraceInProgress()) {
       traceEventEnd()
     }
-    %composer.endReplaceableGroup()
+    %composer.endReplaceGroup()
     return tmp0_return
   } else {
     val tmp1_return = null
     if (isTraceInProgress()) {
       traceEventEnd()
     }
-    %composer.endReplaceableGroup()
+    %composer.endReplaceGroup()
     return tmp1_return
   }
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  %composer.endReplaceGroup()
 }
 @Composable
 fun Test4(b: Boolean, %composer: Composer?, %changed: Int): String? {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "C(Test4):Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "C(Test4):Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
   }
@@ -141,13 +139,12 @@ fun Test4(b: Boolean, %composer: Composer?, %changed: Int): String? {
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  sourceInformationMarkerEnd(%composer)
   return tmp0
 }
 @Composable
 fun Test5(%composer: Composer?, %changed: Int): String? {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "C(Test5):Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "C(Test5):Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
   }
@@ -156,13 +153,12 @@ fun Test5(%composer: Composer?, %changed: Int): String? {
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  sourceInformationMarkerEnd(%composer)
   return tmp0
 }
 @Composable
 fun Test6(%composer: Composer?, %changed: Int): String? {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "C(Test6):Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "C(Test6):Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
   }
@@ -170,11 +166,11 @@ fun Test6(%composer: Composer?, %changed: Int): String? {
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  sourceInformationMarkerEnd(%composer)
 }
 @Composable
 fun Test7(b: Boolean, %composer: Composer?, %changed: Int): String? {
-  %composer.startReplaceableGroup(<>)
+  %composer.startReplaceGroup(<>)
   sourceInformation(%composer, "C(Test7):Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
@@ -184,20 +180,19 @@ fun Test7(b: Boolean, %composer: Composer?, %changed: Int): String? {
     if (isTraceInProgress()) {
       traceEventEnd()
     }
-    %composer.endReplaceableGroup()
+    %composer.endReplaceGroup()
     return tmp1_return
   }
   val tmp0 = "false"
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  %composer.endReplaceGroup()
   return tmp0
 }
 @Composable
 fun Test8(%composer: Composer?, %changed: Int): Unit? {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "C(Test8)<Test6(...>:Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "C(Test8)<Test6(...>:Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
   }
@@ -207,13 +202,12 @@ fun Test8(%composer: Composer?, %changed: Int): Unit? {
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  sourceInformationMarkerEnd(%composer)
   return tmp0
 }
 @Composable
 fun Test9(%composer: Composer?, %changed: Int): Unit? {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "C(Test9)<Test6(...>:Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "C(Test9)<Test6(...>:Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
   }
@@ -223,13 +217,12 @@ fun Test9(%composer: Composer?, %changed: Int): Unit? {
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  sourceInformationMarkerEnd(%composer)
   return tmp0
 }
 @Composable
 fun Test10(%composer: Composer?, %changed: Int): Unit? {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "C(Test10)<Test6(...>:Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "C(Test10)<Test6(...>:Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
   }
@@ -238,6 +231,6 @@ fun Test10(%composer: Composer?, %changed: Int): Unit? {
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  sourceInformationMarkerEnd(%composer)
   return tmp0
 }

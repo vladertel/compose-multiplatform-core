@@ -24,7 +24,6 @@ import androidx.camera.camera2.pipe.CameraController
 import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.GraphState
-import androidx.camera.camera2.pipe.OutputStream
 import androidx.camera.camera2.pipe.StreamGraph
 import androidx.camera.camera2.pipe.StreamId
 import androidx.camera.camera2.pipe.config.CameraGraphScope
@@ -33,6 +32,8 @@ import androidx.camera.camera2.pipe.core.Log
 import androidx.camera.camera2.pipe.core.TokenLockImpl
 import androidx.camera.camera2.pipe.core.acquire
 import androidx.camera.camera2.pipe.core.acquireOrNull
+import androidx.camera.camera2.pipe.internal.FrameCaptureQueue
+import androidx.camera.camera2.pipe.internal.FrameDistributor
 import androidx.camera.camera2.pipe.internal.GraphLifecycleManager
 import javax.inject.Inject
 import kotlinx.atomicfu.atomic
@@ -55,7 +56,9 @@ constructor(
     private val cameraBackend: CameraBackend,
     private val cameraController: CameraController,
     private val graphState3A: GraphState3A,
-    private val listener3A: Listener3A
+    private val listener3A: Listener3A,
+    private val frameDistributor: FrameDistributor,
+    private val frameCaptureQueue: FrameCaptureQueue,
 ) : CameraGraph {
     private val debugId = cameraGraphIds.incrementAndGet()
 
@@ -77,24 +80,15 @@ constructor(
                 "Cannot create a HIGH_SPEED CameraGraph with more than two outputs. " +
                     "Configured outputs are ${streamGraph.outputs}"
             }
-            val containsPreviewStream =
-                this.streamGraph.outputs.any {
-                    it.streamUseCase == OutputStream.StreamUseCase.PREVIEW
-                }
-            val containsVideoStream =
-                this.streamGraph.outputs.any {
-                    it.streamUseCase == OutputStream.StreamUseCase.VIDEO_RECORD
-                }
-            if (streamGraph.outputs.size == 2) {
-                require(containsPreviewStream) {
-                    "Cannot create a HIGH_SPEED CameraGraph without setting the Preview " +
-                        "Video stream. Configured outputs are ${streamGraph.outputs}"
-                }
-            } else {
-                require(containsPreviewStream || containsVideoStream) {
-                    "Cannot create a HIGH_SPEED CameraGraph without having a Preview or Video " +
-                        "stream. Configured outputs are ${streamGraph.outputs}"
-                }
+
+            // Streams must be preview and/or video for high speed sessions
+            val allStreamsValidForHighSpeedOperatingMode = this.streamGraph.outputs.all {
+                it.isValidForHighSpeedOperatingMode()
+            }
+
+            require(allStreamsValidForHighSpeedOperatingMode) {
+                "HIGH_SPEED CameraGraph must only contain Preview and/or Video " +
+                    "streams. Configured outputs are ${streamGraph.outputs}"
             }
         }
 
@@ -148,7 +142,7 @@ constructor(
     override suspend fun acquireSession(): CameraGraph.Session {
         Debug.traceStart { "$this#acquireSession" }
         val token = sessionLock.acquire(1)
-        val session = CameraGraphSessionImpl(token, graphProcessor, controller3A)
+        val session = CameraGraphSessionImpl(token, graphProcessor, controller3A, frameCaptureQueue)
         Debug.traceStop()
         return session
     }
@@ -156,7 +150,7 @@ constructor(
     override fun acquireSessionOrNull(): CameraGraph.Session? {
         Debug.traceStart { "$this#acquireSessionOrNull" }
         val token = sessionLock.acquireOrNull(1) ?: return null
-        val session = CameraGraphSessionImpl(token, graphProcessor, controller3A)
+        val session = CameraGraphSessionImpl(token, graphProcessor, controller3A, frameCaptureQueue)
         Debug.traceStop()
         return session
     }
@@ -176,6 +170,8 @@ constructor(
         sessionLock.close()
         graphProcessor.close()
         graphLifecycleManager.monitorAndClose(cameraBackend, cameraController)
+        frameDistributor.close()
+        frameCaptureQueue.close()
         surfaceGraph.close()
         Debug.traceStop()
     }

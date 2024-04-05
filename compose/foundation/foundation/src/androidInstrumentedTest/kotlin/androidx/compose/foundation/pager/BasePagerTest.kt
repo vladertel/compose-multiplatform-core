@@ -23,7 +23,7 @@ import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.snapping.SnapFlingBehavior
+import androidx.compose.foundation.gestures.TargetedFlingBehavior
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -70,6 +70,7 @@ open class BasePagerTest(private val config: ParamConfig) :
     var pagerSize: Int = 0
     var placed = mutableSetOf<Int>()
     var focused = mutableSetOf<Int>()
+    var focusRequesters = mutableMapOf<Int, FocusRequester>()
     var pageSize: Int = 0
     lateinit var focusManager: FocusManager
     lateinit var initialFocusedItem: FocusRequester
@@ -129,6 +130,7 @@ open class BasePagerTest(private val config: ParamConfig) :
         snapPositionalThreshold: Float = 0.5f,
         key: ((index: Int) -> Any)? = null,
         snapPosition: SnapPosition = config.snapPosition.first,
+        flingBehavior: TargetedFlingBehavior? = null,
         pageContent: @Composable PagerScope.(page: Int) -> Unit = { Page(index = it) }
     ) {
 
@@ -138,12 +140,11 @@ open class BasePagerTest(private val config: ParamConfig) :
             }
             composeView = LocalView.current
             focusManager = LocalFocusManager.current
-            val flingBehavior =
-                PagerDefaults.flingBehavior(
-                    state = state,
-                    pagerSnapDistance = snappingPage,
-                    snapPositionalThreshold = snapPositionalThreshold
-                )
+            val resolvedFlingBehavior = flingBehavior ?: PagerDefaults.flingBehavior(
+                state = state,
+                pagerSnapDistance = snappingPage,
+                snapPositionalThreshold = snapPositionalThreshold
+            )
             CompositionLocalProvider(
                 LocalLayoutDirection provides config.layoutDirection,
                 LocalOverscrollConfiguration provides null
@@ -163,7 +164,7 @@ open class BasePagerTest(private val config: ParamConfig) :
                         pageSize = pageSize(),
                         userScrollEnabled = userScrollEnabled,
                         reverseLayout = reverseLayout,
-                        flingBehavior = flingBehavior,
+                        flingBehavior = resolvedFlingBehavior,
                         pageSpacing = pageSpacing,
                         contentPadding = contentPadding,
                         pageContent = pageContent,
@@ -180,6 +181,7 @@ open class BasePagerTest(private val config: ParamConfig) :
     internal fun Page(index: Int, initialFocusedItemIndex: Int = 0) {
         val focusRequester = FocusRequester().also {
             if (index == initialFocusedItemIndex) initialFocusedItem = it
+            focusRequesters[index] = it
         }
         Box(modifier = Modifier
             .focusRequester(focusRequester)
@@ -287,7 +289,7 @@ open class BasePagerTest(private val config: ParamConfig) :
         contentPadding: PaddingValues = PaddingValues(0.dp),
         outOfBoundsPageCount: Int = 0,
         pageSize: PageSize = PageSize.Fill,
-        flingBehavior: SnapFlingBehavior = PagerDefaults.flingBehavior(state = state),
+        flingBehavior: TargetedFlingBehavior = PagerDefaults.flingBehavior(state = state),
         pageSpacing: Dp = 0.dp,
         key: ((index: Int) -> Any)? = null,
         snapPosition: SnapPosition = config.snapPosition.first,
@@ -392,6 +394,7 @@ internal const val PagerTestTag = "pager"
 internal const val DefaultPageCount = 20
 internal const val DefaultAnimationRepetition = 2
 internal val TestOrientation = listOf(Orientation.Vertical, Orientation.Horizontal)
+
 @OptIn(ExperimentalFoundationApi::class)
 internal val AllOrientationsParams = mutableListOf<ParamConfig>().apply {
     for (orientation in TestOrientation) {
@@ -407,6 +410,7 @@ internal val TestSnapPosition = listOf(
     SnapPosition.Center to "Center",
     SnapPosition.End to "End"
 )
+
 internal fun testContentPaddings(orientation: Orientation) = listOf(
     PaddingValues(0.dp),
     if (orientation == Orientation.Vertical)
