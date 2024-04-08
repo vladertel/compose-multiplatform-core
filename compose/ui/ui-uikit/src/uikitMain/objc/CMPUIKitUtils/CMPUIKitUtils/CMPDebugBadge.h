@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
-//! Project version number for CMPUIKitUtils.
-FOUNDATION_EXPORT double CMPUIKitUtilsVersionNumber;
+NS_ASSUME_NONNULL_BEGIN
 
-//! Project version string for CMPUIKitUtils.
-FOUNDATION_EXPORT const unsigned char CMPUIKitUtilsVersionString[];
+@interface CMPDebugBadge : UIView
 
-#import "CMPViewController.h"
-#import "CMPAccessibilityElement.h"
-#import "CMPAccessibilityContainer.h"
-#import "CMPOSLogger.h"
-#import "CMPDebugBadge.h"
+@end
+
+NS_ASSUME_NONNULL_END

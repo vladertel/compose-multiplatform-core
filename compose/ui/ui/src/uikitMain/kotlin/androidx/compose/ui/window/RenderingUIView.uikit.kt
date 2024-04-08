@@ -21,8 +21,10 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.interop.UIKitInteropContext
 import androidx.compose.ui.interop.UIKitInteropTransaction
+import androidx.compose.ui.uikit.utils.CMPDebugBadge
 import kotlin.math.floor
 import kotlin.math.roundToLong
+import kotlin.native.Platform.isDebugBinary
 import kotlinx.cinterop.*
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skiko.SkikoRenderDelegate
@@ -92,6 +94,17 @@ internal class RenderingUIView(
                     CGColorCreate(CGColorSpaceCreateDeviceRGB(), pinned.addressOf(0))
             }
             it.framebufferOnly = false
+        }
+
+        if (isDebugBinary) {
+            val badge = CMPDebugBadge(frame = CGRectZero.readValue())
+
+            addSubview(badge)
+
+            NSLayoutConstraint.activateConstraints(listOf(
+                badge.topAnchor.constraintEqualToAnchor(topAnchor),
+                badge.rightAnchor.constraintEqualToAnchor(rightAnchor)
+            ))
         }
     }
 
