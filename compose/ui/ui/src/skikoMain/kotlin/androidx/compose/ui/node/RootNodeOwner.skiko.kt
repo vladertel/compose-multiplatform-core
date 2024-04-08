@@ -79,7 +79,6 @@ import androidx.compose.ui.util.trace
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.max
 import kotlin.math.min
-import kotlinx.coroutines.awaitCancellation
 
 /**
  * Owner of root [LayoutNode].
@@ -272,12 +271,10 @@ internal class RootNodeOwner(
         override val softwareKeyboardController =
             DelegatingSoftwareKeyboardController(textInputService)
 
-        // TODO https://youtrack.jetbrains.com/issue/COMPOSE-733/Merge-1.6.-Apply-changes-for-the-new-text-input
         override suspend fun textInputSession(
             session: suspend PlatformTextInputSessionScope.() -> Nothing
-        ): Nothing {
-            awaitCancellation()
-        }
+        ) = platformContext.textInputSession(session)
+
         // TODO https://youtrack.jetbrains.com/issue/COMPOSE-743/Implement-commonMain-Dragdrop-developed-in-AOSP
         override val dragAndDropManager: DragAndDropManager get() = TODO("Not yet implemented")
         override val pointerIconService = PointerIconServiceImpl()

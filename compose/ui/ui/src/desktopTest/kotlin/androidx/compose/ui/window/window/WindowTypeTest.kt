@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowTestScope
 import androidx.compose.ui.window.runApplicationTest
+import androidx.compose.ui.window.window.WindowTypeTest.TextFieldKind
 import com.google.common.truth.Truth.assertThat
 import java.awt.event.KeyEvent.KEY_PRESSED
 import java.awt.event.KeyEvent.KEY_RELEASED

@@ -41,7 +41,7 @@ import kotlin.math.min
 internal class DesktopTextInputService(private val component: PlatformComponent) :
     PlatformTextInputService {
     data class CurrentInput(
-        var value: TextFieldValue,
+        var state: TextFieldStateAdapter,
         val onEditCommand: ((List<EditCommand>) -> Unit),
         val onImeActionPerformed: ((ImeAction) -> Unit),
         val imeAction: ImeAction,
@@ -63,8 +63,36 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
         onEditCommand: (List<EditCommand>) -> Unit,
         onImeActionPerformed: (ImeAction) -> Unit
     ) {
+        startInputImpl(
+            state = TextFieldValueStateAdapter(value),
+            imeOptions = imeOptions,
+            onEditCommand = onEditCommand,
+            onImeActionPerformed = onImeActionPerformed,
+        )
+    }
+
+    fun startInput(request: PlatformTextInputMethodRequest) {
+        with(request) {
+            startInputImpl(
+                state = state,
+                imeOptions = imeOptions,
+                onEditCommand = onEditCommand,
+                onImeActionPerformed = request.onImeAction ?: { }
+            )
+        }
+    }
+
+    private fun startInputImpl(
+        state: TextFieldStateAdapter,
+        imeOptions: ImeOptions,
+        onEditCommand: (List<EditCommand>) -> Unit,
+        onImeActionPerformed: (ImeAction) -> Unit
+    ) {
         val input = CurrentInput(
-            value, onEditCommand, onImeActionPerformed, imeOptions.imeAction
+            state = state,
+            onEditCommand = onEditCommand,
+            onImeActionPerformed = onImeActionPerformed,
+            imeAction = imeOptions.imeAction
         )
         currentInput = input
 
@@ -83,14 +111,12 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
     }
 
     override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {
-        currentInput?.let { input ->
-            input.value = newValue
-        }
+        currentInput?.state = TextFieldValueStateAdapter(newValue)
     }
 
     // TODO(https://github.com/JetBrains/compose-jb/issues/2040): probably the position of input method
     //  popup isn't correct now
-    @Deprecated("This method should not be called, used BringIntoViewRequester instead.")
+    @Deprecated("This method should not be called, use BringIntoViewRequester instead.")
     override fun notifyFocusedRect(rect: Rect) {
         currentInput?.let { input ->
             input.focusedRect = rect
@@ -119,7 +145,7 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
             val composing = event.text?.toStringFrom(event.committedCharacterCount).orEmpty()
             val ops = mutableListOf<EditCommand>()
 
-            if (needToDeletePreviousChar && isMac && input.value.selection.min > 0 && composing.isEmpty()) {
+            if (needToDeletePreviousChar && isMac && input.state.selection.min > 0 && composing.isEmpty()) {
                 needToDeletePreviousChar = false
                 ops.add(DeleteSurroundingTextInCodePointsCommand(1, 0))
             }
@@ -136,7 +162,7 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
     private fun methodRequestsForInput(input: CurrentInput) =
         object : InputMethodRequests {
             override fun getLocationOffset(x: Int, y: Int): TextHitInfo? {
-                if (input.value.composition != null) {
+                if (input.state.composition != null) {
                     // TODO: to properly implement this method we need to somehow have access to
                     //  Paragraph at this point
                     return TextHitInfo.leading(0)
@@ -151,10 +177,10 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
             }
 
             override fun getInsertPositionOffset(): Int {
-                val composedStartIndex = input.value.composition?.start ?: 0
-                val composedEndIndex = input.value.composition?.end ?: 0
+                val composedStartIndex = input.state.composition?.start ?: 0
+                val composedEndIndex = input.state.composition?.end ?: 0
 
-                val caretIndex = input.value.selection.start
+                val caretIndex = input.state.selection.start
                 if (caretIndex < composedStartIndex) {
                     return caretIndex
                 }
@@ -165,7 +191,7 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
             }
 
             override fun getCommittedTextLength() =
-                input.value.text.length - (input.value.composition?.length ?: 0)
+                input.state.text.length - (input.state.composition?.length ?: 0)
 
             override fun getSelectedText(
                 attributes: Array<AttributedCharacterIterator.Attribute>?
@@ -173,7 +199,7 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
                 if (charKeyPressed) {
                     needToDeletePreviousChar = true
                 }
-                val str = input.value.text.substring(input.value.selection)
+                val str = input.state.text.substring(input.state.selection)
                 return AttributedString(str).iterator
             }
 
@@ -192,8 +218,8 @@ internal class DesktopTextInputService(private val component: PlatformComponent)
                 endIndex: Int,
                 attributes: Array<AttributedCharacterIterator.Attribute>?
             ): AttributedCharacterIterator {
-                val comp = input.value.composition
-                val text = input.value.text
+                val comp = input.state.composition
+                val text = input.state.text
                 // When input is performed with Pinyin and backspace pressed,
                 // comp is null and beginIndex > endIndex.
                 // TODO Check is this an expected behavior?
@@ -242,3 +268,19 @@ private fun AttributedCharacterIterator.toStringFrom(index: Int): String {
 
 private val isMac =
     System.getProperty("os.name").lowercase(Locale.ENGLISH).startsWith("mac")
+
+
+private class TextFieldValueStateAdapter(
+    val value: TextFieldValue
+): TextFieldStateAdapter {
+
+    override val text: CharSequence
+        get() = value.text
+
+    override val selection: TextRange
+        get() = value.selection
+
+    override val composition: TextRange?
+        get() = value.composition
+
+}
