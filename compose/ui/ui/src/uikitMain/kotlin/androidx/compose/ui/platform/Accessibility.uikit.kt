@@ -624,6 +624,10 @@ private class AccessibilityElement(
                 }
             }
 
+            config.getOrNull(SemanticsProperties.LiveRegion)?.let {
+                result = result or UIAccessibilityTraitUpdatesFrequently
+            }
+
             config.getOrNull(SemanticsActions.OnClick)?.let {
                 result = result or UIAccessibilityTraitButton
             }
