@@ -889,15 +889,30 @@ abstract class AbstractComposeLowering(
     )
 
     fun IrClass.makeStabilityField(): IrField {
-        val isJvm = context.platform.isJvm()
-        val stabilityFieldName = when {
-            isJvm -> KtxNameConventions.STABILITY_FLAG
-            else -> this.uniqueStabilityFieldName()
+        return if (context.platform.isJvm()) {
+            this.makeStabilityFieldJvm()
+        } else {
+            this.makeStabilityFieldNonJvm()
         }
-        val fieldParent = when {
-            isJvm -> this
-            else -> this.getPackageFragment()
+    }
+
+    private fun IrClass.makeStabilityFieldJvm(): IrField {
+        return context.irFactory.buildField {
+            startOffset = SYNTHETIC_OFFSET
+            endOffset = SYNTHETIC_OFFSET
+            name = KtxNameConventions.STABILITY_FLAG
+            isStatic = true
+            isFinal = true
+            type = context.irBuiltIns.intType
+            visibility = DescriptorVisibilities.PUBLIC
+        }.also { stabilityField ->
+            stabilityField.parent = this@makeStabilityFieldJvm
         }
+    }
+
+    private fun IrClass.makeStabilityFieldNonJvm(): IrField {
+        val stabilityFieldName = this.uniqueStabilityFieldName()
+        val fieldParent = this.getPackageFragment()
 
         return context.irFactory.buildField {
             startOffset = SYNTHETIC_OFFSET
@@ -909,9 +924,7 @@ abstract class AbstractComposeLowering(
             visibility = DescriptorVisibilities.PUBLIC
         }.also { stabilityField ->
             stabilityField.parent = fieldParent
-            if (!isJvm) {
-                makeStabilityProp(stabilityField, fieldParent)
-            }
+            makeStabilityProp(stabilityField, fieldParent)
         }
     }
 
