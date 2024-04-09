@@ -159,10 +159,10 @@ tasks.register("testWeb") {
     // The agents become stuck, cancelled, etc.
     // Only one in 3 runs passes. It spoils the development of other Compose parts.
 //    dependsOn(":compose:foundation:foundation:wasmJsBrowserTest")
-//    dependsOn(":compose:material3:material3:wasmJsBrowserTest")
-//    dependsOn(":compose:ui:ui-text:wasmJsBrowserTest")
-//    dependsOn(":compose:ui:ui-text:wasmJsBrowserTest")
-//    dependsOn(":compose:ui:ui:wasmJsBrowserTest")
+    dependsOn(":compose:material3:material3:wasmJsBrowserTest")
+    dependsOn(":compose:ui:ui-text:wasmJsBrowserTest")
+    dependsOn(":compose:ui:ui-text:wasmJsBrowserTest")
+    dependsOn(":compose:ui:ui:wasmJsBrowserTest")
 }
 
 tasks.register("testUIKit") {
