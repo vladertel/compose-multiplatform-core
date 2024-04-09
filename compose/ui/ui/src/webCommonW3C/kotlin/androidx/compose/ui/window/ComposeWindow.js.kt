@@ -26,12 +26,16 @@ import androidx.compose.ui.events.EventTargetListener
 import androidx.compose.ui.events.toNativeDragEvent
 import androidx.compose.ui.events.toNativePointerEvent
 import androidx.compose.ui.events.toNativeScrollEvent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.pointer.BrowserCursor
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.native.ComposeLayer
-import androidx.compose.ui.platform.JSTextInputService
+import androidx.compose.ui.platform.DefaultInputModeManager
+import androidx.compose.ui.platform.WebTextInputService
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.ViewConfiguration
@@ -54,6 +58,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.skiko.SkiaLayer
 import org.w3c.dom.AddEventListenerOptions
+import org.w3c.dom.DOMRect
+import org.w3c.dom.DOMRectReadOnly
 import org.w3c.dom.Element
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLStyleElement
@@ -147,22 +153,33 @@ private class ComposeWindow(
 
     private val canvasEvents = EventTargetListener(canvas)
 
-    private val jsTextInputService = JSTextInputService()
-    private val platformContext: PlatformContext =
-        object : PlatformContext by PlatformContext.Empty {
-            override val windowInfo get() = _windowInfo
-            override val textInputService = jsTextInputService
-            override val viewConfiguration =
-                object : ViewConfiguration by PlatformContext.Empty.viewConfiguration {
-                    override val touchSlop: Float get() = with(density) { 18.dp.toPx() }
-                }
+    private val platformContext: PlatformContext = object : PlatformContext {
+        override val windowInfo get() = _windowInfo
 
-            override fun setPointerIcon(pointerIcon: PointerIcon) {
-                if (pointerIcon is BrowserCursor) {
-                    canvas.style.cursor = pointerIcon.id
-                }
+        override val inputModeManager: InputModeManager = DefaultInputModeManager()
+
+        override val textInputService = object : WebTextInputService() {
+            override fun resolveInputMode() = inputModeManager.inputMode
+            override fun getOffset(rect: Rect): Offset {
+                val viewportRect = canvas.getBoundingClientRect()
+                val offsetX = viewportRect.left.toFloat().coerceAtLeast(0f) + (rect.left / density.density)
+                val offsetY = viewportRect.top.toFloat().coerceAtLeast(0f) + (rect.top / density.density)
+                return Offset(offsetX, offsetY)
             }
         }
+
+        override val viewConfiguration =
+            object : ViewConfiguration by PlatformContext.Empty.viewConfiguration {
+                override val touchSlop: Float get() = with(density) { 18.dp.toPx() }
+            }
+
+        override fun setPointerIcon(pointerIcon: PointerIcon) {
+            if (pointerIcon is BrowserCursor) {
+                canvas.style.cursor = pointerIcon.id
+            }
+        }
+
+    }
 
     private val layer = ComposeLayer(
         layer = SkiaLayer(),
@@ -193,8 +210,9 @@ private class ComposeWindow(
                 offsetY = top
             }
 
-            val skikoEvent = event.toNativePointerEvent(PointerEventType.Press, offsetX, offsetY)
-            layer.view.onPointerEvent(skikoEvent)
+            layer.view.onPointerEvent(
+                event.toNativePointerEvent(PointerEventType.Press, offsetX, offsetY)
+            )
         }
 
         addTypedEvent<TouchEvent>("touchmove") { event ->
