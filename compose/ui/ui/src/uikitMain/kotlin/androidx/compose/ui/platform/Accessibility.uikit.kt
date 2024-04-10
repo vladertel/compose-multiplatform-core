@@ -1283,6 +1283,8 @@ internal class AccessibilityMediator(
             }
 
             refocusedElement
+        } else {
+            null // No need to refocus to anything
         }
 
         return NodesSyncResult(newElementToFocus)
