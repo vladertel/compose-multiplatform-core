@@ -133,7 +133,6 @@ internal class WebImeInputService(parentInputService: InputAwareInputService) : 
         }
 
         htmlInput.addEventListener("input", {
-                htmlInput
                 val text = htmlInput.value
                 val cursorPosition = htmlInput.selectionEnd
                 sendImeValueToCompose(onEditCommand, text, cursorPosition)
@@ -157,8 +156,7 @@ internal class WebImeInputService(parentInputService: InputAwareInputService) : 
             onEditCommand(
                 listOf(
                     DeleteAllCommand(),
-                    CommitTextCommand(value, 1),
-                    SetSelectionCommand(newCursorPosition, newCursorPosition)
+                    CommitTextCommand(value, newCursorPosition),
                 )
             )
         } else {
