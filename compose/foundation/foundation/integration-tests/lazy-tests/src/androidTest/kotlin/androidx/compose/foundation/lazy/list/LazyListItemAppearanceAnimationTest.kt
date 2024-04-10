@@ -22,7 +22,6 @@ import android.os.Build
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
@@ -30,9 +29,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.animateItem
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -62,7 +61,6 @@ import org.junit.Test
 
 @LargeTest
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
-@OptIn(ExperimentalFoundationApi::class)
 class LazyListItemAppearanceAnimationTest {
 
     @get:Rule
@@ -379,7 +377,7 @@ class LazyListItemAppearanceAnimationTest {
     }
 
     @Composable
-    private fun Item(
+    private fun LazyItemScope.Item(
         color: Color,
         size: Dp = itemSizeDp,
         crossAxisSize: Dp = crossAxisSizeDp,
@@ -387,7 +385,11 @@ class LazyListItemAppearanceAnimationTest {
     ) {
         Box(
             Modifier
-                .animateItem(appearanceSpec = animSpec, placementSpec = null)
+                .animateItem(
+                    fadeInSpec = animSpec,
+                    placementSpec = null,
+                    fadeOutSpec = null
+                )
                 .background(color)
                 .requiredHeight(size)
                 .requiredWidth(crossAxisSize)
@@ -400,4 +402,4 @@ private val Duration = 64L // 4 frames, so we get 0f, 0.25f, 0.5f, 0.75f and 1f 
 private val AnimSpec = tween<Float>(Duration.toInt(), easing = LinearEasing)
 private val ContainerTag = "container"
 
-private fun Float.isCloseTo(expected: Float) = abs(this - expected) < 0.01f
+internal fun Float.isCloseTo(expected: Float) = abs(this - expected) < 0.01f

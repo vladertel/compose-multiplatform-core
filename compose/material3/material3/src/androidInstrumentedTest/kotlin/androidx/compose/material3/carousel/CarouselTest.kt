@@ -19,7 +19,9 @@ package androidx.compose.material3.carousel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.TargetedFlingBehavior
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -130,6 +132,82 @@ class CarouselTest {
         }
     }
 
+    @Test
+    fun carouselSingleAdvanceFling_capsScroll() {
+        // Arrange
+        createCarousel()
+        assertThat(carouselState.pagerState.currentPage).isEqualTo(0)
+
+        // Act
+        rule.onNodeWithTag(CarouselTestTag)
+            .performTouchInput {
+                swipeWithVelocity(
+                    centerRight,
+                    centerLeft,
+                    10000f
+                )
+            }
+
+        // Assert
+        rule.runOnIdle {
+            // A swipe from the very right to very left should be capped at
+            // the item right after the visible pages onscreen regardless of velocity
+            assertThat(carouselState.pagerState.currentPage).isLessThan(
+                carouselState.pagerState.layoutInfo.visiblePagesInfo.size + 1)
+        }
+    }
+
+    @Test
+    fun carouselMultibrowseFling_ScrollsToEnd() {
+        // Arrange
+        createCarousel(
+            flingBehavior =
+            { state: CarouselState -> CarouselDefaults.multiBrowseFlingBehavior(state) },
+        )
+        assertThat(carouselState.pagerState.currentPage).isEqualTo(0)
+
+        // Act
+        rule.onNodeWithTag(CarouselTestTag)
+            .performTouchInput { swipeWithVelocity(centerRight, centerLeft, 10000f) }
+
+        // Assert
+        rule.runOnIdle {
+            // A swipe from the very right to very left at a high velocity should go beyond
+            // first item after the visible pages as it's not capped
+            assertThat(carouselState.pagerState.currentPage).isGreaterThan(
+                carouselState.pagerState.layoutInfo.visiblePagesInfo.size)
+        }
+    }
+
+    @Test
+    fun carousel_correctlyCalculatesMaxScrollOffsetWithItemSpacing() {
+        rule.setMaterialContent(lightColorScheme()) {
+            val state = rememberCarouselState { 10 }.also {
+                carouselState = it
+            }
+            val strategy = Strategy(
+                defaultKeylines = keylineListOf(380f, 0f, CarouselAlignment.Start) {
+                        add(10f, isAnchor = true)
+                        add(186f)
+                        add(122f)
+                        add(56f)
+                        add(10f, isAnchor = true)
+                },
+                availableSpace = 380f,
+                itemSpacing = 8f,
+                beforeContentPadding = 0f,
+                afterContentPadding = 0f
+            )
+
+            // Max offset should only add item spacing between each item
+            val expectedMaxScrollOffset = (186f * 10) + (8f * 9) - 380f
+
+            assertThat(calculateMaxScrollOffset(state, strategy)).isEqualTo(
+                expectedMaxScrollOffset
+            )
+        }
+    }
+
     @Composable
     internal fun Item(index: Int) {
         Box(
@@ -147,9 +225,16 @@ class CarouselTest {
     private fun createCarousel(
         initialItem: Int = 0,
         itemCount: () -> Int = { DefaultItemCount },
-        modifier: Modifier = Modifier.width(412.dp).height(221.dp),
+        modifier: Modifier = Modifier
+            .width(412.dp)
+            .height(221.dp),
         orientation: Orientation = Orientation.Horizontal,
-        content: @Composable CarouselScope.(item: Int) -> Unit = { Item(index = it) }
+        flingBehavior: @Composable (CarouselState) -> TargetedFlingBehavior = @Composable {
+            CarouselDefaults.singleAdvanceFlingBehavior(
+                state = it,
+            )
+        },
+        content: @Composable CarouselItemScope.(item: Int) -> Unit = { Item(index = it) }
     ) {
         rule.setMaterialContent(lightColorScheme()) {
             val state = rememberCarouselState(initialItem, itemCount).also {
@@ -159,17 +244,20 @@ class CarouselTest {
             Carousel(
                 state = state,
                 orientation = orientation,
-                keylineList = { availableSpace ->
+                keylineList = { availableSpace, itemSpacing ->
                     multiBrowseKeylineList(
                         density = density,
                         carouselMainAxisSize = availableSpace,
                         preferredItemSize = with(density) { 186.dp.toPx() },
-                        itemSpacing = 0f,
+                        itemSpacing = itemSpacing,
                         itemCount = itemCount.invoke(),
                     )
                 },
+                flingBehavior = flingBehavior(state),
+                maxNonFocalVisibleItemCount = 2,
                 modifier = modifier.testTag(CarouselTestTag),
                 itemSpacing = 0.dp,
+                contentPadding = PaddingValues(0.dp),
                 content = content,
             )
         }
@@ -178,8 +266,10 @@ class CarouselTest {
     private fun createUncontainedCarousel(
         initialItem: Int = 0,
         itemCount: () -> Int = { DefaultItemCount },
-        modifier: Modifier = Modifier.width(412.dp).height(221.dp),
-        content: @Composable CarouselScope.(item: Int) -> Unit = { Item(index = it) }
+        modifier: Modifier = Modifier
+            .width(412.dp)
+            .height(221.dp),
+        content: @Composable CarouselItemScope.(item: Int) -> Unit = { Item(index = it) }
     ) {
         rule.setMaterialContent(lightColorScheme()) {
             val state = rememberCarouselState(initialItem, itemCount).also {
@@ -187,7 +277,7 @@ class CarouselTest {
             }
             HorizontalUncontainedCarousel(
                 state = state,
-                itemSize = 150.dp,
+                itemWidth = 150.dp,
                 modifier = modifier.testTag(CarouselTestTag),
                 itemSpacing = 0.dp,
                 content = content,

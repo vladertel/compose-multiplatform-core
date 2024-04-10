@@ -35,6 +35,7 @@ import androidx.camera.camera2.pipe.internal.FrameDistributor
 import androidx.camera.camera2.pipe.internal.GraphLifecycleManager
 import androidx.camera.camera2.pipe.internal.ImageSourceMap
 import androidx.camera.camera2.pipe.testing.CameraControllerSimulator
+import androidx.camera.camera2.pipe.testing.FakeAudioRestrictionController
 import androidx.camera.camera2.pipe.testing.FakeCameraBackend
 import androidx.camera.camera2.pipe.testing.FakeCameraMetadata
 import androidx.camera.camera2.pipe.testing.FakeGraphProcessor
@@ -113,10 +114,13 @@ internal class CameraGraphImplTest {
             cameraSurfaceManager,
             emptyMap()
         )
+        val audioRestriction = FakeAudioRestrictionController()
+        val cameraGraphId = CameraGraphId.nextId()
         val graph =
             CameraGraphImpl(
                 graphConfig,
                 metadata,
+                cameraGraphId,
                 graphLifecycleManager,
                 fakeGraphProcessor,
                 fakeGraphProcessor,
@@ -127,7 +131,8 @@ internal class CameraGraphImplTest {
                 GraphState3A(),
                 Listener3A(),
                 frameDistributor,
-                frameCaptureQueue
+                frameCaptureQueue,
+                audioRestriction
             )
         stream1 =
             checkNotNull(graph.streams[stream1Config]) {

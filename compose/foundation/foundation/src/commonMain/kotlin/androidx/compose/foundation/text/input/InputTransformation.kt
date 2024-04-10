@@ -48,33 +48,34 @@ fun interface InputTransformation {
      * Optional [KeyboardOptions] that will be used as the default keyboard options for configuring
      * the IME. The options passed directly to the text field composable will always override this.
      */
-    @ExperimentalFoundationApi
     val keyboardOptions: KeyboardOptions? get() = null
 
     /**
      * Optional semantics configuration that can update certain characteristics of the applied
      * TextField, e.g. [SemanticsPropertyReceiver.maxTextLength].
      */
-    @ExperimentalFoundationApi
     fun SemanticsPropertyReceiver.applySemantics() = Unit
 
     /**
      * The transform operation. For more information see the documentation on [InputTransformation].
      *
-     * To reject all changes in [valueWithChanges], call
-     * `valueWithChanges.`[revertAllChanges][TextFieldBuffer.revertAllChanges].
+     * This function is scoped to [TextFieldBuffer], a buffer that can be changed in-place to alter
+     * or reject the changes or set the selection.
      *
-     * @param originalValue The value of the field before the change was performed.
-     * @param valueWithChanges The value of the field after the change. This value can be changed
-     * in-place to alter or reject the changes or set the selection.
+     * To reject all changes in the scoped [TextFieldBuffer], call
+     * [revertAllChanges][TextFieldBuffer.revertAllChanges].
+     *
+     * When multiple [InputTransformation]s are linked together, the [transformInput] function of
+     * the first transformation is invoked before the second one. Once the changes are made to
+     * [TextFieldBuffer] by the initial [InputTransformation] in the chain, the same instance of
+     * [TextFieldBuffer] is forwarded to the subsequent transformation in the chain. Note that
+     * [TextFieldBuffer.originalValue] never changes while the buffer is passed along the chain.
+     * This sequence persists until the chain reaches its conclusion.
      */
-    fun transformInput(originalValue: TextFieldCharSequence, valueWithChanges: TextFieldBuffer)
+    fun TextFieldBuffer.transformInput()
 
     companion object : InputTransformation {
-        override fun transformInput(
-            originalValue: TextFieldCharSequence,
-            valueWithChanges: TextFieldBuffer
-        ) {
+        override fun TextFieldBuffer.transformInput() {
             // Noop.
         }
     }
@@ -93,27 +94,6 @@ fun interface InputTransformation {
  *
  * @param next The [InputTransformation] that will be ran after this one.
  */
-@ExperimentalFoundationApi
-@Stable
-@JvmName("thenOrNull")
-fun InputTransformation?.then(next: InputTransformation?): InputTransformation? = when {
-    this == null -> next
-    next == null -> this
-    else -> this.then(next)
-}
-
-/**
- * Creates a filter chain that will run [next] after this. Filters are applied sequentially, so any
- * changes made by this filter will be visible to [next].
- *
- * The returned filter will use the [KeyboardOptions] from [next] if non-null, otherwise it will
- * use the options from this transformation.
- *
- * @sample androidx.compose.foundation.samples.BasicTextFieldInputTransformationChainingSample
- *
- * @param next The [InputTransformation] that will be ran after this one.
- */
-@ExperimentalFoundationApi
 @Stable
 fun InputTransformation.then(next: InputTransformation): InputTransformation =
     FilterChain(this, next)
@@ -130,7 +110,6 @@ fun InputTransformation.then(next: InputTransformation): InputTransformation =
  * @sample androidx.compose.foundation.samples.BasicTextFieldInputTransformationByValueChooseSample
  * @sample androidx.compose.foundation.samples.BasicTextFieldInputTransformationByValueReplaceSample
  */
-@ExperimentalFoundationApi
 @Stable
 fun InputTransformation.byValue(
     transformation: (
@@ -146,7 +125,6 @@ fun InputTransformation.byValue(
  *
  * @param locale The [Locale] in which to perform the case conversion.
  */
-@ExperimentalFoundationApi
 @Stable
 fun InputTransformation.allCaps(locale: Locale): InputTransformation =
     this.then(AllCapsTransformation(locale))
@@ -155,7 +133,6 @@ fun InputTransformation.allCaps(locale: Locale): InputTransformation =
  * Returns [InputTransformation] that rejects input which causes the total length of the text field
  * to be more than [maxLength] characters.
  */
-@ExperimentalFoundationApi
 @Stable
 fun InputTransformation.maxLength(maxLength: Int): InputTransformation =
     this.then(MaxLengthFilter(maxLength))
@@ -170,20 +147,17 @@ private class FilterChain(
 ) : InputTransformation {
 
     override val keyboardOptions: KeyboardOptions?
-        // TODO(b/295951492) Do proper merging.
-        get() = second.keyboardOptions ?: first.keyboardOptions
+        get() = second.keyboardOptions?.fillUnspecifiedValuesWith(first.keyboardOptions)
+            ?: first.keyboardOptions
 
     override fun SemanticsPropertyReceiver.applySemantics() {
         with(first) { applySemantics() }
         with(second) { applySemantics() }
     }
 
-    override fun transformInput(
-        originalValue: TextFieldCharSequence,
-        valueWithChanges: TextFieldBuffer
-    ) {
-        first.transformInput(originalValue, valueWithChanges)
-        second.transformInput(originalValue, valueWithChanges)
+    override fun TextFieldBuffer.transformInput() {
+        with(first) { transformInput() }
+        with(second) { transformInput() }
     }
 
     override fun toString(): String = "$first.then($second)"
@@ -217,18 +191,15 @@ private data class InputTransformationByValue(
         proposed: CharSequence
     ) -> CharSequence
 ) : InputTransformation {
-    override fun transformInput(
-        originalValue: TextFieldCharSequence,
-        valueWithChanges: TextFieldBuffer
-    ) {
-        val proposed = valueWithChanges.toTextFieldCharSequence()
+    override fun TextFieldBuffer.transformInput() {
+        val proposed = toTextFieldCharSequence()
         val accepted = transformation(originalValue, proposed)
         when {
             // These are reference comparisons – text comparison will be done by setTextIfChanged.
             accepted === proposed -> return
-            accepted === originalValue -> valueWithChanges.revertAllChanges()
+            accepted === originalValue -> revertAllChanges()
             else -> {
-                valueWithChanges.setTextIfChanged(accepted)
+                setTextIfChanged(accepted)
             }
         }
     }
@@ -243,17 +214,14 @@ private data class AllCapsTransformation(private val locale: Locale) : InputTran
         capitalization = KeyboardCapitalization.Characters
     )
 
-    override fun transformInput(
-        originalValue: TextFieldCharSequence,
-        valueWithChanges: TextFieldBuffer
-    ) {
+    override fun TextFieldBuffer.transformInput() {
         // only update inserted content
-        valueWithChanges.changes.forEachChange { range, _ ->
+        changes.forEachChange { range, _ ->
             if (!range.collapsed) {
-                valueWithChanges.replace(
+                replace(
                     range.min,
                     range.max,
-                    valueWithChanges.asCharSequence().substring(range).toUpperCase(locale)
+                    asCharSequence().substring(range).toUpperCase(locale)
                 )
             }
         }
@@ -276,12 +244,9 @@ private data class MaxLengthFilter(
         maxTextLength = maxLength
     }
 
-    override fun transformInput(
-        originalValue: TextFieldCharSequence,
-        valueWithChanges: TextFieldBuffer
-    ) {
-        if (valueWithChanges.length > maxLength) {
-            valueWithChanges.revertAllChanges()
+    override fun TextFieldBuffer.transformInput() {
+        if (length > maxLength) {
+            revertAllChanges()
         }
     }
 

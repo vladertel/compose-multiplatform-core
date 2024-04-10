@@ -35,6 +35,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.internal.HorizontalIconPadding
+import androidx.compose.material3.internal.MinFocusedLabelLineHeight
+import androidx.compose.material3.internal.MinSupportingTextLineHeight
+import androidx.compose.material3.internal.MinTextLineHeight
+import androidx.compose.material3.internal.Strings
+import androidx.compose.material3.internal.SupportingTopPadding
+import androidx.compose.material3.internal.TextFieldAnimationDuration
+import androidx.compose.material3.internal.TextFieldPadding
+import androidx.compose.material3.internal.getString
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -1653,8 +1662,8 @@ class OutlinedTextFieldTest {
             focusRequester.requestFocus()
         }
 
-        // animation duration is 150, advancing by 75 to get into middle of animation
-        rule.mainClock.advanceTimeBy(75)
+        // advance to middle of animation
+        rule.mainClock.advanceTimeBy(TextFieldAnimationDuration.toLong() / 2)
 
         rule.runOnIdle {
             assertThat(textStyle.color).isEqualTo(expectedLabelColor)

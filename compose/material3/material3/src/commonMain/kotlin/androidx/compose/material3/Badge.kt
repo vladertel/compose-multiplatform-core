@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.internal.ProvideContentColorTextStyle
 import androidx.compose.material3.tokens.BadgeTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -91,13 +92,15 @@ fun BadgedBox(
         },
         modifier = modifier
             .onGloballyPositioned { coordinates ->
-                layoutAbsoluteLeft = coordinates.boundsInWindow().left
-                layoutAbsoluteTop = coordinates.boundsInWindow().top
+                val windowBoundsRect = coordinates.boundsInWindow()
+                layoutAbsoluteLeft = windowBoundsRect.left
+                layoutAbsoluteTop = windowBoundsRect.top
                 val layoutGreatGrandParent =
                     coordinates.parentLayoutCoordinates?.parentLayoutCoordinates?.parentCoordinates
                 layoutGreatGrandParent?.let {
-                    greatGrandParentAbsoluteRight = it.boundsInWindow().right
-                    greatGrandParentAbsoluteTop = it.boundsInWindow().top
+                    val greatGrandParentWindowBoundsRect = it.boundsInWindow()
+                    greatGrandParentAbsoluteRight = greatGrandParentWindowBoundsRect.right
+                    greatGrandParentAbsoluteTop = greatGrandParentWindowBoundsRect.top
                 }
             }
     ) { measurables, constraints ->

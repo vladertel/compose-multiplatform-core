@@ -63,6 +63,20 @@ fun runMetalavaWithArgs(
                 "androidx.annotation.RequiresOptIn",
                 "--suppress-compatibility-meta-annotation",
                 "kotlin.RequiresOptIn",
+
+                // Skip reading comments in Metalava for two reasons:
+                // - We prefer for developers to specify api information via annotations instead
+                //   of just javadoc comments (like @hide)
+                // - This allows us to improve cacheability of Metalava tasks
+                "--ignore-comments",
+                "--hide",
+                "DeprecationMismatch",
+                "--hide",
+                "DocumentExceptions",
+
+                // Don't track annotations that aren't needed for review or checking compat.
+                "--exclude-annotation",
+                "androidx.annotation.ReplaceWith",
             )
     val workQueue = workerExecutor.processIsolation()
     workQueue.submit(MetalavaWorkAction::class.java) { parameters ->
@@ -250,9 +264,7 @@ fun generateApi(
     generateApiConfigs.forEach { (generateApiMode, apiLintMode) ->
         generateApi(
             metalavaClasspath,
-            files.bootClasspath,
-            files.dependencyClasspath,
-            files.sourcePaths.files,
+            files,
             apiLocation,
             generateApiMode,
             apiLintMode,
@@ -271,9 +283,7 @@ fun generateApi(
  */
 private fun generateApi(
     metalavaClasspath: FileCollection,
-    bootClasspath: FileCollection,
-    dependencyClasspath: FileCollection,
-    sourcePaths: Collection<File>,
+    files: JavaCompileInputs,
     outputLocation: ApiLocation,
     generateApiMode: GenerateApiMode,
     apiLintMode: ApiLintMode,
@@ -285,9 +295,10 @@ private fun generateApi(
 ) {
     val args =
         getGenerateApiArgs(
-            bootClasspath,
-            dependencyClasspath,
-            sourcePaths,
+            files.bootClasspath,
+            files.dependencyClasspath,
+            files.sourcePaths.files,
+            files.commonModuleSourcePaths.files,
             outputLocation,
             generateApiMode,
             apiLintMode,
@@ -305,6 +316,7 @@ fun getGenerateApiArgs(
     bootClasspath: FileCollection,
     dependencyClasspath: FileCollection,
     sourcePaths: Collection<File>,
+    commonModuleSourcePaths: Collection<File>,
     outputLocation: ApiLocation?,
     generateApiMode: GenerateApiMode,
     apiLintMode: ApiLintMode,
@@ -318,9 +330,16 @@ fun getGenerateApiArgs(
             (bootClasspath.files + dependencyClasspath.files).joinToString(File.pathSeparator),
             "--source-path",
             sourcePaths.filter { it.exists() }.joinToString(File.pathSeparator),
-            "--format=v4",
-            "--warnings-as-errors"
         )
+
+    val existentCommonModuleSourcePaths = commonModuleSourcePaths.filter { it.exists() }
+    if (existentCommonModuleSourcePaths.isNotEmpty()) {
+        args += listOf("--common-source-path", existentCommonModuleSourcePaths.joinToString(":"))
+    }
+    args += listOf(
+        "--format=v4",
+        "--warnings-as-errors"
+    )
 
     pathToManifest?.let { args += listOf("--manifest", pathToManifest) }
 
@@ -389,8 +408,6 @@ fun getGenerateApiArgs(
             args.addAll(
                 listOf(
                     "--error",
-                    "DeprecationMismatch", // Enforce deprecation mismatch
-                    "--error",
                     "ReferencesDeprecated",
                     "--error-message:api-lint",
                     """
@@ -408,8 +425,6 @@ fun getGenerateApiArgs(
         is ApiLintMode.Skip -> {
             args.addAll(
                 listOf(
-                    "--hide",
-                    "DeprecationMismatch",
                     "--hide",
                     "UnhiddenSystemApi",
                     "--hide",

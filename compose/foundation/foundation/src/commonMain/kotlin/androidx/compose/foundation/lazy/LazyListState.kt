@@ -34,6 +34,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.LazyListState.Companion.Saver
 import androidx.compose.foundation.lazy.layout.AwaitFirstLayoutModifier
 import androidx.compose.foundation.lazy.layout.LazyLayoutBeyondBoundsInfo
+import androidx.compose.foundation.lazy.layout.LazyLayoutItemAnimator
 import androidx.compose.foundation.lazy.layout.LazyLayoutPinnedItemList
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState
 import androidx.compose.foundation.lazy.layout.ObservableScopeInvalidator
@@ -261,7 +262,7 @@ class LazyListState @ExperimentalFoundationApi constructor(
      */
     internal val awaitLayoutModifier = AwaitFirstLayoutModifier()
 
-    internal val itemAnimator = LazyListItemAnimator()
+    internal val itemAnimator = LazyLayoutItemAnimator<LazyListMeasuredItem>()
 
     internal val beyondBoundsInfo = LazyLayoutBeyondBoundsInfo()
 
@@ -300,15 +301,71 @@ class LazyListState @ExperimentalFoundationApi constructor(
         scrollOffset: Int = 0
     ) {
         scroll {
-            snapToItemIndexInternal(index, scrollOffset)
+            snapToItemIndexInternal(index, scrollOffset, forceRemeasure = true)
         }
     }
 
-    internal fun snapToItemIndexInternal(index: Int, scrollOffset: Int) {
-        scrollPosition.requestPosition(index, scrollOffset)
-        // placement animation is not needed because we snap into a new position.
-        itemAnimator.reset()
-        remeasurement?.forceRemeasure()
+    internal val measurementScopeInvalidator = ObservableScopeInvalidator()
+
+    /**
+     * Requests the item at [index] to be at the start of the viewport during the next
+     * remeasure, offset by [scrollOffset], and schedules a remeasure.
+     *
+     * The scroll position will be updated to the requested position rather than maintain
+     * the index based on the first visible item key (when a data set change will also be
+     * applied during the next remeasure), but *only* for the next remeasure.
+     *
+     * Any scroll in progress will be cancelled.
+     *
+     * @param index the index to which to scroll. Must be non-negative.
+     * @param scrollOffset the offset that the item should end up after the scroll. Note that
+     * positive offset refers to forward scroll, so in a top-to-bottom list, positive offset will
+     * scroll the item further upward (taking it partly offscreen).
+     */
+    fun requestScrollToItem(
+        @AndroidXIntRange(from = 0)
+        index: Int,
+        scrollOffset: Int = 0
+    ) {
+        // Cancel any scroll in progress.
+        if (isScrollInProgress) {
+            layoutInfoState.value.coroutineScope.launch {
+                scroll { }
+            }
+        }
+
+        snapToItemIndexInternal(index, scrollOffset, forceRemeasure = false)
+    }
+
+    /**
+     * Snaps to the requested scroll position. Synchronously executes remeasure if [forceRemeasure]
+     * is true, and schedules a remeasure if false.
+     */
+    internal fun snapToItemIndexInternal(
+        index: Int,
+        scrollOffset: Int,
+        forceRemeasure: Boolean
+    ) {
+        val positionChanged = scrollPosition.index != index ||
+            scrollPosition.scrollOffset != scrollOffset
+        // sometimes this method is called not to scroll, but to stay on the same index when
+        // the data changes, as by default we maintain the scroll position by key, not index.
+        // when this happens we don't need to reset the animations as from the user perspective
+        // we didn't scroll anywhere and if there is an offset change for an item, this change
+        // should be animated.
+        // however, when the request is to really scroll to a different position, we have to
+        // reset previously known item positions as we don't want offset changes to be animated.
+        // this offset should be considered as a scroll, not the placement change.
+        if (positionChanged) {
+            itemAnimator.reset()
+        }
+        scrollPosition.requestPositionAndForgetLastKnownKey(index, scrollOffset)
+
+        if (forceRemeasure) {
+            remeasurement?.forceRemeasure()
+        } else {
+            measurementScopeInvalidator.invalidateScope()
+        }
     }
 
     /**
@@ -338,10 +395,12 @@ class LazyListState @ExperimentalFoundationApi constructor(
     override var canScrollBackward: Boolean by mutableStateOf(false)
         private set
 
-    override val isLastScrollForward: Boolean
-        get() = scrollableState.isLastScrollForward
-    override val isLastScrollBackward: Boolean
-        get() = scrollableState.isLastScrollBackward
+    @get:Suppress("GetterSetterNames")
+    override val lastScrolledForward: Boolean
+        get() = scrollableState.lastScrolledForward
+    @get:Suppress("GetterSetterNames")
+    override val lastScrolledBackward: Boolean
+        get() = scrollableState.lastScrolledBackward
 
     internal val placementScopeInvalidator = ObservableScopeInvalidator()
 
@@ -411,7 +470,7 @@ class LazyListState @ExperimentalFoundationApi constructor(
         }
     }
 
-    fun notifyPrefetchOnScroll(delta: Float, layoutInfo: LazyListLayoutInfo) {
+    private fun notifyPrefetchOnScroll(delta: Float, layoutInfo: LazyListLayoutInfo) {
         if (prefetchingEnabled) {
             with(prefetchStrategy) {
                 prefetchScope.onScroll(
@@ -534,6 +593,8 @@ class LazyListState @ExperimentalFoundationApi constructor(
      * When the user provided custom keys for the items we can try to detect when there were
      * items added or removed before our current first visible item and keep this item
      * as the first visible one even given that its index has been changed.
+     * The scroll position will not be updated if [requestScrollToItem] was called since
+     * the last time this method was called.
      */
     internal fun updateScrollPositionIfTheFirstItemWasMoved(
         itemProvider: LazyListItemProvider,

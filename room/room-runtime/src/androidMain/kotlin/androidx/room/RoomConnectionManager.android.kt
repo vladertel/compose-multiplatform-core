@@ -35,9 +35,10 @@ import androidx.sqlite.use
 internal actual class RoomConnectionManager : BaseRoomConnectionManager {
 
     override val configuration: DatabaseConfiguration
-    override val connectionPool: ConnectionPool
     override val openDelegate: RoomOpenDelegate
     override val callbacks: List<RoomDatabase.Callback>
+
+    private val connectionPool: ConnectionPool
 
     internal val supportOpenHelper: SupportSQLiteOpenHelper?
         get() = (connectionPool as? SupportConnectionPool)?.supportDriver?.openHelper
@@ -49,6 +50,8 @@ internal actual class RoomConnectionManager : BaseRoomConnectionManager {
         openDelegate: RoomOpenDelegate
     ) {
         this.configuration = config
+        this.openDelegate = openDelegate
+        this.callbacks = config.callbacks ?: emptyList()
         if (config.sqliteDriver == null) {
             // Compatibility mode due to no driver provided, instead a driver (SupportSQLiteDriver)
             // is created that wraps SupportSQLite* APIs. The underlying SupportSQLiteDatabase will
@@ -69,18 +72,18 @@ internal actual class RoomConnectionManager : BaseRoomConnectionManager {
             this.connectionPool = if (configuration.name == null) {
                 // An in-memory database must use a single connection pool.
                 newSingleConnectionPool(
-                    driver = DriverWrapper(config.sqliteDriver)
+                    driver = DriverWrapper(config.sqliteDriver),
+                    fileName = ":memory:"
                 )
             } else {
                 newConnectionPool(
                     driver = DriverWrapper(config.sqliteDriver),
+                    fileName = configuration.name,
                     maxNumOfReaders = configuration.journalMode.getMaxNumberOfReaders(),
                     maxNumOfWriters = configuration.journalMode.getMaxNumberOfWriters()
                 )
             }
         }
-        this.openDelegate = openDelegate
-        this.callbacks = config.callbacks ?: emptyList()
         init()
     }
 
@@ -90,6 +93,7 @@ internal actual class RoomConnectionManager : BaseRoomConnectionManager {
     ) {
         this.configuration = config
         this.openDelegate = NoOpOpenDelegate()
+        this.callbacks = config.callbacks ?: emptyList()
         // Compatibility mode due to no driver provided, the SupportSQLiteDriver and
         // SupportConnectionPool are created. A Room onOpen callback is installed so that the
         // SupportSQLiteDatabase is extracted out of the RoomOpenHelper installed.
@@ -98,7 +102,6 @@ internal actual class RoomConnectionManager : BaseRoomConnectionManager {
         this.connectionPool = SupportConnectionPool(
             SupportSQLiteDriver(supportOpenHelperFactory.invoke(configWithCompatibilityCallback))
         )
-        this.callbacks = config.callbacks ?: emptyList()
         init()
     }
 
@@ -161,7 +164,7 @@ internal actual class RoomConnectionManager : BaseRoomConnectionManager {
      * A no op implementation of [RoomOpenDelegate] used in compatibility mode with old gen code
      * that relies on [RoomOpenHelper].
      */
-    private class NoOpOpenDelegate : RoomOpenDelegate(-1, "") {
+    private class NoOpOpenDelegate : RoomOpenDelegate(-1, "", "") {
         override fun onCreate(connection: SQLiteConnection) {
             error("NOP delegate should never be called")
         }
@@ -198,8 +201,9 @@ internal actual class RoomConnectionManager : BaseRoomConnectionManager {
     private class SupportConnectionPool(
         val supportDriver: SupportSQLiteDriver
     ) : ConnectionPool {
-        private val supportConnection by lazy(LazyThreadSafetyMode.NONE) {
-            SupportPooledConnection(supportDriver.open())
+        private val supportConnection by lazy(LazyThreadSafetyMode.PUBLICATION) {
+            val fileName = supportDriver.openHelper.databaseName ?: ":memory:"
+            SupportPooledConnection(supportDriver.open(fileName))
         }
 
         override suspend fun <R> useConnection(

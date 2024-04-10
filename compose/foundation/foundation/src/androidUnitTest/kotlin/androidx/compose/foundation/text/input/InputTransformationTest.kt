@@ -22,6 +22,9 @@ import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.maxTextLength
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
@@ -30,10 +33,10 @@ class InputTransformationTest {
 
     @Test
     fun chainedFilters_areEqual() {
-        val filter1 = InputTransformation { _, _ ->
+        val filter1 = InputTransformation {
             // Noop
         }
-        val filter2 = InputTransformation { _, _ ->
+        val filter2 = InputTransformation {
             // Noop
         }
 
@@ -45,13 +48,13 @@ class InputTransformationTest {
 
     @Test
     fun chainedFilters_areNotEqual_whenFiltersAreDifferent() {
-        val filter1 = InputTransformation { _, _ ->
+        val filter1 = InputTransformation {
             // Noop
         }
-        val filter2 = InputTransformation { _, _ ->
+        val filter2 = InputTransformation {
             // Noop
         }
-        val filter3 = InputTransformation { _, _ ->
+        val filter3 = InputTransformation {
             // Noop
         }
 
@@ -66,19 +69,13 @@ class InputTransformationTest {
         val filter1 = object : InputTransformation {
             override val keyboardOptions = null
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
         val filter2 = object : InputTransformation {
             override val keyboardOptions = null
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
 
@@ -93,19 +90,13 @@ class InputTransformationTest {
         val filter1 = object : InputTransformation {
             override val keyboardOptions = options
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
         val filter2 = object : InputTransformation {
             override val keyboardOptions = null
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
 
@@ -120,19 +111,13 @@ class InputTransformationTest {
         val filter1 = object : InputTransformation {
             override val keyboardOptions = null
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
         val filter2 = object : InputTransformation {
             override val keyboardOptions = options
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
 
@@ -148,19 +133,13 @@ class InputTransformationTest {
         val filter1 = object : InputTransformation {
             override val keyboardOptions = options1
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
         val filter2 = object : InputTransformation {
             override val keyboardOptions = options2
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
 
@@ -170,16 +149,47 @@ class InputTransformationTest {
     }
 
     @Test
+    fun chainedFilters_mergeKeyboardOptions_withPrecedenceToNext() {
+        val options1 = KeyboardOptions(
+            keyboardType = KeyboardType.Password,
+            capitalization = KeyboardCapitalization.Sentences
+        )
+        val options2 = KeyboardOptions(
+            keyboardType = KeyboardType.Email,
+            imeAction = ImeAction.Search
+        )
+        val filter1 = object : InputTransformation {
+            override val keyboardOptions = options1
+
+            override fun TextFieldBuffer.transformInput() {
+            }
+        }
+        val filter2 = object : InputTransformation {
+            override val keyboardOptions = options2
+
+            override fun TextFieldBuffer.transformInput() {
+            }
+        }
+
+        val chain = filter1.then(filter2)
+
+        assertThat(chain.keyboardOptions).isEqualTo(
+            KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                capitalization = KeyboardCapitalization.Sentences,
+                imeAction = ImeAction.Search
+            )
+        )
+    }
+
+    @Test
     fun chainedFilters_applySecondSemantics_afterFirstSemantics() {
         val filter1 = object : InputTransformation {
             override fun SemanticsPropertyReceiver.applySemantics() {
                 maxTextLength = 10
             }
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
         val filter2 = object : InputTransformation {
@@ -187,10 +197,7 @@ class InputTransformationTest {
                 maxTextLength = 20
             }
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) {
+            override fun TextFieldBuffer.transformInput() {
             }
         }
 
@@ -206,9 +213,9 @@ class InputTransformationTest {
         val transformation = InputTransformation.byValue { current, _ -> current }
         val current = TextFieldCharSequence("a")
         val proposed = TextFieldCharSequence("ab")
-        val buffer = TextFieldBuffer(sourceValue = current, initialValue = proposed)
+        val buffer = TextFieldBuffer(originalValue = current, initialValue = proposed)
 
-        transformation.transformInput(current, buffer)
+        with(transformation) { buffer.transformInput() }
 
         assertThat(buffer.changes.changeCount).isEqualTo(0)
         assertThat(buffer.toString()).isEqualTo(current.toString())
@@ -219,9 +226,9 @@ class InputTransformationTest {
         val transformation = InputTransformation.byValue { _, _ -> "a" }
         val current = TextFieldCharSequence("a")
         val proposed = TextFieldCharSequence("ab")
-        val buffer = TextFieldBuffer(sourceValue = current, initialValue = proposed)
+        val buffer = TextFieldBuffer(originalValue = current, initialValue = proposed)
 
-        transformation.transformInput(current, buffer)
+        with(transformation) { buffer.transformInput() }
 
         assertThat(buffer.changes.changeCount).isEqualTo(1)
         assertThat(buffer.toString()).isEqualTo(current.toString())
@@ -232,9 +239,9 @@ class InputTransformationTest {
         val transformation = InputTransformation.byValue { _, _ -> "ab" }
         val current = TextFieldCharSequence("a")
         val proposed = TextFieldCharSequence("ab")
-        val buffer = TextFieldBuffer(sourceValue = current, initialValue = proposed)
+        val buffer = TextFieldBuffer(originalValue = current, initialValue = proposed)
 
-        transformation.transformInput(current, buffer)
+        with(transformation) { buffer.transformInput() }
 
         assertThat(buffer.changes.changeCount).isEqualTo(0)
         assertThat(buffer.toString()).isEqualTo(proposed.toString())
@@ -245,9 +252,9 @@ class InputTransformationTest {
         val transformation = InputTransformation.byValue { _, _ -> "c" }
         val current = TextFieldCharSequence("a")
         val proposed = TextFieldCharSequence("ab")
-        val buffer = TextFieldBuffer(sourceValue = current, initialValue = proposed)
+        val buffer = TextFieldBuffer(originalValue = current, initialValue = proposed)
 
-        transformation.transformInput(current, buffer)
+        with(transformation) { buffer.transformInput() }
 
         assertThat(buffer.changes.changeCount).isEqualTo(1)
         assertThat(buffer.toString()).isEqualTo("c")

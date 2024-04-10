@@ -130,6 +130,8 @@ import androidx.camera.video.internal.compat.quirk.ExtraSupportedResolutionQuirk
 import androidx.camera.video.internal.compat.quirk.ImageCaptureFailedWhenVideoCaptureIsBoundQuirk;
 import androidx.camera.video.internal.compat.quirk.PreviewDelayWhenVideoCaptureIsBoundQuirk;
 import androidx.camera.video.internal.compat.quirk.PreviewStretchWhenVideoCaptureIsBoundQuirk;
+import androidx.camera.video.internal.compat.quirk.SizeCannotEncodeVideoQuirk;
+import androidx.camera.video.internal.compat.quirk.TemporalNoiseQuirk;
 import androidx.camera.video.internal.compat.quirk.VideoQualityQuirk;
 import androidx.camera.video.internal.config.VideoMimeInfo;
 import androidx.camera.video.internal.encoder.SwappedVideoEncoderInfo;
@@ -194,8 +196,10 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
                 hasVideoQualityQuirkAndWorkaroundBySurfaceProcessing();
         boolean hasExtraSupportedResolutionQuirk =
                 DeviceQuirks.get(ExtraSupportedResolutionQuirk.class) != null;
+        boolean hasTemporalNoiseQuirk = DeviceQuirks.get(TemporalNoiseQuirk.class) != null;
         USE_TEMPLATE_PREVIEW_BY_QUIRK =
-                hasPreviewStretchQuirk || hasPreviewDelayQuirk || hasImageCaptureFailedQuirk;
+                hasPreviewStretchQuirk || hasPreviewDelayQuirk || hasImageCaptureFailedQuirk
+                        || hasTemporalNoiseQuirk;
         sEnableSurfaceProcessingByQuirk =
                 hasPreviewDelayQuirk || hasImageCaptureFailedQuirk
                         || hasVideoQualityQuirkAndWorkaroundBySurfaceProcessing
@@ -516,8 +520,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         CameraInternal cameraInternal = getCamera();
         SurfaceEdge cameraEdge = mCameraEdge;
         if (cameraInternal != null && cameraEdge != null) {
-            mRotationDegrees = adjustRotationWithInProgressTransformation(
-                    getRelativeRotation(cameraInternal, isMirroringRequired(cameraInternal)));
+            mRotationDegrees = getCompensatedRotation(cameraInternal);
             cameraEdge.updateTransformation(mRotationDegrees, getAppTargetRotation());
         }
     }
@@ -535,15 +538,27 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         return adjustedCropRect;
     }
 
-    private int adjustRotationWithInProgressTransformation(int rotationDegrees) {
-        int adjustedRotationDegrees = rotationDegrees;
+    /**
+     * Gets the rotation that is compensated by the in-progress transformation.
+     *
+     * <p>If there's no in-progress recording, the returned rotation degrees will be the same as
+     * {@link #getRelativeRotation(CameraInternal)}.
+     */
+    private int getCompensatedRotation(@NonNull CameraInternal cameraInternal) {
+        boolean isMirroringRequired = isMirroringRequired(cameraInternal);
+        int rotationDegrees = getRelativeRotation(cameraInternal, isMirroringRequired);
         if (shouldCompensateTransformation()) {
             TransformationInfo transformationInfo =
                     requireNonNull(mStreamInfo.getInProgressTransformationInfo());
-            adjustedRotationDegrees = within360(
-                    rotationDegrees - transformationInfo.getRotationDegrees());
+            int inProgressDegrees = transformationInfo.getRotationDegrees();
+            if (isMirroringRequired != transformationInfo.isMirroring()) {
+                // If the mirroring states of the current stream and the existing stream are
+                // different, the existing rotation degrees should be inverted.
+                inProgressDegrees = -inProgressDegrees;
+            }
+            rotationDegrees = within360(rotationDegrees - inProgressDegrees);
         }
-        return adjustedRotationDegrees;
+        return rotationDegrees;
     }
 
     @NonNull
@@ -615,8 +630,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         VideoEncoderInfo videoEncoderInfo = resolveVideoEncoderInfo(
                 config.getVideoEncoderInfoFinder(), encoderProfiles, mediaSpec,  resolution,
                 dynamicRange, expectedFrameRate);
-        mRotationDegrees = adjustRotationWithInProgressTransformation(getRelativeRotation(camera,
-                isMirroringRequired(camera)));
+        mRotationDegrees = getCompensatedRotation(camera);
         Rect originalCropRect = calculateCropRect(resolution, videoEncoderInfo);
         mCropRect = adjustCropRectWithInProgressTransformation(originalCropRect, mRotationDegrees);
         Size nodeResolution = adjustResolutionWithInProgressTransformation(resolution,
@@ -626,6 +640,8 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             // pipeline when the transformation becomes invalid.
             mHasCompensatingTransformation = true;
         }
+        mCropRect = adjustCropRectByQuirk(mCropRect, mRotationDegrees,
+                isCreateNodeNeeded(camera, config, mCropRect, resolution), videoEncoderInfo);
         mNode = createNodeIfNeeded(camera, config, mCropRect, resolution, dynamicRange);
         Timebase timebase = resolveTimebase(camera, mNode);
         Logger.d(TAG, "camera timebase = " + camera.getCameraInfoInternal().getTimebase()
@@ -884,7 +900,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         DynamicRange dynamicRange = streamSpec.getDynamicRange();
         if (!isStreamError && mDeferrableSurface != null) {
             if (isStreamActive) {
-                sessionConfigBuilder.addSurface(mDeferrableSurface, dynamicRange);
+                sessionConfigBuilder.addSurface(mDeferrableSurface, dynamicRange, null);
             } else {
                 sessionConfigBuilder.addNonRepeatingSurface(mDeferrableSurface, dynamicRange);
             }
@@ -893,18 +909,25 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         setupSurfaceUpdateNotifier(sessionConfigBuilder, isStreamActive);
     }
 
+    private boolean isCreateNodeNeeded(@NonNull CameraInternal camera,
+            @NonNull VideoCaptureConfig<?> config,
+            @NonNull Rect cropRect,
+            @NonNull Size resolution) {
+        return getEffect() != null
+                || shouldEnableSurfaceProcessingByConfig(camera, config)
+                || shouldEnableSurfaceProcessingByQuirk(camera)
+                || shouldCrop(cropRect, resolution)
+                || shouldMirror(camera)
+                || shouldCompensateTransformation();
+    }
+
     @Nullable
     private SurfaceProcessorNode createNodeIfNeeded(@NonNull CameraInternal camera,
             @NonNull VideoCaptureConfig<T> config,
             @NonNull Rect cropRect,
             @NonNull Size resolution,
             @NonNull DynamicRange dynamicRange) {
-        if (getEffect() != null
-                || shouldEnableSurfaceProcessingByConfig(camera, config)
-                || shouldEnableSurfaceProcessingByQuirk(camera)
-                || shouldCrop(cropRect, resolution)
-                || shouldMirror(camera)
-                || shouldCompensateTransformation()) {
+        if (isCreateNodeNeeded(camera, config, cropRect, resolution)) {
             Logger.d(TAG, "Surface processing is enabled.");
             return new SurfaceProcessorNode(requireNonNull(getCamera()),
                     getEffect() != null ? getEffect().createSurfaceProcessorInternal() :
@@ -917,6 +940,18 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     @Nullable
     SurfaceProcessorNode getNode() {
         return mNode;
+    }
+
+    /** Adjusts the cropRect if the quirk matches, otherwise returns the original cropRect. */
+    @NonNull
+    private static Rect adjustCropRectByQuirk(@NonNull Rect cropRect, int rotationDegrees,
+            boolean isSurfaceProcessingEnabled, @Nullable VideoEncoderInfo videoEncoderInfo) {
+        SizeCannotEncodeVideoQuirk quirk = DeviceQuirks.get(SizeCannotEncodeVideoQuirk.class);
+        if (quirk != null) {
+            return quirk.adjustCropRectForProblematicEncodeSize(cropRect,
+                    isSurfaceProcessingEnabled ? rotationDegrees : 0, videoEncoderInfo);
+        }
+        return cropRect;
     }
 
     /**

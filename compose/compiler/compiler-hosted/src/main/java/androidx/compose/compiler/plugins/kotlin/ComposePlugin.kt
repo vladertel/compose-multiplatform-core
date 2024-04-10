@@ -26,6 +26,8 @@ import androidx.compose.compiler.plugins.kotlin.k1.ComposeDiagnosticSuppressor
 import androidx.compose.compiler.plugins.kotlin.k1.ComposeTypeResolutionInterceptorExtension
 import androidx.compose.compiler.plugins.kotlin.k2.ComposeFirExtensionRegistrar
 import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityFieldSerializationPlugin
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.AddHiddenFromObjCSerializationPlugin
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.HideFromObjCDeclarationsSet
 import com.intellij.mock.MockProject
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -86,6 +88,9 @@ object ComposeConfiguration {
         )
     val TRACE_MARKERS_ENABLED_KEY =
         CompilerConfigurationKey<Boolean>("Include composition trace markers in generated code")
+    val HIDE_FROM_OBJC_ENABLED_KEY =
+        CompilerConfigurationKey<Boolean>(
+            "Add HiddenFromObjC annotation to @Composable declarations")
 }
 
 @OptIn(ExperimentalCompilerApi::class)
@@ -151,7 +156,7 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
         )
         val SUPPRESS_KOTLIN_VERSION_CHECK_ENABLED_OPTION = CliOption(
             "suppressKotlinVersionCompatibilityCheck",
-            "<true|false>",
+            "<kotlin_version>",
             "Suppress Kotlin version compatibility check",
             required = false,
             allowMultipleOccurrences = false
@@ -200,7 +205,7 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
         DECOYS_ENABLED_OPTION,
         STRONG_SKIPPING_OPTION,
         STABLE_CONFIG_PATH_OPTION,
-        TRACE_MARKERS_OPTION
+        TRACE_MARKERS_OPTION,
     )
 
     override fun processOption(
@@ -276,11 +281,19 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
         configuration: CompilerConfiguration
     ) {
         if (checkCompilerVersion(configuration)) {
+            val hideFromObjCDeclarationsSet = HideFromObjCDeclarationsSet()
+
             registerCommonExtensions(project)
+
             IrGenerationExtension.registerExtension(
                 project,
-                createComposeIrExtension(configuration)
+                createComposeIrExtension(
+                    configuration,
+                    hideFromObjCDeclarationsSet
+                )
             )
+
+            registerNativeExtensions(project, hideFromObjCDeclarationsSet)
         }
     }
 
@@ -388,8 +401,19 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
             FirExtensionRegistrarAdapter.registerExtension(project, ComposeFirExtensionRegistrar())
         }
 
+        fun registerNativeExtensions(
+            project: Project,
+            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet
+        ) {
+            DescriptorSerializerPlugin.registerExtension(
+                project,
+                AddHiddenFromObjCSerializationPlugin(hideFromObjCDeclarationsSet)
+            )
+        }
+
         fun createComposeIrExtension(
             configuration: CompilerConfiguration,
+            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet? = null,
             moduleMetricsFactory: ((StabilityInferencer) -> ModuleMetrics)? = null
         ): ComposeIrGenerationExtension {
             val liveLiteralsEnabled = configuration.getBoolean(
@@ -477,7 +501,8 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
                 useK2 = useK2,
                 strongSkippingEnabled = strongSkippingEnabled,
                 stableTypeMatchers = stableTypeMatchers,
-                moduleMetricsFactory = moduleMetricsFactory
+                moduleMetricsFactory = moduleMetricsFactory,
+                hideFromObjCDeclarationsSet = hideFromObjCDeclarationsSet,
             )
         }
     }

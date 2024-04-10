@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
 import androidx.compose.ui.layout.Measurable
@@ -51,10 +52,10 @@ import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.semantics.ScrollAxisRange
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
-import androidx.compose.ui.semantics.getScrollViewportLength
 import androidx.compose.ui.semantics.horizontalScrollAxisRange
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.scrollBy
+import androidx.compose.ui.semantics.scrollByOffset
 import androidx.compose.ui.semantics.verticalScrollAxisRange
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.util.fastRoundToInt
@@ -164,10 +165,13 @@ class ScrollState(initial: Int) : ScrollableState {
 
     override val canScrollBackward: Boolean by derivedStateOf { value > 0 }
 
-    override val isLastScrollForward: Boolean
-        get() = scrollableState.isLastScrollForward
-    override val isLastScrollBackward: Boolean
-        get() = scrollableState.isLastScrollBackward
+    @get:Suppress("GetterSetterNames")
+    override val lastScrolledForward: Boolean
+        get() = scrollableState.lastScrolledForward
+
+    @get:Suppress("GetterSetterNames")
+    override val lastScrolledBackward: Boolean
+        get() = scrollableState.lastScrolledBackward
 
     /**
      * Scroll to position in pixels with animation.
@@ -366,9 +370,14 @@ private class ScrollSemanticsModifierNode(
                 }
             )
 
-            getScrollViewportLength {
-                it.add(state.viewportSize.toFloat())
-                true
+            scrollByOffset { offset ->
+                if (isVertical) {
+                    val consumed = (state as ScrollableState).animateScrollBy(offset.y)
+                    Offset(0f, consumed)
+                } else {
+                    val consumed = (state as ScrollableState).animateScrollBy(offset.x)
+                    Offset(consumed, 0f)
+                }
             }
         }
     }
@@ -450,7 +459,13 @@ internal class ScrollingLayoutNode(
             val absScroll = if (isReversed) scroll - side else -scroll
             val xOffset = if (isVertical) 0 else absScroll
             val yOffset = if (isVertical) absScroll else 0
-            placeable.placeRelativeWithLayer(xOffset, yOffset)
+
+            // Tagging as direct manipulation, such that consumers of this offset can decide whether
+            // to exclude this offset on their coordinates calculation. Such as whether an
+            // `approachLayout` will animate it or directly apply the offset without animation.
+            withDirectManipulationPlacement {
+                placeable.placeRelativeWithLayer(xOffset, yOffset)
+            }
         }
     }
 

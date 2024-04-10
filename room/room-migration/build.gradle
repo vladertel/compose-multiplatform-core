@@ -66,6 +66,10 @@ androidXMultiplatform {
         }
         nativeMain {
             dependsOn(commonMain)
+            dependencies {
+                api(libs.okio)
+                implementation(libs.kotlinSerializationJsonOkio)
+            }
         }
         targets.all { target ->
             if (target.platformType == KotlinPlatformType.native) {
@@ -83,5 +87,4 @@ androidx {
     inceptionYear = "2017"
     description = "Android Room Migration"
     legacyDisableKotlinStrictApiMode = true
-    metalavaK2UastEnabled = true
 }

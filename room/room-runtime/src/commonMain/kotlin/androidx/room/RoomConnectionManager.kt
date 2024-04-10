@@ -16,9 +16,9 @@
 
 package androidx.room
 
+import androidx.annotation.RestrictTo
 import androidx.room.RoomDatabase.JournalMode.TRUNCATE
 import androidx.room.RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING
-import androidx.room.coroutines.ConnectionPool
 import androidx.room.util.findMigrationPath
 import androidx.room.util.isMigrationRequired
 import androidx.sqlite.SQLiteConnection
@@ -35,10 +35,10 @@ internal expect class RoomConnectionManager : BaseRoomConnectionManager
  * Base class for Room's database connection manager, responsible for opening and managing such
  * connections, including performing migrations if necessary and validating schema.
  */
-internal abstract class BaseRoomConnectionManager {
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+abstract class BaseRoomConnectionManager {
 
     protected abstract val configuration: DatabaseConfiguration
-    protected abstract val connectionPool: ConnectionPool
     protected abstract val openDelegate: RoomOpenDelegate
     protected abstract val callbacks: List<RoomDatabase.Callback>
 
@@ -51,10 +51,8 @@ internal abstract class BaseRoomConnectionManager {
     protected inner class DriverWrapper(
         private val actual: SQLiteDriver
     ) : SQLiteDriver {
-        override fun open(): SQLiteConnection {
-            // TODO(b/317973999): Try to validate connections point to the same filename as the
-            //                    one in the database configuration provided in the builder.
-            return configureConnection(actual.open())
+        override fun open(fileName: String): SQLiteConnection {
+            return configureConnection(actual.open(fileName))
         }
     }
 
@@ -196,8 +194,10 @@ internal abstract class BaseRoomConnectionManager {
                     null
                 }
             }
-
-            if (openDelegate.identityHash != identityHash) {
+            if (
+                openDelegate.identityHash != identityHash &&
+                openDelegate.legacyIdentityHash != identityHash
+            ) {
                 error(
                     "Room cannot verify the data integrity. Looks like" +
                         " you've changed schema but forgot to update the version number. You can" +
@@ -206,14 +206,22 @@ internal abstract class BaseRoomConnectionManager {
                 )
             }
         } else {
-            // No room_master_table, this might an a pre-populated DB, we must validate to see if
-            // its suitable for usage.
-            val result = openDelegate.onValidateSchema(connection)
-            if (!result.isValid) {
-                error("Pre-packaged database has an invalid schema: ${result.expectedFoundMsg}")
+            connection.execSQL("BEGIN EXCLUSIVE TRANSACTION")
+            runCatching {
+                // No room_master_table, this might an a pre-populated DB, we must validate to see
+                // if it's suitable for usage.
+                val result = openDelegate.onValidateSchema(connection)
+                if (!result.isValid) {
+                    error("Pre-packaged database has an invalid schema: ${result.expectedFoundMsg}")
+                }
+                openDelegate.onPostMigrate(connection)
+                updateIdentity(connection)
+            }.onSuccess {
+                connection.execSQL("END TRANSACTION")
+            }.onFailure {
+                connection.execSQL("ROLLBACK TRANSACTION")
+                throw it
             }
-            openDelegate.onPostMigrate(connection)
-            updateIdentity(connection)
         }
     }
 

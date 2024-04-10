@@ -29,6 +29,8 @@ import java.io.InputStream
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import org.intellij.lang.annotations.Language
+import perfetto.protos.ComputeMetricArgs
+import perfetto.protos.ComputeMetricResult
 import perfetto.protos.QueryResult
 import perfetto.protos.TraceMetrics
 
@@ -171,7 +173,7 @@ class PerfettoTraceProcessor {
                     val label = "Trace with processing error: ${t.message?.take(50)?.trim()}..."
                     reportSummaryToIde(
                         profilerResults = listOf(
-                            Profiler.ResultFile(
+                            Profiler.ResultFile.ofPerfettoTrace(
                                 label = label,
                                 absolutePath = trace.path
                             )
@@ -196,22 +198,87 @@ class PerfettoTraceProcessor {
          */
         @RestrictTo(LIBRARY_GROUP) // avoids exposing Proto API
         fun getTraceMetrics(metric: String): TraceMetrics {
-            inMemoryTrace("PerfettoTraceProcessor#getTraceMetrics $metric") {
-                require(!metric.contains(" ")) {
-                    "Metric must not contain spaces: $metric"
-                }
+            val computeResult = queryAndVerifyMetricResult(
+                listOf(metric),
+                ComputeMetricArgs.ResultFormat.BINARY_PROTOBUF
+            )
+            return TraceMetrics.ADAPTER.decode(computeResult.metrics!!)
+        }
+
+        /**
+         * Computes the given metrics, returning the results as a binary proto.
+         *
+         * The proto format definition for decoding this binary format can be found
+         * [here](https://cs.android.com/android/platform/superproject/main/+/main:external/perfetto/protos/perfetto/metrics/).
+         *
+         * See [perfetto metric docs](https://perfetto.dev/docs/quickstart/trace-analysis#trace-based-metrics)
+         * for an overview on trace based metrics.
+         */
+        fun queryMetricsProtoBinary(metrics: List<String>): ByteArray {
+            val computeResult = queryAndVerifyMetricResult(
+                metrics,
+                ComputeMetricArgs.ResultFormat.BINARY_PROTOBUF
+            )
+            return computeResult.metrics!!.toByteArray()
+        }
+
+        /**
+         * Computes the given metrics, returning the results as JSON text.
+         *
+         * The proto format definition for these metrics can be found
+         * [here](https://cs.android.com/android/platform/superproject/main/+/main:external/perfetto/protos/perfetto/metrics/).
+         *
+         * See [perfetto metric docs](https://perfetto.dev/docs/quickstart/trace-analysis#trace-based-metrics)
+         * for an overview on trace based metrics.
+         */
+        fun queryMetricsJson(metrics: List<String>): String {
+            val computeResult = queryAndVerifyMetricResult(
+                metrics,
+                ComputeMetricArgs.ResultFormat.JSON
+            )
+            check(computeResult.metrics_as_json != null)
+            return computeResult.metrics_as_json
+        }
+
+        /**
+         * Computes the given metrics, returning the result as proto text.
+         *
+         * The proto format definition for these metrics can be found
+         * [here](https://cs.android.com/android/platform/superproject/main/+/main:external/perfetto/protos/perfetto/metrics/).
+         *
+         * See [perfetto metric docs](https://perfetto.dev/docs/quickstart/trace-analysis#trace-based-metrics)
+         * for an overview on trace based metrics.
+         */
+        fun queryMetricsProtoText(metrics: List<String>): String {
+            val computeResult = queryAndVerifyMetricResult(
+                metrics,
+                ComputeMetricArgs.ResultFormat.TEXTPROTO
+            )
+            check(computeResult.metrics_as_prototext != null)
+            return computeResult.metrics_as_prototext
+        }
+
+        private fun queryAndVerifyMetricResult(
+            metrics: List<String>,
+            format: ComputeMetricArgs.ResultFormat
+        ): ComputeMetricResult {
+            val nameString = metrics.joinToString()
+            require(metrics.none { it.contains(" ") }) {
+                "Metrics must not constain spaces, metrics: $nameString"
+            }
+
+            inMemoryTrace("PerfettoTraceProcessor#getTraceMetrics $nameString") {
                 require(traceProcessor.perfettoHttpServer.isRunning()) {
                     "Perfetto trace_shell_process is not running."
                 }
 
                 // Compute metrics
-                val computeResult = traceProcessor.perfettoHttpServer.computeMetric(listOf(metric))
+                val computeResult = traceProcessor.perfettoHttpServer.computeMetric(metrics, format)
                 if (computeResult.error != null) {
                     throw IllegalStateException(computeResult.error)
                 }
 
-                // Decode and return trace metrics
-                return TraceMetrics.ADAPTER.decode(computeResult.metrics!!)
+                return computeResult
             }
         }
 
@@ -307,11 +374,11 @@ class PerfettoTraceProcessor {
                     },
                     postfix = ")"
                 ) {
-                    "slice.name LIKE \"$it\""
+                    "slice_name LIKE \"$it\""
                 }
             val innerJoins = if (packageName != null) {
                 """
-                INNER JOIN thread_track on slice.track_id = thread_track.id
+                INNER JOIN thread_track ON slice.track_id = thread_track.id
                 INNER JOIN thread USING(utid)
                 INNER JOIN process USING(upid)
                 """.trimMargin()
@@ -319,15 +386,32 @@ class PerfettoTraceProcessor {
                 ""
             }
 
+            val processTrackInnerJoins = """
+                INNER JOIN process_track ON slice.track_id = process_track.id
+                INNER JOIN process USING(upid)
+            """.trimIndent()
+
             return query(
                 query = """
-                    SELECT slice.name,ts,dur
+                    SELECT slice.name AS slice_name,ts,dur
                     FROM slice
                     $innerJoins
                     WHERE $whereClause
+                    UNION
+                    SELECT process_track.name AS slice_name,ts,dur
+                    FROM slice
+                    $processTrackInnerJoins
+                    WHERE $whereClause
                     ORDER BY ts
-                    """.trimMargin()
-            ).toSlices()
+                    """.trimIndent()
+            ).map { row ->
+                // Using an explicit mapper here to account for the aliasing of `slice_name`
+                Slice(
+                    name = row.string("slice_name"),
+                    ts = row.long("ts"),
+                    dur = row.long("dur")
+                )
+            }.toList()
         }
     }
 

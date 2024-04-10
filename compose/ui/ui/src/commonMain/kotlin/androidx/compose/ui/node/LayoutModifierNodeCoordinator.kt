@@ -40,6 +40,7 @@ internal class LayoutModifierNodeCoordinator(
     layoutNode: LayoutNode,
     measureNode: LayoutModifierNode,
 ) : NodeCoordinator(layoutNode) {
+
     var layoutModifierNode: LayoutModifierNode = measureNode
         internal set(value) {
             if (value != field) {
@@ -158,7 +159,7 @@ internal class LayoutModifierNodeCoordinator(
                 // approachMeasureScope is created/updated when layoutModifierNode is set. An
                 // ApproachLayoutModifierNode will lead to a non-null approachMeasureScope.
                 with(scope.approachNode) {
-                    scope.approachMeasureRequired = !isMeasurementApproachComplete(
+                    scope.approachMeasureRequired = isMeasurementApproachInProgress(
                         scope.lookaheadSize
                     ) || constraints != lookaheadConstraints
                     if (!scope.approachMeasureRequired) {
@@ -231,9 +232,22 @@ internal class LayoutModifierNodeCoordinator(
     override fun placeAt(
         position: IntOffset,
         zIndex: Float,
+        layer: GraphicsLayer
+    ) {
+        super.placeAt(position, zIndex, layer)
+        onAfterPlaceAt()
+    }
+
+    override fun placeAt(
+        position: IntOffset,
+        zIndex: Float,
         layerBlock: (GraphicsLayerScope.() -> Unit)?
     ) {
         super.placeAt(position, zIndex, layerBlock)
+        onAfterPlaceAt()
+    }
+
+    private fun onAfterPlaceAt() {
         // The coordinator only runs their placement block to obtain our position, which allows them
         // to calculate the offset of an alignment line we have already provided a position for.
         // No need to place our wrapped as well (we might have actually done this already in
@@ -244,7 +258,7 @@ internal class LayoutModifierNodeCoordinator(
         approachMeasureScope?.let {
             with(it.approachNode) {
                 val approachComplete = with(placementScope) {
-                    isPlacementApproachComplete(
+                    !isPlacementApproachInProgress(
                         lookaheadDelegate!!.lookaheadLayoutCoordinates
                     ) && !it.approachMeasureRequired &&
                         size == lookaheadDelegate?.size &&

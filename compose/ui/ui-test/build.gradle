@@ -127,6 +127,7 @@ androidXMultiplatform {
                 implementation(libs.robolectric)
                 implementation(libs.mockitoCore4)
                 implementation(libs.mockitoKotlin4)
+                implementation(libs.byteBuddy)
 
                 implementation(project(":compose:animation:animation-core"))
                 implementation(project(":compose:material:material"))
@@ -166,4 +167,5 @@ androidx {
     inceptionYear = "2019"
     description = "Compose testing library"
     legacyDisableKotlinStrictApiMode = true
+    samples(project(":compose:ui:ui-test:ui-test-samples"))
 }

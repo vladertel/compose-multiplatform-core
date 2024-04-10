@@ -154,6 +154,16 @@ interface CameraGraph : AutoCloseable {
     fun setSurface(stream: StreamId, surface: Surface?)
 
     /**
+     * CameraPipe allows setting the global audio restriction through [CameraPipe] and audio
+     * restrictions on individual [CameraGraph]s. When multiple settings are present, the highest
+     * level of audio restriction across global and individual [CameraGraph]s is used as the
+     * device's audio restriction.
+     *
+     * Sets the audio restriction of CameraGraph.
+     */
+    fun updateAudioRestrictionMode(mode: AudioRestrictionMode)
+
+    /**
      * This defines the configuration, flags, and pre-defined structure of a [CameraGraph] instance.
      * Note that for parameters, null is considered a valid value, and unset keys are ignored.
      *
@@ -659,6 +669,19 @@ abstract class GraphState internal constructor() {
     class GraphStateError(val cameraError: CameraError, val willAttemptRetry: Boolean) :
         GraphState() {
         override fun toString(): String =
-            super.toString() + "(cameraError = $cameraError, willAttemptRetry = $willAttemptRetry)"
+            super.toString() + "(cameraError=$cameraError, willAttemptRetry=$willAttemptRetry)"
+    }
+}
+
+/**
+ * @see [CameraDevice.AUDIO_RESTRICTION_NONE] and other constants.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+@JvmInline
+value class AudioRestrictionMode internal constructor(val value: Int) {
+    companion object {
+        val AUDIO_RESTRICTION_NONE = AudioRestrictionMode(0)
+        val AUDIO_RESTRICTION_VIBRATION = AudioRestrictionMode(1)
+        val AUDIO_RESTRICTION_VIBRATION_SOUND = AudioRestrictionMode(3)
     }
 }

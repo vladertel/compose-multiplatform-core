@@ -15,7 +15,8 @@ if [ -n "$OUT_DIR" ] ; then
     mkdir -p "$OUT_DIR"
     OUT_DIR="$(cd $OUT_DIR && pwd -P)"
     export GRADLE_USER_HOME="$OUT_DIR/.gradle"
-    export TMPDIR=$OUT_DIR
+    export TMPDIR="$OUT_DIR/tmp"
+    mkdir -p "$TMPDIR"
 else
     CHECKOUT_ROOT="$(cd $SCRIPT_PATH/../.. && pwd -P)"
     export OUT_DIR="$CHECKOUT_ROOT/out"
@@ -113,7 +114,9 @@ fi
 # setup from each lint module.
 export ANDROID_HOME="$APP_HOME/../../prebuilts/fullsdk-$plat"
 # override JAVA_HOME, because CI machines have it and it points to very old JDK
-export JAVA_HOME="$APP_HOME/../../prebuilts/jdk/jdk17/$plat-$platform_suffix"
+export ANDROIDX_JDK17="$APP_HOME/../../prebuilts/jdk/jdk17/$plat-$platform_suffix"
+export ANDROIDX_JDK21="$APP_HOME/../../prebuilts/jdk/jdk21/$plat-$platform_suffix"
+export JAVA_HOME=$ANDROIDX_JDK21
 export STUDIO_GRADLE_JDK=$JAVA_HOME
 
 # Warn developers if they try to build top level project without the full checkout
@@ -243,11 +246,6 @@ else
   disableCi=false
 fi
 
-# workaround for https://github.com/gradle/gradle/issues/18386
-if [[ " ${@} " =~ " --profile " ]]; then
-  mkdir -p reports
-fi
-
 # Expand some arguments
 for compact in "--ci" "--strict" "--clean" "--no-ci"; do
   expanded=""
@@ -259,13 +257,14 @@ for compact in "--ci" "--strict" "--clean" "--no-ci"; do
        -Pandroidx.enableAffectedModuleDetection\
        -Pandroidx.printTimestamps\
        --no-watch-fs\
-       -Pandroidx.highMemory"
+       -Pandroidx.highMemory\
+       --profile"
     fi
   fi
   if [ "$compact" == "--strict" ]; then
     expanded="-Pandroidx.validateNoUnrecognizedMessages\
      -Pandroidx.verifyUpToDate"
-    if [ "$USE_ANDROIDX_REMOTE_BUILD_CACHE" == "" ]; then
+    if [ "$USE_ANDROIDX_REMOTE_BUILD_CACHE" == "" -o "$USE_ANDROIDX_REMOTE_BUILD_CACHE" == "false" ]; then
       expanded="$expanded --offline"
     fi
   fi
@@ -301,6 +300,11 @@ for compact in "--ci" "--strict" "--clean" "--no-ci"; do
     done
   fi
 done
+
+# workaround for https://github.com/gradle/gradle/issues/18386
+if [[ " ${@} " =~ " --profile " ]]; then
+  mkdir -p reports
+fi
 
 raiseMemory=false
 if [[ " ${@} " =~ " -Pandroidx.highMemory " ]]; then

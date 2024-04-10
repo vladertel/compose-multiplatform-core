@@ -36,13 +36,14 @@ import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -259,30 +260,16 @@ class AndroidClipboardManagerTest {
     }
 
     @Test
-    fun getPrimaryClipDescription_returnsClipDescription() {
+    fun getPrimaryClipEntry_includesClipMetadata() {
         val clipboardManager = mock<ClipboardManager>()
+        val clipData = mock<ClipData>()
         val clipDescription = mock<ClipDescription>()
-        whenever(clipboardManager.primaryClipDescription).thenReturn(clipDescription)
+        whenever(clipData.description).thenReturn(clipDescription)
+        whenever(clipboardManager.primaryClip).thenReturn(clipData)
         val subject = AndroidClipboardManager(clipboardManager)
 
-        assertThat(subject.getClipMetadata()?.clipDescription).isSameInstanceAs(clipDescription)
-        verify(clipboardManager, never()).primaryClip
-    }
-
-    @Test
-    fun hasPrimaryClipEntry_returnsHasClipData() {
-        val clipboardManager = mock<ClipboardManager>()
-        whenever(clipboardManager.hasPrimaryClip()).thenReturn(true)
-        val subject = AndroidClipboardManager(clipboardManager)
-
-        assertThat(subject.hasClip()).isEqualTo(true)
-
-        whenever(clipboardManager.hasPrimaryClip()).thenReturn(false)
-
-        assertThat(subject.hasClip()).isEqualTo(false)
-
-        verify(clipboardManager, never()).primaryClip
-        verify(clipboardManager, never()).primaryClipDescription
+        assertThat(subject.getClip()?.clipMetadata?.clipDescription)
+            .isSameInstanceAs(clipDescription)
     }
 
     @Test
@@ -294,6 +281,35 @@ class AndroidClipboardManagerTest {
         subject.setClip(clipData.toClipEntry())
 
         verify(clipboardManager, times(1)).setPrimaryClip(clipData)
+    }
+
+    @SdkSuppress(minSdkVersion = 28)
+    @Test
+    fun setPrimaryClip_callsClearPrimaryClip_ifNull_above28() {
+        val clipboardManager = mock<ClipboardManager>()
+        val subject = AndroidClipboardManager(clipboardManager)
+
+        subject.setClip(null)
+
+        verify(clipboardManager, times(1)).clearPrimaryClip()
+    }
+
+    @SdkSuppress(maxSdkVersion = 27)
+    @Test
+    fun setPrimaryClip_callsClearPrimaryClip_ifNull_below27() {
+        val clipboardManager = mock<ClipboardManager>()
+        val subject = AndroidClipboardManager(clipboardManager)
+
+        subject.setClip(null)
+
+        val argumentCaptor = argumentCaptor<ClipData>()
+        verify(clipboardManager, times(1))
+            .setPrimaryClip(argumentCaptor.capture())
+
+        assertThat(argumentCaptor.lastValue.itemCount).isEqualTo(1)
+        assertThat(argumentCaptor.lastValue.getItemAt(0).uri).isEqualTo(null)
+        assertThat(argumentCaptor.lastValue.getItemAt(0).intent).isEqualTo(null)
+        assertThat(argumentCaptor.lastValue.getItemAt(0).text).isEqualTo("")
     }
 
     @OptIn(ExperimentalComposeUiApi::class)

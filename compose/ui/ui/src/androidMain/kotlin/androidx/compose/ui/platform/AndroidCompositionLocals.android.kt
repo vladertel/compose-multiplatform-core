@@ -64,10 +64,10 @@ internal val LocalResourceIdCache = staticCompositionLocalOf<ResourceIdCache> {
 /**
  * The CompositionLocal containing the current [LifecycleOwner].
  */
-// @Deprecated(
-//    "Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.",
-//    ReplaceWith("androidx.lifecycle.compose.LocalLifecycleOwner"),
-// )
+ @Deprecated(
+    "Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.",
+    ReplaceWith("androidx.lifecycle.compose.LocalLifecycleOwner"),
+ )
 val LocalLifecycleOwner get() = LocalLifecycleOwner
 
 /**
@@ -116,6 +116,8 @@ internal fun ProvideAndroidCompositionLocals(
 
     val imageVectorCache = obtainImageVectorCache(context, configuration)
     val resourceIdCache = obtainResourceIdCache(context)
+    val scrollCaptureInProgress =
+        LocalScrollCaptureInProgress.current or owner.scrollCaptureInProgress
     CompositionLocalProvider(
         LocalConfiguration provides configuration,
         LocalContext provides context,
@@ -124,7 +126,8 @@ internal fun ProvideAndroidCompositionLocals(
         LocalSaveableStateRegistry provides saveableStateRegistry,
         LocalView provides owner.view,
         LocalImageVectorCache provides imageVectorCache,
-        LocalResourceIdCache provides resourceIdCache
+        LocalResourceIdCache provides resourceIdCache,
+        LocalProvidableScrollCaptureInProgress provides scrollCaptureInProgress,
     ) {
         ProvideCommonCompositionLocals(
             owner = owner,

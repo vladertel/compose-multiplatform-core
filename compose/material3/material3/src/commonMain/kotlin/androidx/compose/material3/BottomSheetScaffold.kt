@@ -27,6 +27,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.SheetValue.Expanded
 import androidx.compose.material3.SheetValue.Hidden
 import androidx.compose.material3.SheetValue.PartiallyExpanded
+import androidx.compose.material3.internal.DraggableAnchors
+import androidx.compose.material3.internal.Strings
+import androidx.compose.material3.internal.anchoredDraggable
+import androidx.compose.material3.internal.draggableAnchors
+import androidx.compose.material3.internal.getString
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
@@ -221,20 +226,25 @@ private fun StandardBottomSheet(
     val scope = rememberCoroutineScope()
     val orientation = Orientation.Vertical
     val peekHeightPx = with(LocalDensity.current) { peekHeight.toPx() }
+    val nestedScroll = if (sheetSwipeEnabled) {
+        Modifier.nestedScroll(
+            remember(state.anchoredDraggableState) {
+                ConsumeSwipeWithinBottomSheetBoundsNestedScrollConnection(
+                    sheetState = state,
+                    orientation = orientation,
+                    onFling = { scope.launch { state.settle(it) } }
+                )
+            }
+        )
+    } else {
+        Modifier
+    }
     Surface(
         modifier = Modifier
             .widthIn(max = sheetMaxWidth)
             .fillMaxWidth()
             .requiredHeightIn(min = peekHeight)
-            .nestedScroll(
-                remember(state.anchoredDraggableState) {
-                    ConsumeSwipeWithinBottomSheetBoundsNestedScrollConnection(
-                        sheetState = state,
-                        orientation = orientation,
-                        onFling = { scope.launch { state.settle(it) } }
-                    )
-                }
-            )
+            .then(nestedScroll)
             .draggableAnchors(state.anchoredDraggableState, orientation) { sheetSize, constraints ->
                 val layoutHeight = constraints.maxHeight.toFloat()
                 val sheetHeight = sheetSize.height.toFloat()

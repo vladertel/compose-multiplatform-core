@@ -26,7 +26,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.LayoutAwareModifierNode
+import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.node.requireLayoutCoordinates
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.toSize
@@ -65,9 +67,11 @@ internal class ContentInViewNode(
     private var orientation: Orientation,
     private var scrollState: ScrollableState,
     private var reverseDirection: Boolean,
-    private var bringIntoViewSpec: BringIntoViewSpec
-) : Modifier.Node(), BringIntoViewResponder, LayoutAwareModifierNode {
+    private var bringIntoViewSpec: BringIntoViewSpec?
+) : Modifier.Node(), BringIntoViewResponder, LayoutAwareModifierNode,
+    CompositionLocalConsumerModifierNode {
 
+    override val shouldAutoInvalidate: Boolean = false
     /**
      * Ongoing requests from [bringChildIntoView], with the invariant that it is always sorted by
      * overlapping order: each item's [Rect] completely overlaps the next item.
@@ -102,8 +106,6 @@ internal class ContentInViewNode(
         private set
 
     private var isAnimationRunning = false
-    private val animationState =
-        UpdatableAnimationState(bringIntoViewSpec.scrollAnimationSpec)
 
     override fun calculateRectForParent(localRect: Rect): Rect {
         check(viewportSize != IntSize.Zero) {
@@ -111,6 +113,10 @@ internal class ContentInViewNode(
         }
         // size will only be zero before the initial measurement.
         return computeDestination(localRect, viewportSize)
+    }
+
+    private fun requireBringIntoViewSpec(): BringIntoViewSpec {
+        return bringIntoViewSpec ?: currentValueOf(LocalBringIntoViewSpec)
     }
 
     override suspend fun bringChildIntoView(localRect: () -> Rect?) {
@@ -173,10 +179,11 @@ internal class ContentInViewNode(
     }
 
     private fun launchAnimation() {
+        val bringIntoViewSpec = requireBringIntoViewSpec()
         check(!isAnimationRunning) { "launchAnimation called when previous animation was running" }
 
         if (DEBUG) println("[$TAG] launchAnimation")
-
+        val animationState = UpdatableAnimationState(bringIntoViewSpec.scrollAnimationSpec)
         coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
             var cancellationException: CancellationException? = null
             val animationJob = coroutineContext.job
@@ -184,7 +191,7 @@ internal class ContentInViewNode(
             try {
                 isAnimationRunning = true
                 scrollState.scroll {
-                    animationState.value = calculateScrollDelta()
+                    animationState.value = calculateScrollDelta(bringIntoViewSpec)
                     if (DEBUG) println(
                         "[$TAG] Starting scroll animation down from ${animationState.value}…"
                     )
@@ -249,7 +256,7 @@ internal class ContentInViewNode(
 
                             // Compute a new scroll target taking into account any resizes,
                             // replacements, or added/removed requests since the last frame.
-                            animationState.value = calculateScrollDelta()
+                            animationState.value = calculateScrollDelta(bringIntoViewSpec)
                             if (DEBUG) println(
                                 "[$TAG] scroll target after frame: ${animationState.value}"
                             )
@@ -288,7 +295,7 @@ internal class ContentInViewNode(
      * Calculates how far we need to scroll to satisfy all existing BringIntoView requests and the
      * focused child tracking.
      */
-    private fun calculateScrollDelta(): Float {
+    private fun calculateScrollDelta(bringIntoViewSpec: BringIntoViewSpec): Float {
         if (viewportSize == IntSize.Zero) return 0f
 
         val rectangleToMakeVisible: Rect = findBringIntoViewRequest()
@@ -360,7 +367,7 @@ internal class ContentInViewNode(
         return when (orientation) {
             Vertical -> Offset(
                 x = 0f,
-                y = bringIntoViewSpec.calculateScrollDistance(
+                y = requireBringIntoViewSpec().calculateScrollDistance(
                     childBounds.top,
                     childBounds.bottom - childBounds.top,
                     size.height
@@ -368,7 +375,7 @@ internal class ContentInViewNode(
             )
 
             Horizontal -> Offset(
-                x = bringIntoViewSpec.calculateScrollDistance(
+                x = requireBringIntoViewSpec().calculateScrollDistance(
                     childBounds.left,
                     childBounds.right - childBounds.left,
                     size.width
@@ -392,7 +399,7 @@ internal class ContentInViewNode(
         orientation: Orientation,
         state: ScrollableState,
         reverseDirection: Boolean,
-        bringIntoViewSpec: BringIntoViewSpec
+        bringIntoViewSpec: BringIntoViewSpec?
     ) {
         this.orientation = orientation
         this.scrollState = state

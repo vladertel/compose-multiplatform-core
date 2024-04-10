@@ -73,9 +73,11 @@ class ConfigBuilder {
     fun buildJson(): String {
         val gson = GsonBuilder().setPrettyPrinting().create()
         val instrumentationArgsList = mutableListOf<InstrumentationArg>()
-        instrumentationArgsMap.forEach { (key, value) ->
-            instrumentationArgsList.add(InstrumentationArg(key, value))
-        }
+        instrumentationArgsMap
+            .filter { it.key !in INST_ARG_BLOCKLIST }
+            .forEach { (key, value) ->
+                instrumentationArgsList.add(InstrumentationArg(key, value))
+            }
         instrumentationArgsList.addAll(
             if (isMicrobenchmark && !isPostsubmit) {
                 listOf(
@@ -110,22 +112,19 @@ class ConfigBuilder {
         sb.append(MODULE_METADATA_TAG_OPTION.replace("APPLICATION_ID", applicationId))
             .append(WIFI_DISABLE_OPTION)
             .append(FLAKY_TEST_OPTION)
-        if (isMicrobenchmark) {
-            if (isPostsubmit) {
-                sb.append(MICROBENCHMARK_POSTSUBMIT_OPTIONS)
-            } else {
-                sb.append(MICROBENCHMARK_PRESUBMIT_OPTION)
-            }
+        if (!isPostsubmit && (isMicrobenchmark || isMacrobenchmark)) {
+            sb.append(BENCHMARK_PRESUBMIT_INST_ARGS)
         }
-        instrumentationArgsMap.forEach { (key, value) ->
-            sb.append("""
-                <option name="instrumentation-arg" key="$key" value="$value" />
+        instrumentationArgsMap
+            .filter { it.key !in INST_ARG_BLOCKLIST }
+            .forEach { (key, value) ->
+                sb.append(
+                    """
+                    <option name="instrumentation-arg" key="$key" value="$value" />
 
-                """.trimIndent())
-        }
-        if (isMacrobenchmark) {
-            sb.append(MACROBENCHMARK_POSTSUBMIT_OPTIONS)
-        }
+                    """.trimIndent()
+                )
+            }
         sb.append(SETUP_INCLUDE)
             .append(TARGET_PREPARER_OPEN.replace("CLEANUP_APKS", "true"))
         initialSetupApks.forEach { apk ->
@@ -148,6 +147,16 @@ class ConfigBuilder {
         sb.append(TEST_BLOCK_OPEN)
             .append(RUNNER_OPTION.replace("TEST_RUNNER", testRunner))
             .append(PACKAGE_OPTION.replace("APPLICATION_ID", applicationId))
+            .apply {
+                if (isPostsubmit) {
+                    // These listeners should be unified eventually (b/331974955)
+                    if (isMicrobenchmark) {
+                        sb.append(MICROBENCHMARK_POSTSUBMIT_LISTENERS)
+                    } else if (isMacrobenchmark) {
+                        sb.append(MACROBENCHMARK_POSTSUBMIT_LISTENERS)
+                    }
+                }
+            }
             .append(TEST_BLOCK_CLOSE)
         sb.append(CONFIGURATION_CLOSE)
         return sb.toString()
@@ -358,25 +367,34 @@ private val PACKAGE_OPTION =
 """
         .trimIndent()
 
-private val MICROBENCHMARK_PRESUBMIT_OPTION =
+private val BENCHMARK_PRESUBMIT_INST_ARGS =
     """
     <option name="instrumentation-arg" key="androidx.benchmark.dryRunMode.enable" value="true" />
 
 """
         .trimIndent()
 
-private val MICROBENCHMARK_POSTSUBMIT_OPTIONS =
+/**
+ * These args may never be passed in CI, even if they are set per module
+ */
+private val INST_ARG_BLOCKLIST = listOf(
+    "androidx.benchmark.profiling.skipWhenDurationRisksAnr"
+)
+
+private val MICROBENCHMARK_POSTSUBMIT_LISTENERS =
     """
-    <option name="instrumentation-arg" key="listener" value="androidx.benchmark.junit4.InstrumentationResultsRunListener" />
-    <option name="instrumentation-arg" key="listener" value="androidx.benchmark.junit4.SideEffectRunListener" />
+    <option name="device-listeners" value="androidx.benchmark.junit4.InstrumentationResultsRunListener" />
+    <option name="device-listeners" value="androidx.benchmark.junit4.SideEffectRunListener" />
 
 """
         .trimIndent()
 
-private val MACROBENCHMARK_POSTSUBMIT_OPTIONS =
+// NOTE: listeners are duplicated in macro package due to no common module w/ junit dependency
+// See b/331974955
+private val MACROBENCHMARK_POSTSUBMIT_LISTENERS =
     """
-    <option name="instrumentation-arg" key="listener" value="androidx.benchmark.junit4.InstrumentationResultsRunListener" />
-    <option name="instrumentation-arg" key="listener" value="androidx.benchmark.macro.junit4.SideEffectRunListener" />
+    <option name="device-listeners" value="androidx.benchmark.macro.junit4.InstrumentationResultsRunListener" />
+    <option name="device-listeners" value="androidx.benchmark.macro.junit4.SideEffectRunListener" />
 
 """
         .trimIndent()
