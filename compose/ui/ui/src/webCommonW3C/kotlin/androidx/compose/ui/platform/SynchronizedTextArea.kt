@@ -26,10 +26,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.browser.document
 import org.w3c.dom.HTMLTextAreaElement
+import org.w3c.dom.events.KeyboardEvent
 
 internal class SynchronizedTextArea(
     private val imeOptions: ImeOptions,
-    private val onEditCommand: (List<EditCommand>) -> Unit
+    private val onEditCommand: (List<EditCommand>) -> Unit,
+    private val onImeActionPerformed: (ImeAction) -> Unit
 ) {
     private val textArea: HTMLTextAreaElement = createHtmlInput()
 
@@ -94,6 +96,17 @@ internal class SynchronizedTextArea(
             sendImeValueToCompose(onEditCommand, text, cursorPosition)
         })
 
+        // this done by analogy with KeyCommand.NEW_LINE processing in TextFieldKeyInput
+        if (imeOptions.singleLine) {
+            htmlInput.addEventListener("keydown", { evt ->
+                evt.preventDefault()
+                evt as KeyboardEvent
+                if (evt.key == "Enter" && evt.type == "keydown") {
+                    onImeActionPerformed(imeOptions.imeAction)
+                }
+            })
+        }
+
         return htmlInput
     }
 
@@ -143,7 +156,7 @@ internal class SynchronizedTextArea(
         focus()
     }
 
-     fun updateState(textFieldValue: TextFieldValue) {
+    fun updateState(textFieldValue: TextFieldValue) {
         textArea.value = textFieldValue.text
         textArea.setSelectionRange(textFieldValue.selection.start, textFieldValue.selection.end)
     }

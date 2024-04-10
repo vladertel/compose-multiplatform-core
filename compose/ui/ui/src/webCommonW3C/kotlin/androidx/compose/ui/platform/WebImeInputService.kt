@@ -16,20 +16,12 @@
 
 package androidx.compose.ui.platform
 
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.text.input.CommitTextCommand
-import androidx.compose.ui.text.input.DeleteAllCommand
 import androidx.compose.ui.text.input.EditCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PlatformTextInputService
-import androidx.compose.ui.text.input.SetSelectionCommand
 import androidx.compose.ui.text.input.TextFieldValue
-import kotlinx.browser.document
-import org.w3c.dom.HTMLElement
-import org.w3c.dom.HTMLTextAreaElement
 
 internal class WebImeInputService(parentInputService: InputAwareInputService) : PlatformTextInputService, InputAwareInputService by parentInputService {
 
@@ -45,7 +37,7 @@ internal class WebImeInputService(parentInputService: InputAwareInputService) : 
         onEditCommand: (List<EditCommand>) -> Unit,
         onImeActionPerformed: (ImeAction) -> Unit
     ) {
-        synchronizedTextArea = SynchronizedTextArea(imeOptions, onEditCommand)
+        synchronizedTextArea = SynchronizedTextArea(imeOptions, onEditCommand, onImeActionPerformed)
         synchronizedTextArea?.register()
 
         showSoftwareKeyboard()
