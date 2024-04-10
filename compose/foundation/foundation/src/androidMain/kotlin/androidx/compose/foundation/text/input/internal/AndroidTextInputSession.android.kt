@@ -18,13 +18,17 @@
 
 package androidx.compose.foundation.text.input.internal
 
+import android.os.Build
 import android.util.Log
 import android.view.KeyEvent
+import android.view.inputmethod.HandwritingGesture
+import android.view.inputmethod.InputConnection
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.content.TransferableContent
 import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
 import androidx.compose.foundation.text.input.TextFieldCharSequence
+import androidx.compose.foundation.text.input.internal.HandwritingGestureApi34.performHandwritingGesture
 import androidx.compose.ui.platform.PlatformTextInputSession
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
@@ -80,8 +84,8 @@ internal suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
                     composeImm.updateSelection(
                         selectionStart = newSelection.min,
                         selectionEnd = newSelection.max,
-                        compositionStart = oldComposition?.min ?: -1,
-                        compositionEnd = oldComposition?.max ?: -1
+                        compositionStart = newComposition?.min ?: -1,
+                        compositionEnd = newComposition?.max ?: -1
                     )
                 }
 
@@ -139,30 +143,28 @@ internal suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
                 override fun requestCursorUpdates(cursorUpdateMode: Int) {
                     cursorUpdatesController.requestUpdates(cursorUpdateMode)
                 }
-            }
 
-            val hintMediaTypes = receiveContentConfiguration?.hintMediaTypes
-            val contentMimeTypes: Array<String>? =
-                if (!hintMediaTypes.isNullOrEmpty()) {
-                    val arr = Array(hintMediaTypes.size) { "" }
-                    hintMediaTypes.forEachIndexed { i, mediaType ->
-                        arr[i] = mediaType.representation
+                override fun performHandwritingGesture(gesture: HandwritingGesture): Int {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        return state.performHandwritingGesture(gesture, layoutState)
                     }
-                    arr
-                } else {
-                    null
+                    return InputConnection.HANDWRITING_GESTURE_RESULT_UNSUPPORTED
                 }
+            }
 
             outAttrs.update(
                 text = state.visualText,
                 selection = state.visualText.selection,
                 imeOptions = imeOptions,
-                contentMimeTypes = contentMimeTypes
+                // only pass AllMimeTypes if we have a ReceiveContentConfiguration.
+                contentMimeTypes = receiveContentConfiguration?.let { ALL_MIME_TYPES }
             )
             StatelessInputConnection(textInputSession, outAttrs)
         }
     }
 }
+
+private val ALL_MIME_TYPES = arrayOf("*/*")
 
 private fun logDebug(tag: String = TIA_TAG, content: () -> String) {
     if (TIA_DEBUG) {

@@ -29,6 +29,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.SheetValue.Expanded
 import androidx.compose.material3.SheetValue.Hidden
 import androidx.compose.material3.SheetValue.PartiallyExpanded
+import androidx.compose.material3.internal.AnchoredDraggableState
+import androidx.compose.material3.internal.Strings
+import androidx.compose.material3.internal.animateTo
+import androidx.compose.material3.internal.getString
+import androidx.compose.material3.internal.snapTo
+import androidx.compose.material3.internal.systemBarsForVisualComponents
 import androidx.compose.material3.tokens.ScrimTokens
 import androidx.compose.material3.tokens.SheetBottomTokens
 import androidx.compose.runtime.Composable
@@ -370,7 +376,7 @@ internal fun ConsumeSwipeWithinBottomSheetBoundsNestedScrollConnection(
 ): NestedScrollConnection = object : NestedScrollConnection {
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
         val delta = available.toFloat()
-        return if (delta < 0 && source == NestedScrollSource.Drag) {
+        return if (delta < 0 && source == NestedScrollSource.UserInput) {
             sheetState.anchoredDraggableState.dispatchRawDelta(delta).toOffset()
         } else {
             Offset.Zero
@@ -382,7 +388,7 @@ internal fun ConsumeSwipeWithinBottomSheetBoundsNestedScrollConnection(
         available: Offset,
         source: NestedScrollSource
     ): Offset {
-        return if (source == NestedScrollSource.Drag) {
+        return if (source == NestedScrollSource.UserInput) {
             sheetState.anchoredDraggableState.dispatchRawDelta(available.toFloat()).toOffset()
         } else {
             Offset.Zero

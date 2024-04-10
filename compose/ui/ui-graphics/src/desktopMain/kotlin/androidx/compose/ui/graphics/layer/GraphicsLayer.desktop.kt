@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.GraphicsContext
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
@@ -162,12 +163,12 @@ actual class GraphicsLayer {
         invalidateMatrix()
     }
 
-    actual fun buildLayer(
+    actual fun record(
         density: Density,
         layoutDirection: LayoutDirection,
         size: IntSize,
         block: DrawScope.() -> Unit
-    ): GraphicsLayer {
+    ) {
         this.density = density
         this.size = size
         updateLayerConfiguration()
@@ -199,7 +200,6 @@ actual class GraphicsLayer {
             )
         }
         picture = pictureRecorder.finishRecordingAsPicture()
-        return this
     }
 
     private fun addSubLayer(graphicsLayer: GraphicsLayer) {
@@ -405,7 +405,7 @@ actual class GraphicsLayer {
     /**
      * Returns the outline specified by either [setPathOutline] or [setRoundRectOutline].
      * By default this will return [Outline.Rectangle] with the size of the [GraphicsLayer]
-     * specified by [buildLayer] or [IntSize.Zero] if [buildLayer] was not previously invoked.
+     * specified by [record] or [IntSize.Zero] if [record] was not previously invoked.
      */
     actual val outline: Outline
         get() = configureOutline()
@@ -543,4 +543,12 @@ actual class GraphicsLayer {
         actual val UnsetOffset: IntOffset = IntOffset(Int.MIN_VALUE, Int.MIN_VALUE)
         actual val UnsetSize: IntSize = IntSize(Int.MIN_VALUE, Int.MIN_VALUE)
     }
+
+    /**
+     * Create an [ImageBitmap] with the contents of this [GraphicsLayer] instance. Note that
+     * [GraphicsLayer.record] must be invoked first to record drawing operations before invoking
+     * this method.
+     */
+    actual suspend fun toImageBitmap(): ImageBitmap =
+        ImageBitmap(size.width, size.height).apply { draw(Canvas(this), null) }
 }

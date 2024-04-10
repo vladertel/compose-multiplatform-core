@@ -46,7 +46,6 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.InspectableValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.isDebugInspectorInfoEnabled
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
@@ -74,7 +73,6 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
-@OptIn(ExperimentalTestApi::class)
 class AnimationModifierTest {
 
     @get:Rule
@@ -384,11 +382,14 @@ class AnimationModifierTest {
 internal class TestModifier : LayoutModifier {
     var width: Int = 0
     var height: Int = 0
+    var lookaheadSize: IntSize? = null
+        private set
     override fun MeasureScope.measure(
         measurable: Measurable,
         constraints: Constraints
     ): MeasureResult {
         val placeable = measurable.measure(constraints)
+        if (isLookingAhead) lookaheadSize = IntSize(placeable.width, placeable.height)
         width = placeable.width
         height = placeable.height
         return layout(width, height) {

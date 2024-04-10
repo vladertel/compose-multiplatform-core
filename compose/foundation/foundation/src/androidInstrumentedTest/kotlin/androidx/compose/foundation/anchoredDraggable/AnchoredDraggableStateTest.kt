@@ -40,6 +40,7 @@ import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.gestures.animateTo
+import androidx.compose.foundation.gestures.animateToWithDecay
 import androidx.compose.foundation.gestures.snapTo
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -171,8 +172,8 @@ class AnchoredDraggableStateTest {
                             state.updateAnchors(
                                 DraggableAnchors {
                                     A at 0f
-                                    B at layoutSize.width / 2f
-                                    C at layoutSize.width.toFloat()
+                                    B at layoutSize.height / 2f
+                                    C at layoutSize.height.toFloat()
                                 }
                             )
                         }
@@ -282,6 +283,59 @@ class AnchoredDraggableStateTest {
         assertWithMessage("Target state")
             .that(state.targetValue)
             .isEqualTo(B)
+    }
+
+    @Test
+    fun anchoredDraggable_targetState_updatedWithDeltaDispatch() {
+        val state = AnchoredDraggableState(
+            initialValue = A,
+            positionalThreshold = { it / 2f },
+            velocityThreshold = defaultVelocityThreshold,
+            snapAnimationSpec = tween(),
+            decayAnimationSpec = defaultDecayAnimationSpec,
+            anchors = DraggableAnchors {
+                A at 0f
+                B at 200f
+                C at 400f
+            }
+        )
+
+        val initialOffset = state.requireOffset()
+
+        // Swipe towards B, close before threshold
+        val aToBThreshold = abs(state.anchors.positionOf(A) - state.anchors.positionOf(B)) / 2f
+        state.dispatchRawDelta(initialOffset + (aToBThreshold * 0.9f))
+
+        assertThat(state.currentValue).isEqualTo(A)
+        assertThat(state.targetValue).isEqualTo(A)
+
+        // Swipe towards B, close after threshold
+        state.dispatchRawDelta(aToBThreshold * 0.2f)
+
+        assertThat(state.currentValue).isEqualTo(A)
+        assertThat(state.targetValue).isEqualTo(B)
+
+        runBlocking(AutoTestFrameClock()) { state.settle(velocity = 0f) }
+
+        assertThat(state.currentValue).isEqualTo(B)
+        assertThat(state.targetValue).isEqualTo(B)
+
+        // Swipe towards A, close before threshold
+        state.dispatchRawDelta(-(aToBThreshold * 0.9f))
+
+        assertThat(state.currentValue).isEqualTo(B)
+        assertThat(state.targetValue).isEqualTo(B)
+
+        // Swipe towards A, close after threshold
+        state.dispatchRawDelta(-(aToBThreshold * 0.2f))
+
+        assertThat(state.currentValue).isEqualTo(B)
+        assertThat(state.targetValue).isEqualTo(A)
+
+        runBlocking(AutoTestFrameClock()) { state.settle(velocity = 0f) }
+
+        assertThat(state.currentValue).isEqualTo(A)
+        assertThat(state.targetValue).isEqualTo(A)
     }
 
     @Test
@@ -897,7 +951,7 @@ class AnchoredDraggableStateTest {
     }
 
     @Test
-    fun anchoredDraggable_customDrag_snapsToClosestAnchor() = runBlocking {
+    fun anchoredDraggable_customDrag_doesNotSnapToClosestAnchor() = runBlocking {
         val state = AnchoredDraggableState(
             initialValue = A,
             positionalThreshold = defaultPositionalThreshold,
@@ -916,13 +970,13 @@ class AnchoredDraggableStateTest {
         }
 
         assertThat(state.currentValue).isEqualTo(B)
-        assertThat(state.requireOffset()).isEqualTo(200f)
+        assertThat(state.requireOffset()).isEqualTo(150f)
 
         state.anchoredDrag {
             dragTo(260f)
         }
         assertThat(state.currentValue).isEqualTo(C)
-        assertThat(state.requireOffset()).isEqualTo(300f)
+        assertThat(state.requireOffset()).isEqualTo(260f)
     }
 
     @Test
@@ -1513,9 +1567,57 @@ class AnchoredDraggableStateTest {
             assertThat(state.offset).isEqualTo(positionB)
 
             // since offset == positionB, decay animation is used
-            assertThat(inspectDecayAnimationSpec.animationWasExecutions).isEqualTo(1)
+            assertThat(inspectDecayAnimationSpec.animationWasExecutions).isEqualTo(0)
             assertThat(tweenAnimationSpec.animationWasExecutions).isEqualTo(0)
         }
+
+    @Test
+    fun anchoredDraggable_animateTo_alreadyAtTarget_noOps() {
+        val state = AnchoredDraggableState(
+            initialValue = B,
+            positionalThreshold = defaultPositionalThreshold,
+            velocityThreshold = defaultVelocityThreshold,
+            snapAnimationSpec = defaultAnimationSpec,
+            decayAnimationSpec = defaultDecayAnimationSpec,
+            anchors = DraggableAnchors {
+                A at 0f
+                B at 200f
+                C at 300f
+            }
+        )
+        val clock = HandPumpTestFrameClock()
+        val scope = CoroutineScope(clock)
+
+        assertThat(state.offset).isEqualTo(200f)
+        scope.launch { state.animateTo(B) }
+        runBlocking { clock.advanceByFrame() } // Advance only one frame, we should be done
+        assertThat(state.offset).isEqualTo(200f)
+    }
+
+    @Test
+    fun anchoredDraggable_animateToWithDecay_alreadyAtTarget_noOps() {
+        val state = AnchoredDraggableState(
+            initialValue = B,
+            positionalThreshold = defaultPositionalThreshold,
+            velocityThreshold = defaultVelocityThreshold,
+            snapAnimationSpec = defaultAnimationSpec,
+            decayAnimationSpec = defaultDecayAnimationSpec,
+            anchors = DraggableAnchors {
+                A at 0f
+                B at 200f
+                C at 300f
+            }
+        )
+        val clock = HandPumpTestFrameClock()
+        val scope = CoroutineScope(clock)
+
+        assertThat(state.offset).isEqualTo(200f)
+        scope.launch {
+            state.animateToWithDecay(B, velocity = 100f)
+        }
+        runBlocking { clock.advanceByFrame() } // Advance only one frame, we should be done
+        assertThat(state.offset).isEqualTo(200f)
+    }
 
     private suspend fun suspendIndefinitely() = suspendCancellableCoroutine<Unit> { }
 

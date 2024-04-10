@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateObserver
 import androidx.compose.runtime.withFrameNanos
@@ -52,7 +53,9 @@ import kotlin.math.max
 import kotlin.math.roundToLong
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -643,7 +646,7 @@ class SeekableTransitionState<S>(
                                     initialValue = runningAnimation.start,
                                     targetValue = Target1,
                                     initialVelocity =
-                                        runningAnimation.initialVelocity ?: ZeroVelocity
+                                    runningAnimation.initialVelocity ?: ZeroVelocity
                                 )
                             } else if (runningAnimation == null ||
                                 runningAnimation.progressNanos == 0L
@@ -748,21 +751,28 @@ class SeekableTransitionState<S>(
         // The current progress with respect to the animationSpec if it exists or
         // durationNanos if animationSpec is null
         var progressNanos: Long = 0L
+
         // The AnimationSpec used in this animation, or null if it is a linear animation with
         // duration of durationNanos
         var animationSpec: VectorizedAnimationSpec<AnimationVector1D>? = null
+
         // Used by initial value animations to mark when the animation should continue
         var isComplete = false
+
         // The current fraction of the animation
         var value: Float = 0f
+
         // The start value of the animation
         var start: AnimationVector1D = AnimationVector1D(0f)
+
         // The initial velocity of the animation
         var initialVelocity: AnimationVector1D? = null
+
         // The total duration of the transition's animations. This is the totalDurationNanos
         // at the time that this was created for initial value animations. Note that this can
         // be different from the animationSpec's duration.
         var durationNanos: Long = 0L
+
         // The total duration of the animationSpec. This is kept cached because Spring
         // animations can take time to calculate their durations
         var animationSpecDuration: Long = 0L
@@ -771,6 +781,7 @@ class SeekableTransitionState<S>(
     private companion object {
         // AnimationVector1D with 0 value, kept so that we don't have to allocate unnecessarily
         val ZeroVelocity = AnimationVector1D(0f)
+
         // AnimationVector1D with 1 value, used as the target value of 1f
         val Target1 = AnimationVector1D(1f)
     }
@@ -877,20 +888,28 @@ fun <T> updateTransition(
  */
 // TODO: Support creating Transition outside of composition and support imperative use of Transition
 @Stable
-class Transition<S> @PublishedApi internal constructor(
+class Transition<S> internal constructor(
     private val transitionState: TransitionState<S>,
+    @get:RestrictTo(RestrictTo.Scope.LIBRARY)
+    val parentTransition: Transition<*>?,
     val label: String? = null
 ) {
+    @PublishedApi
+    internal constructor(
+        transitionState: TransitionState<S>,
+        label: String? = null
+    ) : this(transitionState, null, label)
+
     internal constructor(
         initialState: S,
         label: String?
-    ) : this(MutableTransitionState(initialState), label)
+    ) : this(MutableTransitionState(initialState), null, label)
 
     @PublishedApi
     internal constructor(
         transitionState: MutableTransitionState<S>,
         label: String? = null
-    ) : this(transitionState as TransitionState<S>, label)
+    ) : this(transitionState as TransitionState<S>, null, label)
 
     /**
      * Current state of the transition. This will always be the initialState of the transition
@@ -920,19 +939,30 @@ class Transition<S> @PublishedApi internal constructor(
     val isRunning: Boolean
         get() = startTimeNanos != AnimationConstants.UnspecifiedTime
 
+    private var _playTimeNanos by mutableLongStateOf(0L)
+
     /**
      * Play time in nano-seconds. [playTimeNanos] is always non-negative. It starts from 0L at the
      * beginning of the transition and increment until all child animations have finished.
      */
     @get:RestrictTo(RestrictTo.Scope.LIBRARY)
     @set:RestrictTo(RestrictTo.Scope.LIBRARY)
-    var playTimeNanos by mutableLongStateOf(0L)
+    var playTimeNanos: Long
+        get() {
+            return parentTransition?.playTimeNanos ?: _playTimeNanos
+        }
+        set(value) {
+            if (parentTransition == null) {
+                _playTimeNanos = value
+            }
+        }
+
     // startTimeNanos is in real frame time nanos for the root transition and
     // scaled frame time for child transitions (as offset from the root start)
     internal var startTimeNanos by mutableLongStateOf(AnimationConstants.UnspecifiedTime)
 
     // This gets calculated every time child is updated/added
-    internal var updateChildrenNeeded: Boolean by mutableStateOf(true)
+    private var updateChildrenNeeded: Boolean by mutableStateOf(false)
 
     private val _animations = mutableStateListOf<TransitionAnimationState<*, *>>()
     private val _transitions = mutableStateListOf<Transition<*>>()
@@ -1009,6 +1039,7 @@ class Transition<S> @PublishedApi internal constructor(
         } else {
             (deltaT / durationScale).roundToLong()
         }
+        playTimeNanos = scaledPlayTimeNanos
         onFrame(scaledPlayTimeNanos, durationScale == 0f)
     }
 
@@ -1020,8 +1051,6 @@ class Transition<S> @PublishedApi internal constructor(
         }
         updateChildrenNeeded = false
 
-        // Update play time
-        playTimeNanos = scaledPlayTimeNanos
         var allFinished = true
         // Pulse new playtime
         _animations.fastForEach {
@@ -1176,21 +1205,29 @@ class Transition<S> @PublishedApi internal constructor(
     internal fun animateTo(targetState: S) {
         if (!isSeeking) {
             updateTarget(targetState)
-            // target != currentState adds LaunchedEffect into the tree in the same frame as
+            // target != currentState adds the effect into the tree in the same frame as
             // target change.
             if (targetState != currentState || isRunning || updateChildrenNeeded) {
-                LaunchedEffect(this) {
-                    while (true) {
+                // We're using a composition-obtained scope + DisposableEffect here to give us
+                // control over coroutine dispatching
+                val coroutineScope = rememberCoroutineScope()
+                DisposableEffect(coroutineScope, this) {
+                    // Launch the coroutine undispatched so the block is executed in the current
+                    // frame. This is important as this initializes the state.
+                    coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
                         val durationScale = coroutineContext.durationScale
-                        withFrameNanos {
-                            // This check is very important, as isSeeking may be changed off-band
-                            // between the last check in composition and this callback which
-                            // happens in the animation callback the next frame.
-                            if (!isSeeking) {
-                                onFrame(it / AnimationDebugDurationScale, durationScale)
+                        while (isActive) {
+                            withFrameNanos {
+                                // This check is very important, as isSeeking may be changed
+                                // off-band between the last check in composition and this callback
+                                // which happens in the animation callback the next frame.
+                                if (!isSeeking) {
+                                    onFrame(it / AnimationDebugDurationScale, durationScale)
+                                }
                             }
                         }
                     }
+                    onDispose { }
                 }
             }
         }
@@ -1302,11 +1339,13 @@ class Transition<S> @PublishedApi internal constructor(
         // Changed during composition, may rollback
         private var targetValue: T by mutableStateOf(initialValue)
 
+        private val defaultSpring = spring<T>()
+
         /**
          * [AnimationSpec] that is used for current animation run. This can change when
          * [targetState] changes.
          */
-        var animationSpec: FiniteAnimationSpec<T> by mutableStateOf(spring())
+        var animationSpec: FiniteAnimationSpec<T> by mutableStateOf(defaultSpring)
             private set
 
         /**
@@ -1694,12 +1733,16 @@ class Transition<S> @PublishedApi internal constructor(
 
 // When a TransitionAnimation doesn't need to be reset
 private const val NoReset = -1f
+
 // When the animation needs to be changed because of a target update
 private const val ResetNoSnap = -2f
+
 // When the animation should be reset to have the same start and end value
 private const val ResetAnimationSnap = -3f
+
 // Snap to the current state and set the initial and target values to the same thing
 private const val ResetAnimationSnapCurrent = -4f
+
 // Snap to the target state and set the initial and target values to the same thing
 private const val ResetAnimationSnapTarget = -5f
 
@@ -1767,11 +1810,7 @@ internal fun <S, T> Transition<S>.createChildTransitionInternal(
     childLabel: String,
 ): Transition<T> {
     val transition = remember(this) {
-        Transition(MutableTransitionState(initialState), "${this.label} > $childLabel").also {
-            // By setting these now, we don't have to wait a frame for the animation to start.
-            it.startTimeNanos = playTimeNanos
-            it.playTimeNanos = playTimeNanos
-        }
+        Transition(MutableTransitionState(initialState), this, "${this.label} > $childLabel")
     }
 
     DisposableEffect(transition) {

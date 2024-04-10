@@ -23,6 +23,7 @@ import androidx.annotation.RestrictTo
 import androidx.room.concurrent.CloseBarrier
 import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
+import androidx.room.util.contains as containsCommon
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteDriver
 import kotlin.coroutines.ContinuationInterceptor
@@ -241,6 +242,10 @@ actual abstract class RoomDatabase {
 
     /**
      * Use a connection to perform database operations.
+     *
+     * This function is for internal access to the pool, it is an unconfined coroutine function to
+     * be used by Room generated code paths. For the public version see [useReaderConnection] and
+     * [useWriterConnection].
      */
     internal actual suspend fun <R> useConnection(
         isReadOnly: Boolean,
@@ -252,7 +257,7 @@ actual abstract class RoomDatabase {
     /**
      * Journal modes for SQLite database.
      *
-     * @see Builder.setJournalMode
+     * @see Builder#setJournalMode
      */
     actual enum class JournalMode {
         /**
@@ -375,16 +380,39 @@ actual abstract class RoomDatabase {
         }
 
         /**
+         * Adds the given migrations to the list of available migrations. If 2 migrations have the
+         * same start-end versions, the latter migration overrides the previous one.
+         *
+         * @param migrations List of available migrations.
+         */
+        actual fun addMigrations(migrations: List<Migration>) {
+            migrations.forEach(::addMigration)
+        }
+
+        /**
          * Add a [Migration] to the container. If the container already has a migration with the
          * same start-end versions then it will be overwritten.
          *
          * @param migration the migration to add.
          */
-        internal actual fun addMigration(migration: Migration) {
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        actual fun addMigration(migration: Migration) {
             val start = migration.startVersion
             val end = migration.endVersion
             val targetMap = migrations.getOrPut(start) { mutableMapOf() }
             targetMap[end] = migration
+        }
+
+        /**
+         * Indicates if the given migration is contained within the [MigrationContainer] based
+         * on its start-end versions.
+         *
+         * @param startVersion Start version of the migration.
+         * @param endVersion End version of the migration
+         * @return True if it contains a migration with the same start-end version, false otherwise.
+         */
+        actual fun contains(startVersion: Int, endVersion: Int): Boolean {
+            return this.containsCommon(startVersion, endVersion)
         }
 
         /**

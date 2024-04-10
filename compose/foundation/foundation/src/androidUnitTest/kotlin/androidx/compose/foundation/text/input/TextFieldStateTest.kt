@@ -17,6 +17,7 @@
 package androidx.compose.foundation.text.input
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateObserver
 import androidx.compose.ui.text.TextRange
@@ -26,6 +27,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -46,21 +49,62 @@ class TextFieldStateTest {
     fun defaultInitialTextAndSelection() {
         val state = TextFieldState()
         assertThat(state.text.toString()).isEqualTo("")
-        assertThat(state.text.selection).isEqualTo(TextRange.Zero)
+        assertThat(state.selection).isEqualTo(TextRange.Zero)
     }
 
     @Test
     fun customInitialTextAndDefaultSelection() {
         val state = TextFieldState(initialText = "hello")
         assertThat(state.text.toString()).isEqualTo("hello")
-        assertThat(state.text.selection).isEqualTo(TextRange(5))
+        assertThat(state.selection).isEqualTo(TextRange(5))
     }
 
     @Test
     fun customInitialTextAndSelection() {
         val state = TextFieldState(initialText = "hello", initialSelection = TextRange(0, 1))
         assertThat(state.text.toString()).isEqualTo("hello")
-        assertThat(state.text.selection).isEqualTo(TextRange(0, 1))
+        assertThat(state.selection).isEqualTo(TextRange(0, 1))
+    }
+
+    @Test
+    fun edit_doesNotAllow_reentrantBehavior() {
+        assertFailsWith<IllegalStateException>(
+            "TextFieldState does not support concurrent or nested editing."
+        ) {
+            state.edit {
+                replace(0, 0, "hello")
+                state.edit {
+                    replace(0, 0, "hello")
+                }
+            }
+        }
+        assertThat(state.text.toString()).isEmpty()
+    }
+
+    @Test
+    fun edit_doesNotAllow_concurrentAccess() {
+        assertFailsWith<IllegalStateException>(
+            "TextFieldState does not support concurrent or nested editing."
+        ) {
+            runTest {
+                var edit2Started = false
+                launch {
+                    state.edit {
+                        replace(0, 0, "hello")
+                        while (!edit2Started) delay(10)
+                    }
+                }
+                launch {
+                    state.edit {
+                        edit2Started = true
+                        replace(0, 0, "hello")
+                    }
+                }
+                advanceUntilIdle()
+                runCurrent()
+            }
+        }
+        assertThat(state.text.toString()).isEmpty()
     }
 
     @Test
@@ -75,6 +119,24 @@ class TextFieldStateTest {
         }
 
         assertThat(state.text.toString()).isEmpty()
+    }
+
+    @Test
+    fun edit_canEditAgain_ifFirstOneThrows() {
+        class ExpectedException : RuntimeException()
+
+        assertFailsWith<ExpectedException> {
+            state.edit {
+                replace(0, 0, "hello")
+                throw ExpectedException()
+            }
+        }
+        assertThat(state.text.toString()).isEmpty()
+
+        state.edit {
+            replace(0, 0, "hello")
+        }
+        assertThat(state.text.toString()).isEqualTo("hello")
     }
 
     @Test
@@ -230,7 +292,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             placeCursorAtEnd()
         }
-        assertThat(state.text.selection).isEqualTo(TextRange(5))
+        assertThat(state.selection).isEqualTo(TextRange(5))
     }
 
     @Test
@@ -239,7 +301,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             placeCursorBeforeCharAt(2)
         }
-        assertThat(state.text.selection).isEqualTo(TextRange(2))
+        assertThat(state.selection).isEqualTo(TextRange(2))
     }
 
     @Test
@@ -261,7 +323,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             selectAll()
         }
-        assertThat(state.text.selection).isEqualTo(TextRange(0, 5))
+        assertThat(state.selection).isEqualTo(TextRange(0, 5))
     }
 
     @Test
@@ -270,7 +332,7 @@ class TextFieldStateTest {
             replace(0, 0, "hello")
             selection = TextRange(1, 4)
         }
-        assertThat(state.text.selection).isEqualTo(TextRange(1, 4))
+        assertThat(state.selection).isEqualTo(TextRange(1, 4))
     }
 
     @Test
@@ -338,14 +400,7 @@ class TextFieldStateTest {
     fun setTextAndPlaceCursorAtEnd_works() {
         state.setTextAndPlaceCursorAtEnd("Hello")
         assertThat(state.text.toString()).isEqualTo("Hello")
-        assertThat(state.text.selection).isEqualTo(TextRange(5))
-    }
-
-    @Test
-    fun setTextAndSelectAll_works() {
-        state.setTextAndSelectAll("Hello")
-        assertThat(state.text.toString()).isEqualTo("Hello")
-        assertThat(state.text.selection).isEqualTo(TextRange(0, 5))
+        assertThat(state.selection).isEqualTo(TextRange(5))
     }
 
     @Test
@@ -401,28 +456,28 @@ class TextFieldStateTest {
     }
 
     @Test
-    fun forEachValues_fires_immediately() = runTestWithSnapshotsThenCancelChildren {
+    fun snapshotFlow_fires_immediately() = runTestWithSnapshotsThenCancelChildren {
         val state = TextFieldState("hello", initialSelection = TextRange(5))
         val texts = mutableListOf<TextFieldCharSequence>()
 
         launch(Dispatchers.Unconfined) {
-            state.forEachTextValue { texts += it }
+            snapshotFlow { state.value }.collectLatest { texts += it }
         }
 
         assertThat(texts).hasSize(1)
-        assertThat(texts.single()).isSameInstanceAs(state.text)
+        assertThat(texts.single()).isSameInstanceAs(state.value)
         assertThat(texts.single().toString()).isEqualTo("hello")
         assertThat(texts.single().selection).isEqualTo(TextRange(5))
     }
 
     @Test
-    fun forEachValue_fires_whenTextChanged() = runTestWithSnapshotsThenCancelChildren {
+    fun snapshotFlow_fires_whenTextChanged() = runTestWithSnapshotsThenCancelChildren {
         val state = TextFieldState(initialSelection = TextRange(0))
         val texts = mutableListOf<TextFieldCharSequence>()
-        val initialText = state.text
+        val initialSelection = state.selection
 
         launch(Dispatchers.Unconfined) {
-            state.forEachTextValue { texts += it }
+            snapshotFlow { state.value }.collectLatest { texts += it }
         }
 
         state.edit {
@@ -431,18 +486,18 @@ class TextFieldStateTest {
         }
 
         assertThat(texts).hasSize(2)
-        assertThat(texts.last()).isSameInstanceAs(state.text)
+        assertThat(texts.last()).isSameInstanceAs(state.value)
         assertThat(texts.last().toString()).isEqualTo("hello")
-        assertThat(texts.last().selection).isEqualTo(initialText.selection)
+        assertThat(texts.last().selection).isEqualTo(initialSelection)
     }
 
     @Test
-    fun forEachValue_fires_whenSelectionChanged() = runTestWithSnapshotsThenCancelChildren {
+    fun snapshotFlow_fires_whenSelectionChanged() = runTestWithSnapshotsThenCancelChildren {
         val state = TextFieldState("hello", initialSelection = TextRange(0))
         val texts = mutableListOf<TextFieldCharSequence>()
 
         launch(Dispatchers.Unconfined) {
-            state.forEachTextValue { texts += it }
+            snapshotFlow { state.value }.collectLatest { texts += it }
         }
 
         state.edit {
@@ -450,18 +505,18 @@ class TextFieldStateTest {
         }
 
         assertThat(texts).hasSize(2)
-        assertThat(texts.last()).isSameInstanceAs(state.text)
+        assertThat(texts.last()).isSameInstanceAs(state.value)
         assertThat(texts.last().toString()).isEqualTo("hello")
         assertThat(texts.last().selection).isEqualTo(TextRange(5))
     }
 
     @Test
-    fun forEachValue_firesTwice_whenEditCalledTwice() = runTestWithSnapshotsThenCancelChildren {
+    fun snapshotFlow_firesTwice_whenEditCalledTwice() = runTestWithSnapshotsThenCancelChildren {
         val state = TextFieldState()
         val texts = mutableListOf<TextFieldCharSequence>()
 
         launch(Dispatchers.Unconfined) {
-            state.forEachTextValue { texts += it }
+            snapshotFlow { state.value }.collectLatest { texts += it }
         }
 
         state.edit {
@@ -476,18 +531,18 @@ class TextFieldStateTest {
 
         assertThat(texts).hasSize(3)
         assertThat(texts[1].toString()).isEqualTo("hello")
-        assertThat(texts[2]).isSameInstanceAs(state.text)
+        assertThat(texts[2]).isSameInstanceAs(state.value)
         assertThat(texts[2].toString()).isEqualTo("hello world")
     }
 
     @Test
-    fun forEachValue_firesOnce_whenMultipleChangesMadeInSingleEdit() =
+    fun snapshotFlow_firesOnce_whenMultipleChangesMadeInSingleEdit() =
         runTestWithSnapshotsThenCancelChildren {
             val state = TextFieldState()
             val texts = mutableListOf<TextFieldCharSequence>()
 
             launch(Dispatchers.Unconfined) {
-                state.forEachTextValue { texts += it }
+                snapshotFlow { state.value }.collectLatest { texts += it }
             }
 
             state.edit {
@@ -496,18 +551,18 @@ class TextFieldStateTest {
                 placeCursorAtEnd()
             }
 
-            assertThat(texts.last()).isSameInstanceAs(state.text)
+            assertThat(texts.last()).isSameInstanceAs(state.value)
             assertThat(texts.last().toString()).isEqualTo("hello world")
         }
 
     @Test
-    fun forEachValue_fires_whenChangeMadeInSnapshotIsApplied() =
+    fun snapshotFlow_fires_whenChangeMadeInSnapshotIsApplied() =
         runTestWithSnapshotsThenCancelChildren {
             val state = TextFieldState()
             val texts = mutableListOf<TextFieldCharSequence>()
 
             launch(Dispatchers.Unconfined) {
-                state.forEachTextValue { texts += it }
+                snapshotFlow { state.value }.collectLatest { texts += it }
             }
 
             val snapshot = Snapshot.takeMutableSnapshot()
@@ -523,17 +578,17 @@ class TextFieldStateTest {
             snapshot.apply()
             snapshot.dispose()
 
-            assertThat(texts.last()).isSameInstanceAs(state.text)
+            assertThat(texts.last()).isSameInstanceAs(state.value)
         }
 
     @Test
-    fun forEachValue_notFired_whenChangeMadeInSnapshotThenDisposed() =
+    fun snapshotFlow_notFired_whenChangeMadeInSnapshotThenDisposed() =
         runTestWithSnapshotsThenCancelChildren {
             val state = TextFieldState()
             val texts = mutableListOf<TextFieldCharSequence>()
 
             launch(Dispatchers.Unconfined) {
-                state.forEachTextValue { texts += it }
+                snapshotFlow { state.value }.collectLatest { texts += it }
             }
 
             val snapshot = Snapshot.takeMutableSnapshot()
@@ -551,13 +606,13 @@ class TextFieldStateTest {
         }
 
     @Test
-    fun forEachValue_cancelsPreviousHandler_whenChangeMadeWhileSuspended() =
+    fun snapshotFlow_cancelsPreviousHandler_whenChangeMadeWhileSuspended() =
         runTestWithSnapshotsThenCancelChildren {
             val state = TextFieldState()
             val texts = mutableListOf<TextFieldCharSequence>()
 
             launch(Dispatchers.Unconfined) {
-                state.forEachTextValue {
+                snapshotFlow { state.value }.collectLatest {
                     texts += it
                     awaitCancellation()
                 }
@@ -570,6 +625,63 @@ class TextFieldStateTest {
                 .containsExactly("", "hello", "world")
                 .inOrder()
         }
+
+    @Test
+    fun snapshotFlowOfText_onlyFiresIfContentChanges() {
+        runTestWithSnapshotsThenCancelChildren {
+            val state = TextFieldState()
+            val texts = mutableListOf<CharSequence>()
+
+            launch(Dispatchers.Unconfined) {
+                snapshotFlow {
+                    state.text
+                }.collect {
+                    texts += it
+                }
+            }
+
+            state.edit { append("a") }
+            state.edit { append("b") }
+            state.edit { placeCursorBeforeCharAt(0) }
+            state.edit { placeCursorAtEnd() }
+            state.edit { append("c") }
+
+            assertThat(texts.map { it.toString() })
+                .containsExactly("", "a", "ab", "abc")
+                .inOrder()
+        }
+    }
+
+    @Test
+    fun toString_doesNotReadSnapshotState() {
+        val state = TextFieldState("hello")
+        var isRead = false
+        Snapshot.observe(
+            readObserver = {
+                isRead = true
+            }
+        ) {
+            state.toString()
+        }
+
+        assertThat(isRead).isFalse()
+    }
+
+    @Test
+    fun isEditing_doesNotRegisterSnapshotRead() {
+        val state = TextFieldState("hello")
+        var isRead = false
+        Snapshot.observe(
+            readObserver = {
+                // if read object is a Boolean, it might be `isEditing`.
+                isRead = it is Boolean
+            }
+        ) {
+            state.edit { append(" world") }
+        }
+
+        assertThat(isRead).isEqualTo(false)
+    }
 
     private fun runTestWithSnapshotsThenCancelChildren(testBody: suspend TestScope.() -> Unit) {
         val globalWriteObserverHandle = Snapshot.registerGlobalWriteObserver {

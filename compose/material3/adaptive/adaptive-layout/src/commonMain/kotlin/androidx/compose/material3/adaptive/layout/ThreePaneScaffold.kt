@@ -16,16 +16,13 @@
 
 package androidx.compose.material3.adaptive.layout
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.snap
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.Measurable
@@ -52,7 +48,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachIndexed
@@ -70,7 +65,7 @@ import kotlin.math.min
  * freely pipeline the relevant adaptive signals and use them as input of the scaffold function
  * to render the final adaptive layout.
  *
- * It's recommended to use [ThreePaneScaffold] with [calculateStandardPaneScaffoldDirective],
+ * It's recommended to use [ThreePaneScaffold] with [calculatePaneScaffoldDirective],
  * [calculateThreePaneScaffoldValue] to follow the Material design guidelines on adaptive
  * programming.
  *
@@ -90,7 +85,6 @@ internal fun ThreePaneScaffold(
     scaffoldDirective: PaneScaffoldDirective,
     scaffoldValue: ThreePaneScaffoldValue,
     paneOrder: ThreePaneScaffoldHorizontalOrder,
-    windowInsets: WindowInsets,
     secondaryPane: @Composable ThreePaneScaffoldScope.() -> Unit,
     tertiaryPane: (@Composable ThreePaneScaffoldScope.() -> Unit)? = null,
     paneExpansionState: PaneExpansionState = PaneExpansionState(),
@@ -108,7 +102,6 @@ internal fun ThreePaneScaffold(
         scaffoldDirective = scaffoldDirective,
         scaffoldState = scaffoldState,
         paneOrder = paneOrder,
-        windowInsets = windowInsets,
         secondaryPane = secondaryPane,
         tertiaryPane = tertiaryPane,
         paneExpansionState = paneExpansionState,
@@ -124,7 +117,6 @@ internal fun ThreePaneScaffold(
     scaffoldDirective: PaneScaffoldDirective,
     scaffoldState: SeekableTransitionState<ThreePaneScaffoldValue>,
     paneOrder: ThreePaneScaffoldHorizontalOrder,
-    windowInsets: WindowInsets,
     secondaryPane: @Composable ThreePaneScaffoldScope.() -> Unit,
     tertiaryPane: (@Composable ThreePaneScaffoldScope.() -> Unit)? = null,
     paneExpansionState: PaneExpansionState = PaneExpansionState(),
@@ -239,13 +231,11 @@ internal fun ThreePaneScaffold(
                 scaffoldState.targetState,
                 paneExpansionState,
                 ltrPaneOrder,
-                windowInsets
             )
         }.apply {
             this.scaffoldDirective = scaffoldDirective
             this.scaffoldValue = scaffoldState.targetState
             this.paneOrder = ltrPaneOrder
-            this.windowInsets = windowInsets
         }
 
         Layout(
@@ -265,12 +255,10 @@ private class ThreePaneContentMeasurePolicy(
     scaffoldValue: ThreePaneScaffoldValue,
     val paneExpansionState: PaneExpansionState,
     paneOrder: ThreePaneScaffoldHorizontalOrder,
-    windowInsets: WindowInsets
 ) : MultiContentMeasurePolicy {
     var scaffoldDirective by mutableStateOf(scaffoldDirective)
     var scaffoldValue by mutableStateOf(scaffoldValue)
     var paneOrder by mutableStateOf(paneOrder)
-    var windowInsets by mutableStateOf(windowInsets)
 
     /**
      * Data class that is used to store the position and width of an expanded pane to be reused when
@@ -317,32 +305,16 @@ private class ThreePaneContentMeasurePolicy(
             }
 
             val verticalSpacerSize = scaffoldDirective.horizontalPartitionSpacerSize.roundToPx()
-            val leftContentPadding = max(
-                scaffoldDirective.contentPadding.calculateLeftPadding(layoutDirection).roundToPx(),
-                windowInsets.getLeft(this@measure, layoutDirection)
-            )
-            val rightContentPadding = max(
-                scaffoldDirective.contentPadding.calculateRightPadding(layoutDirection).roundToPx(),
-                windowInsets.getRight(this@measure, layoutDirection)
-            )
-            val topContentPadding = max(
-                scaffoldDirective.contentPadding.calculateTopPadding().roundToPx(),
-                windowInsets.getTop(this@measure)
-            )
-            val bottomContentPadding = max(
-                scaffoldDirective.contentPadding.calculateBottomPadding().roundToPx(),
-                windowInsets.getBottom(this@measure)
-            )
             val outerBounds = IntRect(
-                leftContentPadding,
-                topContentPadding,
-                constraints.maxWidth - rightContentPadding,
-                constraints.maxHeight - bottomContentPadding
+                0,
+                0,
+                constraints.maxWidth,
+                constraints.maxHeight
             )
 
             if (!paneExpansionState.isUnspecified()) {
                 // Pane expansion should override everything
-                val availableWidth = constraints.maxWidth - leftContentPadding - rightContentPadding
+                val availableWidth = constraints.maxWidth
                 if (paneExpansionState.firstPaneWidth == 0 ||
                     paneExpansionState.firstPanePercentage == 0f) {
                     if (visiblePanes.size > 1) {
@@ -388,10 +360,10 @@ private class ThreePaneContentMeasurePolicy(
             } else if (scaffoldDirective.excludedBounds.isNotEmpty()) {
                 val layoutBounds = coordinates!!.boundsInWindow()
                 val layoutPhysicalPartitions = mutableListOf<Rect>()
-                var actualLeft = layoutBounds.left + leftContentPadding
-                var actualRight = layoutBounds.right - rightContentPadding
-                val actualTop = layoutBounds.top + topContentPadding
-                val actualBottom = layoutBounds.bottom - bottomContentPadding
+                var actualLeft = layoutBounds.left
+                var actualRight = layoutBounds.right
+                val actualTop = layoutBounds.top
+                val actualBottom = layoutBounds.bottom
                 // Assume hinge bounds are sorted from left to right, non-overlapped.
                 @Suppress("ListIterator")
                 scaffoldDirective.excludedBounds.forEach { hingeBound ->
@@ -519,8 +491,7 @@ private class ThreePaneContentMeasurePolicy(
                                 primaryMeasurables,
                                 ThreePaneScaffoldDefaults.PrimaryPanePriority,
                                 role,
-                                ThreePaneScaffoldDefaults.PrimaryPanePreferredWidth
-                                    .roundToPx()
+                                scaffoldDirective.defaultPanePreferredWidth.roundToPx()
                             )
                         }
 
@@ -529,8 +500,7 @@ private class ThreePaneContentMeasurePolicy(
                                 secondaryMeasurables,
                                 ThreePaneScaffoldDefaults.SecondaryPanePriority,
                                 role,
-                                ThreePaneScaffoldDefaults.SecondaryPanePreferredWidth
-                                    .roundToPx()
+                                scaffoldDirective.defaultPanePreferredWidth.roundToPx()
                             )
                         }
 
@@ -539,8 +509,7 @@ private class ThreePaneContentMeasurePolicy(
                                 tertiaryMeasurables,
                                 ThreePaneScaffoldDefaults.TertiaryPanePriority,
                                 role,
-                                ThreePaneScaffoldDefaults.TertiaryPanePreferredWidth
-                                    .roundToPx()
+                                scaffoldDirective.defaultPanePreferredWidth.roundToPx()
                             )
                         }
                     }
@@ -716,45 +685,6 @@ private class ThreePaneContentMeasurePolicy(
     }
 }
 
-/**
- * The root composable of pane contents in a [ThreePaneScaffold] that supports default motions
- * during pane switching. It's recommended to use this composable to wrap your own contents when
- * passing them into pane parameters of the scaffold functions, therefore your panes can have a
- * nice default animation for free.
- *
- * See usage samples at:
- * @sample androidx.compose.material3.adaptive.samples.ListDetailPaneScaffoldSample
- * @sample androidx.compose.material3.adaptive.samples.ListDetailPaneScaffoldSampleWithExtraPane
- */
-@Suppress("IllegalExperimentalApiUsage") // TODO: address before moving to beta
-@OptIn(ExperimentalAnimationApi::class)
-@ExperimentalMaterial3AdaptiveApi
-@Composable
-fun ThreePaneScaffoldScope.AnimatedPane(
-    modifier: Modifier = Modifier,
-    content: (@Composable ThreePaneScaffoldScope.() -> Unit),
-) {
-    val keepShowing = scaffoldStateTransition.currentState[role] != PaneAdaptedValue.Hidden &&
-        scaffoldStateTransition.targetState[role] != PaneAdaptedValue.Hidden
-    scaffoldStateTransition.AnimatedVisibility(
-        visible = { value: ThreePaneScaffoldValue -> value[role] != PaneAdaptedValue.Hidden },
-        modifier = modifier
-            .animatedPane()
-            .animateBounds(
-                animateFraction = scaffoldStateTransitionFraction,
-                positionAnimationSpec = positionAnimationSpec,
-                sizeAnimationSpec = sizeAnimationSpec,
-                lookaheadScope = this,
-                enabled = keepShowing
-            )
-            .graphicsLayer(clip = !keepShowing),
-        enter = enterTransition,
-        exit = exitTransition
-    ) {
-        content()
-    }
-}
-
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 private class PaneMeasurable(
     val measurable: Measurable,
@@ -806,8 +736,8 @@ private class PaneMeasurable(
 /**
  * Scope for the panes of [ThreePaneScaffold].
  */
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
-interface ThreePaneScaffoldScope : PaneScaffoldScope, LookaheadScope {
+@ExperimentalMaterial3AdaptiveApi
+sealed interface ThreePaneScaffoldScope : PaneScaffoldScope, LookaheadScope {
     /**
      * The [ThreePaneScaffoldRole] of the current pane in the scope.
      */
@@ -821,6 +751,7 @@ interface ThreePaneScaffoldScope : PaneScaffoldScope, LookaheadScope {
     /**
      * The current fraction of the scaffold state transition.
      */
+    // TODO(b/333403487): change this to lambda to defer value reading
     val scaffoldStateTransitionFraction: Float
 
     /**
@@ -890,22 +821,6 @@ internal object ThreePaneScaffoldDefaults {
         ThreePaneScaffoldRole.Secondary,
         ThreePaneScaffoldRole.Tertiary
     )
-
-    /**
-     * The default preferred width of [ThreePaneScaffoldRole.Secondary]. See more details in
-     * [ThreePaneScaffoldScope.preferredWidth].
-     */
-    val SecondaryPanePreferredWidth = 412.dp
-
-    /**
-     * The default preferred width of [ThreePaneScaffoldRole.Tertiary]. See more details in
-     * [ThreePaneScaffoldScope.preferredWidth].
-     */
-    val TertiaryPanePreferredWidth = 412.dp
-
-    // Make it the same as the secondary and tertiary panes, so we can have a semi-50-50-split on
-    // narrower windows by default.
-    val PrimaryPanePreferredWidth = 412.dp
 
     // TODO(conradchen): consider declaring a value class for priority
     const val PrimaryPanePriority = 10

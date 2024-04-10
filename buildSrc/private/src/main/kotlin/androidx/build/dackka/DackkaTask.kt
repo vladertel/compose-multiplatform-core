@@ -139,16 +139,26 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
                 ?.let { metadataFile ->
                     val metadata =
                         gson.fromJson(metadataFile.readText(), ProjectStructureMetadata::class.java)
-                    metadata.sourceSets.map { sourceSet ->
+                    metadata.sourceSets.mapNotNull { sourceSet ->
+                        val sourceDir = multiplatformSourcesDir.get().asFile.resolve(sourceSet.name)
+                        if (!sourceDir.exists()) return@mapNotNull null
                         val analysisPlatform =
                             DokkaAnalysisPlatform.valueOf(sourceSet.analysisPlatform.uppercase())
-                        val sourceDir = multiplatformSourcesDir.get().asFile.resolve(sourceSet.name)
                         DokkaInputModels.SourceSet(
                             id = sourceSetIdForSourceSet(sourceSet.name),
                             displayName = sourceSet.name,
                             analysisPlatform = analysisPlatform.jsonName,
                             sourceRoots = objects.fileCollection().from(sourceDir),
-                            samples = objects.fileCollection(),
+                            // TODO(b/181224204): KMP samples aren't supported, dackka assumes all
+                            // samples are in common
+                            samples = if (analysisPlatform == DokkaAnalysisPlatform.COMMON) {
+                                objects.fileCollection().from(
+                                    samplesDir,
+                                    frameworkSamplesDir.get().asFile
+                                )
+                            } else {
+                                objects.fileCollection()
+                            },
                             includes = objects.fileCollection().from(includesFiles(sourceDir)),
                             classpath = dependenciesClasspath,
                             externalDocumentationLinks = externalDocs,
@@ -194,7 +204,6 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
         val linksConfiguration = ""
         val jsonMap =
             mapOf(
-                "moduleName" to "",
                 "outputDir" to destinationDir.get().asFile.path,
                 "globalLinks" to linksConfiguration,
                 "sourceSets" to sourceSets(),

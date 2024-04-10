@@ -22,9 +22,9 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.FlingBehavior
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollScope
-import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.TargetedFlingBehavior
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -46,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,7 +82,7 @@ internal fun Pager(
     /** Whether scrolling via the user gestures is allowed. */
     userScrollEnabled: Boolean,
     /** Number of pages to compose and layout before and after the visible pages */
-    outOfBoundsPageCount: Int = PagerDefaults.OutOfBoundsPageCount,
+    beyondViewportPageCount: Int = PagerDefaults.BeyondViewportPageCount,
     /** Space between pages */
     pageSpacing: Dp = 0.dp,
     /** Allows to change how to calculate the Page size */
@@ -99,9 +100,9 @@ internal fun Pager(
     /** The content of the pager */
     pageContent: @Composable PagerScope.(page: Int) -> Unit
 ) {
-    require(outOfBoundsPageCount >= 0) {
-        "outOfBoundsPageCount should be greater than or equal to 0, " +
-            "you selected $outOfBoundsPageCount"
+    require(beyondViewportPageCount >= 0) {
+        "beyondViewportPageCount should be greater than or equal to 0, " +
+            "you selected $beyondViewportPageCount"
     }
 
     val pagerItemProvider = rememberPagerItemProviderLambda(
@@ -110,24 +111,26 @@ internal fun Pager(
         key = key
     ) { state.pageCount }
 
+    val coroutineScope = rememberCoroutineScope()
+
     val measurePolicy = rememberPagerMeasurePolicy(
         state = state,
         contentPadding = contentPadding,
         reverseLayout = reverseLayout,
         orientation = orientation,
-        outOfBoundsPageCount = outOfBoundsPageCount,
+        beyondViewportPageCount = beyondViewportPageCount,
         pageSpacing = pageSpacing,
         pageSize = pageSize,
         horizontalAlignment = horizontalAlignment,
         verticalAlignment = verticalAlignment,
         itemProviderLambda = pagerItemProvider,
         snapPosition = snapPosition,
+        coroutineScope = coroutineScope,
         pageCount = { state.pageCount }
     )
 
     val semanticState = rememberPagerSemanticState(
         state,
-        reverseLayout,
         orientation == Orientation.Vertical
     )
 
@@ -135,7 +138,7 @@ internal fun Pager(
         PagerWrapperFlingBehavior(flingBehavior, state)
     }
 
-    val defaultBringIntoViewSpec = ScrollableDefaults.bringIntoViewSpec()
+    val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val pagerBringIntoViewSpec = remember(state, defaultBringIntoViewSpec) {
         PagerBringIntoViewSpec(
             state,
@@ -157,7 +160,7 @@ internal fun Pager(
             .lazyLayoutBeyondBoundsModifier(
                 state = rememberPagerBeyondBoundsState(
                     state = state,
-                    outOfBoundsPageCount = outOfBoundsPageCount
+                    beyondViewportPageCount = beyondViewportPageCount
                 ),
                 beyondBoundsInfo = state.beyondBoundsInfo,
                 reverseLayout = reverseLayout,
@@ -330,7 +333,7 @@ private class PagerBringIntoViewSpec(
                 // move one page forward or backward, whilst making sure we don't move out of bounds
                 // again.
                 val reversedFirstPageScroll = pagerState.firstVisiblePageOffset * -1f
-                if (pagerState.isLastScrollForward) {
+                if (pagerState.lastScrolledForward) {
                     reversedFirstPageScroll + pagerState.pageSizeWithSpacing
                 } else {
                     reversedFirstPageScroll

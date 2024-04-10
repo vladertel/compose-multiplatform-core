@@ -564,7 +564,7 @@ class InvalidationTrackerTest {
         }
 
         override fun createOpenDelegate(): RoomOpenDelegateMarker {
-            return object : RoomOpenDelegate(0, "") {
+            return object : RoomOpenDelegate(0, "", "") {
                 override fun onCreate(connection: SQLiteConnection) {}
                 override fun onPreMigrate(connection: SQLiteConnection) {}
                 override fun onValidateSchema(connection: SQLiteConnection) =
@@ -585,7 +585,7 @@ class InvalidationTrackerTest {
 
         val preparedQueries = mutableListOf<String>()
 
-        override fun open(): SQLiteConnection {
+        override fun open(fileName: String): SQLiteConnection {
             return FakeSQLiteConnection()
         }
 

@@ -19,7 +19,6 @@ package androidx.core.view
 import android.app.Dialog
 import android.os.Build
 import android.view.View
-import android.view.WindowInsetsController
 import android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
 import android.widget.EditText
 import android.widget.TextView
@@ -76,7 +75,7 @@ public class WindowInsetsControllerCompatActivityTest {
 
         scenario.withActivity {
             WindowCompat.getInsetsController(window, container).systemBarsBehavior =
-                WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             // Needed on API 23 to report the nav bar insets
             this.window.addFlags(FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         }

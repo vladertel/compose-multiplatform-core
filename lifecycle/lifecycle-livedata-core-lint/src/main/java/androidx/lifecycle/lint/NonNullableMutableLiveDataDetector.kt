@@ -29,12 +29,19 @@ import com.android.tools.lint.detector.api.Severity
 import com.android.tools.lint.detector.api.UastLintUtils
 import com.android.tools.lint.detector.api.isKotlin
 import com.intellij.psi.PsiClassType
+import com.intellij.psi.PsiTypeParameter
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.impl.source.PsiImmediateClassType
-import org.jetbrains.kotlin.asJava.elements.KtLightTypeParameter
+import org.jetbrains.kotlin.analysis.api.analyze
+import org.jetbrains.kotlin.analysis.api.calls.KtCall
+import org.jetbrains.kotlin.analysis.api.calls.KtCallableMemberCall
+import org.jetbrains.kotlin.analysis.api.calls.singleCallOrNull
+import org.jetbrains.kotlin.analysis.api.types.KtNonErrorClassType
+import org.jetbrains.kotlin.analysis.api.types.KtTypeParameterType
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtCallableDeclaration
+import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNullableType
 import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.uast.UAnnotated
@@ -102,7 +109,7 @@ class NonNullableMutableLiveDataDetector : Detector(), UastScanner {
                 // argument: `Boolean`
                 val typeReference = element.sourcePsi
                     ?.children
-                    ?.firstOrNull { it is KtTypeReference } as? KtTypeReference
+                    ?.firstNotNullOfOrNull { it as? KtTypeReference }
                 val typeArgument = typeReference?.typeElement?.typeArgumentsAsTypes?.singleOrNull()
                 if (typeArgument != null) {
                     return typeArgument
@@ -114,12 +121,30 @@ class NonNullableMutableLiveDataDetector : Detector(), UastScanner {
                 // argument: `Boolean`
                 val expression = element.sourcePsi
                     ?.children
-                    ?.firstOrNull { it is KtCallExpression } as? KtCallExpression
+                    ?.firstNotNullOfOrNull { it as? KtCallExpression }
                 return expression?.typeArguments?.singleOrNull()?.typeReference
             }
 
             override fun visitCallExpression(node: UCallExpression) {
-                if (!isKotlin(node.sourcePsi) || !methods.contains(node.methodName) ||
+                var isGeneric = false
+                val ktCallExpression = node.sourcePsi as? KtCallExpression
+                    ?: node.sourcePsi as? KtNameReferenceExpression ?: return
+                analyze(ktCallExpression) {
+                    val ktCall = ktCallExpression.resolveCall()?.singleCallOrNull<KtCall>()
+                    val callee = (ktCall as? KtCallableMemberCall<*, *>)?.partiallyAppliedSymbol
+                    val receiver = callee?.extensionReceiver ?: callee?.dispatchReceiver
+                    var receiverType = receiver?.type as? KtNonErrorClassType
+                    while (!isGeneric && receiverType != null) {
+                        val typeArgument = receiverType.ownTypeArguments.singleOrNull()?.type
+                        if (typeArgument is KtTypeParameterType) {
+                            isGeneric = true
+                        }
+                        receiverType = typeArgument as? KtNonErrorClassType
+                    }
+                }
+                if (isGeneric) return
+
+                if (!isKotlin(node.lang) || !methods.contains(node.methodName) ||
                     !context.evaluator.isMemberInSubClassOf(
                             node.resolve()!!, "androidx.lifecycle.LiveData", false
                         )
@@ -175,6 +200,11 @@ class NonNullableMutableLiveDataDetector : Detector(), UastScanner {
             return null
         }
         val cls = classType.resolve().getUastParentOfType<UClass>()
+        if (cls != null && !isKotlin(cls.lang)) {
+            // If the type argument refers to a Java type,
+            // we won't get KtTypeReference anyway, so bail out early.
+            return null
+        }
         val parentPsiType = cls?.superClassType as PsiClassType
         if (parentPsiType.hasParameters()) {
             val parentTypeReference = cls.uastSuperTypes[0]
@@ -223,7 +253,7 @@ class NonNullableMutableLiveDataDetector : Detector(), UastScanner {
     private fun UCallExpression.isGenericTypeDefinition(): Boolean {
         val classType = typeArguments.singleOrNull() as? PsiImmediateClassType
         val resolveGenerics = classType?.resolveGenerics()
-        return resolveGenerics?.element is KtLightTypeParameter
+        return resolveGenerics?.element is PsiTypeParameter
     }
 
     /**

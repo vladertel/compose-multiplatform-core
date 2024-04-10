@@ -26,7 +26,7 @@ import static androidx.camera.core.ImageCapture.FLASH_MODE_OFF;
 import static androidx.camera.core.ImageCapture.FLASH_MODE_ON;
 import static androidx.camera.core.ImageCapture.FLASH_MODE_SCREEN;
 import static androidx.camera.core.ImageCapture.OUTPUT_FORMAT_JPEG;
-import static androidx.camera.core.ImageCapture.OUTPUT_FORMAT_ULTRA_HDR;
+import static androidx.camera.core.ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR;
 import static androidx.camera.core.ImageCapture.getImageCaptureCapabilities;
 import static androidx.camera.core.MirrorMode.MIRROR_MODE_ON_FRONT_ONLY;
 import static androidx.camera.integration.core.CameraXViewModel.getConfiguredCameraXCameraImplementation;
@@ -108,6 +108,7 @@ import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.DisplayOrientedMeteringPointFactory;
 import androidx.camera.core.DynamicRange;
+import androidx.camera.core.ExperimentalImageCaptureOutputFormat;
 import androidx.camera.core.ExperimentalLensFacing;
 import androidx.camera.core.ExposureState;
 import androidx.camera.core.FocusMeteringAction;
@@ -143,6 +144,7 @@ import androidx.camera.video.VideoCapture;
 import androidx.camera.video.VideoRecordEvent;
 import androidx.camera.view.ScreenFlashView;
 import androidx.camera.viewfinder.core.ZoomGestureDetector;
+import androidx.camera.viewfinder.core.ZoomGestureDetector.ZoomEvent;
 import androidx.core.content.ContextCompat;
 import androidx.core.math.MathUtils;
 import androidx.core.util.Consumer;
@@ -185,6 +187,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * resumed and when the device is rotated. The complex interactions between the camera and these
  * lifecycle events are handled internally by CameraX.
  */
+@SuppressLint("NullAnnotationGroup")
+@OptIn(markerClass = ExperimentalImageCaptureOutputFormat.class)
 public class CameraXActivity extends AppCompatActivity {
     private static final String TAG = "CameraXActivity";
     private static final String[] REQUIRED_PERMISSIONS;
@@ -1785,8 +1789,8 @@ public class CameraXActivity extends AppCompatActivity {
     private String getBindFailedErrorMessage() {
         if (mVideoQuality != QUALITY_AUTO) {
             return "Bind too many use cases or video quality is too large.";
-        } else if (mImageOutputFormat == OUTPUT_FORMAT_ULTRA_HDR && Objects.equals(mDynamicRange,
-                DynamicRange.SDR)) {
+        } else if (mImageOutputFormat == OUTPUT_FORMAT_JPEG_ULTRA_HDR
+                && Objects.equals(mDynamicRange, DynamicRange.SDR)) {
             return "Bind too many use cases or device does not support concurrent SDR and HDR.";
         } else if (!Objects.equals(mDynamicRange, DynamicRange.SDR)) {
             return "Bind too many use cases or unsupported dynamic range combination.";
@@ -2042,12 +2046,12 @@ public class CameraXActivity extends AppCompatActivity {
         mZoomRatioLabel.setTextColor(getResources().getColor(R.color.zoom_ratio_set));
     }
 
-    ZoomGestureDetector.OnZoomGestureListener mZoomGestureListener = (type, detector) -> {
-        if (mCamera != null && type == ZoomGestureDetector.ZOOM_GESTURE_MOVE) {
+    ZoomGestureDetector.OnZoomGestureListener mZoomGestureListener = zoomEvent -> {
+        if (mCamera != null && zoomEvent instanceof ZoomEvent.Move) {
             CameraInfo cameraInfo = mCamera.getCameraInfo();
             float newZoom =
                     requireNonNull(cameraInfo.getZoomState().getValue()).getZoomRatio()
-                            * detector.getScaleFactor();
+                            * ((ZoomEvent.Move) zoomEvent).getScaleFactor();
             setZoomRatio(newZoom);
         }
         return true;
@@ -2598,7 +2602,7 @@ public class CameraXActivity extends AppCompatActivity {
     private static String getImageOutputFormatIconName(@ImageCapture.OutputFormat int format) {
         if (format == OUTPUT_FORMAT_JPEG) {
             return "Jpeg";
-        } else if (format == OUTPUT_FORMAT_ULTRA_HDR) {
+        } else if (format == OUTPUT_FORMAT_JPEG_ULTRA_HDR) {
             return "Ultra HDR";
         }
         return "?";
@@ -2608,7 +2612,7 @@ public class CameraXActivity extends AppCompatActivity {
     private static String getImageOutputFormatMenuItemName(@ImageCapture.OutputFormat int format) {
         if (format == OUTPUT_FORMAT_JPEG) {
             return "Jpeg";
-        } else if (format == OUTPUT_FORMAT_ULTRA_HDR) {
+        } else if (format == OUTPUT_FORMAT_JPEG_ULTRA_HDR) {
             return "Ultra HDR";
         }
         return "Unknown format";
@@ -2617,7 +2621,7 @@ public class CameraXActivity extends AppCompatActivity {
     private static int imageOutputFormatToItemId(@ImageCapture.OutputFormat int format) {
         if (format == OUTPUT_FORMAT_JPEG) {
             return 0;
-        } else if (format == OUTPUT_FORMAT_ULTRA_HDR) {
+        } else if (format == OUTPUT_FORMAT_JPEG_ULTRA_HDR) {
             return 1;
         } else {
             throw new IllegalArgumentException("Undefined output format: " + format);
@@ -2630,7 +2634,7 @@ public class CameraXActivity extends AppCompatActivity {
             case 0:
                 return OUTPUT_FORMAT_JPEG;
             case 1:
-                return OUTPUT_FORMAT_ULTRA_HDR;
+                return OUTPUT_FORMAT_JPEG_ULTRA_HDR;
             default:
                 throw new IllegalArgumentException("Undefined item id: " + itemId);
         }

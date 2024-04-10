@@ -16,7 +16,6 @@
 
 package androidx.compose.material3.adaptive.navigation
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
@@ -47,7 +46,7 @@ class ListDetailPaneScaffoldNavigatorTest {
         var canNavigateBack by Delegates.notNull<Boolean>()
 
         composeRule.setContent {
-            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator(
+            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator<Int>(
                 scaffoldDirective = MockSinglePaneScaffoldDirective
             )
             canNavigateBack = scaffoldNavigator.canNavigateBack()
@@ -78,7 +77,7 @@ class ListDetailPaneScaffoldNavigatorTest {
         var canNavigateBack by Delegates.notNull<Boolean>()
 
         composeRule.setContent {
-            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator(
+            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator<Int>(
                 scaffoldDirective = MockDualPaneScaffoldDirective
             )
             canNavigateBack = scaffoldNavigator.canNavigateBack()
@@ -109,7 +108,7 @@ class ListDetailPaneScaffoldNavigatorTest {
         var canNavigateBack by Delegates.notNull<Boolean>()
 
         composeRule.setContent {
-            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator(
+            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator<Int>(
                 scaffoldDirective = MockDualPaneScaffoldDirective,
                 isDestinationHistoryAware = false
             )
@@ -141,7 +140,7 @@ class ListDetailPaneScaffoldNavigatorTest {
         var canNavigateBack by Delegates.notNull<Boolean>()
 
         composeRule.setContent {
-            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator(
+            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator<Int>(
                 scaffoldDirective = MockDualPaneScaffoldDirective,
                 isDestinationHistoryAware = true
             )
@@ -173,7 +172,7 @@ class ListDetailPaneScaffoldNavigatorTest {
         var canNavigateBack by Delegates.notNull<Boolean>()
 
         composeRule.setContent {
-            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator(
+            scaffoldNavigator = rememberListDetailPaneScaffoldNavigator<Int>(
                 scaffoldDirective = MockSinglePaneScaffoldDirective
             )
             canNavigateBack = scaffoldNavigator.canNavigateBack()
@@ -568,23 +567,12 @@ class ListDetailPaneScaffoldNavigatorTest {
 }
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-private val MockSinglePaneScaffoldDirective = PaneScaffoldDirective(
-    contentPadding = PaddingValues(0.dp),
-    maxHorizontalPartitions = 1,
-    horizontalPartitionSpacerSize = 0.dp,
-    maxVerticalPartitions = 1,
-    verticalPartitionSpacerSize = 0.dp,
-    excludedBounds = emptyList()
-)
+private val MockSinglePaneScaffoldDirective = PaneScaffoldDirective.Default
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-private val MockDualPaneScaffoldDirective = PaneScaffoldDirective(
-    contentPadding = PaddingValues(16.dp),
+private val MockDualPaneScaffoldDirective = PaneScaffoldDirective.Default.copy(
     maxHorizontalPartitions = 2,
     horizontalPartitionSpacerSize = 16.dp,
-    maxVerticalPartitions = 1,
-    verticalPartitionSpacerSize = 0.dp,
-    excludedBounds = emptyList()
 )
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)

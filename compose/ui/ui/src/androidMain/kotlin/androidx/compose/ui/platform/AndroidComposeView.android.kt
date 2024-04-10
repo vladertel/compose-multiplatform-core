@@ -20,6 +20,7 @@ package androidx.compose.ui.platform
 
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Point
 import android.graphics.Rect
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.M
@@ -46,6 +47,7 @@ import android.view.MotionEvent.ACTION_POINTER_UP
 import android.view.MotionEvent.ACTION_SCROLL
 import android.view.MotionEvent.ACTION_UP
 import android.view.MotionEvent.TOOL_TYPE_MOUSE
+import android.view.ScrollCaptureTarget
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewStructure
@@ -111,6 +113,7 @@ import androidx.compose.ui.graphics.CanvasHolder
 import androidx.compose.ui.graphics.GraphicsContext
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.setFrom
 import androidx.compose.ui.graphics.toAndroidRect
 import androidx.compose.ui.graphics.toComposeRect
@@ -170,6 +173,7 @@ import androidx.compose.ui.node.visitSubtree
 import androidx.compose.ui.platform.MotionEventVerifierApi29.isValidMotionEvent
 import androidx.compose.ui.platform.coreshims.ContentCaptureSessionCompat
 import androidx.compose.ui.platform.coreshims.ViewCompatShims
+import androidx.compose.ui.scrollcapture.ScrollCapture
 import androidx.compose.ui.semantics.EmptySemanticsElement
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.findClosestParentNode
@@ -792,6 +796,29 @@ internal class AndroidComposeView(
         } ?: super.getFocusedRect(rect)
     }
 
+    private val scrollCapture = if (SDK_INT >= 31) ScrollCapture() else null
+    internal val scrollCaptureInProgress: Boolean
+        get() = if (SDK_INT >= 31) {
+            scrollCapture?.scrollCaptureInProgress ?: false
+        } else {
+            false
+        }
+
+    override fun onScrollCaptureSearch(
+        localVisibleRect: Rect,
+        windowOffset: Point,
+        targets: Consumer<ScrollCaptureTarget>
+    ) {
+        if (SDK_INT >= 31) {
+            scrollCapture?.onScrollCaptureSearch(
+                view = this,
+                semanticsOwner = semanticsOwner,
+                coroutineContext = coroutineContext,
+                targets = targets
+            )
+        }
+    }
+
     override fun onResume(owner: LifecycleOwner) {
         // Refresh in onResume in case the value has changed.
         showLayoutBounds = getIsShowingLayoutBounds()
@@ -1032,14 +1059,14 @@ internal class AndroidComposeView(
         // `traversalAfter` from a non-sealed instance of an ANI
         when (extraDataKey) {
             composeAccessibilityDelegate.ExtraDataTestTraversalBeforeVal -> {
-                composeAccessibilityDelegate.idToBeforeMap[virtualViewId]?.let {
-                    info.extras.putInt(extraDataKey, it)
-                }
+                composeAccessibilityDelegate.idToBeforeMap
+                    .getOrDefault(virtualViewId, -1)
+                    .let { if (it != -1) { info.extras.putInt(extraDataKey, it) } }
             }
             composeAccessibilityDelegate.ExtraDataTestTraversalAfterVal -> {
-                composeAccessibilityDelegate.idToAfterMap[virtualViewId]?.let {
-                    info.extras.putInt(extraDataKey, it)
-                }
+                composeAccessibilityDelegate.idToAfterMap
+                    .getOrDefault(virtualViewId, -1)
+                    .let { if (it != -1) { info.extras.putInt(extraDataKey, it) } }
             }
             else -> {}
         }
@@ -1113,8 +1140,9 @@ internal class AndroidComposeView(
                     info.setParent(thisView, parentId)
                     val semanticsId = layoutNode.semanticsId
 
-                    val beforeId = composeAccessibilityDelegate.idToBeforeMap[semanticsId]
-                    beforeId?.let {
+                    val beforeId =
+                        composeAccessibilityDelegate.idToBeforeMap.getOrDefault(semanticsId, -1)
+                    if (beforeId != -1) {
                         val beforeView = androidViewsHandler.semanticsIdToView(beforeId)
                         if (beforeView != null) {
                             // If the node that should come before this one is a view, we want to
@@ -1124,7 +1152,7 @@ internal class AndroidComposeView(
                         } else {
                             // Otherwise, we'll just set the "before" value by passing in
                             // the semanticsId.
-                            info.setTraversalBefore(thisView, it)
+                            info.setTraversalBefore(thisView, beforeId)
                         }
                         addExtraDataToAccessibilityNodeInfoHelper(
                             semanticsId, info.unwrap(),
@@ -1132,13 +1160,14 @@ internal class AndroidComposeView(
                         )
                     }
 
-                    val afterId = composeAccessibilityDelegate.idToAfterMap[semanticsId]
-                    afterId?.let {
+                    val afterId =
+                        composeAccessibilityDelegate.idToAfterMap.getOrDefault(semanticsId, -1)
+                    if (afterId != -1) {
                         val afterView = androidViewsHandler.semanticsIdToView(afterId)
                         if (afterView != null) {
                             info.setTraversalAfter(afterView)
                         } else {
-                            info.setTraversalAfter(thisView, it)
+                            info.setTraversalAfter(thisView, afterId)
                         }
                         addExtraDataToAccessibilityNodeInfoHelper(
                             semanticsId, info.unwrap(),
@@ -1376,8 +1405,12 @@ internal class AndroidComposeView(
 
     override fun createLayer(
         drawBlock: (Canvas) -> Unit,
-        invalidateParentLayer: () -> Unit
+        invalidateParentLayer: () -> Unit,
+        explicitLayer: GraphicsLayer?
     ): OwnedLayer {
+        if (explicitLayer != null) {
+            return GraphicsLayerOwnerLayer(explicitLayer, this, drawBlock, invalidateParentLayer)
+        }
         // First try the layer cache
         val layer = layerCache.pop()
         if (layer !== null) {

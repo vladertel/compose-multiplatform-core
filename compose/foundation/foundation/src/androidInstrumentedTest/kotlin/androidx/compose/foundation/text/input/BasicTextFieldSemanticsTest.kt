@@ -186,10 +186,10 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
             BasicTextField(
                 state = state,
                 modifier = Modifier.testTag(Tag),
-                inputTransformation = { _, changes ->
-                    if (changes.length > 1) {
-                        val newText = changes.asCharSequence().asSequence().joinToString("-")
-                        changes.replace(0, changes.length, newText)
+                inputTransformation = {
+                    if (length > 1) {
+                        val newText = asCharSequence().asSequence().joinToString("-")
+                        replace(0, length, newText)
                     }
                 }
             )
@@ -249,9 +249,9 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
             BasicTextField(
                 state = state,
                 modifier = Modifier.testTag(Tag),
-                inputTransformation = { _, changes ->
-                    val newChange = changes.asCharSequence().replace(Regex("a"), "")
-                    changes.replace(0, changes.length, newChange)
+                inputTransformation = {
+                    val newChange = asCharSequence().replace(Regex("a"), "")
+                    replace(0, length, newChange)
                 }
             )
         }
@@ -385,7 +385,7 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
         rule.onNode(isSelectionHandle(Handle.SelectionEnd)).assertIsDisplayed()
 
         rule.runOnIdle {
-            assertThat(state.text.selection).isEqualTo(TextRange(2, 3))
+            assertThat(state.selection).isEqualTo(TextRange(2, 3))
         }
     }
 
@@ -397,8 +397,8 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
             BasicTextField(
                 state = state,
                 modifier = Modifier.testTag(Tag),
-                inputTransformation = { _, changes ->
-                    changes.revertAllChanges()
+                inputTransformation = {
+                    revertAllChanges()
                 }
             )
         }
@@ -406,7 +406,7 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
         rule.onNodeWithTag(Tag).performTextInputSelection(TextRange(2))
 
         rule.runOnIdle {
-            assertThat(state.text.selection).isEqualTo(TextRange(5))
+            assertThat(state.selection).isEqualTo(TextRange(5))
         }
     }
 
@@ -517,7 +517,7 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
         rule.onNodeWithTag(Tag).performSemanticsAction(SemanticsActions.PasteText)
 
         rule.runOnIdle {
-            assertThat(state.text.selection).isEqualTo(TextRange(5))
+            assertThat(state.selection).isEqualTo(TextRange(5))
             assertThat(state.text.toString()).isEqualTo("Hello World!")
         }
     }
@@ -532,12 +532,12 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
                 BasicTextField(
                     state = state,
                     modifier = Modifier.testTag(Tag),
-                    inputTransformation = { _, changes ->
+                    inputTransformation = {
                         // remove all 'l' characters
-                        if (changes.changes.changeCount != 0) {
-                            val newChange = changes.asCharSequence().replace(Regex("l"), "")
-                            changes.replace(0, changes.length, newChange)
-                            changes.placeCursorAtEnd()
+                        if (changes.changeCount != 0) {
+                            val newChange = asCharSequence().replace(Regex("l"), "")
+                            replace(0, length, newChange)
+                            placeCursorAtEnd()
                         }
                     }
                 )
@@ -548,7 +548,7 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
         rule.onNodeWithTag(Tag).performSemanticsAction(SemanticsActions.PasteText)
 
         rule.runOnIdle {
-            assertThat(state.text.selection).isEqualTo(TextRange(9))
+            assertThat(state.selection).isEqualTo(TextRange(9))
             assertThat(state.text.toString()).isEqualTo("Heo Word!")
         }
     }
@@ -588,7 +588,6 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
         rule.onNodeWithTag(Tag).assert(SemanticsMatcher.keyNotDefined(SemanticsActions.CopyText))
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun semantics_copy_appliesFilter() {
         val state = TextFieldState("Hello World!", initialSelection = TextRange(0, 5))
@@ -598,10 +597,10 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
                 BasicTextField(
                     state = state,
                     modifier = Modifier.testTag(Tag),
-                    inputTransformation = { original, changes ->
+                    inputTransformation = {
                         // reject copy action collapsing the selection
-                        if (changes.selection != original.selection) {
-                            changes.revertAllChanges()
+                        if (selection != originalValue.selection) {
+                            revertAllChanges()
                         }
                     }
                 )
@@ -611,11 +610,10 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
         rule.onNodeWithTag(Tag).performSemanticsAction(SemanticsActions.CopyText)
 
         rule.runOnIdle {
-            assertThat(state.text.selection).isEqualTo(TextRange(0, 5))
+            assertThat(state.selection).isEqualTo(TextRange(0, 5))
         }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun semantics_cut() {
         val state = TextFieldState("Hello World!", initialSelection = TextRange(0, 5))
@@ -633,12 +631,11 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
 
         rule.runOnIdle {
             assertThat(state.text.toString()).isEqualTo(" World!")
-            assertThat(state.text.selection).isEqualTo(TextRange(0))
+            assertThat(state.selection).isEqualTo(TextRange(0))
             assertThat(clipboardManager.getText()?.toString()).isEqualTo("Hello")
         }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun semantics_cut_appliesFilter() {
         val state = TextFieldState("Hello World!", initialSelection = TextRange(0, 5))
@@ -648,8 +645,8 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
                 BasicTextField(
                     state = state,
                     modifier = Modifier.testTag(Tag),
-                    inputTransformation = { _, changes ->
-                        changes.revertAllChanges()
+                    inputTransformation = {
+                        revertAllChanges()
                     }
                 )
             }
@@ -659,7 +656,7 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
 
         rule.runOnIdle {
             assertThat(state.text.toString()).isEqualTo("Hello World!")
-            assertThat(state.text.selection).isEqualTo(TextRange(0, 5))
+            assertThat(state.selection).isEqualTo(TextRange(0, 5))
             assertThat(clipboardManager.getText()?.toString()).isEqualTo("Hello")
         }
     }
@@ -737,10 +734,7 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
                 this[semanticsPropertyKey] = 2
             }
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) = Unit
+            override fun TextFieldBuffer.transformInput() = Unit
         }
         rule.setContent {
             BasicTextField(
@@ -762,10 +756,7 @@ class BasicTextFieldSemanticsTest : FocusedWindowTest {
                 this[semanticsPropertyKey] = number
             }
 
-            override fun transformInput(
-                originalValue: TextFieldCharSequence,
-                valueWithChanges: TextFieldBuffer
-            ) = Unit
+            override fun TextFieldBuffer.transformInput() = Unit
         }
         rule.setContent {
             BasicTextField(

@@ -22,6 +22,7 @@ import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
@@ -32,7 +33,7 @@ object NonInteractiveSurfaceDefaults {
     /**
      * Represents the default shape used by a non-interactive [Surface]
      */
-    val shape: Shape @ReadOnlyComposable @Composable get() = MaterialTheme.shapes.medium
+    val shape: Shape @ReadOnlyComposable @Composable get() = RectangleShape
 
     /**
      * Creates a [NonInteractiveSurfaceColors] that represents the default container & content
@@ -300,12 +301,12 @@ object ClickableSurfaceDefaults {
 }
 
 /**
- * Contains the default values used by Toggleable Surface.
+ * Contains the default values used by Selectable Surface.
  */
-object ToggleableSurfaceDefaults {
+object SelectableSurfaceDefaults {
     /**
-     * Creates a [ToggleableSurfaceShape] that represents the default container shapes used in a
-     * toggleable Surface.
+     * Creates a [SelectableSurfaceShape] that represents the default container shapes used in a
+     * selectable Surface.
      *
      * @param shape the shape used when the Surface is enabled, and has no other
      * [Interaction]s.
@@ -333,7 +334,7 @@ object ToggleableSurfaceDefaults {
         pressedSelectedShape: Shape = shape,
         selectedDisabledShape: Shape = disabledShape,
         focusedSelectedDisabledShape: Shape = disabledShape
-    ) = ToggleableSurfaceShape(
+    ) = SelectableSurfaceShape(
         shape = shape,
         focusedShape = focusedShape,
         pressedShape = pressedShape,
@@ -347,8 +348,8 @@ object ToggleableSurfaceDefaults {
     )
 
     /**
-     * Creates a [ToggleableSurfaceColors] that represents the default container & content colors
-     * used in a toggleable Surface.
+     * Creates a [SelectableSurfaceColors] that represents the default container & content colors
+     * used in a selectable Surface.
      *
      * @param containerColor the container color used when the Surface is enabled, and has no other
      * [Interaction]s.
@@ -397,7 +398,7 @@ object ToggleableSurfaceDefaults {
         focusedSelectedContentColor: Color = MaterialTheme.colorScheme.inverseOnSurface,
         pressedSelectedContainerColor: Color = focusedSelectedContainerColor,
         pressedSelectedContentColor: Color = focusedSelectedContentColor
-    ) = ToggleableSurfaceColors(
+    ) = SelectableSurfaceColors(
         containerColor = containerColor,
         contentColor = contentColor,
         focusedContainerColor = focusedContainerColor,
@@ -415,8 +416,8 @@ object ToggleableSurfaceDefaults {
     )
 
     /**
-     * Creates a [ToggleableSurfaceScale] that represents the default scales used in a
-     * toggleable Surface. scales are used to modify the size of a composable in different
+     * Creates a [SelectableSurfaceScale] that represents the default scales used in a
+     * selectable Surface. scales are used to modify the size of a composable in different
      * [Interaction] states e.g. 1f (original) in default state, 1.2f (scaled up) in focused state,
      * 0.8f (scaled down) in pressed state, etc.
      *
@@ -448,7 +449,7 @@ object ToggleableSurfaceDefaults {
         pressedSelectedScale: Float = scale,
         selectedDisabledScale: Float = disabledScale,
         focusedSelectedDisabledScale: Float = disabledScale
-    ) = ToggleableSurfaceScale(
+    ) = SelectableSurfaceScale(
         scale = scale,
         focusedScale = focusedScale,
         pressedScale = pressedScale,
@@ -462,8 +463,8 @@ object ToggleableSurfaceDefaults {
     )
 
     /**
-     * Creates a [ToggleableSurfaceBorder] that represents the default [Border]s applied on a
-     * toggleable Surface in different [Interaction] states.
+     * Creates a [SelectableSurfaceBorder] that represents the default [Border]s applied on a
+     * selectable Surface in different [Interaction] states.
      *
      * @param border the [Border] used when the Surface is enabled, and has no other
      * [Interaction]s.
@@ -492,7 +493,7 @@ object ToggleableSurfaceDefaults {
         pressedSelectedBorder: Border = border,
         selectedDisabledBorder: Border = disabledBorder,
         focusedSelectedDisabledBorder: Border = disabledBorder
-    ) = ToggleableSurfaceBorder(
+    ) = SelectableSurfaceBorder(
         border = border,
         focusedBorder = focusedBorder,
         pressedBorder = pressedBorder,
@@ -506,8 +507,8 @@ object ToggleableSurfaceDefaults {
     )
 
     /**
-     * Creates a [ToggleableSurfaceGlow] that represents the default [Glow]s used in a
-     * toggleable Surface.
+     * Creates a [SelectableSurfaceGlow] that represents the default [Glow]s used in a
+     * selectable Surface.
      *
      * @param glow the [Glow] used when the Surface is enabled, and has no other [Interaction]s.
      * @param focusedGlow the [Glow] used when the Surface is enabled and focused.
@@ -523,7 +524,7 @@ object ToggleableSurfaceDefaults {
         selectedGlow: Glow = glow,
         focusedSelectedGlow: Glow = focusedGlow,
         pressedSelectedGlow: Glow = glow
-    ) = ToggleableSurfaceGlow(
+    ) = SelectableSurfaceGlow(
         glow = glow,
         focusedGlow = focusedGlow,
         pressedGlow = pressedGlow,
@@ -537,7 +538,7 @@ object ToggleableSurfaceDefaults {
         focused: Boolean,
         pressed: Boolean,
         selected: Boolean,
-        shape: ToggleableSurfaceShape
+        shape: SelectableSurfaceShape
     ): Shape {
         return when {
             enabled && selected && pressed -> shape.pressedSelectedShape
@@ -558,7 +559,7 @@ object ToggleableSurfaceDefaults {
         focused: Boolean,
         pressed: Boolean,
         selected: Boolean,
-        colors: ToggleableSurfaceColors
+        colors: SelectableSurfaceColors
     ): Color {
         return when {
             enabled && selected && pressed -> colors.pressedSelectedContainerColor
@@ -576,7 +577,7 @@ object ToggleableSurfaceDefaults {
         focused: Boolean,
         pressed: Boolean,
         selected: Boolean,
-        colors: ToggleableSurfaceColors
+        colors: SelectableSurfaceColors
     ): Color {
         return when {
             enabled && selected && pressed -> colors.pressedSelectedContentColor
@@ -594,7 +595,7 @@ object ToggleableSurfaceDefaults {
         focused: Boolean,
         pressed: Boolean,
         selected: Boolean,
-        scale: ToggleableSurfaceScale
+        scale: SelectableSurfaceScale
     ): Float {
         return when {
             enabled && selected && pressed -> scale.pressedSelectedScale
@@ -615,7 +616,7 @@ object ToggleableSurfaceDefaults {
         focused: Boolean,
         pressed: Boolean,
         selected: Boolean,
-        border: ToggleableSurfaceBorder
+        border: SelectableSurfaceBorder
     ): Border {
         return when {
             enabled && selected && pressed -> border.pressedSelectedBorder
@@ -636,7 +637,7 @@ object ToggleableSurfaceDefaults {
         focused: Boolean,
         pressed: Boolean,
         selected: Boolean,
-        glow: ToggleableSurfaceGlow
+        glow: SelectableSurfaceGlow
     ): Glow {
         return when {
             enabled && selected && pressed -> glow.pressedSelectedGlow

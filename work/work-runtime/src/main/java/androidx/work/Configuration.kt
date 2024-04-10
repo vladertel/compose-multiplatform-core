@@ -43,6 +43,7 @@ import kotlinx.coroutines.asExecutor
  *
  * To set a custom Configuration for WorkManager, see [WorkManager.initialize].
  */
+@OptIn(ExperimentalConfigurationApi::class)
 class Configuration internal constructor(builder: Builder) {
     /**
      * The [Executor] used by [WorkManager] to execute [Worker]s.
@@ -160,6 +161,23 @@ class Configuration internal constructor(builder: Builder) {
     @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     val isUsingDefaultTaskExecutor: Boolean
 
+    /**
+     * Specifies whether WorkManager automatically set
+     * [android.app.job.JobInfo.Builder.setImportantWhileForeground] for workers that
+     * are eligible to run immediately.
+     */
+    @get:ExperimentalConfigurationApi
+    @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
+    @property:ExperimentalConfigurationApi
+    val isMarkingJobsAsImportantWhileForeground: Boolean
+
+    /**
+     * @return The [Tracer] instance that can be used by [WorkManager] to record trace spans
+     * when executing [WorkRequest]s.
+     */
+    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    val tracer: Tracer
+
     init {
         val builderWorkerDispatcher = builder.workerContext
 
@@ -198,6 +216,8 @@ class Configuration internal constructor(builder: Builder) {
         workerExecutionExceptionHandler = builder.workerExecutionExceptionHandler
         defaultProcessName = builder.defaultProcessName
         contentUriTriggerWorkersLimit = builder.contentUriTriggerWorkersLimit
+        isMarkingJobsAsImportantWhileForeground = builder.markJobsAsImportantWhileForeground
+        tracer = builder.tracer ?: createDefaultTracer()
     }
 
     /**
@@ -221,6 +241,8 @@ class Configuration internal constructor(builder: Builder) {
         internal var maxJobSchedulerId: Int = Int.MAX_VALUE
         internal var maxSchedulerLimit: Int = MIN_SCHEDULER_LIMIT
         internal var contentUriTriggerWorkersLimit: Int = DEFAULT_CONTENT_URI_TRIGGERS_WORKERS_LIMIT
+        internal var markJobsAsImportantWhileForeground: Boolean = true
+        internal var tracer: Tracer? = null
 
         /**
          * Creates a new [Configuration.Builder].
@@ -253,6 +275,10 @@ class Configuration internal constructor(builder: Builder) {
                 configuration.workerInitializationExceptionHandler
             workerExecutionExceptionHandler = configuration.workerExecutionExceptionHandler
             defaultProcessName = configuration.defaultProcessName
+            contentUriTriggerWorkersLimit = configuration.contentUriTriggerWorkersLimit
+            markJobsAsImportantWhileForeground =
+                configuration.isMarkingJobsAsImportantWhileForeground
+            tracer = configuration.tracer
         }
 
         /**
@@ -515,6 +541,34 @@ class Configuration internal constructor(builder: Builder) {
         }
 
         /**
+         * Regulates whether WorkManager should automatically set
+         * [android.app.job.JobInfo.Builder.setImportantWhileForeground] for workers that
+         * are eligible to run immediately.
+         *
+         * It will have effects only on API levels >= 23.
+         *
+         * @param markAsImportant whether to mark jobs as important
+         * @return This [Builder] instance
+         */
+        @ExperimentalConfigurationApi
+        fun setMarkingJobsAsImportantWhileForeground(markAsImportant: Boolean): Builder {
+            this.markJobsAsImportantWhileForeground = markAsImportant
+            return this
+        }
+
+        /**
+         * Specifies the [Tracer] that can be used by [WorkManager] to record trace spans.
+         *
+         * @param tracer The [Tracer] instance to be used.
+         * @return This [Builder] instance
+         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        fun setTracer(tracer: Tracer): Builder {
+            this.tracer = tracer
+            return this
+        }
+
+        /**
          * Builds a [Configuration] object.
          *
          * @return A [Configuration] object with this [Builder]'s parameters.
@@ -570,6 +624,21 @@ private fun createDefaultExecutor(isTaskExecutor: Boolean): Executor {
         max(2, min(Runtime.getRuntime().availableProcessors() - 1, 4)),
         factory
     )
+}
+
+private fun createDefaultTracer(): Tracer {
+    // Delegate to AndroidX Tracing while leaving the implementation open-ended for a pluggable
+    // implementation.
+    val tracer = object : Tracer {
+        override fun beginAsyncSection(methodName: String, cookie: Int) {
+            androidx.tracing.Trace.beginAsyncSection(methodName, cookie)
+        }
+
+        override fun endAsyncSection(methodName: String, cookie: Int) {
+            androidx.tracing.Trace.endAsyncSection(methodName, cookie)
+        }
+    }
+    return tracer
 }
 
 private fun CoroutineContext?.asExecutor(): Executor? =

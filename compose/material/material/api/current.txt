@@ -374,10 +374,16 @@ package androidx.compose.material {
   }
 
   public final class DrawerDefaults {
+    method public androidx.compose.animation.core.TweenSpec<java.lang.Float> getAnimationSpec();
+    method @androidx.compose.runtime.Composable public long getBackgroundColor();
     method public float getElevation();
     method @androidx.compose.runtime.Composable public long getScrimColor();
+    method @androidx.compose.runtime.Composable public androidx.compose.ui.graphics.Shape getShape();
+    property public final androidx.compose.animation.core.TweenSpec<java.lang.Float> AnimationSpec;
     property public final float Elevation;
+    property @androidx.compose.runtime.Composable public final long backgroundColor;
     property @androidx.compose.runtime.Composable public final long scrimColor;
+    property @androidx.compose.runtime.Composable public final androidx.compose.ui.graphics.Shape shape;
     field public static final androidx.compose.material.DrawerDefaults INSTANCE;
     field public static final float ScrimOpacity = 0.32f;
   }
@@ -879,6 +885,13 @@ package androidx.compose.material {
   public final class TabRowKt {
     method @androidx.compose.runtime.Composable @androidx.compose.ui.UiComposable public static void ScrollableTabRow(int selectedTabIndex, optional androidx.compose.ui.Modifier modifier, optional long backgroundColor, optional long contentColor, optional float edgePadding, optional kotlin.jvm.functions.Function1<? super java.util.List<androidx.compose.material.TabPosition>,kotlin.Unit> indicator, optional kotlin.jvm.functions.Function0<kotlin.Unit> divider, kotlin.jvm.functions.Function0<kotlin.Unit> tabs);
     method @androidx.compose.runtime.Composable @androidx.compose.ui.UiComposable public static void TabRow(int selectedTabIndex, optional androidx.compose.ui.Modifier modifier, optional long backgroundColor, optional long contentColor, optional kotlin.jvm.functions.Function1<? super java.util.List<androidx.compose.material.TabPosition>,kotlin.Unit> indicator, optional kotlin.jvm.functions.Function0<kotlin.Unit> divider, kotlin.jvm.functions.Function0<kotlin.Unit> tabs);
+  }
+
+  public final class TextDefaults {
+    method @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable public androidx.compose.ui.text.LinkAnnotation.Clickable Clickable(String tag, optional androidx.compose.ui.text.SpanStyle? linkStyle, optional androidx.compose.ui.text.SpanStyle? linkFocusedStyle, optional androidx.compose.ui.text.SpanStyle? linkHoveredStyle, androidx.compose.ui.text.LinkInteractionListener? linkInteractionListener);
+    method @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable public androidx.compose.ui.text.LinkAnnotation.Url Url(String url, optional androidx.compose.ui.text.SpanStyle? linkStyle, optional androidx.compose.ui.text.SpanStyle? linkFocusedStyle, optional androidx.compose.ui.text.SpanStyle? linkHoveredStyle, optional androidx.compose.ui.text.LinkInteractionListener? linkInteractionListener);
+    method @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable public androidx.compose.ui.text.AnnotatedString fromHtml(String htmlString, optional androidx.compose.ui.text.SpanStyle? linkStyle, optional androidx.compose.ui.text.SpanStyle? linkFocusedStyle, optional androidx.compose.ui.text.SpanStyle? linkHoveredStyle, optional androidx.compose.ui.text.LinkInteractionListener? linkInteractionListener);
+    field public static final androidx.compose.material.TextDefaults INSTANCE;
   }
 
   @androidx.compose.runtime.Stable public interface TextFieldColors {

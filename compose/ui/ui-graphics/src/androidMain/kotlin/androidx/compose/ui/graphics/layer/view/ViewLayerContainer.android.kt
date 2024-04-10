@@ -16,9 +16,12 @@
 
 package androidx.compose.ui.graphics.layer.view;
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Rect
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewParent
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.R
 import androidx.compose.ui.graphics.layer.ViewLayer
@@ -52,7 +55,7 @@ internal open class DrawChildContainer(context: Context) : ViewGroup(context) {
         clipToPadding = false
 
         // Hide this view and its children in tools:
-        setTag(R.id.hide_in_inspector_tag, true)
+        setTag(R.id.hide_graphics_layer_in_inspector_tag, true)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
@@ -62,6 +65,23 @@ internal open class DrawChildContainer(context: Context) : ViewGroup(context) {
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         // we don't measure our children
         setMeasuredDimension(0, 0)
+    }
+
+    /**
+     * We control our own child Views and we don't want the View system to inadvertently
+     * re-layout the hierarchy.
+     */
+    @SuppressLint("MissingSuperCall")
+    override fun requestLayout() {
+        // NO-OP
+    }
+
+    override fun forceLayout() {
+        // NO-OP
+    }
+
+    override fun invalidateChildInParent(location: IntArray?, dirty: Rect?): ViewParent? {
+        return null
     }
 
     override fun dispatchDraw(canvas: android.graphics.Canvas) {

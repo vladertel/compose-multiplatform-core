@@ -39,7 +39,6 @@ import androidx.compose.material3.samples.BottomSheetScaffoldNestedScrollSample
 import androidx.compose.material3.samples.ButtonSample
 import androidx.compose.material3.samples.ButtonWithIconSample
 import androidx.compose.material3.samples.CardSample
-import androidx.compose.material3.samples.CarouselSample
 import androidx.compose.material3.samples.CheckboxSample
 import androidx.compose.material3.samples.CheckboxWithTextSample
 import androidx.compose.material3.samples.ChipGroupReflowSample
@@ -68,6 +67,7 @@ import androidx.compose.material3.samples.ExitUntilCollapsedMediumTopAppBar
 import androidx.compose.material3.samples.ExposedDropdownMenuSample
 import androidx.compose.material3.samples.ExtendedFloatingActionButtonSample
 import androidx.compose.material3.samples.ExtendedFloatingActionButtonTextSample
+import androidx.compose.material3.samples.FadingHorizontalMultiBrowseCarouselSample
 import androidx.compose.material3.samples.FancyIndicatorContainerTabs
 import androidx.compose.material3.samples.FancyIndicatorTabs
 import androidx.compose.material3.samples.FancyTabs
@@ -79,6 +79,8 @@ import androidx.compose.material3.samples.FilledTonalIconToggleButtonSample
 import androidx.compose.material3.samples.FilterChipSample
 import androidx.compose.material3.samples.FilterChipWithLeadingIconSample
 import androidx.compose.material3.samples.FloatingActionButtonSample
+import androidx.compose.material3.samples.HorizontalMultiBrowseCarouselSample
+import androidx.compose.material3.samples.HorizontalUncontainedCarouselSample
 import androidx.compose.material3.samples.IconButtonSample
 import androidx.compose.material3.samples.IconToggleButtonSample
 import androidx.compose.material3.samples.IndeterminateCircularProgressIndicatorSample
@@ -87,12 +89,6 @@ import androidx.compose.material3.samples.InputChipSample
 import androidx.compose.material3.samples.InputChipWithAvatarSample
 import androidx.compose.material3.samples.LargeFloatingActionButtonSample
 import androidx.compose.material3.samples.LeadingIconTabs
-import androidx.compose.material3.samples.LegacyCircularProgressIndicatorSample
-import androidx.compose.material3.samples.LegacyIndeterminateCircularProgressIndicatorSample
-import androidx.compose.material3.samples.LegacyIndeterminateLinearProgressIndicatorSample
-import androidx.compose.material3.samples.LegacyLinearProgressIndicatorSample
-import androidx.compose.material3.samples.LegacyRangeSliderSample
-import androidx.compose.material3.samples.LegacySliderSample
 import androidx.compose.material3.samples.LinearProgressIndicatorSample
 import androidx.compose.material3.samples.MenuSample
 import androidx.compose.material3.samples.MenuWithScrollStateSample
@@ -173,6 +169,7 @@ import androidx.compose.material3.samples.ThreeLineListItemWithOverlineAndSuppor
 import androidx.compose.material3.samples.TimeInputSample
 import androidx.compose.material3.samples.TimePickerSample
 import androidx.compose.material3.samples.TimePickerSwitchableSample
+import androidx.compose.material3.samples.TintedIconButtonSample
 import androidx.compose.material3.samples.TriStateCheckboxSample
 import androidx.compose.material3.samples.TwoLineListItem
 import androidx.compose.runtime.Composable
@@ -326,11 +323,25 @@ private const val CarouselExampleDescription = "Carousel examples"
 private const val CarouselExampleSourceUrl = "$SampleSourceUrl/CarouselSamples.kt"
 val CarouselExamples = listOf(
     Example(
-        name = ::CarouselSample.name,
+        name = ::HorizontalMultiBrowseCarouselSample.name,
         description = CarouselExampleDescription,
         sourceUrl = CarouselExampleSourceUrl
     ) {
-        CarouselSample()
+        HorizontalMultiBrowseCarouselSample()
+    },
+    Example(
+        name = ::HorizontalUncontainedCarouselSample.name,
+        description = CarouselExampleDescription,
+        sourceUrl = CarouselExampleSourceUrl
+    ) {
+        HorizontalUncontainedCarouselSample()
+    },
+    Example(
+        name = ::FadingHorizontalMultiBrowseCarouselSample.name,
+        description = CarouselExampleDescription,
+        sourceUrl = CarouselExampleSourceUrl
+    ) {
+        FadingHorizontalMultiBrowseCarouselSample()
     }
 )
 
@@ -645,6 +656,11 @@ val IconButtonExamples =
             sourceUrl = IconButtonExampleSourceUrl,
         ) { IconButtonSample() },
         Example(
+            name = ::TintedIconButtonSample.name,
+            description = IconButtonExampleDescription,
+            sourceUrl = IconButtonExampleSourceUrl,
+        ) { TintedIconButtonSample() },
+        Example(
             name = ::IconToggleButtonSample.name,
             description = IconButtonExampleDescription,
             sourceUrl = IconButtonExampleSourceUrl,
@@ -825,34 +841,6 @@ val ProgressIndicatorsExamples = listOf(
         sourceUrl = ProgressIndicatorsExampleSourceUrl
     ) {
         IndeterminateCircularProgressIndicatorSample()
-    },
-    Example(
-        name = ::LegacyLinearProgressIndicatorSample.name,
-        description = ProgressIndicatorsExampleDescription,
-        sourceUrl = ProgressIndicatorsExampleSourceUrl
-    ) {
-        LegacyLinearProgressIndicatorSample()
-    },
-    Example(
-        name = ::LegacyIndeterminateLinearProgressIndicatorSample.name,
-        description = ProgressIndicatorsExampleDescription,
-        sourceUrl = ProgressIndicatorsExampleSourceUrl
-    ) {
-        LegacyIndeterminateLinearProgressIndicatorSample()
-    },
-    Example(
-        name = ::LegacyCircularProgressIndicatorSample.name,
-        description = ProgressIndicatorsExampleDescription,
-        sourceUrl = ProgressIndicatorsExampleSourceUrl
-    ) {
-        LegacyCircularProgressIndicatorSample()
-    },
-    Example(
-        name = ::LegacyIndeterminateCircularProgressIndicatorSample.name,
-        description = ProgressIndicatorsExampleDescription,
-        sourceUrl = ProgressIndicatorsExampleSourceUrl
-    ) {
-        LegacyIndeterminateCircularProgressIndicatorSample()
     }
 )
 
@@ -943,13 +931,6 @@ private const val SlidersExampleDescription = "Sliders examples"
 private const val SlidersExampleSourceUrl = "$SampleSourceUrl/SliderSamples.kt"
 val SlidersExamples = listOf(
     Example(
-        name = ::LegacySliderSample.name,
-        description = SlidersExampleDescription,
-        sourceUrl = SlidersExampleSourceUrl
-    ) {
-        LegacySliderSample()
-    },
-    Example(
         name = ::SliderSample.name,
         description = SlidersExampleDescription,
         sourceUrl = SlidersExampleSourceUrl
@@ -976,13 +957,6 @@ val SlidersExamples = listOf(
         sourceUrl = SlidersExampleSourceUrl
     ) {
         SliderWithCustomTrackAndThumb()
-    },
-    Example(
-        name = ::LegacyRangeSliderSample.name,
-        description = SlidersExampleDescription,
-        sourceUrl = SlidersExampleSourceUrl
-    ) {
-        LegacyRangeSliderSample()
     },
     Example(
         name = ::RangeSliderSample.name,

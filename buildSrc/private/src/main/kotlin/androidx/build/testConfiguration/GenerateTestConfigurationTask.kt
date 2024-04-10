@@ -93,9 +93,9 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
 
     @get:Internal abstract val testLoader: Property<BuiltArtifactsLoader>
 
-    @get:Input abstract val testProjectPath: Property<String>
-
     @get:Input abstract val minSdk: Property<Int>
+
+    @get:Input abstract val macrobenchmark: Property<Boolean>
 
     @get:Input abstract val hasBenchmarkPlugin: Property<Boolean>
 
@@ -192,10 +192,15 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
                 // they run with dryRunMode to check crashes don't happen, without measurement
                 configBuilder.tag("androidx_unit_tests")
             }
-        } else if (testProjectPath.get().endsWith("macrobenchmark")) {
+        } else if (macrobenchmark.get()) {
             // macro benchmarks do not have a dryRunMode, so we don't run them in presubmit
             configBuilder.isMacrobenchmark(true)
             configBuilder.tag("macrobenchmarks")
+            if (additionalTags.get().contains("wear")) {
+                // Wear macrobenchmarks are tagged separately to enable running on wear in CI
+                // standard macrobenchmarks don't currently run well on wear (b/189952249)
+                configBuilder.tag("wear-macrobenchmarks")
+            }
         } else {
             configBuilder.tag("androidx_unit_tests")
         }

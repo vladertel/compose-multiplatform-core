@@ -266,6 +266,31 @@ class SliderScreenshotTest {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Test
+    fun sliderTest_middle_steps_custom_ticks() {
+        rule.setMaterialContent(lightColorScheme()) {
+            Box(wrap.testTag(wrapperTestTag)) {
+                Slider(
+                    state = remember { SliderState(0.5f, steps = 5) },
+                    track = {
+                        SliderDefaults.Track(
+                            sliderState = it,
+                            drawTick = { offset, _ ->
+                                drawCircle(
+                                    color = Color.Red,
+                                    center = offset,
+                                    radius = SliderDefaults.TickSize.toPx() / 4
+                                )
+                            }
+                        )
+                    }
+                )
+            }
+        }
+        assertSliderAgainstGolden("sliderTest_middle_steps_custom_ticks")
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
     fun sliderTest_customColors() {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
@@ -277,7 +302,6 @@ class SliderScreenshotTest {
                         activeTickColor = Color.Yellow,
                         inactiveTickColor = Color.Magenta
                     )
-
                 )
             }
         }
@@ -301,11 +325,23 @@ class SliderScreenshotTest {
                         disabledActiveTickColor = Color.Magenta,
                         disabledInactiveTickColor = Color.Cyan
                     )
-
                 )
             }
         }
         assertSliderAgainstGolden("slider_customColors_disabled")
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun sliderTest_min_corner() {
+        rule.setMaterialContent(lightColorScheme()) {
+            Box(wrap.testTag(wrapperTestTag)) {
+                Slider(
+                    remember { SliderState(0.91f) }
+                )
+            }
+        }
+        assertSliderAgainstGolden("slider_min_corner")
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -478,7 +514,38 @@ class SliderScreenshotTest {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Test
-    fun rangeSliderTest_overlapingThumbs() {
+    fun rangeSliderTest_middle_steps_custom_ticks() {
+        rule.setMaterialContent(lightColorScheme()) {
+            Box(wrap.testTag(wrapperTestTag)) {
+                RangeSlider(
+                    state = remember {
+                        RangeSliderState(
+                            0.5f,
+                            1f,
+                            steps = 5
+                        )
+                    },
+                    track = {
+                        SliderDefaults.Track(
+                            rangeSliderState = it,
+                            drawTick = { offset, _ ->
+                                drawCircle(
+                                    color = Color.Red,
+                                    center = offset,
+                                    radius = SliderDefaults.TickSize.toPx() / 4
+                                )
+                            }
+                        )
+                    }
+                )
+            }
+        }
+        assertSliderAgainstGolden("rangeSliderTest_middle_steps_custom_ticks")
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Test
+    fun rangeSliderTest_overlappingThumbs() {
         rule.setMaterialContent(lightColorScheme()) {
             Box(wrap.testTag(wrapperTestTag)) {
                 RangeSlider(
@@ -488,7 +555,7 @@ class SliderScreenshotTest {
                 )
             }
         }
-        assertSliderAgainstGolden("rangeSlider_overlapingThumbs")
+        assertSliderAgainstGolden("rangeSlider_overlappingThumbs")
     }
 
     @OptIn(ExperimentalMaterial3Api::class)

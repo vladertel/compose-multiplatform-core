@@ -52,7 +52,7 @@ sealed class Metric {
      * TODO: takes package for package level filtering, but probably want a
      *  general config object coming into [start].
      */
-    internal abstract fun getResult(
+    internal abstract fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement>
@@ -137,7 +137,18 @@ private fun Long.nsToDoubleMs(): Double = this / 1_000_000.0
  * how much faster than the deadline a frame was.
  *
  * * `frameDurationCpuMs` - How much time the frame took to be produced on the CPU - on both the UI
- * Thread, and RenderThread.
+ * Thread, and RenderThread. Note that this doesn't account for time before the frame started
+ * (before Choreographer#doFrame), as that data isn't available in traces prior to API 31.
+ *
+ * * `frameCount` - How many total frames were produced. This is a secondary metric which can be
+ * used to understand *why* the above metrics changed. For example, when removing unneeded frames
+ * that were incorrectly invalidated to save power, `frameOverrunMs` and `frameDurationCpuMs` will
+ * often get worse, as the removed frames were trivial. Checking `frameCount` can be a useful
+ * indicator in such cases.
+ *
+ * Generally, prefer tracking and detecting regressions with `frameOverrunMs` when it is available,
+ * as it is the more complete data, and accounts for modern devices (including higher, variable
+ * framerate rendering) more naturally.
  */
 @Suppress("CanSealedSubClassBeObject")
 class FrameTimingMetric : Metric() {
@@ -145,15 +156,16 @@ class FrameTimingMetric : Metric() {
     override fun start() {}
     override fun stop() {}
 
-    override fun getResult(
+    override fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement> {
-        return FrameTimingQuery.getFrameData(
+        val frameData = FrameTimingQuery.getFrameData(
             session = traceSession,
             captureApiLevel = captureInfo.apiLevel,
             packageName = captureInfo.targetPackageName
         )
+        return frameData
             .getFrameSubMetrics(captureInfo.apiLevel)
             .filterKeys { it == SubMetric.FrameDurationCpuNs || it == SubMetric.FrameOverrunNs }
             .map {
@@ -165,7 +177,7 @@ class FrameTimingMetric : Metric() {
                     },
                     dataSamples = it.value.map { timeNs -> timeNs.nsToDoubleMs() }
                 )
-            }
+            } + listOf(Measurement("frameCount", frameData.size.toDouble()))
     }
 }
 
@@ -260,7 +272,7 @@ class FrameTimingGfxInfoMetric : Metric() {
         "gfxFrameJankPercent",
     )
 
-    override fun getResult(
+    override fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement> {
@@ -303,7 +315,7 @@ class StartupTimingMetric : Metric() {
     override fun stop() {
     }
 
-    override fun getResult(
+    override fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement> {
@@ -343,7 +355,7 @@ class StartupTimingLegacyMetric : Metric() {
     override fun stop() {
     }
 
-    override fun getResult(
+    override fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement> {
@@ -386,10 +398,10 @@ class StartupTimingLegacyMetric : Metric() {
  * package:
  * ```
  * class ActivityResumeMetric : TraceMetric() {
- *     override fun getResult(
+ *     override fun getMeasurements(
  *         captureInfo: CaptureInfo,
  *         traceSession: PerfettoTraceProcessor.Session
- *     ): Result {
+ *     ): List<Measurement> {
  *         val rowSequence = traceSession.query(
  *             """
  *             SELECT
@@ -409,9 +421,9 @@ class StartupTimingLegacyMetric : Metric() {
  *         // to capture timing of every component of activity lifecycle
  *         val activityResultNs = rowSequence.firstOrNull()?.double("dur")
  *         return if (activityResultMs != null) {
- *             Result("activityResumeMs", activityResultNs / 1_000_000.0)
+ *             listOf(Measurement("activityResumeMs", activityResultNs / 1_000_000.0))
  *         } else {
- *             Result()
+ *             emptyList()
  *         }
  *     }
  * }
@@ -435,7 +447,7 @@ abstract class TraceMetric : Metric() {
     /**
      * Get the metric result for a given iteration given information about the target process and a TraceProcessor session
      */
-    public abstract override fun getResult(
+    public abstract override fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement>
@@ -448,12 +460,22 @@ abstract class TraceMetric : Metric() {
  * Select how matching sections are resolved into a duration metric with [mode], and configure if
  * sections outside the target process are included with [targetPackageOnly].
  *
+ * The following TraceSectionMetric counts the number of JIT method compilations that occur within a
+ * trace:
+ *
+ * ```
+ * TraceSectionMetric(
+ *     sectionName = "JIT Compiling %",
+ *     mode = TraceSectionMetric.Mode.Sum
+ * )
+ * ```
+ *
  * @see androidx.tracing.Trace.beginSection
  * @see androidx.tracing.Trace.endSection
  * @see androidx.tracing.trace
  */
 @ExperimentalMetricApi
-class TraceSectionMetric(
+class TraceSectionMetric @JvmOverloads constructor(
     /**
      * Section name or pattern to match.
      *
@@ -463,35 +485,35 @@ class TraceSectionMetric(
      */
     private val sectionName: String,
     /**
-     * Metric label, defaults to [sectionName].
-     */
-    private val label: String = sectionName,
-    /**
      * Defines how slices matching [sectionName] should be confirmed to metrics, by default uses
      * [Mode.Sum] to count and sum durations of all matching trace sections.
      */
     private val mode: Mode = Mode.Sum,
     /**
+     * Metric label, defaults to [sectionName].
+     */
+    private val label: String = sectionName,
+    /**
      * Filter results to trace sections only from the target process, defaults to true.
      */
     private val targetPackageOnly: Boolean = true
 ) : Metric() {
-    enum class Mode {
+    sealed class Mode(internal val name: String) {
         /**
          * Captures the duration of the first instance of `sectionName` in the trace.
          *
          * When this mode is used, no measurement will be reported if the named section does
          * not appear in the trace.
          */
-        First,
+        object First : Mode("First")
 
         /**
          * Captures the sum of all instances of `sectionName` in the trace.
          *
          * When this mode is used, a measurement of `0` will be reported if the named section
-         * does not appear in the trace
+         * does not appear in the trace.
          */
-        Sum,
+        object Sum : Mode("Sum")
 
         /**
          * Reports the maximum observed duration for a trace section matching `sectionName` in the
@@ -500,7 +522,7 @@ class TraceSectionMetric(
          * When this mode is used, no measurement will be reported if the named section does
          * not appear in the trace.
          */
-        Min,
+        object Min : Mode("Min")
 
         /**
          * Reports the maximum observed duration for a trace section matching `sectionName` in the
@@ -509,7 +531,24 @@ class TraceSectionMetric(
          * When this mode is used, no measurement will be reported if the named section does
          * not appear in the trace.
          */
-        Max,
+        object Max : Mode("Max")
+
+        /**
+         * Counts the number of observed instances of a trace section matching `sectionName` in the
+         * trace.
+         *
+         * When this mode is used, a measurement of `0` will be reported if the named section
+         * does not appear in the trace.
+         */
+        object Count : Mode("Count")
+
+        /**
+         * Average duration of trace sections matching `sectionName` in the trace.
+         *
+         * When this mode is used, a measurement of `0` will be reported if the named section
+         * does not appear in the trace.
+         */
+        object Average : Mode("Average")
     }
 
     override fun configure(packageName: String) {
@@ -521,7 +560,7 @@ class TraceSectionMetric(
     override fun stop() {
     }
 
-    override fun getResult(
+    override fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement> {
@@ -572,6 +611,22 @@ class TraceSectionMetric(
                     Measurement(
                         name = label + "MaxMs",
                         data = slices.maxOf { it.dur } / 1_000_000.0
+                    )
+                )
+            }
+            Mode.Count -> {
+                listOf(
+                    Measurement(
+                        name = label + "Count",
+                        data = slices.size.toDouble()
+                    )
+                )
+            }
+            Mode.Average -> {
+                listOf(
+                    Measurement(
+                        name = label + "AverageMs",
+                        data = slices.sumOf { it.dur } / 1_000_000.0 / slices.size
                     )
                 )
             }
@@ -700,7 +755,7 @@ class PowerMetric(
         }
     }
 
-    override fun getResult(
+    override fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement> {
@@ -860,7 +915,7 @@ class MemoryUsageMetric(
         Gpu("GPU Memory", alreadyInKb = false)
     }
 
-    override fun getResult(
+    override fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement> {
@@ -885,7 +940,7 @@ class MemoryUsageMetric(
  */
 @ExperimentalMetricApi
 class MemoryCountersMetric : TraceMetric() {
-    override fun getResult(
+    override fun getMeasurements(
         captureInfo: CaptureInfo,
         traceSession: PerfettoTraceProcessor.Session
     ): List<Measurement> {

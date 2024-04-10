@@ -1335,73 +1335,72 @@ public final class ModifiersBuilders {
 
         /**
          * Gets the horizontal offset of this element relative to the location where the element's
-         * layout placed it. If not set, defaults to zero.
+         * layout placed it.
          */
-        @Nullable
+        @NonNull
         public DpProp getTranslationX() {
             if (mImpl.hasTranslationX()) {
                 return DpProp.fromProto(mImpl.getTranslationX());
             } else {
-                return null;
+                return new DpProp.Builder(0f).build();
             }
         }
 
         /**
          * Gets the vertical offset of this element in addition to the location where the element's
-         * layout placed it. If not set, defaults to zero.
+         * layout placed it.
          */
-        @Nullable
+        @NonNull
         public DpProp getTranslationY() {
             if (mImpl.hasTranslationY()) {
                 return DpProp.fromProto(mImpl.getTranslationY());
             } else {
-                return null;
+                return new DpProp.Builder(0f).build();
             }
         }
 
 
         /**
          * Gets the scale of this element in the x direction around the pivot point, as a proportion
-         * of the element's unscaled width. If not set, defaults to one.
+         * of the element's unscaled width.
          */
-        @Nullable
+        @NonNull
         public FloatProp getScaleX() {
             if (mImpl.hasScaleX()) {
                 return FloatProp.fromProto(mImpl.getScaleX());
             } else {
-                return null;
+                return new FloatProp.Builder(1f).build();
             }
         }
 
         /**
          * Gets the scale of this element in the y direction around the pivot point, as a proportion
-         * of the element's unscaled height. If not set, defaults to one.
+         * of the element's unscaled height.
          */
-        @Nullable
+        @NonNull
         public FloatProp getScaleY() {
             if (mImpl.hasScaleY()) {
                 return FloatProp.fromProto(mImpl.getScaleY());
             } else {
-                return null;
+                return new FloatProp.Builder(1f).build();
             }
         }
 
         /**
-         * Gets the clockwise Degrees that the element is rotated around the pivot point. If not
-         * set, defaults to zero.
+         * Gets the clockwise Degrees that the element is rotated around the pivot point.
          */
-        @Nullable
+        @NonNull
         public DegreesProp getRotation() {
             if (mImpl.hasRotation()) {
                 return DegreesProp.fromProto(mImpl.getRotation());
             } else {
-                return null;
+                return new DegreesProp.Builder(0f).build();
             }
         }
 
         /**
          * Sets the x offset of the point around which the element is rotated and scaled.
-         * Dynamic value is supported. If not set, defaults to the element center.
+         * Dynamic value is supported.
          */
         @Nullable
         public PivotDimension getPivotX() {
@@ -1414,7 +1413,7 @@ public final class ModifiersBuilders {
 
         /**
          * Gets the y offset of the point around which the element is rotated and scaled.
-         * Dynamic value is supported. If not set, defaults to the element center.
+         * Dynamic value is supported.
          */
         @Nullable
         public PivotDimension getPivotY() {

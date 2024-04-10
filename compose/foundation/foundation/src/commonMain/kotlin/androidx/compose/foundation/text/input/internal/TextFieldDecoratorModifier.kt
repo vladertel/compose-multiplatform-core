@@ -23,16 +23,16 @@ import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
 import androidx.compose.foundation.content.internal.dragAndDropRequestPermission
 import androidx.compose.foundation.content.internal.getReceiveContentConfiguration
 import androidx.compose.foundation.content.readPlainText
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.HoverInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.KeyboardActionScope
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.handwriting.detectStylusHandwriting
+import androidx.compose.foundation.text.handwriting.isStylusHandwritingSupported
 import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.internal.selection.TextFieldSelectionState
 import androidx.compose.foundation.text.input.internal.selection.TextToolbarState
 import androidx.compose.ui.focus.FocusDirection
@@ -45,9 +45,6 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyInputModifierNode
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.PointerInputScope
-import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.modifier.ModifierLocalModifierNode
@@ -65,7 +62,6 @@ import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.PlatformTextInputModifierNode
 import androidx.compose.ui.platform.PlatformTextInputSession
@@ -91,10 +87,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.util.fastFirstOrNull
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -125,7 +118,7 @@ internal data class TextFieldDecoratorModifier(
     private val enabled: Boolean,
     private val readOnly: Boolean,
     private val keyboardOptions: KeyboardOptions,
-    private val keyboardActions: KeyboardActions,
+    private val keyboardActionHandler: KeyboardActionHandler?,
     private val singleLine: Boolean,
     private val interactionSource: MutableInteractionSource
 ) : ModifierNodeElement<TextFieldDecoratorModifierNode>() {
@@ -137,7 +130,7 @@ internal data class TextFieldDecoratorModifier(
         enabled = enabled,
         readOnly = readOnly,
         keyboardOptions = keyboardOptions,
-        keyboardActions = keyboardActions,
+        keyboardActionHandler = keyboardActionHandler,
         singleLine = singleLine,
         interactionSource = interactionSource,
     )
@@ -151,7 +144,7 @@ internal data class TextFieldDecoratorModifier(
             enabled = enabled,
             readOnly = readOnly,
             keyboardOptions = keyboardOptions,
-            keyboardActions = keyboardActions,
+            keyboardActionHandler = keyboardActionHandler,
             singleLine = singleLine,
             interactionSource = interactionSource,
         )
@@ -172,7 +165,7 @@ internal class TextFieldDecoratorModifierNode(
     var enabled: Boolean,
     var readOnly: Boolean,
     keyboardOptions: KeyboardOptions,
-    var keyboardActions: KeyboardActions,
+    var keyboardActionHandler: KeyboardActionHandler?,
     var singleLine: Boolean,
     var interactionSource: MutableInteractionSource
 ) : DelegatingNode(),
@@ -189,15 +182,17 @@ internal class TextFieldDecoratorModifierNode(
     LayoutAwareModifierNode {
 
     private val editable get() = enabled && !readOnly
-    private var _stylusHandwritingTrigger: MutableSharedFlow<Unit>? = null
-    private val stylusHandwritingTrigger: MutableSharedFlow<Unit>
+
+    private var backingStylusHandwritingTrigger: MutableSharedFlow<Unit>? = null
+    private val stylusHandwritingTrigger: MutableSharedFlow<Unit>?
         get() {
-            val handwritingTrigger = _stylusHandwritingTrigger
-            if (handwritingTrigger != null) return handwritingTrigger
+            val finalStylusHandwritingTrigger = backingStylusHandwritingTrigger
+            if (finalStylusHandwritingTrigger != null) return finalStylusHandwritingTrigger
+            if (!isStylusHandwritingSupported) return null
             return MutableSharedFlow<Unit>(
                 replay = 1,
                 onBufferOverflow = BufferOverflow.DROP_LATEST
-            ).also { _stylusHandwritingTrigger = it }
+            ).also { backingStylusHandwritingTrigger = it }
         }
 
     private val pointerInputNode = delegate(SuspendingPointerInputModifierNode {
@@ -228,79 +223,34 @@ internal class TextFieldDecoratorModifierNode(
                     detectTextFieldLongPressAndAfterDrag(requestFocus)
                 }
             }
-            launch(start = CoroutineStart.UNDISPATCHED) {
-                detectStylusHandwriting()
+            // Note: when editable changes (enabled or readOnly changes), this pointerInputModifier
+            // is reset. And we don't need to worry about cancel or launch the stylus handwriting
+            // detecting job.
+            if (isStylusHandwritingSupported && editable) {
+                 launch(start = CoroutineStart.UNDISPATCHED) {
+                    detectStylusHandwriting {
+                        if (!isFocused) {
+                            requestFocus()
+                        }
+
+                        // Send the handwriting start signal to platform.
+                        // The editor should send the signal when it is focused or is about
+                        // to gain focus, Here are more details:
+                        //   1) if the editor already has an active input session, the
+                        //   platform handwriting service should already listen to this flow
+                        //   and it'll start handwriting right away.
+                        //
+                        //   2) if the editor is not focused, but it'll be focused and
+                        //   create a new input session, one handwriting signal will be
+                        //   replayed when the platform collect this flow. And the platform
+                        //   should trigger handwriting accordingly.
+                        stylusHandwritingTrigger?.tryEmit(Unit)
+                        return@detectStylusHandwriting true
+                    }
+                }
             }
         }
     })
-
-    private suspend fun PointerInputScope.detectStylusHandwriting() {
-        awaitEachGesture {
-            val firstDown =
-                awaitFirstDown(requireUnconsumed = true, pass = PointerEventPass.Initial)
-
-            val isStylus =
-                firstDown.type == PointerType.Stylus || firstDown.type == PointerType.Eraser
-            if (!editable || !isStylus) {
-                return@awaitEachGesture
-            }
-
-            val viewConfiguration = currentValueOf(LocalViewConfiguration)
-
-            // Await the touch slop before long press timeout.
-            var exceedsTouchSlop: PointerInputChange? = null
-            // The stylus move must exceeds touch slop before long press timeout.
-            while (true) {
-                val pointerEvent = awaitPointerEvent(pass = PointerEventPass.Main)
-                // The tracked pointer is consumed or lifted, stop tracking.
-                val change = pointerEvent.changes.fastFirstOrNull {
-                    !it.isConsumed && it.id == firstDown.id && it.pressed
-                }
-                if (change == null) {
-                    break
-                }
-
-                val time = change.uptimeMillis - firstDown.uptimeMillis
-                if (time >= viewConfiguration.longPressTimeoutMillis) {
-                    break
-                }
-
-                val offset = change.position - firstDown.position
-                if (offset.getDistance() > viewConfiguration.handwritingSlop) {
-                    exceedsTouchSlop = change
-                    break
-                }
-            }
-
-            if (exceedsTouchSlop == null) return@awaitEachGesture
-
-            exceedsTouchSlop.consume()
-
-            if (!isFocused) {
-                requestFocus()
-            }
-
-            // Send the handwriting start signal to platform.
-            // The editor should send the signal when it is focused or is about to gain focused,
-            // Here are more details:
-            //   1) if the editor already has an active input session, the platform handwriting
-            //   service should already listen to this flow and it'll start handwriting right away.
-            //
-            //   2) if the editor is not focused, but it'll be focused and create a new input
-            //   session, one handwriting signal will be replayed when the platform collect this
-            //   flow. And the platform should trigger handwriting accordingly.
-            stylusHandwritingTrigger.tryEmit(Unit)
-
-            // Consume the remaining changes of this pointer.
-            while (true) {
-                val pointerEvent = awaitPointerEvent(pass = PointerEventPass.Initial)
-                val pointerChange = pointerEvent.changes.fastFirstOrNull {
-                    !it.isConsumed && it.id == firstDown.id && it.pressed
-                } ?: return@awaitEachGesture
-                pointerChange.consume()
-            }
-        }
-    }
 
     /**
      * The last enter event that was submitted to [interactionSource] from [dragAndDropNode]. We
@@ -323,8 +273,8 @@ internal class TextFieldDecoratorModifierNode(
         textFieldDragAndDropNode(
             hintMediaTypes = {
                 val receiveContentConfiguration = getReceiveContentConfiguration()
-                // if receiveContent configuration is set, all drag operations should be
-                // accepted. ReceiveContent handler should evaluate the incoming content.
+                // if ReceiveContentConfiguration is set, all drag events should be accepted.
+                // ContentReceiver handler should evaluate the incoming content.
                 if (receiveContentConfiguration != null) {
                     MediaTypesAll
                 } else {
@@ -387,7 +337,8 @@ internal class TextFieldDecoratorModifierNode(
             })
     )
 
-    var keyboardOptions: KeyboardOptions = keyboardOptions.withDefaultsFrom(filter?.keyboardOptions)
+    var keyboardOptions: KeyboardOptions =
+        keyboardOptions.fillUnspecifiedValuesWith(filter?.keyboardOptions)
         private set
 
     /**
@@ -424,25 +375,9 @@ internal class TextFieldDecoratorModifierNode(
                 ImeAction.Done -> {
                     requireKeyboardController().hide()
                 }
-                ImeAction.Go, ImeAction.Search, ImeAction.Send,
-                ImeAction.Default, ImeAction.None -> Unit
+                else -> Unit
             }
         }
-    }
-
-    private val onImeActionPerformed: (ImeAction) -> Unit = { imeAction ->
-        val keyboardAction = when (imeAction) {
-            ImeAction.Done -> keyboardActions.onDone
-            ImeAction.Go -> keyboardActions.onGo
-            ImeAction.Next -> keyboardActions.onNext
-            ImeAction.Previous -> keyboardActions.onPrevious
-            ImeAction.Search -> keyboardActions.onSearch
-            ImeAction.Send -> keyboardActions.onSend
-            ImeAction.Default, ImeAction.None -> null
-            else -> error("invalid ImeAction")
-        }
-        keyboardAction?.invoke(keyboardActionScope)
-            ?: keyboardActionScope.defaultKeyboardAction(imeAction)
     }
 
     /**
@@ -466,7 +401,7 @@ internal class TextFieldDecoratorModifierNode(
         enabled: Boolean,
         readOnly: Boolean,
         keyboardOptions: KeyboardOptions,
-        keyboardActions: KeyboardActions,
+        keyboardActionHandler: KeyboardActionHandler?,
         singleLine: Boolean,
         interactionSource: MutableInteractionSource
     ) {
@@ -488,8 +423,8 @@ internal class TextFieldDecoratorModifierNode(
         this.filter = filter
         this.enabled = enabled
         this.readOnly = readOnly
-        this.keyboardOptions = keyboardOptions.withDefaultsFrom(filter?.keyboardOptions)
-        this.keyboardActions = keyboardActions
+        this.keyboardOptions = keyboardOptions.fillUnspecifiedValuesWith(filter?.keyboardOptions)
+        this.keyboardActionHandler = keyboardActionHandler
         this.singleLine = singleLine
         this.interactionSource = interactionSource
 
@@ -596,8 +531,10 @@ internal class TextFieldDecoratorModifierNode(
             textFieldState.replaceSelectedText(newText, clearComposition = true)
             true
         }
-        onImeAction(keyboardOptions.imeAction) {
-            onImeActionPerformed(keyboardOptions.imeAction)
+
+        val effectiveImeAction = keyboardOptions.imeActionOrDefault
+        onImeAction(effectiveImeAction) {
+            onImeActionPerformed(effectiveImeAction)
             true
         }
         onClick {
@@ -684,9 +621,11 @@ internal class TextFieldDecoratorModifierNode(
         // because the resize happens after the text state change, and the resize moves the cursor
         // under the keyboard. This also covers the case where the field shrinks while focused.
         val selection = textFieldState.visualText.selection
+        val layoutResult = textLayoutState.layoutResult ?: return
         if (selection.collapsed) {
             coroutineScope.launch {
-                textLayoutState.bringCursorIntoView(cursorIndex = selection.start)
+                val rect = layoutResult.getCursorRect(selection.start)
+                textLayoutState.bringIntoViewRequester.bringIntoView(rect)
             }
         }
     }
@@ -721,7 +660,7 @@ internal class TextFieldDecoratorModifierNode(
             textFieldSelectionState = textFieldSelectionState,
             editable = enabled && !readOnly,
             singleLine = singleLine,
-            onSubmit = { onImeActionPerformed(keyboardOptions.imeAction) }
+            onSubmit = { onImeActionPerformed(keyboardOptions.imeActionOrDefault) }
         )
     }
 
@@ -734,7 +673,7 @@ internal class TextFieldDecoratorModifierNode(
     }
 
     private fun startInputSession(fromTap: Boolean) {
-        if (!fromTap && !keyboardOptions.shouldShowKeyboardOnFocus) return
+        if (!fromTap && !keyboardOptions.showKeyboardOnFocusOrDefault) return
 
         val receiveContentConfiguration = getReceiveContentConfiguration()
 
@@ -752,7 +691,7 @@ internal class TextFieldDecoratorModifierNode(
                     layoutState = textLayoutState,
                     imeOptions = keyboardOptions.toImeOptions(singleLine),
                     receiveContentConfiguration = receiveContentConfiguration,
-                    onImeAction = onImeActionPerformed,
+                    onImeAction = ::onImeActionPerformed,
                     stylusHandwritingTrigger = stylusHandwritingTrigger,
                 )
             }
@@ -763,7 +702,7 @@ internal class TextFieldDecoratorModifierNode(
     private fun disposeInputSession() {
         inputSessionJob?.cancel()
         inputSessionJob = null
-        stylusHandwritingTrigger.resetReplayCache()
+        stylusHandwritingTrigger?.resetReplayCache()
     }
 
     private fun startInputSessionOnWindowFocusChange() {
@@ -785,6 +724,22 @@ internal class TextFieldDecoratorModifierNode(
             dragEnterEvent = null
         }
     }
+
+    private fun onImeActionPerformed(imeAction: ImeAction) {
+        if (imeAction == ImeAction.None ||
+            imeAction == ImeAction.Default ||
+            keyboardActionHandler == null) {
+            // this should never happen but better be safe
+            keyboardActionScope.defaultKeyboardAction(imeAction)
+            return
+        }
+
+        keyboardActionHandler?.onKeyboardAction(
+            performDefaultAction = {
+                keyboardActionScope.defaultKeyboardAction(imeAction)
+            }
+        )
+    }
 }
 
 /**
@@ -798,33 +753,3 @@ internal expect suspend fun PlatformTextInputSession.platformSpecificTextInputSe
     onImeAction: ((ImeAction) -> Unit)?,
     stylusHandwritingTrigger: MutableSharedFlow<Unit>? = null
 ): Nothing
-
-/**
- * Returns a [KeyboardOptions] that is merged with [defaults], with this object's values taking
- * precedence.
- */
-// TODO(b/295951492) KeyboardOptions can't actually be merged correctly in all cases, because its
-//  properties don't all have proper "unspecified" values. I think we can fix that in a
-//  backwards-compatible way, but it will require adding new API outside of the text2 package so we
-//  should hold off on making them until after the study.
-internal fun KeyboardOptions.withDefaultsFrom(defaults: KeyboardOptions?): KeyboardOptions {
-    if (defaults == null) return this
-    return KeyboardOptions(
-        capitalization = if (this.capitalization != KeyboardCapitalization.None) {
-            this.capitalization
-        } else {
-            defaults.capitalization
-        },
-        autoCorrect = this.autoCorrect && defaults.autoCorrect,
-        keyboardType = if (this.keyboardType != KeyboardType.Text) {
-            this.keyboardType
-        } else {
-            defaults.keyboardType
-        },
-        imeAction = if (this.imeAction != ImeAction.Default) {
-            this.imeAction
-        } else {
-            defaults.imeAction
-        }
-    )
-}

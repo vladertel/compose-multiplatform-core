@@ -1,5 +1,3 @@
-import androidx.build.gradle.gcpbuildcache.GcpBuildCache
-import androidx.build.gradle.gcpbuildcache.GcpBuildCacheServiceFactory
 import groovy.transform.Field
 
 pluginManagement {
@@ -52,28 +50,24 @@ def prebuiltsRoot = new File(
 ).absolutePath
 def rootProjectRepositories
 
-apply from: "buildSrc/out.gradle"
-def (outDir, buildSrcOut) = init.getOutDir()
+apply from: "buildSrc/settingsScripts/out-setup.groovy"
 
-getGradle().beforeProject {
+getGradle().beforeProject { project ->
     // Migrate to dependencyResolutionManagement.repositories when
     // https://github.com/gradle/gradle/issues/17295 is fixed
-    if (it.path == ":") {
-        repos.addMavenRepositories(it.repositories)
-        rootProjectRepositories = it.repositories
-
-        // Set buildSrcOut and outDir extras on root project
-        it.ext.buildSrcOut = buildSrcOut
-        it.ext.outDir = outDir
+    if (project.path == ":") {
+        repos.addMavenRepositories(project.repositories)
+        rootProjectRepositories = project.repositories
     } else {
         // Performance optimization because it is more efficient to reuse
         // repositories from the root project than recreate identical ones
         // on each project
-        it.repositories.addAll(rootProjectRepositories)
+        project.repositories.addAll(rootProjectRepositories)
     }
-    it.ext.prebuiltsRoot = prebuiltsRoot
-    // Expected out directory structure for :foo:bar is out/androidx/foo/bar
-    it.buildDir = new File(outDir, "androidx/${it.path.replace(":", "/")}/build")
+    project.ext.prebuiltsRoot = prebuiltsRoot
+    init.chooseBuildDirectory(
+            new File("${buildscript.sourceFile.parent}/../.."), rootProject.name, project
+    )
 }
 
 apply(plugin: "com.gradle.enterprise")
@@ -107,17 +101,9 @@ gradleEnterprise {
 
 def cacheSetting = System.getenv("USE_ANDROIDX_REMOTE_BUILD_CACHE")
 switch (cacheSetting) {
-    case ["true", "uplink"]: // legacy build cache
-        logger.warn("\u001B[31m\nYou are using legacy USE_ANDROIDX_REMOTE_BUILD_CACHE=$cacheSetting " +
-                "type, this cache has been turned down, so you are *not* using a remote cache. " +
-                "Please move to the new cache using http://go/androidx-dev#remote-build-cache\u001B[0m\n")
-        break
-    case "gcp":
-        buildCache {
-            registerBuildCacheService(GcpBuildCache, GcpBuildCacheServiceFactory)
-        }
+    case ["true", "gcp"]:
         settings.buildCache {
-            remote(GcpBuildCache) {
+            remote(androidx.build.gradle.gcpbuildcache.GcpBuildCache) {
                 projectId = "androidx-ge"
                 bucketName = "androidx-gradle-remote-cache"
                 messageOnAuthenticationFailure = "Your GCP Credentials have expired.\n" +
@@ -437,6 +423,7 @@ includeProject(":camera:camera-effects-still-portrait", [BuildType.CAMERA])
 includeProject(":camera:camera-extensions", [BuildType.CAMERA])
 includeProject(":camera:camera-extensions-stub", [BuildType.CAMERA])
 includeProject(":camera:camera-lifecycle", [BuildType.CAMERA])
+includeProject(":camera:camera-lifecycle:camera-lifecycle-samples", "camera/camera-lifecycle/samples", [BuildType.CAMERA])
 includeProject(":camera:camera-mlkit-vision", [BuildType.CAMERA])
 includeProject(":camera:camera-testing", [BuildType.CAMERA])
 includeProject(":camera:camera-video", [BuildType.CAMERA])
@@ -532,6 +519,7 @@ includeProject(":compose:material3:benchmark", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3-adaptive-navigation-suite", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3-adaptive-navigation-suite:material3-adaptive-navigation-suite-samples", "compose/material3/material3-adaptive-navigation-suite/samples", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3-common", [BuildType.COMPOSE])
+includeProject(":compose:material3:material3-common:material3-common-samples", "compose/material3/material3-common/samples", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3-lint", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3-window-size-class", [BuildType.COMPOSE])
 includeProject(":compose:material3:material3-window-size-class:material3-window-size-class-samples", "compose/material3/material3-window-size-class/samples", [BuildType.COMPOSE])
@@ -589,6 +577,7 @@ includeProject(":compose:ui:ui-test-manifest-lint", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-test-manifest:integration-tests:testapp", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-text", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-text-google-fonts", [BuildType.COMPOSE])
+includeProject(":compose:ui:ui-text-lint", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-text:ui-text-benchmark", "compose/ui/ui-text/benchmark", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-text:ui-text-samples", "compose/ui/ui-text/samples", [BuildType.COMPOSE])
 includeProject(":compose:ui:ui-tooling", [BuildType.COMPOSE])
@@ -694,6 +683,7 @@ includeProject(":enterprise:enterprise-feedback-testing", [BuildType.MAIN])
 includeProject(":exifinterface:exifinterface", [BuildType.MAIN])
 includeProject(":fragment:fragment", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":fragment:fragment-compose", [BuildType.COMPOSE])
+includeProject(":fragment:fragment-compose:fragment-compose-samples", "fragment/fragment-compose/samples", [BuildType.COMPOSE])
 includeProject(":fragment:fragment-ktx", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":fragment:fragment-lint", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
 includeProject(":fragment:fragment-testing", [BuildType.MAIN, BuildType.FLAN, BuildType.COMPOSE])
@@ -921,6 +911,7 @@ includeProject(":security:security-crypto", [BuildType.MAIN])
 includeProject(":security:security-crypto-ktx", [BuildType.MAIN])
 includeProject(":security:security-identity-credential", [BuildType.MAIN])
 includeProject(":security:security-mls", [BuildType.MAIN])
+includeProject(":security:security-state", [BuildType.MAIN])
 includeProject(":sharetarget:integration-tests:testapp", [BuildType.MAIN])
 includeProject(":sharetarget:sharetarget", [BuildType.MAIN])
 includeProject(":slice:slice-benchmark", [BuildType.MAIN])
@@ -981,6 +972,7 @@ includeProject(":viewpager:viewpager", [BuildType.MAIN])
 includeProject(":wear:protolayout:protolayout", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:protolayout:protolayout-expression", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:protolayout:protolayout-expression-pipeline", [BuildType.MAIN, BuildType.WEAR])
+includeProject(":wear:protolayout:protolayout-external-protobuf", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:protolayout:protolayout-material", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:protolayout:protolayout-material-core", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:protolayout:protolayout-proto", [BuildType.MAIN, BuildType.WEAR])
@@ -1008,6 +1000,7 @@ includeProject(":wear:compose:integration-tests:demos:common", [BuildType.COMPOS
 includeProject(":wear:compose:integration-tests:macrobenchmark", [BuildType.COMPOSE])
 includeProject(":wear:compose:integration-tests:macrobenchmark-target", [BuildType.COMPOSE])
 includeProject(":wear:compose:integration-tests:navigation", [BuildType.COMPOSE])
+includeProject(":wear:wear-core", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:wear-input", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:wear-input-samples", "wear/wear-input/samples", [BuildType.MAIN, BuildType.WEAR])
 includeProject(":wear:wear-input-testing", [BuildType.MAIN, BuildType.WEAR])
@@ -1181,11 +1174,8 @@ if (isAllProjects()) {
 // for each size and test runner is happy when there is nothing to test.
 includeProject(":placeholder-tests")
 
-// Add includedBuild in most cases for b/203825166
-// Skip adding includeBuild when regenerating signatures for https://github.com/gradle/gradle/issues/26179
-if (!startParameter.projectProperties.containsKey('androidx.update.signatures')) {
-    includeBuild("placeholder")
-}
+// Add includedBuild for b/203825166
+includeBuild("placeholder")
 
 // ---------------------------------------------------------------------
 // --- there should be no includeProject additions after this line -----

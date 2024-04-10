@@ -23,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -41,7 +40,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalTestApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class TextFieldOutputTransformationGesturesIntegrationTest {
@@ -77,7 +76,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(center + Offset(1f, 0f))
         }
         rule.runOnIdle {
-            assertThat(text.text.selection).isEqualTo(TextRange(2))
+            assertThat(text.selection).isEqualTo(TextRange(2))
         }
 
         rule.onNodeWithTag(Tag).performTouchInput {
@@ -87,7 +86,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(center + Offset(-1f, 0f))
         }
         rule.runOnIdle {
-            assertThat(text.text.selection).isEqualTo(TextRange(1))
+            assertThat(text.selection).isEqualTo(TextRange(1))
         }
     }
 
@@ -124,7 +123,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(topRight)
         }
         rule.runOnIdle {
-            assertThat(text.text.selection).isEqualTo(TextRange(indexOfA))
+            assertThat(text.selection).isEqualTo(TextRange(indexOfA))
         }
         assertCursor(indexOfA)
 
@@ -134,7 +133,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(bottomLeft)
         }
         rule.runOnIdle {
-            assertThat(text.text.selection)
+            assertThat(text.selection)
                 .isEqualTo(TextRange(indexOfA + 1))
         }
         assertCursor(indexOfA + replacement.length)
@@ -164,7 +163,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(center + Offset(1f, 0f))
         }
         rule.runOnIdle {
-            assertThat(text.text.selection).isEqualTo(TextRange(1))
+            assertThat(text.selection).isEqualTo(TextRange(1))
         }
         assertCursor(5)
 
@@ -175,7 +174,7 @@ class TextFieldOutputTransformationGesturesIntegrationTest {
             click(center + Offset(-1f, 0f))
         }
         rule.runOnIdle {
-            assertThat(text.text.selection).isEqualTo(TextRange(1))
+            assertThat(text.selection).isEqualTo(TextRange(1))
         }
         assertCursor(1)
     }
