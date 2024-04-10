@@ -1070,6 +1070,7 @@ internal class AccessibilityMediator(
                     }
 
                     debugLogger?.log("AccessibilityMediator.sync took $time")
+                    debugLogger?.log("LayoutChanged, newElementToFocus: ${result.newElementToFocus}")
 
                     UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, result.newElementToFocus)
                 }
@@ -1099,8 +1100,12 @@ internal class AccessibilityMediator(
                 null
             )
 
+            debugLogger?.log("PageScrolled")
+
             if (accessibilityElementsMap[focusedNode.id] == null) {
                 findElementInRect(rect = focusedRectInWindow)?.let {
+                    debugLogger?.log("LayoutChanged, result: $it")
+
                     UIAccessibilityPostNotification(
                         UIAccessibilityLayoutChangedNotification,
                         it
@@ -1278,10 +1283,6 @@ internal class AccessibilityMediator(
             }
 
             refocusedElement
-        } else {
-            focusedElement?.semanticsNodeId?.let {
-                accessibilityElementsMap[it]
-            }
         }
 
         return NodesSyncResult(newElementToFocus)
