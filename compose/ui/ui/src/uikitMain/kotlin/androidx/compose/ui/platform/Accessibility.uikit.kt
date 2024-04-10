@@ -601,6 +601,10 @@ private class AccessibilityElement(
             val config = cachedConfig
 
             if (config.contains(SemanticsProperties.LiveRegion)) {
+                // TODO: LiveRegionMode in the config is currently ignored.
+                //  the default behavior due this flag set will actually do `Polite` announcements
+                //  to do `Assertive` announcements, we need to post a notification manually on each change
+                //  which we need to track manually
                 result = result or UIAccessibilityTraitUpdatesFrequently
             }
 
