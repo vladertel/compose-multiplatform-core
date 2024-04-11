@@ -44,3 +44,11 @@ val LazyColumnWithInteropViewsExample = Screen.Example("LazyColumn with interop 
         }
     }
 }
+
+val LazyColumnForA11YTestingExample = Screen.Example("LazyColumn with interop views") {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(100) {
+            Text("Text $it", Modifier.height(40.dp))
+        }
+    }
+}
