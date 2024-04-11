@@ -870,11 +870,11 @@ class ComposerLambdaMemoization(
         val function = expression.function
         val argumentCount = function.valueParameters.size
 
-        val isJsOrWasm = context.platform.isJs() || context.platform.isWasm()
-        if (argumentCount > MAX_RESTART_ARGUMENT_COUNT && isJsOrWasm) {
+        if (argumentCount > MAX_RESTART_ARGUMENT_COUNT && !context.platform.isJvm()) {
             error(
                 "only $MAX_RESTART_ARGUMENT_COUNT parameters " +
-                    "in @Composable lambda are supported on K/JS or K/Wasm"
+                    "in @Composable lambda are supported on" +
+                    "non-JVM targets (K/JS or K/Wasm or K/Native)"
             )
         }
 
