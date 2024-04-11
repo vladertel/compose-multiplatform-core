@@ -443,8 +443,6 @@ private class AccessibilityElement(
     private fun scrollIfPossible(direction: UIAccessibilityScrollDirection): AccessibilityElement? {
         val config = cachedConfig
 
-        //val (width, height) = semanticsNode.size
-
         when (direction) {
             UIAccessibilityScrollDirectionUp -> {
                 var result = config.getOrNull(SemanticsActions.PageUp)?.action?.invoke()
@@ -1000,6 +998,10 @@ internal class AccessibilityMediator(
     private var needsInitialRefocusing = true
     private var isAlive = true
 
+    private var inflightScrollsCount = 0
+    private val needsRefocusingDueToScroll: Boolean
+        get() = inflightScrollsCount > 0
+
     /**
      * The kind of invalidation that determines what kind of logic will be executed in the next sync.
      * `COMPLETE` invalidation means that the whole tree should be recomputed, `BOUNDS` means that only
@@ -1096,8 +1098,12 @@ internal class AccessibilityMediator(
         focusedNode: SemanticsNode,
         focusedRectInWindow: Rect
     ) {
+        inflightScrollsCount++
+
         coroutineScope.launch {
             delay(delay)
+
+            inflightScrollsCount--
 
             UIAccessibilityPostNotification(
                 UIAccessibilityPageScrolledNotification,
@@ -1272,7 +1278,7 @@ internal class AccessibilityMediator(
 
         val isFocusedElementDead = !isFocusedElementAlive
 
-        val needsRefocusing = needsInitialRefocusing || isFocusedElementDead
+        val needsRefocusing = needsInitialRefocusing || isFocusedElementDead || needsRefocusingDueToScroll
 
         val newElementToFocus = if (needsRefocusing) {
             debugLogger?.log("Needs refocusing")
