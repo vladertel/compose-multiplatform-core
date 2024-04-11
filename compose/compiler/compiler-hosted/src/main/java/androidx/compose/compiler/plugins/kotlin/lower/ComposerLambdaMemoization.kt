@@ -870,11 +870,11 @@ class ComposerLambdaMemoization(
         val function = expression.function
         val argumentCount = function.valueParameters.size
 
-        val isJsOrWasmOrNative = context.platform.isJs() || context.platform.isWasm() || context.platform.isNative()
-        if (argumentCount > MAX_RESTART_ARGUMENT_COUNT && isJsOrWasmOrNative) {
+        val isJsOrWasm = context.platform.isJs() || context.platform.isWasm()
+        if (argumentCount > MAX_RESTART_ARGUMENT_COUNT && isJsOrWasm) {
             error(
                 "only $MAX_RESTART_ARGUMENT_COUNT parameters " +
-                    "in @Composable lambda are supported on K/JS or K/Wasm or K/Native"
+                    "in @Composable lambda are supported on K/JS or K/Wasm"
             )
         }
 
@@ -952,7 +952,7 @@ class ComposerLambdaMemoization(
     ): IrExpression {
         // Kotlin/JS doesn't have an optimization for non-capturing lambdas
         // https://youtrack.jetbrains.com/issue/KT-49923
-        val skipNonCapturingLambdas = !context.platform.isJs() && ! context.platform.isWasm()
+        val skipNonCapturingLambdas = !context.platform.isJs() && !context.platform.isWasm()
 
         // If the function doesn't capture, Kotlin's default optimization is sufficient
         if (captures.isEmpty() && skipNonCapturingLambdas) {
