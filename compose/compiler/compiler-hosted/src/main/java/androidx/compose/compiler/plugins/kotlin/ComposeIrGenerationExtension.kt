@@ -167,16 +167,11 @@ class ComposeIrGenerationExtension(
 
         val mangler = when {
             pluginContext.platform.isJs() -> JsManglerIr
-            pluginContext.platform.isWasm() -> JsManglerIr
             else -> null
         }
 
         val idSignatureBuilder = when {
             pluginContext.platform.isJs() -> IdSignatureSerializer(
-                PublicIdSignatureComputer(mangler!!),
-                DeclarationTable(JsGlobalDeclarationTable(pluginContext.irBuiltIns))
-            )
-            pluginContext.platform.isWasm() -> IdSignatureSerializer(
                 PublicIdSignatureComputer(mangler!!),
                 DeclarationTable(JsGlobalDeclarationTable(pluginContext.irBuiltIns))
             )
@@ -262,7 +257,7 @@ class ComposeIrGenerationExtension(
             ).lower(moduleFragment)
         }
 
-        if (pluginContext.platform.isWasm() || pluginContext.platform.isJs()) {
+        if (pluginContext.platform.isJs() || pluginContext.platform.isWasm()) {
             WrapJsComposableLambdaLowering(
                 pluginContext,
                 symbolRemapper,
