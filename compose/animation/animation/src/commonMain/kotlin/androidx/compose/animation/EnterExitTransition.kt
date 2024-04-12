@@ -14,27 +14,23 @@
  * limitations under the License.
  */
 
-@file:OptIn(InternalAnimationApi::class, ExperimentalAnimationApi::class)
+@file:OptIn(ExperimentalSharedTransitionApi::class, ExperimentalAnimationApi::class)
 
 package androidx.compose.animation
 
 import androidx.compose.animation.core.AnimationVector2D
 import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.InternalAnimationApi
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.TwoWayConverter
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateValue
 import androidx.compose.animation.core.createDeferredAnimation
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
@@ -110,10 +107,11 @@ sealed class EnterTransition {
     operator fun plus(enter: EnterTransition): EnterTransition {
         return EnterTransitionImpl(
             TransitionData(
-                fade = data.fade ?: enter.data.fade,
-                slide = data.slide ?: enter.data.slide,
-                changeSize = data.changeSize ?: enter.data.changeSize,
-                scale = data.scale ?: enter.data.scale,
+                fade = enter.data.fade ?: data.fade,
+                slide = enter.data.slide ?: data.slide,
+                changeSize = enter.data.changeSize ?: data.changeSize,
+                scale = enter.data.scale ?: data.scale,
+                // `enter` after plus operator to prioritize its values on the map
                 effectsMap = data.effectsMap + enter.data.effectsMap
             )
         )
@@ -195,11 +193,12 @@ sealed class ExitTransition {
     operator fun plus(exit: ExitTransition): ExitTransition {
         return ExitTransitionImpl(
             TransitionData(
-                fade = data.fade ?: exit.data.fade,
-                slide = data.slide ?: exit.data.slide,
-                changeSize = data.changeSize ?: exit.data.changeSize,
-                scale = data.scale ?: exit.data.scale,
-                hold = data.hold || exit.data.hold,
+                fade = exit.data.fade ?: data.fade,
+                slide = exit.data.slide ?: data.slide,
+                changeSize = exit.data.changeSize ?: data.changeSize,
+                scale = exit.data.scale ?: data.scale,
+                hold = exit.data.hold || data.hold,
+                // `exit` after plus operator to prioritize its values on the map
                 effectsMap = data.effectsMap + exit.data.effectsMap
             )
         )
@@ -212,12 +211,12 @@ sealed class ExitTransition {
     override fun toString(): String =
         when (this) {
             None -> "ExitTransition.None"
-            Hold -> "ExitTransition.Hold"
+            KeepUntilTransitionsFinished -> "ExitTransition.KeepUntilTransitionsFinished"
             else -> data.run {
                 "ExitTransition: \n" + "Fade - " + fade?.toString() + ",\nSlide - " +
                     slide?.toString() + ",\nShrink - " + changeSize?.toString() +
                     ",\nScale - " + scale?.toString() +
-                    ",\nHold - " + hold
+                    ",\nKeepUntilTransitionsFinished - " + hold
             }
         }
 
@@ -243,9 +242,33 @@ sealed class ExitTransition {
          * when dealing with one set of content entering OR exiting, such as AnimatedVisibility,
          * holding would not be meaningful.
          */
-        internal val Hold: ExitTransition = ExitTransitionImpl(TransitionData(hold = true))
+        internal val KeepUntilTransitionsFinished: ExitTransition =
+            ExitTransitionImpl(TransitionData(hold = true))
     }
 }
+
+internal sealed class TransitionEffect {
+    internal abstract val key: TransitionEffectKey<*>
+}
+
+internal interface TransitionEffectKey<E : TransitionEffect>
+
+internal data class ContentScaleTransitionEffect(
+    val contentScale: ContentScale,
+    val alignment: Alignment,
+) : TransitionEffect() {
+    companion object Key :
+        TransitionEffectKey<ContentScaleTransitionEffect>
+
+    override val key: TransitionEffectKey<*>
+        get() = Key
+}
+
+internal infix fun EnterTransition.withEffect(effect: TransitionEffect): EnterTransition =
+    EnterTransitionImpl(TransitionData(effectsMap = mapOf(effect.key to effect)))
+
+internal infix fun ExitTransition.withEffect(effect: TransitionEffect): ExitTransition =
+    ExitTransitionImpl(TransitionData(effectsMap = mapOf(effect.key to effect)))
 
 /**
  * This fades in the content of the transition, from the specified starting alpha (i.e.
@@ -798,18 +821,6 @@ internal data class Scale(
     val animationSpec: FiniteAnimationSpec<Float>
 )
 
-internal fun EnterTransition(
-    key: Any,
-    node: ModifierNodeElement<out Modifier.Node>
-): EnterTransition =
-    EnterTransitionImpl(TransitionData(effectsMap = mapOf(key to node)))
-
-internal fun ExitTransition(
-    key: Any,
-    node: ModifierNodeElement<out Modifier.Node>
-): ExitTransition =
-    ExitTransitionImpl(TransitionData(effectsMap = mapOf(key to node)))
-
 @Immutable
 private class EnterTransitionImpl(override val data: TransitionData) : EnterTransition()
 
@@ -837,45 +848,28 @@ internal data class TransitionData(
     val changeSize: ChangeSize? = null,
     val scale: Scale? = null,
     val hold: Boolean = false,
-    val effectsMap: Map<Any, ModifierNodeElement<out Modifier.Node>> = emptyMap()
+    val effectsMap: Map<TransitionEffectKey<*>, TransitionEffect> = emptyMap()
 )
 
-@Suppress("ModifierFactoryExtensionFunction", "ModifierFactoryReturnType")
-internal operator fun EnterTransition.get(key: Any): ModifierNodeElement<out Modifier.Node>? =
-    data.effectsMap[key]
+@Suppress("UNCHECKED_CAST")
+internal operator fun <T : TransitionEffect> EnterTransition.get(key: TransitionEffectKey<T>): T? =
+    data.effectsMap[key] as? T
 
-@Suppress("ModifierFactoryExtensionFunction", "ModifierFactoryReturnType")
-internal operator fun ExitTransition.get(key: Any): ModifierNodeElement<out Modifier.Node>? =
-    data.effectsMap[key]
+@Suppress("UNCHECKED_CAST")
+internal operator fun <T : TransitionEffect> ExitTransition.get(key: TransitionEffectKey<T>): T? =
+    data.effectsMap[key] as? T
 
-@OptIn(ExperimentalAnimationApi::class, InternalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class)
 @Suppress("ModifierFactoryExtensionFunction", "ComposableModifierFactory")
 @Composable
 internal fun Transition<EnterExitState>.createModifier(
     enter: EnterTransition,
     exit: ExitTransition,
+    isEnabled: () -> Boolean = { true },
     label: String
 ): Modifier {
-    // Active enter & active exit reference the enter and exit transition that is currently being
-    // used. It is important to preserve the active enter/exit that was previously used before
-    // changing target state, such that if the previous enter/exit is interrupted, we still hold
-    // reference to the enter/exit that define those animations and therefore could recover.
-    var activeEnter by remember(this) { mutableStateOf(enter) }
-    var activeExit by remember(this) { mutableStateOf(exit) }
-    if (currentState == targetState && currentState == EnterExitState.Visible) {
-        if (isSeeking) {
-            // When seeking, the timing is different and there's no need to handle interruptions.
-            activeEnter = enter
-            activeExit = exit
-        } else {
-            activeEnter = EnterTransition.None
-            activeExit = ExitTransition.None
-        }
-    } else if (targetState == EnterExitState.Visible) {
-        activeEnter += enter
-    } else {
-        activeExit += exit
-    }
+    val activeEnter = trackActiveEnter(enter = enter)
+    val activeExit = trackActiveExit(exit = exit)
 
     val shouldAnimateSlide = activeEnter.data.slide != null || activeExit.data.slide != null
     val shouldAnimateSizeChange =
@@ -902,13 +896,87 @@ internal fun Transition<EnterExitState>.createModifier(
 
     val graphicsLayerBlock = createGraphicsLayerBlock(activeEnter, activeExit, label)
     return Modifier
-        .graphicsLayer(clip = !disableClip)
+        .graphicsLayer {
+            clip = !disableClip && isEnabled()
+        }
         .then(
             EnterExitTransitionElement(
                 this, sizeAnimation, offsetAnimation, slideAnimation,
-                activeEnter, activeExit, graphicsLayerBlock
+                activeEnter, activeExit, isEnabled, graphicsLayerBlock
             )
         )
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+internal fun Transition<EnterExitState>.trackActiveContentScaleEffect(
+    enter: EnterTransition,
+    exit: ExitTransition
+): ContentScaleTransitionEffect? {
+    // Track the active content scale. Only reset it when the animation is finished
+    // to avoid sudden change of content scale.
+    var activeContentScaleTransitionEffect: ContentScaleTransitionEffect? by remember {
+        mutableStateOf(null)
+    }
+    if (currentState != targetState) {
+        activeContentScaleTransitionEffect =
+            if (targetState == EnterExitState.Visible) {
+                // Favor currently active ones unless it's not set, so that if
+                // the animation is interrupted, we don't swap content scale
+                // and alignment all of a sudden, which would lead to visual
+                // discontinuity.
+                activeContentScaleTransitionEffect ?: enter[ContentScaleTransitionEffect.Key]
+            } else {
+                activeContentScaleTransitionEffect ?: exit[ContentScaleTransitionEffect.Key]
+            }
+    } else {
+        activeContentScaleTransitionEffect = null
+    }
+    return activeContentScaleTransitionEffect
+}
+
+@Composable
+internal fun Transition<EnterExitState>.trackActiveEnter(enter: EnterTransition): EnterTransition {
+    // Active enter & active exit reference the enter and exit transition that is currently being
+    // used. It is important to preserve the active enter/exit that was previously used before
+    // changing target state, such that if the previous enter/exit is interrupted, we still hold
+    // reference to the enter/exit that define those animations and therefore could recover.
+    var activeEnter by remember(this) { mutableStateOf(enter) }
+    if (currentState == targetState && currentState == EnterExitState.Visible) {
+        if (isSeeking) {
+            // When seeking, the timing is different and there's no need to handle interruptions.
+            activeEnter = enter
+        } else {
+            activeEnter = EnterTransition.None
+        }
+    } else if (targetState == EnterExitState.Visible) {
+        activeEnter += enter
+    }
+    return activeEnter
+}
+
+@Composable
+internal fun Transition<EnterExitState>.trackActiveExit(exit: ExitTransition): ExitTransition {
+    // Active enter & active exit reference the enter and exit transition that is currently being
+    // used. It is important to preserve the active enter/exit that was previously used before
+    // changing target state, such that if the previous enter/exit is interrupted, we still hold
+    // reference to the enter/exit that define those animations and therefore could recover.
+    var activeExit by remember(this) { mutableStateOf(exit) }
+    if (currentState == targetState && currentState == EnterExitState.Visible) {
+        if (isSeeking) {
+            // When seeking, the timing is different and there's no need to handle interruptions.
+            activeExit = exit
+        } else {
+            activeExit = ExitTransition.None
+        }
+    } else if (targetState != EnterExitState.Visible) {
+        activeExit += exit
+    }
+    return activeExit
+}
+
+internal fun interface GraphicsLayerBlockForEnterExit {
+    fun init(): GraphicsLayerScope.() -> Unit
 }
 
 @Composable
@@ -916,7 +984,7 @@ private fun Transition<EnterExitState>.createGraphicsLayerBlock(
     enter: EnterTransition,
     exit: ExitTransition,
     label: String
-): GraphicsLayerScope.() -> Unit {
+): GraphicsLayerBlockForEnterExit {
 
     val shouldAnimateAlpha = enter.data.fade != null || exit.data.fade != null
     val shouldAnimateScale = enter.data.scale != null || exit.data.scale != null
@@ -924,8 +992,27 @@ private fun Transition<EnterExitState>.createGraphicsLayerBlock(
     // Fade - it's important to put fade in the end. Otherwise fade will clip slide.
     // We'll animate if at any point during the transition fadeIn/fadeOut becomes non-null. This
     // would ensure the removal of fadeIn/Out amid a fade animation doesn't result in a jump.
-    val alpha by if (shouldAnimateAlpha) {
-        animateFloat(
+    val alphaAnimation = if (shouldAnimateAlpha) {
+        createDeferredAnimation(typeConverter = Float.VectorConverter,
+            label = remember { "$label alpha" }
+        )
+    } else null
+
+    val scaleAnimation = if (shouldAnimateScale) {
+        createDeferredAnimation(typeConverter = Float.VectorConverter,
+            label = remember { "$label scale" }
+        )
+    } else null
+
+    val transformOriginAnimation = if (shouldAnimateScale) {
+        createDeferredAnimation(
+            TransformOriginVectorConverter,
+            label = "TransformOriginInterruptionHandling"
+        )
+    } else null
+
+    return GraphicsLayerBlockForEnterExit {
+        val alpha = alphaAnimation?.animate(
             transitionSpec = {
                 when {
                     EnterExitState.PreEnter isTransitioningTo EnterExitState.Visible ->
@@ -937,7 +1024,6 @@ private fun Transition<EnterExitState>.createGraphicsLayerBlock(
                     else -> DefaultAlphaAndScaleSpring
                 }
             },
-            label = remember { "$label alpha" }
         ) {
             when (it) {
                 EnterExitState.Visible -> 1f
@@ -945,12 +1031,8 @@ private fun Transition<EnterExitState>.createGraphicsLayerBlock(
                 EnterExitState.PostExit -> exit.data.fade?.alpha ?: 1f
             }
         }
-    } else {
-        DefaultAlpha
-    }
 
-    return if (shouldAnimateScale) {
-        val scale by animateFloat(
+        val scale = scaleAnimation?.animate(
             transitionSpec = {
                 when {
                     EnterExitState.PreEnter isTransitioningTo EnterExitState.Visible ->
@@ -961,8 +1043,7 @@ private fun Transition<EnterExitState>.createGraphicsLayerBlock(
 
                     else -> DefaultAlphaAndScaleSpring
                 }
-            },
-            label = remember { "$label scale" }
+            }
         ) {
             when (it) {
                 EnterExitState.Visible -> 1f
@@ -978,10 +1059,7 @@ private fun Transition<EnterExitState>.createGraphicsLayerBlock(
             }
         // Animate transform origin if there's any change. If scale is only defined for enter or
         // exit, use the same transform origin for both.
-        val transformOrigin by animateValue(
-            TransformOriginVectorConverter,
-            label = "TransformOriginInterruptionHandling"
-        ) {
+        val transformOrigin = transformOriginAnimation?.animate({ spring() }) {
             when (it) {
                 EnterExitState.Visible -> transformOriginWhenVisible
                 EnterExitState.PreEnter ->
@@ -993,16 +1071,12 @@ private fun Transition<EnterExitState>.createGraphicsLayerBlock(
         }
 
         val block: GraphicsLayerScope.() -> Unit = {
-            this.alpha = alpha
-            this.scaleX = scale
-            this.scaleY = scale
-            this.transformOrigin = transformOrigin
+            this.alpha = alpha?.value ?: 1f
+            this.scaleX = scale?.value ?: 1f
+            this.scaleY = scale?.value ?: 1f
+            this.transformOrigin = transformOrigin?.value ?: TransformOrigin.Center
         }
         block
-    } else if (shouldAnimateAlpha) {
-        { this.alpha = alpha }
-    } else {
-        {}
     }
 }
 
@@ -1012,7 +1086,6 @@ private val TransformOriginVectorConverter =
         convertFromVector = { TransformOrigin(it.v1, it.v2) }
     )
 
-private val DefaultAlpha = mutableFloatStateOf(1f)
 private val DefaultAlphaAndScaleSpring = spring<Float>(stiffness = Spring.StiffnessMediumLow)
 
 private val DefaultOffsetAnimationSpec = spring(
@@ -1027,7 +1100,8 @@ private class EnterExitTransitionModifierNode(
     var slideAnimation: Transition<EnterExitState>.DeferredAnimation<IntOffset, AnimationVector2D>?,
     var enter: EnterTransition,
     var exit: ExitTransition,
-    var graphicsLayerBlock: GraphicsLayerScope.() -> Unit
+    var isEnabled: () -> Boolean,
+    var graphicsLayerBlock: GraphicsLayerBlockForEnterExit
 ) : LayoutModifierNodeWithPassThroughIntrinsics() {
 
     private var lookaheadConstraintsAvailable = false
@@ -1118,7 +1192,8 @@ private class EnterExitTransitionModifierNode(
             return layout(measuredSize.width, measuredSize.height) {
                 placeable.place(0, 0)
             }
-        } else {
+        } else if (isEnabled()) {
+            val layerBlock = graphicsLayerBlock.init()
             // Measure the content based on the current constraints passed down from parent.
             // AnimatedContent will measure outgoing children with a cached constraints to avoid
             // re-layout the outgoing content. At the animateEnterExit() level, it's not best not
@@ -1141,8 +1216,15 @@ private class EnterExitTransitionModifierNode(
                 ?: IntOffset.Zero) + slideOffset
             return layout(currentSize.width, currentSize.height) {
                 placeable.placeWithLayer(
-                    offset.x + offsetDelta.x, offset.y + offsetDelta.y, 0f, graphicsLayerBlock
+                    offset.x + offsetDelta.x, offset.y + offsetDelta.y, 0f, layerBlock
                 )
+            }
+        } else {
+            // If not enabled, skip all animations
+            return measurable.measure(constraints).run {
+                layout(width, height) {
+                    place(0, 0)
+                }
             }
         }
     }
@@ -1184,12 +1266,13 @@ private data class EnterExitTransitionElement(
     var slideAnimation: Transition<EnterExitState>.DeferredAnimation<IntOffset, AnimationVector2D>?,
     var enter: EnterTransition,
     var exit: ExitTransition,
-    var graphicsLayerBlock: GraphicsLayerScope.() -> Unit
+    var isEnabled: () -> Boolean,
+    var graphicsLayerBlock: GraphicsLayerBlockForEnterExit
 ) : ModifierNodeElement<EnterExitTransitionModifierNode>() {
     override fun create(): EnterExitTransitionModifierNode =
         EnterExitTransitionModifierNode(
             transition, sizeAnimation, offsetAnimation, slideAnimation, enter, exit,
-            graphicsLayerBlock
+            isEnabled, graphicsLayerBlock
         )
 
     override fun update(node: EnterExitTransitionModifierNode) {
@@ -1199,6 +1282,7 @@ private data class EnterExitTransitionElement(
         node.slideAnimation = slideAnimation
         node.enter = enter
         node.exit = exit
+        node.isEnabled = isEnabled
         node.graphicsLayerBlock = graphicsLayerBlock
     }
 

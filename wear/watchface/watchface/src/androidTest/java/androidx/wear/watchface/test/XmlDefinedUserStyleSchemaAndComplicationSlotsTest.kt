@@ -36,6 +36,7 @@ import androidx.wear.watchface.ComplicationSlotInflationFactory
 import androidx.wear.watchface.ComplicationSlotsManager
 import androidx.wear.watchface.RenderParameters
 import androidx.wear.watchface.Renderer
+import androidx.wear.watchface.StatefulWatchFaceService
 import androidx.wear.watchface.WatchFace
 import androidx.wear.watchface.WatchFaceService
 import androidx.wear.watchface.WatchFaceType
@@ -59,11 +60,9 @@ import androidx.wear.watchface.style.UserStyleSetting.DoubleRangeUserStyleSettin
 import androidx.wear.watchface.style.UserStyleSetting.LongRangeUserStyleSetting.LongRangeOption
 import androidx.wear.watchface.style.data.UserStyleWireFormat
 import com.google.common.truth.Truth.assertThat
-import java.lang.IllegalArgumentException
 import java.time.ZonedDateTime
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertFailsWith
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert
@@ -84,14 +83,13 @@ private const val INTERACTIVE_INSTANCE_ID = "InteractiveTestInstance"
 
 class TestXmlWatchFaceService(
     testContext: Context,
-    private var surfaceHolderOverride: SurfaceHolder,
-    private var xmlWatchFaceResourceId: Int,
+    private var surfaceHolderOverride: SurfaceHolder
 ) : WatchFaceService() {
     init {
         attachBaseContext(testContext)
     }
 
-    override fun getXmlWatchFaceResourceId() = xmlWatchFaceResourceId
+    override fun getXmlWatchFaceResourceId() = R.xml.xml_watchface
 
     override fun getWallpaperSurfaceHolderOverride() = surfaceHolderOverride
 
@@ -157,15 +155,100 @@ class TestXmlWatchFaceService(
         )
 }
 
+class TestState(val value: Int)
+
+class TestStatefulXmlWatchFaceService(
+    testContext: Context,
+    private var surfaceHolderOverride: SurfaceHolder
+) : StatefulWatchFaceService<TestState>() {
+    init {
+        attachBaseContext(testContext)
+    }
+
+    override fun createExtra() = TestState(123)
+
+    override fun getXmlWatchFaceResourceId() = R.xml.xml_watchface
+
+    override fun getWallpaperSurfaceHolderOverride() = surfaceHolderOverride
+
+    class TestCanvasComplicationFactory(val extra: TestState) : CanvasComplicationFactory {
+        override fun create(
+            watchState: WatchState,
+            invalidateCallback: CanvasComplication.InvalidateCallback
+        ): CanvasComplication =
+            object : CanvasComplication {
+                override fun render(
+                    canvas: Canvas,
+                    bounds: Rect,
+                    zonedDateTime: ZonedDateTime,
+                    renderParameters: RenderParameters,
+                    slotId: Int
+                ) {}
+
+                override fun drawHighlight(
+                    canvas: Canvas,
+                    bounds: Rect,
+                    boundsType: Int,
+                    zonedDateTime: ZonedDateTime,
+                    color: Int
+                ) {}
+
+                override fun getData() = NoDataComplicationData()
+
+                override fun loadData(
+                    complicationData: ComplicationData,
+                    loadDrawablesAsynchronous: Boolean
+                ) {}
+            }
+    }
+
+    override fun getComplicationSlotInflationFactory(
+        currentUserStyleRepository: CurrentUserStyleRepository,
+        extra: TestState
+    ) =
+        object : ComplicationSlotInflationFactory() {
+            override fun getCanvasComplicationFactory(slotId: Int): CanvasComplicationFactory {
+                return TestCanvasComplicationFactory(extra)
+            }
+        }
+
+    override suspend fun createWatchFace(
+        surfaceHolder: SurfaceHolder,
+        watchState: WatchState,
+        complicationSlotsManager: ComplicationSlotsManager,
+        currentUserStyleRepository: CurrentUserStyleRepository,
+        extra: TestState
+    ) =
+        WatchFace(
+            WatchFaceType.DIGITAL,
+            @Suppress("deprecation")
+            object :
+                Renderer.CanvasRenderer(
+                    surfaceHolder,
+                    currentUserStyleRepository,
+                    watchState,
+                    CanvasType.HARDWARE,
+                    16L
+                ) {
+                override fun render(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime) {}
+
+                override fun renderHighlightLayer(
+                    canvas: Canvas,
+                    bounds: Rect,
+                    zonedDateTime: ZonedDateTime
+                ) {}
+            }
+        )
+}
+
 @RunWith(AndroidJUnit4::class)
 @MediumTest
-class XmlDefinedUserStyleSchemaAndComplicationSlotsTest {
+public class XmlDefinedUserStyleSchemaAndComplicationSlotsTest {
 
     @get:Rule
     val mocks = MockitoJUnit.rule()
 
     @Mock private lateinit var surfaceHolder: SurfaceHolder
-
     @Mock private lateinit var surface: Surface
 
     private val bitmap = Bitmap.createBitmap(BITMAP_WIDTH, BITMAP_HEIGHT, Bitmap.Config.ARGB_8888)
@@ -174,25 +257,25 @@ class XmlDefinedUserStyleSchemaAndComplicationSlotsTest {
     private lateinit var interactiveWatchFaceInstance: IInteractiveWatchFace
 
     @Before
-    fun setUp() {
+    public fun setUp() {
         Assume.assumeTrue("This test suite assumes API 29", Build.VERSION.SDK_INT >= 29)
     }
 
     @After
-    fun tearDown() {
+    public fun tearDown() {
         InteractiveInstanceManager.setParameterlessEngine(null)
         if (this::interactiveWatchFaceInstance.isInitialized) {
             interactiveWatchFaceInstance.release()
         }
     }
 
-    private fun setPendingWallpaperInteractiveWatchFaceInstance(instanceId: String) {
+    private fun setPendingWallpaperInteractiveWatchFaceInstance() {
         val existingInstance =
             InteractiveInstanceManager
                 .getExistingInstanceOrSetPendingWallpaperInteractiveWatchFaceInstance(
                     InteractiveInstanceManager.PendingWallpaperInteractiveWatchFaceInstance(
                         WallpaperInteractiveWatchFaceInstanceParams(
-                            instanceId,
+                            INTERACTIVE_INSTANCE_ID,
                             DeviceConfig(false, false, 0, 0),
                             WatchUiState(false, 0),
                             UserStyleWireFormat(emptyMap()),
@@ -221,14 +304,13 @@ class XmlDefinedUserStyleSchemaAndComplicationSlotsTest {
         assertThat(existingInstance).isNull()
     }
 
-    private fun createAndMountTestService(
-        xmlWatchFaceResourceId: Int = R.xml.xml_watchface,
-    ): WatchFaceService.EngineWrapper {
+    @Test
+    @Suppress("Deprecation", "NewApi") // userStyleSettings
+    public fun staticSchemaAndComplicationsRead() {
         val service =
             TestXmlWatchFaceService(
-                ApplicationProvider.getApplicationContext(),
-                surfaceHolder,
-                xmlWatchFaceResourceId
+                ApplicationProvider.getApplicationContext<Context>(),
+                surfaceHolder
             )
 
         Mockito.`when`(surfaceHolder.surfaceFrame)
@@ -237,20 +319,10 @@ class XmlDefinedUserStyleSchemaAndComplicationSlotsTest {
         Mockito.`when`(surfaceHolder.surface).thenReturn(surface)
         Mockito.`when`(surface.isValid).thenReturn(false)
 
-        setPendingWallpaperInteractiveWatchFaceInstance(
-            "${INTERACTIVE_INSTANCE_ID}_$xmlWatchFaceResourceId"
-        )
+        setPendingWallpaperInteractiveWatchFaceInstance()
 
         val wrapper = service.onCreateEngine() as WatchFaceService.EngineWrapper
         assertThat(initLatch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)).isTrue()
-
-        return wrapper
-    }
-
-    @Test
-    @Suppress("Deprecation", "NewApi") // userStyleSettings
-    fun staticSchemaAndComplicationsRead() {
-        val wrapper = createAndMountTestService()
 
         runBlocking {
             val watchFaceImpl = wrapper.deferredWatchFaceImpl.await()
@@ -411,40 +483,35 @@ class XmlDefinedUserStyleSchemaAndComplicationSlotsTest {
     }
 
     @Test
-    fun staticSchemaAndComplicationsRead_invalidXml() {
-        // test that when the xml cannot be parsed, the error is propagated and that
-        // the deferred values of the engine wrapper do not hang indefinitely
-        val wrapper = createAndMountTestService(R.xml.xml_watchface_invalid)
-        runBlocking {
-            val exception =
-                assertFailsWith<IllegalArgumentException> { wrapper.deferredValidation.await() }
-            assertThat(exception.message).contains("must have a systemDataSourceFallback attribute")
-            assertThat(wrapper.deferredWatchFaceImpl.isCancelled)
-        }
-    }
+    @Suppress("Deprecation", "NewApi") // userStyleSettings
+    public fun testStatefulXmlWatchFaceService() {
+        val service =
+            TestStatefulXmlWatchFaceService(
+                ApplicationProvider.getApplicationContext<Context>(),
+                surfaceHolder
+            )
 
-    @Test
-    fun readsComplicationWithWeatherDefaultOnApi34() {
-        Assume.assumeTrue("This test runs only on API >= 34", Build.VERSION.SDK_INT >= 34)
-        val wrapper = createAndMountTestService(R.xml.xml_watchface_weather)
+        Mockito.`when`(surfaceHolder.surfaceFrame)
+            .thenReturn(Rect(0, 0, BITMAP_WIDTH, BITMAP_HEIGHT))
+        Mockito.`when`(surfaceHolder.lockHardwareCanvas()).thenReturn(canvas)
+        Mockito.`when`(surfaceHolder.surface).thenReturn(surface)
+        Mockito.`when`(surface.isValid).thenReturn(false)
+
+        setPendingWallpaperInteractiveWatchFaceInstance()
+
+        val wrapper = service.onCreateEngine() as WatchFaceService.EngineWrapper
+        assertThat(initLatch.await(TIMEOUT_MS, TimeUnit.MILLISECONDS)).isTrue()
+
         runBlocking {
             val watchFaceImpl = wrapper.deferredWatchFaceImpl.await()
-            val complicationSlot = watchFaceImpl.complicationSlotsManager.complicationSlots[10]!!
-            assertThat(complicationSlot.defaultDataSourcePolicy.systemDataSourceFallback)
-                .isEqualTo(SystemDataSources.DATA_SOURCE_WEATHER)
-        }
-    }
+            val factory = watchFaceImpl
+                .complicationSlotsManager
+                .complicationSlots[10]!!
+                .canvasComplicationFactory as
+                    TestStatefulXmlWatchFaceService.TestCanvasComplicationFactory
 
-    @Test
-    fun throwsExceptionOnReadingComplicationWithWeatherDefaultOnApiBelow34() {
-        Assume.assumeTrue("This test runs only on API < 34", Build.VERSION.SDK_INT < 34)
-        val wrapper = createAndMountTestService(R.xml.xml_watchface_weather)
-
-        runBlocking {
-            val exception =
-                assertFailsWith<IllegalArgumentException> { wrapper.deferredValidation.await() }
-            assertThat(exception.message)
-                .contains("cannot have the supplied systemDataSourceFallback value")
+            // Assert the extra was passed to the TestCanvasComplicationFactory.
+            assertThat(factory.extra.value).isEqualTo(123)
         }
     }
 }

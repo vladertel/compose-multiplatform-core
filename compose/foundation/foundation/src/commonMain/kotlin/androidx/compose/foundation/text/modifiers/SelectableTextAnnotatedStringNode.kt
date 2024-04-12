@@ -55,8 +55,9 @@ internal class SelectableTextAnnotatedStringNode(
     minLines: Int = DefaultMinLines,
     placeholders: List<AnnotatedString.Range<Placeholder>>? = null,
     onPlaceholderLayout: ((List<Rect?>) -> Unit)? = null,
-    private val selectionController: SelectionController? = null,
-    overrideColor: ColorProducer? = null
+    private var selectionController: SelectionController? = null,
+    overrideColor: ColorProducer? = null,
+    private var onShowTranslation: ((TextAnnotatedStringNode.TextSubstitutionValue) -> Unit)? = null
 ) : DelegatingNode(), LayoutModifierNode, DrawModifierNode, GlobalPositionAwareModifierNode {
 
     private val delegate = delegate(
@@ -72,7 +73,8 @@ internal class SelectableTextAnnotatedStringNode(
             placeholders = placeholders,
             onPlaceholderLayout = onPlaceholderLayout,
             selectionController = selectionController,
-            overrideColor = overrideColor
+            overrideColor = overrideColor,
+            onShowTranslation = onShowTranslation
         )
     )
 
@@ -144,9 +146,11 @@ internal class SelectableTextAnnotatedStringNode(
             callbacksChanged = delegate.updateCallbacks(
                 onTextLayout = onTextLayout,
                 onPlaceholderLayout = onPlaceholderLayout,
-                selectionController = selectionController
+                selectionController = selectionController,
+                onShowTranslation = onShowTranslation
             ),
         )
+        this.selectionController = selectionController
         // we always relayout when we're selectable
         invalidateMeasurement()
     }

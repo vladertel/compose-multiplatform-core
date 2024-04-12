@@ -14,9 +14,18 @@
  * limitations under the License.
  */
 
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import androidx.build.Publish
+import org.jetbrains.kotlin.konan.target.Family
 
 plugins {
     id("AndroidXPlugin")
@@ -33,20 +42,77 @@ androidXMultiplatform {
     defaultPlatform(PlatformIdentifier.ANDROID)
 
     sourceSets {
-        androidMain {
+        commonMain {
             dependencies {
                 api(libs.kotlinStdlib)
                 implementation(project(":paging:paging-common"))
             }
         }
-        androidTest {
+
+        commonJvmMain {
+            dependsOn(commonMain)
+        }
+
+        jvmMain {
+            dependsOn(commonJvmMain)
+        }
+
+        androidMain {
+            dependsOn(commonJvmMain)
+        }
+
+        commonTest {
+            dependencies {
+                implementation(libs.kotlinTest)
+                implementation(libs.kotlinCoroutinesTest)
+                implementation(project(":internal-testutils-paging"))
+                implementation(project(":kruth:kruth"))
+            }
+        }
+
+        commonJvmTest {
+            dependsOn(commonTest)
             dependencies {
                 implementation(libs.junit)
-                implementation(libs.kotlinCoroutinesTest)
-                implementation((libs.kotlinCoroutinesAndroid))
-                implementation(project(":internal-testutils-paging"))
-                implementation(libs.kotlinTest)
-                implementation(libs.truth)
+            }
+        }
+
+        jvmTest {
+            dependsOn(commonJvmTest)
+        }
+
+        androidInstrumentedTest {
+            dependsOn(commonJvmTest)
+            dependencies {
+                implementation(libs.testRunner)
+            }
+        }
+
+        nativeMain {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.atomicFu)
+            }
+        }
+        darwinMain {
+            dependsOn(nativeMain)
+        }
+        linuxMain {
+            dependsOn(nativeMain)
+        }
+
+        targets.all { target ->
+            if (target.platformType == KotlinPlatformType.native) {
+                target.compilations["main"].defaultSourceSet {
+                    def konanTargetFamily = target.konanTarget.family
+                    if (konanTargetFamily == Family.OSX || konanTargetFamily == Family.IOS) {
+                        dependsOn(darwinMain)
+                    } else if (konanTargetFamily == Family.LINUX) {
+                        dependsOn(linuxMain)
+                    } else {
+                        throw new GradleException("unknown native target ${target}")
+                    }
+                }
             }
         }
     }

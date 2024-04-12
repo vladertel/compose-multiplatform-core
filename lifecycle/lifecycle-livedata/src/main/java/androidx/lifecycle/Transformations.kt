@@ -45,10 +45,15 @@ import androidx.arch.core.util.Function
 @JvmName("map")
 @MainThread
 @CheckResult
+@Suppress("UNCHECKED_CAST")
 fun <X, Y> LiveData<X>.map(
     transform: (@JvmSuppressWildcards X) -> (@JvmSuppressWildcards Y)
 ): LiveData<Y> {
-    val result = MediatorLiveData<Y>()
+    val result = if (isInitialized) {
+        MediatorLiveData(transform(value as X))
+    } else {
+        MediatorLiveData()
+    }
     result.addSource(this) { x -> result.value = transform(x) }
     return result
 }
@@ -113,18 +118,24 @@ fun <X, Y> LiveData<X>.map(mapFunction: Function<X, Y>): LiveData<Y> {
 @JvmName("switchMap")
 @MainThread
 @CheckResult
+@Suppress("UNCHECKED_CAST")
 fun <X, Y> LiveData<X>.switchMap(
     transform: (@JvmSuppressWildcards X) -> (@JvmSuppressWildcards LiveData<Y>)?
 ): LiveData<Y> {
-    val result = MediatorLiveData<Y>()
-    result.addSource(this, object : Observer<X> {
-        var liveData: LiveData<Y>? = null
-
-        override fun onChanged(value: X) {
-            val newLiveData = transform(value)
-            if (liveData === newLiveData) {
-                return
-            }
+    var liveData: LiveData<Y>? = null
+    val result = if (isInitialized) {
+        val initialLiveData = transform(value as X)
+        if (initialLiveData != null && initialLiveData.isInitialized) {
+            MediatorLiveData<Y>(initialLiveData.value)
+        } else {
+            MediatorLiveData<Y>()
+        }
+    } else {
+        MediatorLiveData<Y>()
+    }
+    result.addSource(this) { value: X ->
+        val newLiveData = transform(value)
+        if (liveData !== newLiveData) {
             if (liveData != null) {
                 result.removeSource(liveData!!)
             }
@@ -133,7 +144,7 @@ fun <X, Y> LiveData<X>.switchMap(
                 result.addSource(liveData!!) { y -> result.setValue(y) }
             }
         }
-    })
+    }
     return result
 }
 
@@ -176,11 +187,12 @@ fun <X, Y> LiveData<X>.switchMap(switchMapFunction: Function<X, LiveData<Y>>): L
 @MainThread
 @CheckResult
 fun <X> LiveData<X>.distinctUntilChanged(): LiveData<X> {
-    val outputLiveData = MediatorLiveData<X>()
     var firstTime = true
-    if (isInitialized) {
-        outputLiveData.value = value
+    val outputLiveData = if (isInitialized) {
         firstTime = false
+        MediatorLiveData<X>(value)
+    } else {
+        MediatorLiveData<X>()
     }
     outputLiveData.addSource(this) { value ->
         val previousValue = outputLiveData.value

@@ -16,9 +16,11 @@
 
 package androidx.privacysandbox.ads.adservices.measurement
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Build
-import androidx.annotation.RequiresApi
+import android.os.ext.SdkExtensions
+import androidx.annotation.RequiresExtension
 
 /**
  * Class holding trigger registration parameters.
@@ -28,7 +30,6 @@ import androidx.annotation.RequiresApi
  * @param debugKeyAllowed Used by the browser to indicate whether the debug key obtained from the
  * registration URI is allowed to be used.
  */
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 class WebTriggerParams public constructor(
     val registrationUri: Uri,
     val debugKeyAllowed: Boolean
@@ -50,5 +51,24 @@ class WebTriggerParams public constructor(
     override fun toString(): String {
         return "WebTriggerParams { RegistrationUri=$registrationUri, " +
             "DebugKeyAllowed=$debugKeyAllowed }"
+    }
+
+    internal companion object {
+        @SuppressLint("ClassVerificationFailure", "NewApi")
+        @RequiresExtension(extension = SdkExtensions.AD_SERVICES, version = 4)
+        @RequiresExtension(extension = Build.VERSION_CODES.S, version = 9)
+        @RequiresExtension(extension = Build.VERSION_CODES.R, version = 11)
+        internal fun convertWebTriggerParams(
+            request: List<WebTriggerParams>
+        ): List<android.adservices.measurement.WebTriggerParams> {
+            var result = mutableListOf<android.adservices.measurement.WebTriggerParams>()
+            for (param in request) {
+                result.add(android.adservices.measurement.WebTriggerParams
+                    .Builder(param.registrationUri)
+                    .setDebugKeyAllowed(param.debugKeyAllowed)
+                    .build())
+            }
+            return result
+        }
     }
 }

@@ -18,16 +18,11 @@ package androidx.compose.foundation
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.modifier.ModifierLocalMap
-import androidx.compose.ui.modifier.ModifierLocalModifierNode
-import androidx.compose.ui.modifier.modifierLocalMapOf
-import androidx.compose.ui.modifier.modifierLocalOf
 import androidx.compose.ui.node.GlobalPositionAwareModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.TraversableNode
+import androidx.compose.ui.node.findNearestAncestor
 import androidx.compose.ui.platform.InspectorInfo
-
-internal val ModifierLocalFocusedBoundsObserver =
-    modifierLocalOf<((LayoutCoordinates?) -> Unit)?> { null }
 
 /**
  * Calls [onPositioned] whenever the bounds of the currently-focused area changes.
@@ -48,7 +43,8 @@ fun Modifier.onFocusedBoundsChanged(onPositioned: (LayoutCoordinates?) -> Unit):
 private class FocusedBoundsObserverElement(
     val onPositioned: (LayoutCoordinates?) -> Unit
 ) : ModifierNodeElement<FocusedBoundsObserverNode>() {
-    override fun create(): FocusedBoundsObserverNode = FocusedBoundsObserverNode(onPositioned)
+    override fun create(): FocusedBoundsObserverNode =
+        FocusedBoundsObserverNode(onPositioned)
 
     override fun update(node: FocusedBoundsObserverNode) {
         node.onPositioned = onPositioned
@@ -70,19 +66,18 @@ private class FocusedBoundsObserverElement(
 
 internal class FocusedBoundsObserverNode(
     var onPositioned: (LayoutCoordinates?) -> Unit
-) : Modifier.Node(), ModifierLocalModifierNode, (LayoutCoordinates?) -> Unit {
-    private val parent: ((LayoutCoordinates?) -> Unit)?
-        get() = if (isAttached) ModifierLocalFocusedBoundsObserver.current else null
+) : Modifier.Node(), TraversableNode {
 
-    override val providedValues: ModifierLocalMap =
-        modifierLocalMapOf(entry = ModifierLocalFocusedBoundsObserver to this)
+    override val traverseKey: Any = TraverseKey
 
     /** Called when a child gains/loses focus or is focused and changes position. */
-    override fun invoke(focusedBounds: LayoutCoordinates?) {
-        if (!isAttached) return
+
+     fun onFocusBoundsChanged(focusedBounds: LayoutCoordinates?) {
         onPositioned(focusedBounds)
-        parent?.invoke(focusedBounds)
+        findNearestAncestor()?.onFocusBoundsChanged(focusedBounds)
     }
+
+    companion object TraverseKey
 }
 
 /**
@@ -91,13 +86,17 @@ internal class FocusedBoundsObserverNode(
  * this node around, but once the un-delegate API lands we can remove this node entirely if it
  * is not focused. (b/276790428)
  */
-internal class FocusedBoundsNode : Modifier.Node(), ModifierLocalModifierNode,
+internal class FocusedBoundsNode : Modifier.Node(), TraversableNode,
     GlobalPositionAwareModifierNode {
     private var isFocused: Boolean = false
 
-    private val observer: ((LayoutCoordinates?) -> Unit)?
+    override val traverseKey: Any get() = TraverseKey
+
+    override val shouldAutoInvalidate: Boolean = false
+
+    private val observer: FocusedBoundsObserverNode?
         get() = if (isAttached) {
-            ModifierLocalFocusedBoundsObserver.current
+            findNearestAncestor(FocusedBoundsObserverNode.TraverseKey) as? FocusedBoundsObserverNode
         } else {
             null
         }
@@ -112,7 +111,7 @@ internal class FocusedBoundsNode : Modifier.Node(), ModifierLocalModifierNode,
     fun setFocus(focused: Boolean) {
         if (focused == isFocused) return
         if (!focused) {
-            observer?.invoke(null)
+            observer?.onFocusBoundsChanged(null)
         } else {
             notifyObserverWhenAttached()
         }
@@ -125,13 +124,15 @@ internal class FocusedBoundsNode : Modifier.Node(), ModifierLocalModifierNode,
         if (coordinates.isAttached) {
             notifyObserverWhenAttached()
         } else {
-            observer?.invoke(null)
+            observer?.onFocusBoundsChanged(null)
         }
     }
 
     private fun notifyObserverWhenAttached() {
         if (layoutCoordinates != null && layoutCoordinates!!.isAttached) {
-            observer?.invoke(layoutCoordinates)
+            observer?.onFocusBoundsChanged(layoutCoordinates)
         }
     }
+
+    companion object TraverseKey
 }

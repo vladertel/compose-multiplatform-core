@@ -46,6 +46,9 @@ internal class JavacProcessingEnv(
     override val config: XProcessingEnvConfig,
 ) : XProcessingEnv {
     override val backend: XProcessingEnv.Backend = XProcessingEnv.Backend.JAVAC
+    override val targetPlatforms: Set<XProcessingEnv.Platform> = setOf(
+        XProcessingEnv.Platform.JVM
+    )
 
     val elementUtils: Elements = delegate.elementUtils
 
@@ -92,6 +95,10 @@ internal class JavacProcessingEnv(
         return packageElement.enclosedElements
             .filterIsInstance<TypeElement>()
             .map { wrapTypeElement(it) }
+    }
+
+    override fun getElementsFromPackage(packageName: String): List<XElement> {
+        return getTypeElementsFromPackage(packageName)
     }
 
     override fun findType(qName: String): XType? {
@@ -312,10 +319,7 @@ internal class JavacProcessingEnv(
                 wrapExecutableElement(element)
             }
             is PackageElement -> {
-                error(
-                    "Cannot get elements with annotation $annotationName. Package " +
-                        "elements are not supported by XProcessing."
-                )
+                JavacPackageElement(this, element)
             }
             else -> error("Unsupported element $element with annotation $annotationName")
         }

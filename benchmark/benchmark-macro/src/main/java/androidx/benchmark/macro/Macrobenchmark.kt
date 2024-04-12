@@ -18,12 +18,13 @@ package androidx.benchmark.macro
 
 import android.content.pm.ApplicationInfo
 import android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE
+import android.content.pm.ApplicationInfo.FLAG_SYSTEM
+import android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RestrictTo
 import androidx.benchmark.Arguments
-import androidx.benchmark.BenchmarkResult
 import androidx.benchmark.ConfigurationError
 import androidx.benchmark.DeviceInfo
 import androidx.benchmark.InstrumentationResults
@@ -33,6 +34,7 @@ import androidx.benchmark.Shell
 import androidx.benchmark.checkAndGetSuppressionState
 import androidx.benchmark.conditionalError
 import androidx.benchmark.inMemoryTrace
+import androidx.benchmark.json.BenchmarkData
 import androidx.benchmark.perfetto.PerfettoCapture.PerfettoSdkConfig
 import androidx.benchmark.perfetto.PerfettoCapture.PerfettoSdkConfig.InitialProcessState
 import androidx.benchmark.perfetto.PerfettoCaptureWrapper
@@ -46,10 +48,11 @@ import androidx.tracing.trace
 import java.io.File
 
 /**
- * Get package ApplicationInfo, throw if not found
+ * Get package ApplicationInfo, throw if not found.
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @Suppress("DEPRECATION")
-internal fun getInstalledPackageInfo(packageName: String): ApplicationInfo {
+fun getInstalledPackageInfo(packageName: String): ApplicationInfo {
     val pm = InstrumentationRegistry.getInstrumentation().context.packageManager
     try {
         return pm.getApplicationInfo(packageName, 0)
@@ -59,6 +62,14 @@ internal fun getInstalledPackageInfo(packageName: String): ApplicationInfo {
             notFoundException
         )
     }
+}
+
+/**
+ * @return `true` if the [ApplicationInfo] instance is referring to a system app.
+ */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+fun ApplicationInfo.isSystemApp(): Boolean {
+    return flags and (FLAG_SYSTEM or FLAG_UPDATED_SYSTEM_APP) > 0
 }
 
 internal fun checkErrors(packageName: String): ConfigurationError.SuppressionState? {
@@ -150,7 +161,7 @@ internal fun checkErrors(packageName: String): ConfigurationError.SuppressionSta
                 """.trimIndent()
             ),
             conditionalError(
-                hasError = Arguments.methodTracingEnabled(),
+                hasError = Arguments.macrobenchMethodTracingEnabled(),
                 id = "METHOD-TRACING-ENABLED",
                 summary = "Method tracing is enabled during a Macrobenchmark",
                 message = """
@@ -207,20 +218,29 @@ private fun macrobenchmark(
 
     val startTime = System.nanoTime()
     // Ensure method tracing is explicitly enabled and that we are not running in dry run mode.
-    val launchWithMethodTracing = Arguments.methodTracingEnabled()
+    val launchWithMethodTracing = Arguments.macrobenchMethodTracingEnabled()
+    val applicationInfo = getInstalledPackageInfo(packageName)
     val scope = MacrobenchmarkScope(
         packageName,
         launchWithClearTask = launchWithClearTask
     )
+    // Capture if the app being benchmarked is a system app.
+    scope.isSystemApp = applicationInfo.isSystemApp()
     scope.launchWithMethodTracing = launchWithMethodTracing
+
     // Ensure the device is awake
     scope.device.wakeUp()
+
+    // Stop Background Dexopt during a Macrobenchmark to improve stability.
+    if (Build.VERSION.SDK_INT >= 33) {
+        scope.cancelBackgroundDexopt()
+    }
 
     // Always kill the process at beginning of test
     scope.killProcess()
 
     inMemoryTrace("compile $packageName") {
-        compilationMode.resetAndCompile(packageName, killProcessBlock = scope::killProcess) {
+        compilationMode.resetAndCompile(scope) {
             setupBlock(scope)
             measureBlock(scope)
         }
@@ -233,7 +253,7 @@ private fun macrobenchmark(
     // output, and give it different (test-wide) lifecycle
     val perfettoCollector = PerfettoCaptureWrapper()
     val tracePaths = mutableListOf<String>()
-    val resultFiles = mutableListOf<Profiler.ResultFile>()
+    val methodTracingResultFiles = mutableListOf<Profiler.ResultFile>()
     try {
         metrics.forEach {
             it.configure(packageName)
@@ -247,6 +267,7 @@ private fun macrobenchmark(
                 }
 
                 scope.iteration = iteration
+
                 inMemoryTrace("setupBlock") {
                     setupBlock(scope)
                 }
@@ -290,13 +311,14 @@ private fun macrobenchmark(
                             metrics.forEach {
                                 it.stop()
                             }
-                            if (launchWithMethodTracing) {
-                                val (label, tracePath) = scope.stopMethodTracing()
-                                val resultFile = Profiler.ResultFile(
+                            if (launchWithMethodTracing && scope.isMethodTracing) {
+                                val (label, tracePath) = scope.stopMethodTracing(fileLabel)
+                                val resultFile = Profiler.ResultFile.ofPerfettoTrace(
                                     label = label,
                                     absolutePath = tracePath
                                 )
-                                resultFiles += resultFile
+                                methodTracingResultFiles += resultFile
+                                scope.isMethodTracing = false
                             }
                         }
                     }
@@ -310,7 +332,7 @@ private fun macrobenchmark(
                         metrics
                             // capture list of Measurements
                             .map {
-                                it.getResult(
+                                it.getMeasurements(
                                     Metric.CaptureInfo(
                                         targetPackageName = packageName,
                                         testPackageName = macrobenchPackageName,
@@ -347,12 +369,18 @@ private fun macrobenchmark(
             """.trimIndent()
         }
         InstrumentationResults.instrumentationReport {
+            if (launchWithMethodTracing && methodTracingResultFiles.size < iterations) {
+                warningMessage += "\nNOTE: Method traces cannot be captured during iterations" +
+                    " that start while the target process is already running (including HOT/WARM" +
+                    " launches)."
+            }
+
             reportSummaryToIde(
                 warningMessage = warningMessage,
                 testName = uniqueName,
                 measurements = measurements,
                 iterationTracePaths = tracePaths,
-                profilerResults = resultFiles
+                profilerResults = methodTracingResultFiles
             )
 
             warningMessage = "" // warning only printed once
@@ -369,15 +397,24 @@ private fun macrobenchmark(
             else -> 0
         }
 
-        ResultWriter.appendReport(
-            BenchmarkResult(
+        val mergedProfilerOutputs = (tracePaths.mapIndexed { index, it ->
+            Profiler.ResultFile.ofPerfettoTrace(
+                label = "Trace Iteration $index",
+                absolutePath = it
+            )
+        } + methodTracingResultFiles).map {
+            BenchmarkData.TestResult.ProfilerOutput(it)
+        }
+        ResultWriter.appendTestResult(
+            BenchmarkData.TestResult(
                 className = className,
-                testName = testName,
+                name = testName,
                 totalRunTimeNs = System.nanoTime() - startTime,
-                metrics = measurements,
+                metrics = measurements.singleMetrics + measurements.sampledMetrics,
                 repeatIterations = iterations,
                 thermalThrottleSleepSeconds = 0,
-                warmupIterations = warmupIterations
+                warmupIterations = warmupIterations,
+                profilerOutputs = mergedProfilerOutputs
             )
         )
     } finally {

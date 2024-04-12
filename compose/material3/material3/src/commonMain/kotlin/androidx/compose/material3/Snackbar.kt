@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.paddingFromBaseline
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.internal.Strings
+import androidx.compose.material3.internal.getString
 import androidx.compose.material3.tokens.SnackbarTokens
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -39,6 +41,8 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastFirst
+import androidx.compose.ui.util.fastFirstOrNull
 import kotlin.math.max
 import kotlin.math.min
 
@@ -111,8 +115,8 @@ fun Snackbar(
         contentColor = contentColor,
         shadowElevation = SnackbarTokens.ContainerElevation
     ) {
-        val textStyle = MaterialTheme.typography.fromToken(SnackbarTokens.SupportingTextFont)
-        val actionTextStyle = MaterialTheme.typography.fromToken(SnackbarTokens.ActionLabelTextFont)
+        val textStyle = SnackbarTokens.SupportingTextFont.value
+        val actionTextStyle = SnackbarTokens.ActionLabelTextFont.value
         CompositionLocalProvider(LocalTextStyle provides textStyle) {
             when {
                 action == null -> OneRowSnackbar(
@@ -333,9 +337,9 @@ private fun OneRowSnackbar(
     ) { measurables, constraints ->
         val containerWidth = min(constraints.maxWidth, ContainerMaxWidth.roundToPx())
         val actionButtonPlaceable =
-            measurables.firstOrNull { it.layoutId == actionTag }?.measure(constraints)
+            measurables.fastFirstOrNull { it.layoutId == actionTag }?.measure(constraints)
         val dismissButtonPlaceable =
-            measurables.firstOrNull { it.layoutId == dismissActionTag }?.measure(constraints)
+            measurables.fastFirstOrNull { it.layoutId == dismissActionTag }?.measure(constraints)
         val actionButtonWidth = actionButtonPlaceable?.width ?: 0
         val actionButtonHeight = actionButtonPlaceable?.height ?: 0
         val dismissButtonWidth = dismissButtonPlaceable?.width ?: 0
@@ -344,7 +348,7 @@ private fun OneRowSnackbar(
         val textMaxWidth =
             (containerWidth - actionButtonWidth - dismissButtonWidth - extraSpacingWidth)
                 .coerceAtLeast(constraints.minWidth)
-        val textPlaceable = measurables.first { it.layoutId == textTag }.measure(
+        val textPlaceable = measurables.fastFirst { it.layoutId == textTag }.measure(
             constraints.copy(minHeight = 0, maxWidth = textMaxWidth)
         )
 

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastForEachReversed
 import androidx.compose.ui.util.fastSumBy
 import androidx.tv.foundation.lazy.layout.LazyLayoutKeyIndexMap
 import androidx.tv.foundation.lazy.list.fastFilter
@@ -40,7 +41,6 @@ import kotlin.math.sign
  * Measures and calculates the positions for the currently visible items. The result is produced
  * as a [TvLazyGridMeasureResult] which contains all the calculations.
  */
-@Suppress("IllegalExperimentalApiUsage") // TODO (b/233188423): Address before moving to beta
 @OptIn(ExperimentalFoundationApi::class)
 internal fun measureLazyGrid(
     itemsCount: Int,
@@ -303,7 +303,6 @@ internal fun measureLazyGrid(
     }
 }
 
-@Suppress("IllegalExperimentalApiUsage") // TODO (b/233188423): Address before moving to beta
 @ExperimentalFoundationApi
 private inline fun calculateExtraItems(
     pinnedItems: List<Int>,
@@ -397,7 +396,7 @@ private fun calculateItemsOffsets(
     } else {
         var currentMainAxis = firstLineScrollOffset
 
-        itemsBefore.fastForEach {
+        itemsBefore.fastForEachReversed {
             currentMainAxis -= it.mainAxisSizeWithSpacings
             it.position(currentMainAxis, 0, layoutWidth, layoutHeight)
             positionedItems.add(it)

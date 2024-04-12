@@ -20,8 +20,10 @@ import androidx.room.compiler.processing.XAnnotated
 import androidx.room.compiler.processing.XExecutableParameterElement
 import androidx.room.compiler.processing.XMemberContainer
 import androidx.room.compiler.processing.XType
+import androidx.room.compiler.processing.isArray
 import androidx.room.compiler.processing.ksp.KspAnnotated.UseSiteFilter.Companion.NO_USE_SITE_OR_METHOD_PARAMETER
 import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticPropertyMethodElement
+import androidx.room.compiler.processing.util.sanitizeAsJavaParameterName
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSPropertySetter
 import com.google.devtools.ksp.symbol.KSValueParameter
@@ -44,6 +46,9 @@ internal class KspExecutableParameterElement(
 
     override val name: String
         get() = parameter.name?.asString() ?: "_no_param_name"
+
+    override val jvmName: String
+        get() = name.sanitizeAsJavaParameterName(parameterIndex)
 
     override val hasDefaultValue: Boolean
         get() = parameter.hasDefault
@@ -69,12 +74,15 @@ internal class KspExecutableParameterElement(
 
     private fun createAsMemberOf(container: XType?): KspType {
         check(container is KspType?)
-        return env.wrap(
-            originatingReference = parameter.type,
+        val resolvedType = parameter.type.resolve()
+        val type = env.wrap(
+            originalAnnotations = parameter.type.annotations,
             ksType = parameter.typeAsMemberOf(
                 functionDeclaration = enclosingElement.declaration,
-                ksType = container?.ksType
-            )
+                ksType = container?.ksType,
+                resolved = resolvedType
+            ),
+            allowPrimitives = !resolvedType.isTypeParameter()
         ).copyWithScope(
             KSTypeVarianceResolverScope.MethodParameter(
                 kspExecutableElement = enclosingElement,
@@ -84,6 +92,13 @@ internal class KspExecutableParameterElement(
                 asMemberOf = container,
             )
         )
+        // In KSP2 the varargs have the component type instead of the array type. We make it always
+        // return the array type in XProcessing.
+        return if (isVarArgs() && !type.isArray()) {
+            env.getArrayType(type)
+        } else {
+            type
+        }
     }
 
     override fun kindName(): String {

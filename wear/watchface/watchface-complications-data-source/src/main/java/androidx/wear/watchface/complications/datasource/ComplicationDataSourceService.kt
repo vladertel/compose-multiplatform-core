@@ -269,6 +269,9 @@ public annotation class IsForSafeWatchFace
  * `android.support.wearable.complications.category.PROVIDER_CONFIG` as well as
  * [Intent.CATEGORY_DEFAULT] as categories.
  *
+ * Note back up and restore of any configuration data is left to the complication data source, see
+ * [METADATA_KEY_CONFIG_RESTORE_SUPPORTED] for more details.
+ *
  * The complication id being configured will be included in the intent that starts the config
  * activity using the extra key
  * `android.support.wearable.complications.EXTRA_CONFIG_COMPLICATION_ID`.
@@ -312,7 +315,6 @@ public abstract class ComplicationDataSourceService : Service() {
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     open fun createMainThreadHandler() = Handler(Looper.getMainLooper())
 
-    @SuppressLint("SyntheticAccessor")
     final override fun onBind(intent: Intent): IBinder? {
         if (ACTION_COMPLICATION_UPDATE_REQUEST == intent.action) {
             if (wrapper == null) {
@@ -452,13 +454,11 @@ public abstract class ComplicationDataSourceService : Service() {
     @MainThread public open fun onComplicationDeactivated(complicationInstanceId: Int) {}
 
     private inner class IComplicationProviderWrapper : IComplicationProvider.Stub() {
-        @SuppressLint("SyntheticAccessor")
         override fun onUpdate(complicationInstanceId: Int, type: Int, manager: IBinder): Unit =
             aidlMethod(TAG, "onUpdate") {
                 onUpdate2(complicationInstanceId, type, manager, bundle = null)
             }
 
-        @SuppressLint("SyntheticAccessor")
         override fun onUpdate2(
             complicationInstanceId: Int,
             type: Int,
@@ -588,7 +588,6 @@ public abstract class ComplicationDataSourceService : Service() {
                 }
             }
 
-        @SuppressLint("SyntheticAccessor")
         override fun onComplicationDeactivated(complicationInstanceId: Int): Unit =
             aidlMethod(TAG, "onComplicationDeactivated") {
                 mainThreadHandler.post {
@@ -598,7 +597,6 @@ public abstract class ComplicationDataSourceService : Service() {
                 }
             }
 
-        @SuppressLint("SyntheticAccessor")
         override fun onComplicationActivated(
             complicationInstanceId: Int,
             type: Int,
@@ -618,7 +616,6 @@ public abstract class ComplicationDataSourceService : Service() {
                 return API_VERSION
             }
 
-        @SuppressLint("SyntheticAccessor")
         override fun getComplicationPreviewData(type: Int): WireComplicationData? =
             aidlMethod(TAG, "getComplicationPreviewData") {
                 val expectedDataType = fromWireType(type)
@@ -882,6 +879,29 @@ public abstract class ComplicationDataSourceService : Service() {
         // TODO(b/192233205): Migrate value to androidx.
         internal const val METADATA_KEY_HIDDEN: String =
             "android.support.wearable.complications.HIDDEN"
+
+        /**
+         * Metadata key used to declare that the complication data source service supports backup
+         * and restore (B&R) of complication configuration data. The system is responsible for
+         * backup and restore of the assignment of complications to watch faces, but responsibility
+         * for backup and restore for any complication data source configuration data is left to the
+         * data source.
+         *
+         * If this flag is set to false, then the system will restore any complications using this
+         * provider in the "not configured" state, i.e. the complication will show a + sign with a
+         * tap action leading to the complication data source's configuration action as defined by
+         * [METADATA_KEY_DATA_SOURCE_CONFIG_ACTION], instead of real data.
+         *
+         * This is a boolean value, defaulting to true, which means apps are opted in by default but
+         * can explicitly opt out by setting this meta-data tag to false.
+         *
+         * The value is ignored (equivalent to false) if the app does not enable Android B&R (
+         * https://developer.android.com/guide/topics/data/backup). This value is also ignored prior
+         * to Android U.
+         */
+        @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        public const val METADATA_KEY_CONFIG_RESTORE_SUPPORTED =
+            "androidx.watchface.complications.datasource.CONFIG_RESTORE_SUPPORTED"
 
         /**
          * Metadata key used to declare an action for a configuration activity for a complication

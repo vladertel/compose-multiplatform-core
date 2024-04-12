@@ -29,6 +29,7 @@ import android.graphics.Color
 import android.graphics.Picture
 import android.graphics.PixelFormat
 import android.graphics.Rect
+import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -36,6 +37,7 @@ import android.os.IBinder
 import android.provider.Settings
 import android.support.wearable.watchface.SharedMemoryImage
 import android.support.wearable.watchface.WatchFaceStyle
+import android.view.Display
 import android.view.Gravity
 import android.view.Surface
 import android.view.Surface.FRAME_RATE_COMPATIBILITY_DEFAULT
@@ -250,8 +252,9 @@ public class WatchFace(
                     }
                     .apply { setContext(context) }
 
-            val engine = watchFaceService.createHeadlessEngine(componentName)
-                as WatchFaceService.EngineWrapper
+            val engine =
+                watchFaceService.createHeadlessEngine(componentName)
+                    as WatchFaceService.EngineWrapper
             val headlessWatchFaceImpl = engine.createHeadlessInstance(params)
             return engine.deferredWatchFaceImpl.await().WFEditorDelegate(headlessWatchFaceImpl)
         }
@@ -302,10 +305,17 @@ public class WatchFace(
         /** Signals that the activity is going away and resources should be released. */
         public fun onDestroy()
 
-        /** Sets a callback to observe an y changes to [ComplicationSlot.configExtras]. */
+        /** Sets a callback to observe any changes to [ComplicationSlot.configExtras]. */
         public fun setComplicationSlotConfigExtrasChangeCallback(
             callback: ComplicationSlotConfigExtrasChangeCallback?
         )
+
+        /**
+         * Overrides the complications to be used until [onDestroy] is called. Note if any
+         * complications are received via the InteractiveClient while this override is in place,
+         * they should be buffered until [onDestroy] is called.
+         */
+        public fun setOverrideComplications(slotIdToComplicationData: Map<Int, ComplicationData>)
     }
 
     /** Used to inform EditorSession about changes to [ComplicationSlot.configExtras]. */
@@ -470,10 +480,7 @@ public class WatchFace(
         }
     }
 
-    /**
-     * The [OverlayStyle]. This feature is unimplemented on any platform, and will be
-     * removed.
-     */
+    /** The [OverlayStyle]. This feature is unimplemented on any platform, and will be removed. */
     @Deprecated("OverlayStyle will be removed in a future release.")
     @Suppress("Deprecation")
     public var overlayStyle: OverlayStyle = OverlayStyle()
@@ -561,7 +568,6 @@ internal class MockTime(var speed: Double, var minTime: Long, var maxTime: Long)
 }
 
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-@SuppressLint("SyntheticAccessor")
 public class WatchFaceImpl
 @UiThread
 constructor(
@@ -654,8 +660,7 @@ constructor(
     private val tapListener = watchface.tapListener
     internal var complicationDeniedDialogIntent = watchface.complicationDeniedDialogIntent
     internal var complicationRationaleDialogIntent = watchface.complicationRationaleDialogIntent
-    @Suppress("Deprecation")
-    internal var overlayStyle = watchface.overlayStyle
+    @Suppress("Deprecation") internal var overlayStyle = watchface.overlayStyle
 
     private var mockTime = MockTime(1.0, 0, Long.MAX_VALUE)
 
@@ -667,6 +672,33 @@ constructor(
     internal var nextDrawTimeMillis: Long = 0
 
     internal val componentName = watchFaceHostApi.getComponentName()
+    private val displayManager: DisplayManager
+    private val displayListener: DisplayManager.DisplayListener
+
+    init {
+        val context = watchFaceHostApi.getContext()
+         displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+         displayListener = object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(displayId: Int) {}
+
+            override fun onDisplayChanged(displayId: Int) {
+                val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)!!
+                if (display.state == Display.STATE_OFF && watchState.isVisible.value == false) {
+                    // We want to avoid a glimpse of a stale time when transitioning from
+                    // hidden to visible, so we render two black frames to clear the buffers
+                    // when the display has been turned off and the watch is not visible.
+                    renderer.renderBlackFrame()
+                    renderer.renderBlackFrame()
+                }
+            }
+
+            override fun onDisplayRemoved(displayId: Int) {}
+        }
+        displayManager.registerDisplayListener(
+            displayListener,
+            watchFaceHostApi.getUiThreadHandler()
+        )
+    }
 
     internal fun getWatchFaceStyle() =
         WatchFaceStyle(
@@ -732,6 +764,7 @@ constructor(
         }
     }
 
+    @UiThread
     internal fun onVisibility(isVisible: Boolean) {
         TraceEvent("WatchFaceImpl.visibility").use {
             if (isVisible) {
@@ -745,10 +778,6 @@ constructor(
                 }
                 scheduleDraw()
             } else {
-                // We want to avoid a glimpse of a stale time when transitioning from hidden to
-                // visible, so we render two black frames to clear the buffers.
-                renderer.renderBlackFrame()
-                renderer.renderBlackFrame()
                 unregisterReceivers()
             }
         }
@@ -761,14 +790,18 @@ constructor(
         // To save power we request a lower hardware display frame rate when the battery is low
         // and not charging.
         if (renderer.surfaceHolder.surface.isValid) {
-            SetFrameRateHelper.setFrameRate(
-                renderer.surfaceHolder.surface,
-                if (it) {
+            if (it) {
+                SetFrameRateHelper.setFrameRate(
+                    renderer.surfaceHolder.surface,
                     1000f / MAX_LOW_POWER_INTERACTIVE_UPDATE_RATE_MS.toFloat()
+                )
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    ClearFrameRateHelperU.clearFrameRate(renderer.surfaceHolder.surface)
                 } else {
-                    SYSTEM_DECIDES_FRAME_RATE
+                    ClearFrameRateHelperR.clearFrameRate(renderer.surfaceHolder.surface)
                 }
-            )
+            }
         }
     }
 
@@ -799,8 +832,9 @@ constructor(
                     // init may not have completed.
                     if (initComplete) {
                         onDraw()
+                    } else {
+                        scheduleDraw()
                     }
-                    scheduleDraw()
                 }
             }
         }
@@ -870,8 +904,11 @@ constructor(
             get() = watchFaceHostApi.getComplicationRationaleIntent()
 
         override var editorObscuresWatchFace: Boolean
-            get() = InteractiveInstanceManager
-                .getCurrentInteractiveInstance()?.engine?.editorObscuresWatchFace ?: false
+            get() =
+                InteractiveInstanceManager.getCurrentInteractiveInstance()
+                    ?.engine
+                    ?.editorObscuresWatchFace
+                    ?: false
             set(value) {
                 InteractiveInstanceManager.getCurrentInteractiveInstance()?.engine?.let {
                     it.editorObscuresWatchFace = value
@@ -884,37 +921,14 @@ constructor(
             slotIdToComplicationData: Map<Int, ComplicationData>?
         ): Bitmap =
             TraceEvent("WFEditorDelegate.takeScreenshot").use {
-                val oldComplicationData =
-                    complicationSlotsManager.complicationSlots.values.associateBy(
-                        { it.id },
-                        { it.renderer.getData() }
-                    )
-
-                slotIdToComplicationData?.let {
-                    for ((id, complicationData) in it) {
-                        complicationSlotsManager.setComplicationDataUpdateSync(
-                            id,
-                            complicationData,
-                            instant
+                slotIdToComplicationData
+                    ?.let { complicationSlotsManager.setComplicationDataForScreenshot(it, instant) }
+                    .use {
+                        renderer.takeScreenshot(
+                            ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")),
+                            renderParameters
                         )
                     }
-                }
-                val screenShot =
-                    renderer.takeScreenshot(
-                        ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")),
-                        renderParameters
-                    )
-                slotIdToComplicationData?.let {
-                    val now = getNow()
-                    for ((id, complicationData) in oldComplicationData) {
-                        complicationSlotsManager.setComplicationDataUpdateSync(
-                            id,
-                            complicationData,
-                            now
-                        )
-                    }
-                }
-                return screenShot
             }
 
         override fun setComplicationSlotConfigExtrasChangeCallback(
@@ -923,11 +937,21 @@ constructor(
             complicationSlotsManager.configExtrasChangeCallback = callback
         }
 
+        override fun setOverrideComplications(
+            slotIdToComplicationData: Map<Int, ComplicationData>
+        ) {
+            InteractiveInstanceManager
+                .getCurrentInteractiveInstance()
+                ?.engine
+                ?.overrideComplications(slotIdToComplicationData)
+        }
+
         @SuppressLint("NewApi") // release
         override fun onDestroy(): Unit =
             TraceEvent("WFEditorDelegate.onDestroy").use {
                 InteractiveInstanceManager.getCurrentInteractiveInstance()?.engine?.let {
                     it.editorObscuresWatchFace = false
+                    it.removeAnyComplicationOverrides()
                 }
                 if (watchState.isHeadless) {
                     headlessWatchFaceImpl!!.release()
@@ -942,6 +966,7 @@ constructor(
             WatchFace.unregisterEditorDelegate(componentName)
         }
         unregisterReceivers()
+        displayManager.unregisterDisplayListener(displayListener)
     }
 
     @UiThread
@@ -971,8 +996,11 @@ constructor(
         // Separate calls are issued to deliver the state of isAmbient and isVisible, so during init
         // we might not yet know the state of both (which is required by the shouldAnimate logic).
         // If the editor is obscuring the watch face, there's no need to schedule a frame.
-        if (!watchState.isAmbient.hasValue() || !watchState.isVisible.hasValue() ||
-            editorObscuresWatchFace) {
+        if (
+            !watchState.isAmbient.hasValue() ||
+                !watchState.isVisible.hasValue() ||
+                editorObscuresWatchFace
+        ) {
             return
         }
 
@@ -1154,57 +1182,26 @@ constructor(
     @RequiresApi(27)
     internal fun renderWatchFaceToBitmap(params: WatchFaceRenderParams): Bundle =
         TraceEvent("WatchFaceImpl.renderWatchFaceToBitmap").use {
-            val oldStyle = currentUserStyleRepository.userStyle.value
             val instant = Instant.ofEpochMilli(params.calendarTimeMillis)
-
-            params.userStyle?.let {
-                currentUserStyleRepository.updateUserStyle(
-                    UserStyle(UserStyleData(it), currentUserStyleRepository.schema)
-                )
-            }
-
-            val oldComplicationData =
-                complicationSlotsManager.complicationSlots.values.associateBy(
-                    { it.id },
-                    { it.renderer.getData() }
-                )
-
-            params.idAndComplicationDatumWireFormats?.let {
-                for (idAndData in it) {
-                    complicationSlotsManager.setComplicationDataUpdateSync(
-                        idAndData.id,
-                        idAndData.complicationData.toApiComplicationData(),
+            val bitmap =
+                setForScreenshot(
+                        params.userStyle?.let {
+                            UserStyle(UserStyleData(it), currentUserStyleRepository.schema)
+                        },
+                        params.idAndComplicationDatumWireFormats?.let { idAndData ->
+                            idAndData.associate {
+                                it.id to it.complicationData.toApiComplicationData()
+                            }
+                        },
                         instant
                     )
-                }
-            }
-
-            val bitmap =
-                renderer.takeScreenshot(
-                    ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")),
-                    RenderParameters(params.renderParametersWireFormat)
-                )
-
-            // No point in restoring the old style and complication if this is headless.
-            if (!watchState.isHeadless) {
-                // Restore previous style & complicationSlots if required.
-                if (params.userStyle != null) {
-                    currentUserStyleRepository.updateUserStyle(oldStyle)
-                }
-
-                if (params.idAndComplicationDatumWireFormats != null) {
-                    val now = getNow()
-                    for ((id, complicationData) in oldComplicationData) {
-                        complicationSlotsManager.setComplicationDataUpdateSync(
-                            id,
-                            complicationData,
-                            now
+                    .use {
+                        renderer.takeScreenshot(
+                            ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")),
+                            RenderParameters(params.renderParametersWireFormat)
                         )
                     }
-                }
-            }
-
-            return SharedMemoryImage.ashmemWriteImageBundle(bitmap)
+            SharedMemoryImage.ashmemWriteImageBundle(bitmap)
         }
 
     @UiThread
@@ -1231,99 +1228,93 @@ constructor(
     @RequiresApi(27)
     internal fun renderComplicationToBitmap(params: ComplicationRenderParams): Bundle? =
         TraceEvent("WatchFaceImpl.renderComplicationToBitmap").use {
-            val zonedDateTime =
-                ZonedDateTime.ofInstant(
-                    Instant.ofEpochMilli(params.calendarTimeMillis),
-                    ZoneId.of("UTC")
+            val slot = complicationSlotsManager[params.complicationSlotId] ?: return@use null
+            setForScreenshot(
+                    params.userStyle?.let {
+                        UserStyle(UserStyleData(it), currentUserStyleRepository.schema)
+                    },
+                    params.complicationData?.let {
+                        mapOf(params.complicationSlotId to it.toApiComplicationData())
+                    },
+                    Instant.ofEpochMilli(params.calendarTimeMillis)
                 )
-            return complicationSlotsManager[params.complicationSlotId]?.let {
-                val oldStyle = currentUserStyleRepository.userStyle.value
-                val instant = Instant.ofEpochMilli(params.calendarTimeMillis)
-
-                val newStyle = params.userStyle
-                if (newStyle != null) {
-                    currentUserStyleRepository.updateUserStyle(
-                        UserStyle(UserStyleData(newStyle), currentUserStyleRepository.schema)
-                    )
-                }
-
-                // Compute the bounds of the complication based on the display rather than
-                // the headless renderer (which may be smaller).
-                val bounds = it.computeBounds(
-                    Rect(
-                    0,
-                    0,
-                        Resources.getSystem().displayMetrics.widthPixels,
-                        Resources.getSystem().displayMetrics.heightPixels
-                    )
-                )
-
-                var prevData: ComplicationData? = null
-                val screenshotComplicationData = params.complicationData
-                if (screenshotComplicationData != null) {
-                    prevData = it.renderer.getData()
-                    complicationSlotsManager.setComplicationDataUpdateSync(
-                        params.complicationSlotId,
-                        screenshotComplicationData.toApiComplicationData(),
-                        instant
-                    )
-                }
-
-                val complicationBitmap: Bitmap
-                val picture = Picture()
-                if (Build.VERSION.SDK_INT >= 28) {
-                    it.renderer.render(
-                        picture.beginRecording(bounds.width(), bounds.height()),
-                        Rect(0, 0, bounds.width(), bounds.height()),
-                        zonedDateTime,
-                        RenderParameters(params.renderParametersWireFormat),
-                        params.complicationSlotId
-                    )
-                    picture.endRecording()
-                    complicationBitmap = Api28CreateBitmapHelper.createBitmap(
-                        picture,
-                        bounds.width(),
-                        bounds.height(),
-                        Bitmap.Config.ARGB_8888
-                    )
-                } else {
-                    complicationBitmap =
-                        Bitmap.createBitmap(
-                            bounds.width(),
-                            bounds.height(),
-                            Bitmap.Config.ARGB_8888
+                .use {
+                    val zonedDateTime =
+                        ZonedDateTime.ofInstant(
+                            Instant.ofEpochMilli(params.calendarTimeMillis),
+                            ZoneId.of("UTC")
                         )
-                    it.renderer.render(
-                        Canvas(complicationBitmap),
-                        Rect(0, 0, bounds.width(), bounds.height()),
-                        zonedDateTime,
-                        RenderParameters(params.renderParametersWireFormat),
-                        params.complicationSlotId
-                    )
-                }
+                    // Compute the bounds of the complication based on the display rather than
+                    // the headless renderer (which may be smaller).
+                    val bounds =
+                        slot.computeBounds(
+                            Rect(
+                                0,
+                                0,
+                                Resources.getSystem().displayMetrics.widthPixels,
+                                Resources.getSystem().displayMetrics.heightPixels
+                            )
+                        )
 
-                // No point in restoring the old style and complication if this is headless.
-                if (!watchState.isHeadless) {
-                    // Restore previous ComplicationData & style if required.
-                    if (prevData != null) {
-                        val now = getNow()
-                        complicationSlotsManager.setComplicationDataUpdateSync(
-                            params.complicationSlotId,
-                            prevData,
-                            now
+                    val complicationBitmap: Bitmap
+                    val picture = Picture()
+                    if (Build.VERSION.SDK_INT >= 28) {
+                        slot.renderer.render(
+                            picture.beginRecording(bounds.width(), bounds.height()),
+                            Rect(0, 0, bounds.width(), bounds.height()),
+                            zonedDateTime,
+                            RenderParameters(params.renderParametersWireFormat),
+                            params.complicationSlotId
+                        )
+                        picture.endRecording()
+                        complicationBitmap =
+                            Api28CreateBitmapHelper.createBitmap(
+                                picture,
+                                bounds.width(),
+                                bounds.height(),
+                                Bitmap.Config.ARGB_8888
+                            )
+                    } else {
+                        complicationBitmap =
+                            Bitmap.createBitmap(
+                                bounds.width(),
+                                bounds.height(),
+                                Bitmap.Config.ARGB_8888
+                            )
+                        slot.renderer.render(
+                            Canvas(complicationBitmap),
+                            Rect(0, 0, bounds.width(), bounds.height()),
+                            zonedDateTime,
+                            RenderParameters(params.renderParametersWireFormat),
+                            params.complicationSlotId
                         )
                     }
-
-                    if (newStyle != null) {
-                        currentUserStyleRepository.updateUserStyle(oldStyle)
-                    }
+                    val bundle = SharedMemoryImage.ashmemWriteImageBundle(complicationBitmap)
+                    complicationBitmap.recycle()
+                    bundle
                 }
-
-                val bundle = SharedMemoryImage.ashmemWriteImageBundle(complicationBitmap)
-                complicationBitmap.recycle()
-                bundle
-            }
         }
+
+    /** Sets the user style and complication data, and returns a restoration function. */
+    internal fun setForScreenshot(
+        userStyle: UserStyle?,
+        complicationIdToData: Map<Int, ComplicationData>?,
+        instant: Instant,
+    ): AutoCloseable {
+        val restoreUserStyle =
+            userStyle?.let { currentUserStyleRepository.updateUserStyleForScreenshot(it) }
+        try {
+            val restoreComplications =
+                complicationIdToData?.let {
+                    complicationSlotsManager.setComplicationDataForScreenshot(it, instant)
+                }
+            return AutoCloseable { restoreUserStyle?.use { restoreComplications?.close() } }
+        } catch (e: Throwable) {
+            // Cleanup on failure.
+            restoreUserStyle?.close()
+            throw e
+        }
+    }
 
     @UiThread
     internal fun dump(writer: IndentingPrintWriter) {
@@ -1341,6 +1332,16 @@ constructor(
         )
         writer.println("currentUserStyleRepository.schema=${currentUserStyleRepository.schema}")
         writer.println("editorObscuresWatchFace=$editorObscuresWatchFace")
+        writer.println("additionalContentDescriptionLabels:")
+        writer.increaseIndent()
+        for (label in renderer.additionalContentDescriptionLabels) {
+            if (Build.TYPE.equals("userdebug")) {
+                writer.println("${label.first}: ${label.second}")
+            } else {
+                writer.println("${label.first}: Redacted")
+            }
+        }
+        writer.decreaseIndent()
         overlayStyle.dump(writer)
         watchState.dump(writer)
         complicationSlotsManager.dump(writer)
@@ -1381,62 +1382,49 @@ internal object CreateRemoteWatchFaceViewHelper {
         return RemoteWatchFaceView(view, host, watchFaceHostApi.getUiThreadCoroutineScope()) {
             surfaceHolder,
             params ->
-            val oldStyle = watchFaceImpl.currentUserStyleRepository.userStyle.value
             val instant = Instant.ofEpochMilli(params.calendarTimeMillis)
-
-            params.userStyle?.let {
-                watchFaceImpl.currentUserStyleRepository.updateUserStyle(
-                    UserStyle(UserStyleData(it), watchFaceImpl.currentUserStyleRepository.schema)
+            watchFaceImpl
+                .setForScreenshot(
+                    params.userStyle?.let {
+                        UserStyle(
+                            UserStyleData(it),
+                            watchFaceImpl.currentUserStyleRepository.schema
+                        )
+                    },
+                    params.idAndComplicationDatumWireFormats?.associate {
+                        it.id to it.complicationData.toApiComplicationData()
+                    },
+                    instant
                 )
-            }
-
-            val oldComplicationData =
-                watchFaceImpl.complicationSlotsManager.complicationSlots.values.associateBy(
-                    { it.id },
-                    { it.renderer.getData() }
-                )
-
-            params.idAndComplicationDatumWireFormats?.let {
-                for (idAndData in it) {
-                    watchFaceImpl.complicationSlotsManager.setComplicationDataUpdateSync(
-                        idAndData.id,
-                        idAndData.complicationData.toApiComplicationData(),
-                        instant
+                .use {
+                    watchFaceImpl.renderer.renderScreenshotToSurface(
+                        ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")),
+                        RenderParameters(params.renderParametersWireFormat),
+                        surfaceHolder
                     )
                 }
-            }
-
-            watchFaceImpl.renderer.renderScreenshotToSurface(
-                ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")),
-                RenderParameters(params.renderParametersWireFormat),
-                surfaceHolder
-            )
-
-            // Restore previous style & complicationSlots if required.
-            if (params.userStyle != null) {
-                watchFaceImpl.currentUserStyleRepository.updateUserStyle(oldStyle)
-            }
-
-            if (params.idAndComplicationDatumWireFormats != null) {
-                val now = watchFaceImpl.getNow()
-                for ((id, complicationData) in oldComplicationData) {
-                    watchFaceImpl.complicationSlotsManager.setComplicationDataUpdateSync(
-                        id,
-                        complicationData,
-                        now
-                    )
-                }
-            }
         }
     }
 }
 
-internal class SetFrameRateHelper {
-    @RequiresApi(Build.VERSION_CODES.R)
-    companion object {
-        fun setFrameRate(surface: Surface, frameRate: Float) {
-            surface.setFrameRate(frameRate, FRAME_RATE_COMPATIBILITY_DEFAULT)
-        }
+@RequiresApi(Build.VERSION_CODES.R)
+internal object SetFrameRateHelper {
+    fun setFrameRate(surface: Surface, frameRate: Float) {
+        surface.setFrameRate(frameRate, FRAME_RATE_COMPATIBILITY_DEFAULT)
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.R)
+internal object ClearFrameRateHelperR {
+    fun clearFrameRate(surface: Surface) {
+        surface.setFrameRate(SYSTEM_DECIDES_FRAME_RATE, FRAME_RATE_COMPATIBILITY_DEFAULT)
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+internal object ClearFrameRateHelperU {
+    fun clearFrameRate(surface: Surface) {
+        surface.clearFrameRate()
     }
 }
 

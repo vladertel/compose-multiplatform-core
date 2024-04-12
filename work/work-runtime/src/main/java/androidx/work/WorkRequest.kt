@@ -87,7 +87,7 @@ abstract class WorkRequest internal constructor(
         /**
          * Sets the backoff policy and backoff delay for the work.  The default values are
          * [BackoffPolicy.EXPONENTIAL] and
-         * {@value WorkRequest#DEFAULT_BACKOFF_DELAY_MILLIS}, respectively.  `backoffDelay`
+         * [WorkRequest#DEFAULT_BACKOFF_DELAY_MILLIS], respectively.  `backoffDelay`
          * will be clamped between [WorkRequest.MIN_BACKOFF_MILLIS] and
          * [WorkRequest.MAX_BACKOFF_MILLIS].
          *
@@ -110,7 +110,7 @@ abstract class WorkRequest internal constructor(
         /**
          * Sets the backoff policy and backoff delay for the work.  The default values are
          * [BackoffPolicy.EXPONENTIAL] and
-         * {@value WorkRequest#DEFAULT_BACKOFF_DELAY_MILLIS}, respectively.  `duration` will
+         * [WorkRequest#DEFAULT_BACKOFF_DELAY_MILLIS], respectively.  `duration` will
          * be clamped between [WorkRequest.MIN_BACKOFF_MILLIS] and
          * [WorkRequest.MAX_BACKOFF_MILLIS].
          *
@@ -158,6 +158,27 @@ abstract class WorkRequest internal constructor(
          */
         fun addTag(tag: String): B {
             tags.add(tag)
+            return thisObject
+        }
+
+        /**
+         * Specifies the name of the trace span to be used by [WorkManager] when executing the
+         * specified [WorkRequest].
+         *
+         * [WorkManager] uses the simple name of the [ListenableWorker] class
+         * truncated to a `127` character string, as the [traceTag] by default.
+         *
+         * You should override the [traceTag], when you are using [ListenableWorker] delegation
+         * via a [WorkerFactory].
+         *
+         * @param traceTag The name of the trace tag
+         * @return The current [Builder]
+         */
+        @Suppress("MissingGetterMatchingBuilder")
+        @SuppressWarnings("SetterReturnsThis")
+        fun setTraceTag(traceTag: String): B {
+            // No need to truncate the name here, given its handled by androidx.tracing.Trace
+            workSpec.traceTag = traceTag
             return thisObject
         }
 
@@ -270,6 +291,11 @@ abstract class WorkRequest internal constructor(
                 }
                 require(workSpec.initialDelay <= 0) { "Expedited jobs cannot be delayed" }
             }
+            if (workSpec.traceTag == null) {
+                // Derive a trace tag based on the fully qualified class name if
+                // one has not already been defined.
+                workSpec.traceTag = deriveTraceTagFromClassName(workSpec.workerClassName)
+            }
             // Create a new id and WorkSpec so this WorkRequest.Builder can be used multiple times.
             setId(UUID.randomUUID())
             return returnValue
@@ -351,5 +377,29 @@ abstract class WorkRequest internal constructor(
          */
         @SuppressLint("MinMaxConstant")
         const val MIN_BACKOFF_MILLIS = 10 * 1000L // 10 seconds.
+
+        /**
+         * The maximum length of a trace span.
+         */
+        private const val MAX_TRACE_SPAN_LENGTH = 127
+
+        /**
+         * The [androidx.tracing.Trace] class already truncates names.
+         *
+         * We try and extract the class name so it does not get truncated, given package name can
+         * be implied from other sources of information.
+         */
+        private fun deriveTraceTagFromClassName(workerClassName: String): String {
+            val components = workerClassName.split(".")
+            val label = when (components.size) {
+                1 -> components[0]
+                else -> components.last()
+            }
+            return if (label.length <= MAX_TRACE_SPAN_LENGTH) {
+                label
+            } else {
+                label.take(MAX_TRACE_SPAN_LENGTH)
+            }
+        }
     }
 }

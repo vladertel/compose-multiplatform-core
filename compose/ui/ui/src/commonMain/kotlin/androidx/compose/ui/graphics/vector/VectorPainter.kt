@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.util.packFloats
 
 /**
  * Default identifier for the root group if a Vector graphic
@@ -166,25 +167,26 @@ fun rememberVectorPainter(
  * @param [image] ImageVector used to create a vector graphic sub-composition
  */
 @Composable
-fun rememberVectorPainter(image: ImageVector) =
-    rememberVectorPainter(
-        defaultWidth = image.defaultWidth,
-        defaultHeight = image.defaultHeight,
-        viewportWidth = image.viewportWidth,
-        viewportHeight = image.viewportHeight,
-        name = image.name,
-        tintColor = image.tintColor,
-        tintBlendMode = image.tintBlendMode,
-        autoMirror = image.autoMirror,
-        content = { _, _ -> RenderVectorGroup(group = image.root) }
-    )
+fun rememberVectorPainter(image: ImageVector): VectorPainter {
+    val density = LocalDensity.current
+    val key = packFloats(image.genId.toFloat(), density.density)
+    return remember(key) {
+        createVectorPainterFromImageVector(
+            density,
+            image,
+            GroupComponent().apply {
+                createGroupComponent(image.root)
+            }
+        )
+    }
+}
 
 /**
  * [Painter] implementation that abstracts the drawing of a Vector graphic.
  * This can be represented by either a [ImageVector] or a programmatic
  * composition of a vector
  */
-class VectorPainter internal constructor() : Painter() {
+class VectorPainter internal constructor(root: GroupComponent = GroupComponent()) : Painter() {
 
     internal var size by mutableStateOf(Size.Zero)
 
@@ -211,7 +213,7 @@ class VectorPainter internal constructor() : Painter() {
             vector.name = value
         }
 
-    internal val vector = VectorComponent().apply {
+    internal val vector = VectorComponent(root).apply {
         invalidateCallback = {
             if (drawCount == invalidateCount) {
                 invalidateCount++
@@ -351,7 +353,8 @@ internal fun VectorPainter.configureVectorPainter(
  */
 internal fun createVectorPainterFromImageVector(
     density: Density,
-    imageVector: ImageVector
+    imageVector: ImageVector,
+    root: GroupComponent
 ): VectorPainter {
     val defaultSize = density.obtainSizePx(imageVector.defaultWidth, imageVector.defaultHeight)
     val viewport = obtainViewportSize(
@@ -359,15 +362,13 @@ internal fun createVectorPainterFromImageVector(
         imageVector.viewportWidth,
         imageVector.viewportHeight
     )
-    return VectorPainter().configureVectorPainter(
+    return VectorPainter(root).configureVectorPainter(
         defaultSize = defaultSize,
         viewportSize = viewport,
         name = imageVector.name,
         intrinsicColorFilter = createColorFilter(imageVector.tintColor, imageVector.tintBlendMode),
         autoMirror = imageVector.autoMirror
-    ).apply {
-        this.vector.root.createGroupComponent(imageVector.root)
-    }
+    )
 }
 
 /**

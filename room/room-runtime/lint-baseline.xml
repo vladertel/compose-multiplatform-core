@@ -1,166 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 8.1.0-beta02" type="baseline" client="gradle" dependencies="false" name="AGP (8.1.0-beta02)" variant="all" version="8.1.0-beta02">
+<issues format="6" by="lint 8.3.0-alpha10" type="baseline" client="gradle" dependencies="false" name="AGP (8.3.0-alpha10)" variant="all" version="8.3.0-alpha10">
 
     <issue
-        id="NewApi"
-        message="Call requires API level 21 (current min is 14): `java.util.Locale#forLanguageTag`"
-        errorLine1="        Locale.setDefault(Locale.forLanguageTag(&quot;tr-TR&quot;))"
-        errorLine2="                                 ~~~~~~~~~~~~~~">
+        id="RestrictedApiAndroidX"
+        message="Api29Impl.setNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            SupportSQLiteCompat.Api29Impl.setNotificationUris(delegate, cr, uris)"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/test/java/androidx/room/InvalidationTrackerTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/AutoClosingRoomOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(5)"
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="Api29Impl.setNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            SupportSQLiteCompat.Api29Impl.setNotificationUris(delegate, cr, uris)"
+        errorLine2="                                                              ~~~~~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoCloserTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/AutoClosingRoomOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(5)"
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="Api29Impl.setNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            SupportSQLiteCompat.Api29Impl.setNotificationUris(delegate, cr, uris)"
+        errorLine2="                                                                        ~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoCloserTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/AutoClosingRoomOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(10)"
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="Api29Impl.setNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            SupportSQLiteCompat.Api29Impl.setNotificationUris(delegate, cr, uris)"
+        errorLine2="                                                                            ~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoCloserTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/AutoClosingRoomOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(10)"
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="Api29Impl.getNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            return SupportSQLiteCompat.Api29Impl.getNotificationUris(delegate)"
+        errorLine2="                                                 ~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoCloserTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/AutoClosingRoomOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(5)"
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="Api29Impl.getNotificationUris can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            return SupportSQLiteCompat.Api29Impl.getNotificationUris(delegate)"
+        errorLine2="                                                                     ~~~~~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoCloserTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/AutoClosingRoomOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(5)"
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="Api23Impl.setExtras can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            SupportSQLiteCompat.Api23Impl.setExtras(delegate, extras)"
+        errorLine2="                                          ~~~~~~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoCloserTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/AutoClosingRoomOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(100)"
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="Api23Impl.setExtras can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            SupportSQLiteCompat.Api23Impl.setExtras(delegate, extras)"
+        errorLine2="                                                    ~~~~~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoClosingRoomOpenHelperFactoryTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/AutoClosingRoomOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="                Thread.sleep(100)"
-        errorLine2="                       ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="Api23Impl.setExtras can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            SupportSQLiteCompat.Api23Impl.setExtras(delegate, extras)"
+        errorLine2="                                                              ~~~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoClosingRoomOpenHelperFactoryTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/AutoClosingRoomOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="                Thread.sleep(100)"
-        errorLine2="                       ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="ProcessLock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="        val copyLock = ProcessLock("
+        errorLine2="                       ~~~~~~~~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoClosingRoomOpenHelperFactoryTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/PrePackagedCopyOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="                Thread.sleep(100)"
-        errorLine2="                       ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="ProcessLock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            name,"
+        errorLine2="            ~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoClosingRoomOpenHelperFactoryTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/PrePackagedCopyOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(100) // Let the db auto close..."
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="ProcessLock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            context.filesDir,"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoClosingRoomOpenHelperTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/PrePackagedCopyOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(20) // Database should auto-close here"
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="ProcessLock.lock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            copyLock.lock()"
+        errorLine2="                     ~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoClosingRoomOpenHelperTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/PrePackagedCopyOpenHelper.android.kt"/>
     </issue>
 
     <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(20)"
-        errorLine2="               ~~~~~">
+        id="RestrictedApiAndroidX"
+        message="ProcessLock.unlock can only be called from within the same library group (referenced groupId=`androidx.sqlite` from groupId=`androidx.room`)"
+        errorLine1="            copyLock.unlock()"
+        errorLine2="                     ~~~~~~">
         <location
-            file="src/androidTest/java/androidx/room/AutoClosingRoomOpenHelperTest.kt"/>
-    </issue>
-
-    <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="        Thread.sleep(20)"
-        errorLine2="               ~~~~~">
-        <location
-            file="src/androidTest/java/androidx/room/AutoClosingRoomOpenHelperTest.kt"/>
-    </issue>
-
-    <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="                        Thread.sleep(10)"
-        errorLine2="                               ~~~~~">
-        <location
-            file="src/test/java/androidx/room/InvalidationTrackerTest.kt"/>
-    </issue>
-
-    <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="                    Thread.sleep(10) // simulate slow reading, as if this was a big file"
-        errorLine2="                           ~~~~~">
-        <location
-            file="src/test/java/androidx/room/SQLiteCopyOpenHelperTest.kt"/>
-    </issue>
-
-    <issue
-        id="BanThreadSleep"
-        message="Uses Thread.sleep()"
-        errorLine1="                Thread.sleep(100)"
-        errorLine2="                       ~~~~~">
-        <location
-            file="src/test/java/androidx/room/TransactionExecutorTest.kt"/>
+            file="src/androidMain/kotlin/androidx/room/support/PrePackagedCopyOpenHelper.android.kt"/>
     </issue>
 
 </issues>

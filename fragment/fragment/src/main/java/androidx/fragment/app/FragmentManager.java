@@ -234,29 +234,84 @@ public abstract class FragmentManager implements FragmentResultOwner {
      */
     public interface OnBackStackChangedListener {
         /**
-         * Called whenever the contents of the back stack change.
+         * Called whenever the contents of the back stack change, after the
+         * fragment manager has moved all of the fragments to their final state.
+         *
+         * <p>
+         * This is the final callback that will be delivered to the listener in all cases except
+         * for when the predictive back gesture is cancelled. It will be called after
+         * {@link #onBackStackChangeCommitted(Fragment, boolean)}.
          */
         @MainThread
         void onBackStackChanged();
 
         /**
          * Called whenever the contents of the back stack are starting to be changed, before
-         * fragments being to move to their target states.
+         * any fragment actually changes its lifecycle state. If this is caused by a forward
+         * transaction and the given fragment is incoming, it will return <code>false</code> from
+         * {@link Fragment#isRemoving()}. If this is caused by a pop operation and the given
+         * fragment is being popped, it will return <code>true</code> from
+         * {@link Fragment#isRemoving()}.
          *
-         * @param fragment that is affected by the starting back stack change
-         * @param pop whether this back stack change is a pop
+         * <p>
+         * This is the first callback that will be delivered to the listener. If the transaction
+         * is caused by a predictive back gesture, it will be followed by an
+         * {@link #onBackStackChangeProgressed(BackEventCompat)} callback otherwise, the next
+         * callback will be {@link #onBackStackChangeCommitted(Fragment, boolean)}.
+         *
+         * @param fragment one of the fragments that is affected by the starting back stack change
+         * @param pop true, if this callback was triggered by a pop operation, false otherwise
          */
         @MainThread
         default void onBackStackChangeStarted(@NonNull Fragment fragment, boolean pop) { }
 
         /**
-         * Called whenever the contents of a back stack change is committed.
+         * Called whenever a predictive back gesture is changing the back stack. This will continue
+         * to be called with an updated {@link BackEventCompat} object until the gesture is either
+         * cancelled or completed.
          *
-         * @param fragment that is affected by the committed back stack change
-         * @param pop whether this back stack change is a pop
+         * <p>
+         * This is called immediately after {@link #onBackStackChangeStarted(Fragment, boolean)}
+         * during a predictive back gesture. If the gesture is completed, this will be followed by
+         * {@link #onBackStackChangeCommitted(Fragment, boolean)} and if it is cancelled, it will be
+         * followed by {@link #onBackStackChangeCancelled()}.
+         *
+         * @param backEventCompat provides the current progress of the active predictive back
+         *                        gesture
+         */
+        @MainThread
+        default void onBackStackChangeProgressed(@NonNull BackEventCompat backEventCompat) { }
+
+        /**
+         * Called whenever the contents of a back stack change is committed. If this is caused by
+         * a forward transaction and the given fragment is incoming, it will return
+         * <code>false</code> from {@link Fragment#isRemoving()}. If this is caused by a pop
+         * operation and the given fragment is being popped, it will return <code>true</code> from
+         * {@link Fragment#isRemoving()}.
+         *
+         * <p>
+         * This is called immediately after {@link #onBackStackChangeStarted(Fragment, boolean)}
+         * for a forward transaction or for a non-predictive back pop. If this is caused by a
+         * predictive back gesture, it will be called after
+         * {@link #onBackStackChangeProgressed(BackEventCompat)} before the fragment moves to the
+         * final state.
+         *
+         * @param fragment one of the fragments that is affected by the committed back stack change
+         * @param pop true, if this callback was triggered by a pop operation, false otherwise
          */
         @MainThread
         default void onBackStackChangeCommitted(@NonNull Fragment fragment, boolean pop) { }
+
+        /**
+         * Called whenever a predictive back gesture is cancelled.
+         *
+         * <p>
+         * This is called immediately after {@link #onBackStackChangeProgressed(BackEventCompat)}
+         * once a predictive back gesture has been cancelled and will place the FragmentManager back
+         * into the state before the predictive back gesture was started.
+         */
+        @MainThread
+        default void onBackStackChangeCancelled() { }
     }
 
     /**
@@ -453,7 +508,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
     private boolean mExecutingActions;
 
     private final FragmentStore mFragmentStore = new FragmentStore();
-    ArrayList<BackStackRecord> mBackStack;
+    ArrayList<BackStackRecord> mBackStack = new ArrayList<>();
     private ArrayList<Fragment> mCreatedMenus;
     private final FragmentLayoutInflaterFactory mLayoutInflaterFactory =
             new FragmentLayoutInflaterFactory(this);
@@ -470,9 +525,11 @@ public abstract class FragmentManager implements FragmentResultOwner {
                     if (FragmentManager.isLoggingEnabled(Log.DEBUG)) {
                         Log.d(FragmentManager.TAG,
                                 "handleOnBackStarted. PREDICTIVE_BACK = " + USE_PREDICTIVE_BACK
+                                        + " fragment manager " + FragmentManager.this
                         );
                     }
                     if (USE_PREDICTIVE_BACK) {
+                        endAnimatingAwayFragments();
                         prepareBackStackTransition();
                     }
                 }
@@ -482,6 +539,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
                     if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
                         Log.v(FragmentManager.TAG,
                                 "handleOnBackProgressed. PREDICTIVE_BACK = " + USE_PREDICTIVE_BACK
+                                        + " fragment manager " + FragmentManager.this
                         );
                     }
                     if (mTransitioningOp != null) {
@@ -495,6 +553,9 @@ public abstract class FragmentManager implements FragmentResultOwner {
                         for (SpecialEffectsController controller: changedControllers) {
                             controller.processProgress(backEvent);
                         }
+                        for (OnBackStackChangedListener listener : mBackStackChangeListeners) {
+                            listener.onBackStackChangeProgressed(backEvent);
+                        }
                     }
                 }
 
@@ -503,6 +564,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
                     if (FragmentManager.isLoggingEnabled(Log.DEBUG)) {
                         Log.d(FragmentManager.TAG,
                                 "handleOnBackPressed. PREDICTIVE_BACK = " + USE_PREDICTIVE_BACK
+                                        + " fragment manager " + FragmentManager.this
                         );
                     }
                     FragmentManager.this.handleOnBackPressed();
@@ -513,6 +575,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
                     if (FragmentManager.isLoggingEnabled(Log.DEBUG)) {
                         Log.d(FragmentManager.TAG,
                                 "handleOnBackCancelled. PREDICTIVE_BACK = " + USE_PREDICTIVE_BACK
+                                        + " fragment manager " + FragmentManager.this
                         );
                     }
                     if (USE_PREDICTIVE_BACK) {
@@ -532,7 +595,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
     private final Map<String, LifecycleAwareResultListener> mResultListeners =
             Collections.synchronizedMap(new HashMap<String, LifecycleAwareResultListener>());
 
-    ArrayList<OnBackStackChangedListener> mBackStackChangeListeners;
+    ArrayList<OnBackStackChangedListener> mBackStackChangeListeners = new ArrayList<>();
     private final FragmentLifecycleCallbacksDispatcher mLifecycleCallbacksDispatcher =
             new FragmentLifecycleCallbacksDispatcher(this);
     private final CopyOnWriteArrayList<FragmentOnAttachListener> mOnAttachListeners =
@@ -724,6 +787,10 @@ public abstract class FragmentManager implements FragmentResultOwner {
         synchronized (mPendingActions) {
             if (!mPendingActions.isEmpty()) {
                 mOnBackPressedCallback.setEnabled(true);
+                if (FragmentManager.isLoggingEnabled(Log.DEBUG)) {
+                    Log.d(TAG, "FragmentManager " + FragmentManager.this + " enabling "
+                            + "OnBackPressedCallback, caused by non-empty pending actions");
+                }
                 return;
             }
         }
@@ -788,8 +855,13 @@ public abstract class FragmentManager implements FragmentResultOwner {
 
     @SuppressWarnings("WeakerAccess") /* synthetic access */
     void handleOnBackPressed() {
+        // First, execute any pending actions to make sure we're in an
+        // up to date view of the world just in case anyone is queuing
+        // up transactions that change the back stack then immediately
+        // calling onBackPressed()
+        execPendingActions(true);
         if (USE_PREDICTIVE_BACK && mTransitioningOp != null) {
-            if (mBackStackChangeListeners != null && !mBackStackChangeListeners.isEmpty()) {
+            if (!mBackStackChangeListeners.isEmpty()) {
                 // Build a list of fragments based on the records
                 Set<Fragment> fragments = new LinkedHashSet<>(
                         fragmentsFromRecord(mTransitioningOp));
@@ -813,16 +885,23 @@ public abstract class FragmentManager implements FragmentResultOwner {
                 controller.completeBack();
             }
             mTransitioningOp = null;
+            updateOnBackPressedCallbackEnabled();
+            if (FragmentManager.isLoggingEnabled(Log.DEBUG)) {
+                Log.d(TAG, "Op is being set to null");
+                Log.d(TAG, "OnBackPressedCallback enabled=" + mOnBackPressedCallback.isEnabled()
+                        + " for  FragmentManager " + this);
+            }
         } else {
-            // First, execute any pending actions to make sure we're in an
-            // up to date view of the world just in case anyone is queuing
-            // up transactions that change the back stack then immediately
-            // calling onBackPressed()
-            execPendingActions(true);
             if (mOnBackPressedCallback.isEnabled()) {
+                if (FragmentManager.isLoggingEnabled(Log.DEBUG)) {
+                    Log.d(TAG, "Calling popBackStackImmediate via onBackPressed callback");
+                }
                 // We still have a back stack, so we can pop
                 popBackStackImmediate();
             } else {
+                if (FragmentManager.isLoggingEnabled(Log.DEBUG)) {
+                    Log.d(TAG, "Calling onBackPressed via onBackPressed callback");
+                }
                 // Sigh. Due to FragmentManager's asynchronicity, we can
                 // get into cases where we *think* we can handle the back
                 // button but because of frame perfect dispatch, we fell
@@ -967,6 +1046,9 @@ public abstract class FragmentManager implements FragmentResultOwner {
             mTransitioningOp.mCommitted = false;
             mTransitioningOp.commit();
             executePendingTransactions();
+            for (OnBackStackChangedListener listener : mBackStackChangeListeners) {
+                listener.onBackStackChangeCancelled();
+            }
         }
     }
 
@@ -1024,7 +1106,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * Return the number of entries currently in the back stack.
      */
     public int getBackStackEntryCount() {
-        return mBackStack != null ? mBackStack.size() : 0;
+        return mBackStack.size() + (mTransitioningOp != null ? 1 : 0);
     }
 
     /**
@@ -1033,6 +1115,12 @@ public abstract class FragmentManager implements FragmentResultOwner {
      */
     @NonNull
     public BackStackEntry getBackStackEntryAt(int index) {
+        if (index == mBackStack.size()) {
+            if (mTransitioningOp == null) {
+                throw new IndexOutOfBoundsException();
+            }
+            return mTransitioningOp;
+        }
         return mBackStack.get(index);
     }
 
@@ -1040,9 +1128,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * Add a new listener for changes to the fragment back stack.
      */
     public void addOnBackStackChangedListener(@NonNull OnBackStackChangedListener listener) {
-        if (mBackStackChangeListeners == null) {
-            mBackStackChangeListeners = new ArrayList<>();
-        }
         mBackStackChangeListeners.add(listener);
     }
 
@@ -1051,9 +1136,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * {@link #addOnBackStackChangedListener(OnBackStackChangedListener)}.
      */
     public void removeOnBackStackChangedListener(@NonNull OnBackStackChangedListener listener) {
-        if (mBackStackChangeListeners != null) {
-            mBackStackChangeListeners.remove(listener);
-        }
+        mBackStackChangeListeners.remove(listener);
     }
 
     @Override
@@ -1081,7 +1164,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
         }
     }
 
-    @SuppressLint("SyntheticAccessor")
     @Override
     public final void setFragmentResultListener(@NonNull final String requestKey,
             @NonNull final LifecycleOwner lifecycleOwner,
@@ -1233,7 +1315,13 @@ public abstract class FragmentManager implements FragmentResultOwner {
         return null;
     }
 
-    void onContainerAvailable(@NonNull FragmentContainerView container) {
+    /**
+     * Callback for when the {@link FragmentContainerView} becomes available in the view hierarchy
+     * and the fragment manager can add the fragment view to its hierarchy.
+     *
+     * @param container the container that the active fragment should add their views to
+     */
+    public final void onContainerAvailable(@NonNull FragmentContainerView container) {
         for (FragmentStateManager fragmentStateManager:
                 mFragmentStore.getActiveFragmentStateManagers()) {
             Fragment fragment = fragmentStateManager.getFragment();
@@ -1255,7 +1343,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * view's context is not a {@link FragmentActivity}.
      */
     @NonNull
-    static FragmentManager findFragmentManager(@NonNull View view) {
+    public static FragmentManager findFragmentManager(@NonNull View view) {
         // Search the view ancestors for a Fragment
         Fragment fragment = findViewFragment(view);
         FragmentManager fm;
@@ -1390,7 +1478,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
         if (shouldClear) {
             for (BackStackState backStackState : mBackStackStates.values()) {
                 for (String who : backStackState.mFragments) {
-                    mFragmentStore.getNonConfig().clearNonConfigState(who);
+                    mFragmentStore.getNonConfig().clearNonConfigState(who, false);
                 }
             }
         }
@@ -1460,19 +1548,17 @@ public abstract class FragmentManager implements FragmentResultOwner {
             }
         }
 
-        if (mBackStack != null) {
-            count = mBackStack.size();
-            if (count > 0) {
-                writer.print(prefix); writer.println("Back Stack:");
-                for (int i = 0; i < count; i++) {
-                    BackStackRecord bs = mBackStack.get(i);
-                    writer.print(prefix);
-                    writer.print("  #");
-                    writer.print(i);
-                    writer.print(": ");
-                    writer.println(bs.toString());
-                    bs.dump(innerPrefix, writer);
-                }
+        count = mBackStack.size();
+        if (count > 0) {
+            writer.print(prefix); writer.println("Back Stack:");
+            for (int i = 0; i < count; i++) {
+                BackStackRecord bs = mBackStack.get(i);
+                writer.print(prefix);
+                writer.print("  #");
+                writer.print(i);
+                writer.print(": ");
+                writer.println(bs.toString());
+                bs.dump(innerPrefix, writer);
             }
         }
 
@@ -2018,8 +2104,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
         // such as push, push, pop, push are correctly considered a push
         boolean isPop = isRecordPop.get(endIndex - 1);
 
-        if (addToBackStack && mBackStackChangeListeners != null
-                && !mBackStackChangeListeners.isEmpty()) {
+        if (addToBackStack && !mBackStackChangeListeners.isEmpty()) {
             Set<Fragment> fragments = new LinkedHashSet<>();
             // Build a list of fragments based on the records
             for (BackStackRecord record : records) {
@@ -2250,10 +2335,8 @@ public abstract class FragmentManager implements FragmentResultOwner {
     }
 
     private void reportBackStackChanged() {
-        if (mBackStackChangeListeners != null) {
-            for (int i = 0; i < mBackStackChangeListeners.size(); i++) {
-                mBackStackChangeListeners.get(i).onBackStackChanged();
-            }
+        for (int i = 0; i < mBackStackChangeListeners.size(); i++) {
+            mBackStackChangeListeners.get(i).onBackStackChanged();
         }
     }
 
@@ -2269,9 +2352,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
     }
 
     void addBackStackState(BackStackRecord state) {
-        if (mBackStack == null) {
-            mBackStack = new ArrayList<>();
-        }
         mBackStack.add(state);
     }
 
@@ -2482,7 +2562,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
      * @return
      */
     private int findBackStackIndex(@Nullable String name, int id, boolean inclusive) {
-        if (mBackStack == null || mBackStack.isEmpty()) {
+        if (mBackStack.isEmpty()) {
             return -1;
         }
         if (name == null && id < 0) {
@@ -2581,16 +2661,14 @@ public abstract class FragmentManager implements FragmentResultOwner {
 
             // Now save back stack.
             BackStackRecordState[] backStack = null;
-            if (mBackStack != null) {
-                int size = mBackStack.size();
-                if (size > 0) {
-                    backStack = new BackStackRecordState[size];
-                    for (int i = 0; i < size; i++) {
-                        backStack[i] = new BackStackRecordState(mBackStack.get(i));
-                        if (isLoggingEnabled(Log.VERBOSE)) {
-                            Log.v(TAG, "saveAllState: adding back stack #" + i
-                                    + ": " + mBackStack.get(i));
-                        }
+            int size = mBackStack.size();
+            if (size > 0) {
+                backStack = new BackStackRecordState[size];
+                for (int i = 0; i < size; i++) {
+                    backStack[i] = new BackStackRecordState(mBackStack.get(i));
+                    if (isLoggingEnabled(Log.VERBOSE)) {
+                        Log.v(TAG, "saveAllState: adding back stack #" + i
+                                + ": " + mBackStack.get(i));
                     }
                 }
             }
@@ -2752,7 +2830,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
                 mBackStack.add(bse);
             }
         } else {
-            mBackStack = null;
+            mBackStack = new ArrayList<>();
         }
         mBackStackIndex.set(fms.mBackStackIndex);
 
@@ -2793,7 +2871,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
     }
 
     @SuppressWarnings("deprecation")
-    @SuppressLint("SyntheticAccessor")
     void attachController(@NonNull FragmentHostCallback<?> host,
             @NonNull FragmentContainer container, @Nullable final Fragment parent) {
         if (mHost != null) throw new IllegalStateException("Already attached");
@@ -2922,7 +2999,6 @@ public abstract class FragmentManager implements FragmentResultOwner {
             mRequestPermissions = registry.register(keyPrefix + "RequestPermissions",
                     new ActivityResultContracts.RequestMultiplePermissions(),
                     new ActivityResultCallback<Map<String, Boolean>>() {
-                        @SuppressLint("SyntheticAccessor")
                         @Override
                         public void onActivityResult(Map<String, Boolean> result) {
                             String[] permissions = result.keySet().toArray(new String[0]);
@@ -3710,7 +3786,7 @@ public abstract class FragmentManager implements FragmentResultOwner {
             boolean result = prepareBackStackState(records, isRecordPop);
             mBackStarted = true;
             // Dispatch started signal to onBackStackChangedListeners.
-            if (mBackStackChangeListeners != null && !mBackStackChangeListeners.isEmpty()) {
+            if (!mBackStackChangeListeners.isEmpty()) {
                 if (records.size() > 0) {
                     boolean isPop = isRecordPop.get(records.size() - 1);
                     Set<Fragment> fragments = new LinkedHashSet<>();

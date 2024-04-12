@@ -16,24 +16,37 @@
 
 package androidx.appsearch.compiler.annotationwrapper;
 
+import static androidx.appsearch.compiler.IntrospectionHelper.APPSEARCH_SCHEMA_CLASS;
 import static androidx.appsearch.compiler.IntrospectionHelper.DOCUMENT_ANNOTATION_CLASS;
 
 import androidx.annotation.NonNull;
+import androidx.appsearch.compiler.IntrospectionHelper;
 
 import com.google.auto.value.AutoValue;
+import com.squareup.javapoet.ClassName;
 
 import java.util.Map;
+
+import javax.lang.model.type.TypeMirror;
 
 /**
  * An instance of the {@code @Document.BooleanProperty} annotation.
  */
 @AutoValue
 public abstract class BooleanPropertyAnnotation extends DataPropertyAnnotation {
-    public static final String SIMPLE_CLASS_NAME = "BooleanProperty";
-    public static final String CLASS_NAME = DOCUMENT_ANNOTATION_CLASS + "." + SIMPLE_CLASS_NAME;
+    public static final ClassName CLASS_NAME =
+            DOCUMENT_ANNOTATION_CLASS.nestedClass("BooleanProperty");
+
+    public static final ClassName CONFIG_CLASS =
+            APPSEARCH_SCHEMA_CLASS.nestedClass("BooleanPropertyConfig");
 
     public BooleanPropertyAnnotation() {
-        super(SIMPLE_CLASS_NAME);
+        super(
+                CLASS_NAME,
+                CONFIG_CLASS,
+                /* genericDocGetterName= */"getPropertyBoolean",
+                /* genericDocArrayGetterName= */"getPropertyBooleanArray",
+                /* genericDocSetterName= */"setPropertyBoolean");
     }
 
     /**
@@ -52,5 +65,11 @@ public abstract class BooleanPropertyAnnotation extends DataPropertyAnnotation {
     @Override
     public final Kind getDataPropertyKind() {
         return Kind.BOOLEAN_PROPERTY;
+    }
+
+    @NonNull
+    @Override
+    public TypeMirror getUnderlyingTypeWithinGenericDoc(@NonNull IntrospectionHelper helper) {
+        return helper.mBooleanPrimitiveType;
     }
 }

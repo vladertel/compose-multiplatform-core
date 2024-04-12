@@ -34,6 +34,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.BUFFERED
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 
 /**
@@ -131,6 +132,7 @@ public fun PredictiveBackHandler(
             "No OnBackPressedDispatcherOwner was provided via LocalOnBackPressedDispatcherOwner"
         }.onBackPressedDispatcher
 
+    @Suppress("deprecation", "KotlinRedundantDiagnosticSuppress") // TODO b/330570365
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner, backDispatcher) {
@@ -149,7 +151,13 @@ private class OnBackInstance(
 ) {
     val channel = Channel<BackEventCompat>(capacity = BUFFERED, onBufferOverflow = SUSPEND)
     val job = scope.launch {
-        onBack(channel.consumeAsFlow())
+        var completed = false
+        onBack(channel.consumeAsFlow().onCompletion {
+            completed = true
+        })
+        check(completed) {
+            "You must collect the progress flow"
+        }
     }
 
     fun send(backEvent: BackEventCompat) = channel.trySend(backEvent)

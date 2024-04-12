@@ -19,7 +19,7 @@ package androidx.paging
 import androidx.paging.LoadState.Error
 import androidx.paging.LoadState.Loading
 import androidx.paging.LoadState.NotLoading
-import co.touchlab.stately.collections.ConcurrentMutableList
+import androidx.paging.internal.CopyOnWriteArrayList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,22 +35,24 @@ import kotlinx.coroutines.flow.update
  */
 internal class MutableCombinedLoadStateCollection {
 
-    private val listeners = ConcurrentMutableList<(CombinedLoadStates) -> Unit>()
+    private val listeners = CopyOnWriteArrayList<(CombinedLoadStates) -> Unit>()
     private val _stateFlow = MutableStateFlow<CombinedLoadStates?>(null)
     public val stateFlow = _stateFlow.asStateFlow()
 
+    // load states are de-duplicated
     fun set(sourceLoadStates: LoadStates, remoteLoadStates: LoadStates?) =
         dispatchNewState { currState ->
             computeNewState(currState, sourceLoadStates, remoteLoadStates)
         }
 
+    // load states are de-duplicated
     fun set(type: LoadType, remote: Boolean, state: LoadState) =
         dispatchNewState { currState ->
             var source = currState?.source ?: LoadStates.IDLE
-            var mediator = currState?.mediator ?: LoadStates.IDLE
+            var mediator = currState?.mediator
 
             if (remote) {
-                mediator = mediator.modifyState(type, state)
+                mediator = LoadStates.IDLE.modifyState(type, state)
             } else {
                 source = source.modifyState(type, state)
             }

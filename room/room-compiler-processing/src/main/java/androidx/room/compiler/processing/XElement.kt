@@ -18,9 +18,8 @@ package androidx.room.compiler.processing
 
 import androidx.room.compiler.processing.javac.JavacElement
 import androidx.room.compiler.processing.ksp.KSFileAsOriginatingElement
-import androidx.room.compiler.processing.ksp.KspElement
-import androidx.room.compiler.processing.ksp.KspMemberContainer
-import androidx.room.compiler.processing.ksp.synthetic.KspSyntheticPropertyMethodElement
+import androidx.room.compiler.processing.ksp.KspFileMemberContainer
+import androidx.room.compiler.processing.ksp.KspTypeElement
 import androidx.room.compiler.processing.ksp.wrapAsOriginatingElement
 import javax.lang.model.element.Element
 import kotlin.contracts.contract
@@ -61,10 +60,10 @@ interface XElement : XAnnotated {
 
     /**
      * Returns the immediate enclosing element. This uses Element.getEnclosingElement() on the
-     * Java side, and KSNode.parent on the KSP side. For non-nested classes we return null as we
-     * don't model packages yet. For fields declared in primary constructors in Kotlin we return
+     * Java side, and KSNode.parent on the KSP side. For non-nested classes we return null.
+     * For fields declared in primary constructors in Kotlin we return
      * the enclosing type, not the constructor. For top-level properties or functions in Kotlin
-     * we return JavacTypeElement on the Java side and KspFileMemberContainer or
+     * we return JavacTypeElement on the Javac/KAPT side and KspFileMemberContainer or
      * KspSyntheticFileMemberContainer on the KSP side.
      */
     val enclosingElement: XElement?
@@ -150,22 +149,31 @@ fun XElement.isConstructor(): Boolean {
  * Attempts to get a Javac [Element] representing the originating element for attribution
  * when writing a file for incremental processing.
  *
- * In KSP a [KSFileAsOriginatingElement] will be returned, which is a synthetic javac element
- * that allows us to pass originating elements to JavaPoet and KotlinPoet, and later extract
- * the KSP file when writing with [XFiler].
+ * In KSP a synthetic javac element will be returned, which allows us to pass originating elements
+ * to JavaPoet and KotlinPoet, and later extract the KSP file when writing with [XFiler] if it
+ * exists.
+ *
+ * Note that this function doesn't yet support Kotlin top-level functions and properties from
+ * compiled classes in KSP due to https://github.com/google/ksp/issues/1704.
  */
-internal fun XElement.originatingElementForPoet(): Element? {
-    return when (this) {
-        is JavacElement -> element
-        is KspElement -> {
-            declaration.wrapAsOriginatingElement()
+internal fun XElement.originatingElementForPoet(): Element {
+    return if (this is JavacElement) {
+        element
+    } else {
+        // We use either the enclosing file or the class as the originating element for KSP.
+        this.closestMemberContainer.run {
+            when (this) {
+                is KspTypeElement -> {
+                    declaration.wrapAsOriginatingElement()
+                }
+                is KspFileMemberContainer -> {
+                    KSFileAsOriginatingElement(ksFile)
+                }
+                else -> {
+                    error("Originating element is not implemented for" +
+                        " ${this.javaClass}")
+                }
+            }
         }
-        is KspSyntheticPropertyMethodElement -> {
-            field.declaration.wrapAsOriginatingElement()
-        }
-        is KspMemberContainer -> {
-            declaration?.wrapAsOriginatingElement()
-        }
-        else -> error("Originating element is not implemented for ${this.javaClass}")
     }
 }

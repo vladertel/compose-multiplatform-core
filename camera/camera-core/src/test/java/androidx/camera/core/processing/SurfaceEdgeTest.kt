@@ -45,6 +45,8 @@ import androidx.camera.testing.impl.fakes.FakeDeferrableSurface
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import com.google.common.truth.Truth.assertThat
 import com.google.common.util.concurrent.ListenableFuture
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -93,6 +95,23 @@ class SurfaceEdgeTest {
         provider.close()
         fakeSurfaceTexture.release()
         fakeSurface.release()
+    }
+
+    @Test
+    fun closeProviderAfterInvalidate_newConnectionNotAffected() {
+        // Arrange: set provider and keep a copy of the old connection.
+        surfaceEdge.setProvider(provider)
+        val oldConnection = surfaceEdge.deferrableSurfaceForTesting
+
+        // Act: invalidate to reset, then close the provider.
+        surfaceEdge.invalidate()
+        provider.close()
+        shadowOf(getMainLooper()).idle()
+
+        // Assert: the new connection is not affected.
+        val newConnection = surfaceEdge.deferrableSurfaceForTesting
+        assertThat(oldConnection.isClosed).isTrue()
+        assertThat(newConnection.isClosed).isFalse()
     }
 
     @Test
@@ -176,6 +195,49 @@ class SurfaceEdgeTest {
     fun createSurfaceRequest_throwsException() {
         surfaceEdge.close()
         surfaceEdge.createSurfaceRequest(FakeCamera())
+    }
+
+    @Test
+    fun closeProviderOnNonUiThread_noCrash() {
+        // Arrange.
+        val providerDeferrableSurface = FakeDeferrableSurface(INPUT_SIZE, ImageFormat.PRIVATE)
+        surfaceEdge.setProvider(providerDeferrableSurface)
+        val nonUiExecutor = Executors.newSingleThreadExecutor()
+        // Act.
+        nonUiExecutor.execute {
+            providerDeferrableSurface.close()
+        }
+        nonUiExecutor.shutdown()
+        assertThat(nonUiExecutor.awaitTermination(1, TimeUnit.SECONDS)).isTrue()
+        // Assert.
+        assertThat(providerDeferrableSurface.isClosed).isTrue()
+    }
+
+    @Test
+    fun closeProviderOnClosedEdge_noCrash() {
+        // Arrange: create SurfaceRequest and close the edge.
+        val providerDeferrableSurface = FakeDeferrableSurface(INPUT_SIZE, ImageFormat.PRIVATE)
+        val edgeDeferrableSurface = surfaceEdge.deferrableSurface
+        surfaceEdge.setProvider(providerDeferrableSurface)
+        surfaceEdge.close()
+        // Act: close the provider.
+        providerDeferrableSurface.close()
+        shadowOf(getMainLooper()).idle()
+        // Assert.
+        assertThat(edgeDeferrableSurface.isClosed).isTrue()
+    }
+
+    @Test
+    fun closeSurfaceRequestProviderOnClosedEdge_noCrash() {
+        // Arrange: create SurfaceRequest and close the edge.
+        val surfaceRequest = surfaceEdge.createSurfaceRequest(FakeCamera())
+        val edgeDeferrableSurface = surfaceEdge.deferrableSurface
+        surfaceEdge.close()
+        // Act: close the provider.
+        surfaceRequest.deferrableSurface.close()
+        shadowOf(getMainLooper()).idle()
+        // Assert.
+        assertThat(edgeDeferrableSurface.isClosed).isTrue()
     }
 
     @Test

@@ -147,6 +147,14 @@ internal class PointerInputEventProcessor(val root: LayoutNode) {
             hitPathTracker.processCancel()
         }
     }
+
+    /**
+     * In some cases we need to clear the HIT Modifier.Node(s) cached from previous events because
+     * they are no longer relevant.
+     */
+    fun clearPreviouslyHitModifierNodes() {
+        hitPathTracker.clearPreviouslyHitModifierNodeCache()
+    }
 }
 
 /**
@@ -196,7 +204,8 @@ private class PointerInputChangeEventProducer {
                     false,
                     it.type,
                     it.historical,
-                    it.scrollDelta
+                    it.scrollDelta,
+                    it.originalEventPosition
                 )
             )
             if (it.down) {

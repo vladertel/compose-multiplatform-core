@@ -37,7 +37,6 @@ import androidx.room.compiler.processing.ksp.KspHasModifiers
 import androidx.room.compiler.processing.ksp.KspMemberContainer
 import androidx.room.compiler.processing.ksp.KspProcessingEnv
 import androidx.room.compiler.processing.ksp.KspType
-import androidx.room.compiler.processing.ksp.KspTypeElement
 import androidx.room.compiler.processing.ksp.findEnclosingMemberContainer
 import androidx.room.compiler.processing.ksp.jvmDescriptor
 import androidx.room.compiler.processing.ksp.overrides
@@ -67,6 +66,8 @@ internal sealed class KspSyntheticPropertyMethodElement(
         field.declaration,
         accessor
     ) {
+
+    override val propertyName = field.name
 
     @OptIn(KspExperimental::class)
     override val jvmName: String by lazy {
@@ -152,7 +153,7 @@ internal sealed class KspSyntheticPropertyMethodElement(
     }
 
     final override fun overrides(other: XMethodElement, owner: XTypeElement): Boolean {
-        return env.resolver.overrides(this, other, field.enclosingElement as? KspTypeElement)
+        return env.resolver.overrides(this, other)
     }
 
     override fun isKotlinPropertyMethod() = true
@@ -174,6 +175,10 @@ internal sealed class KspSyntheticPropertyMethodElement(
             delegate = accessor,
             filter = NO_USE_SITE_OR_GETTER
         ) {
+
+        override fun isKotlinPropertySetter() = false
+
+        override fun isKotlinPropertyGetter() = true
 
         override val name: String by lazy {
             JvmAbi.computeGetterName(field.declaration.simpleName.asString())
@@ -219,6 +224,10 @@ internal sealed class KspSyntheticPropertyMethodElement(
             filter = NO_USE_SITE_OR_SETTER
         ) {
 
+        override fun isKotlinPropertySetter() = true
+
+        override fun isKotlinPropertyGetter() = false
+
         override val name by lazy {
             JvmAbi.computeSetterName(field.declaration.simpleName.asString())
         }
@@ -246,8 +255,8 @@ internal sealed class KspSyntheticPropertyMethodElement(
             return "synthetic property getter"
         }
 
-        private class SyntheticExecutableParameterElement(
-            private val env: KspProcessingEnv,
+        internal class SyntheticExecutableParameterElement(
+            internal val env: KspProcessingEnv,
             override val enclosingElement: Setter
         ) : XExecutableParameterElement,
             XAnnotated by KspAnnotated.create(
@@ -264,8 +273,17 @@ internal sealed class KspSyntheticPropertyMethodElement(
             override fun isVarArgs() = false
 
             override val name: String by lazy {
-                val originalName = enclosingElement.accessor.parameter.name?.asString()
-                originalName.sanitizeAsJavaParameterName(0)
+                enclosingElement.accessor.parameter.name?.asString().let {
+                    if (it == "<set-?>") {
+                        "p0"
+                    } else {
+                        it
+                    }
+                } ?: "_no_param_name"
+            }
+
+            override val jvmName: String by lazy {
+                name.sanitizeAsJavaParameterName(0)
             }
 
             override val type: KspType by lazy {

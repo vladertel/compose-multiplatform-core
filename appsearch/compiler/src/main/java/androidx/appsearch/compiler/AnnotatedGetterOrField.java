@@ -27,8 +27,10 @@ import static java.util.stream.Collectors.joining;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appsearch.compiler.annotationwrapper.DataPropertyAnnotation;
+import androidx.appsearch.compiler.annotationwrapper.LongPropertyAnnotation;
 import androidx.appsearch.compiler.annotationwrapper.MetadataPropertyAnnotation;
 import androidx.appsearch.compiler.annotationwrapper.PropertyAnnotation;
+import androidx.appsearch.compiler.annotationwrapper.SerializerClass;
 import androidx.appsearch.compiler.annotationwrapper.StringPropertyAnnotation;
 
 import com.google.auto.value.AutoValue;
@@ -360,7 +362,7 @@ public abstract class AnnotatedGetterOrField {
         List<? extends AnnotationMirror> annotations =
                 element.getAnnotationMirrors().stream()
                         .filter(ann -> ann.getAnnotationType().toString().startsWith(
-                                DOCUMENT_ANNOTATION_CLASS)).toList();
+                                DOCUMENT_ANNOTATION_CLASS.canonicalName())).toList();
         if (annotations.isEmpty()) {
             return null;
         }
@@ -474,19 +476,34 @@ public abstract class AnnotatedGetterOrField {
         IntrospectionHelper helper = new IntrospectionHelper(env);
         switch (annotation.getDataPropertyKind()) {
             case STRING_PROPERTY:
-                requireTypeIsOneOf(
-                        getterOrField, List.of(helper.mStringType), env, /* allowRepeated= */true);
+                SerializerClass stringSerializer =
+                        ((StringPropertyAnnotation) annotation).getCustomSerializer();
+                if (stringSerializer != null) {
+                    requireComponentTypeMatchesWithSerializer(getterOrField, stringSerializer, env);
+                } else {
+                    requireTypeIsOneOf(
+                            getterOrField,
+                            List.of(helper.mStringType),
+                            env,
+                            /* allowRepeated= */true);
+                }
                 break;
             case DOCUMENT_PROPERTY:
                 requireTypeIsSomeDocumentClass(getterOrField, env);
                 break;
             case LONG_PROPERTY:
-                requireTypeIsOneOf(
-                        getterOrField,
-                        List.of(helper.mLongPrimitiveType, helper.mIntPrimitiveType,
-                                helper.mLongBoxType, helper.mIntegerBoxType),
-                        env,
-                        /* allowRepeated= */true);
+                SerializerClass longSerializer =
+                        ((LongPropertyAnnotation) annotation).getCustomSerializer();
+                if (longSerializer != null) {
+                    requireComponentTypeMatchesWithSerializer(getterOrField, longSerializer, env);
+                } else {
+                    requireTypeIsOneOf(
+                            getterOrField,
+                            List.of(helper.mLongPrimitiveType, helper.mIntPrimitiveType,
+                                    helper.mLongBoxType, helper.mIntegerBoxType),
+                            env,
+                            /* allowRepeated= */true);
+                }
                 break;
             case DOUBLE_PROPERTY:
                 requireTypeIsOneOf(
@@ -533,11 +550,39 @@ public abstract class AnnotatedGetterOrField {
                 .anyMatch(expectedType -> typeUtils.isSameType(expectedType, target));
         if (!isValid) {
             String error = "@"
-                    + getterOrField.getAnnotation().getSimpleClassName()
+                    + getterOrField.getAnnotation().getClassName().simpleName()
                     + " must only be placed on a getter/field of type "
                     + (allowRepeated ? "or array or collection of " : "")
                     + expectedTypes.stream().map(TypeMirror::toString).collect(joining("|"));
             throw new ProcessingException(error, getterOrField.getElement());
+        }
+    }
+
+    /**
+     * Makes sure the getter/field's component type is consistent with the serializer class.
+     *
+     * @throws ProcessingException If the getter/field is of a different type than what the
+     *                             serializer class serializes to/from.
+     */
+    private static void requireComponentTypeMatchesWithSerializer(
+            @NonNull AnnotatedGetterOrField getterOrField,
+            @NonNull SerializerClass serializerClass,
+            @NonNull ProcessingEnvironment env) throws ProcessingException {
+        // The component type must exactly match the type for which we have a serializer.
+        // Subtypes do not work e.g.
+        // @StringProperty(serializer = ParentSerializer.class) Child mField;
+        // because ParentSerializer.deserialize(String) would return a Parent, which we won't be
+        // able to assign to mField.
+        if (!env.getTypeUtils().isSameType(
+                getterOrField.getComponentType(), serializerClass.getCustomType())) {
+            throw new ProcessingException(
+                    ("@%s with serializer = %s must only be placed on a getter/field of type or "
+                            + "array or collection of %s")
+                            .formatted(
+                                    getterOrField.getAnnotation().getClassName().simpleName(),
+                                    serializerClass.getElement().getSimpleName(),
+                                    serializerClass.getCustomType()),
+                    getterOrField.getElement());
         }
     }
 
@@ -552,7 +597,7 @@ public abstract class AnnotatedGetterOrField {
         TypeMirror componentType = annotatedGetterOrField.getComponentType();
         if (componentType.getKind() == TypeKind.DECLARED) {
             Element element = env.getTypeUtils().asElement(componentType);
-            if (element.getKind() == ElementKind.CLASS && getDocumentAnnotation(element) != null) {
+            if (getDocumentAnnotation(element) != null) {
                 return;
             }
         }

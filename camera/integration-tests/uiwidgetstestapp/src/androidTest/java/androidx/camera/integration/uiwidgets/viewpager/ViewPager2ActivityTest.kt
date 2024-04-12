@@ -41,6 +41,7 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.filters.LargeTest
+import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.google.common.truth.Truth.assertThat
@@ -134,7 +135,7 @@ class ViewPager2ActivityTest(
     fun tearDown() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val cameraProvider = ProcessCameraProvider.getInstance(context)[10, TimeUnit.SECONDS]
-        cameraProvider.shutdown()[10, TimeUnit.SECONDS]
+        cameraProvider.shutdownAsync()[10, TimeUnit.SECONDS]
         mDevice.unfreezeRotation()
     }
 
@@ -156,6 +157,7 @@ class ViewPager2ActivityTest(
     }
 
     // The test makes sure the TextureView surface texture keeps the same after switch.
+    @SdkSuppress(maxSdkVersion = 33) // b/331933633
     @Test
     fun testPreviewViewUpdateAfterSwitch() {
 

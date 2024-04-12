@@ -17,7 +17,7 @@
 package androidx.paging
 
 import androidx.kruth.assertWithMessage
-import co.touchlab.stately.concurrency.AtomicBoolean
+import androidx.paging.internal.AtomicBoolean
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
 import kotlin.concurrent.thread
@@ -45,20 +45,23 @@ internal class GarbageCollectionTestHelper {
                 val arraySize = Random.nextInt(1000)
                 leak.add(ByteArray(arraySize))
                 System.gc()
-            } while (continueTriggeringGc.value)
+            } while (continueTriggeringGc.get())
         }
         var collectedItemCount = 0
         val expectedItemCount = size - expected.sumOf { it.second }
         while (collectedItemCount < expectedItemCount &&
-            queue.remove(10.seconds.inWholeMilliseconds) != null
+            queue.remove(5.seconds.inWholeMilliseconds) != null
         ) {
             collectedItemCount++
         }
-        continueTriggeringGc.value = false
+        continueTriggeringGc.set(false)
         val leakedObjects = countLiveObjects()
         val leakedObjectToStrings = references.mapNotNull {
             it.get()
         }.joinToString("\n")
+        assertWithMessage(
+            "expected to collect $expectedItemCount, collected $collectedItemCount"
+        ).that(collectedItemCount).isEqualTo(expectedItemCount)
         assertWithMessage(
             """
             expected to collect $expectedItemCount, collected $collectedItemCount.

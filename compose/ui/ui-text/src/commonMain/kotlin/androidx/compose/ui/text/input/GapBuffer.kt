@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.text.input
 
+import androidx.annotation.RestrictTo
 import androidx.compose.ui.text.InternalTextApi
 
 /**
@@ -225,9 +226,9 @@ private class GapBuffer(initBuffer: CharArray, initGapStart: Int, initGapEnd: In
  * is requested, this class flush the buffer and create new String, then start new gap buffer.
  *
  * @param text The initial text
- * @suppress
  */
 @InternalTextApi // "Used by benchmarks"
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class PartialGapBuffer(var text: String) {
     internal companion object {
         const val BUF_SIZE = 255

@@ -376,7 +376,20 @@ value class PointerEventType private constructor(internal val value: Int) {
  * The [position] represents the position of the pointer relative to the element that
  * this [PointerInputChange] is being dispatched to.
  *
- * Note: The [position] values can be outside the actual bounds of the element itself meaning the
+ * Note 1: A [PointerEvent]'s [PointerEventType] is the cause of an event and the associated
+ * [PointerInputChange]'s properties reflecting that. Most of those are exclusive, in other words,
+ * a Press/Release [PointerEventType] will not cause a scrollDelta change and a
+ * Scroll [PointerEventType] will not cause a pressed or previousPressed change. However, either a
+ * a Scroll or a Press/Release may contain a position change in its [PointerInputChange]s.
+ * (You can imagine one finger moving while another is lifted up.)
+ *
+ * Examples of [PointerEventType] and the associated [PointerInputChange] property changes:
+ *  - Press -> press will change (position may change) but scroll delta will not.
+ *  - Release -> press will change (position may change) but scroll delta will not.
+ *  - Move -> position will change but press and scroll delta will not.
+ *  - Scroll -> scroll delta will change (position may change) but press will not.
+ *
+ * Note 2: The [position] values can be outside the actual bounds of the element itself meaning the
  * numbers can be negative or larger than the element bounds.
  *
  * The [previousPosition] represents the position of the pointer offset to the current
@@ -499,6 +512,7 @@ class PointerInputChange(
         type: PointerType,
         historical: List<HistoricalChange>,
         scrollDelta: Offset,
+        originalEventPosition: Offset,
     ) : this(
         id,
         uptimeMillis,
@@ -513,6 +527,7 @@ class PointerInputChange(
         scrollDelta
     ) {
         _historical = historical
+        this.originalEventPosition = originalEventPosition
     }
 
     /**
@@ -527,8 +542,11 @@ class PointerInputChange(
     @get:ExperimentalComposeUiApi
     val historical: List<HistoricalChange>
         get() = _historical ?: listOf()
+
     @OptIn(ExperimentalComposeUiApi::class)
     private var _historical: List<HistoricalChange>? = null
+
+    internal var originalEventPosition: Offset = Offset.Zero
 
     /**
      * Indicates whether the change was consumed or not. Note that the change must be consumed in
@@ -590,7 +608,8 @@ class PointerInputChange(
         consumed.downChange || consumed.positionChange,
         type,
         this.historical,
-        this.scrollDelta
+        this.scrollDelta,
+        this.originalEventPosition,
     ).also {
         this.consumed = consumed
     }
@@ -663,7 +682,8 @@ class PointerInputChange(
         consumed.downChange || consumed.positionChange,
         type,
         this.historical,
-        scrollDelta
+        scrollDelta,
+        this.originalEventPosition,
     ).also {
         this.consumed = consumed
     }
@@ -701,7 +721,8 @@ class PointerInputChange(
         isInitiallyConsumed = false, // doesn't matter, we will pass a holder anyway
         type,
         historical = this.historical,
-        scrollDelta
+        scrollDelta,
+        this.originalEventPosition,
     ).also {
         it.consumed = this.consumed
     }
@@ -763,7 +784,7 @@ class PointerInputChange(
         type: PointerType = this.type,
         historical: List<HistoricalChange> = this.historical,
         scrollDelta: Offset = this.scrollDelta
-        ): PointerInputChange = PointerInputChange(
+    ): PointerInputChange = PointerInputChange(
         id,
         currentTime,
         currentPosition,
@@ -775,7 +796,8 @@ class PointerInputChange(
         isInitiallyConsumed = false, // doesn't matter, we will pass a holder anyway
         type,
         historical,
-        scrollDelta
+        scrollDelta,
+        originalEventPosition = this.originalEventPosition,
     ).also {
         it.consumed = this.consumed
     }
@@ -814,6 +836,17 @@ class HistoricalChange(
     val uptimeMillis: Long,
     val position: Offset
 ) {
+    internal var originalEventPosition: Offset = Offset.Zero
+        private set
+
+    internal constructor(
+        uptimeMillis: Long,
+        position: Offset,
+        originalEventPosition: Offset
+    ) : this(uptimeMillis, position) {
+        this.originalEventPosition = originalEventPosition
+    }
+
     override fun toString(): String {
         return "HistoricalChange(uptimeMillis=$uptimeMillis, " +
             "position=$position)"

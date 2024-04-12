@@ -24,9 +24,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.internal.ProvideContentColorTextStyle
 import androidx.compose.material3.tokens.BadgeTokens
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +42,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastFirst
 import kotlin.math.roundToInt
 
 /**
@@ -64,7 +65,6 @@ import kotlin.math.roundToInt
  * @param content the anchor to which this badge will be positioned
  *
  */
-@ExperimentalMaterial3Api
 @Composable
 fun BadgedBox(
     badge: @Composable BoxScope.() -> Unit,
@@ -92,24 +92,26 @@ fun BadgedBox(
         },
         modifier = modifier
             .onGloballyPositioned { coordinates ->
-                layoutAbsoluteLeft = coordinates.boundsInWindow().left
-                layoutAbsoluteTop = coordinates.boundsInWindow().top
+                val windowBoundsRect = coordinates.boundsInWindow()
+                layoutAbsoluteLeft = windowBoundsRect.left
+                layoutAbsoluteTop = windowBoundsRect.top
                 val layoutGreatGrandParent =
                     coordinates.parentLayoutCoordinates?.parentLayoutCoordinates?.parentCoordinates
                 layoutGreatGrandParent?.let {
-                    greatGrandParentAbsoluteRight = it.boundsInWindow().right
-                    greatGrandParentAbsoluteTop = it.boundsInWindow().top
+                    val greatGrandParentWindowBoundsRect = it.boundsInWindow()
+                    greatGrandParentAbsoluteRight = greatGrandParentWindowBoundsRect.right
+                    greatGrandParentAbsoluteTop = greatGrandParentWindowBoundsRect.top
                 }
             }
     ) { measurables, constraints ->
 
-        val badgePlaceable = measurables.first { it.layoutId == "badge" }.measure(
+        val badgePlaceable = measurables.fastFirst { it.layoutId == "badge" }.measure(
             // Measure with loose constraints for height as we don't want the text to take up more
             // space than it needs.
             constraints.copy(minHeight = 0)
         )
 
-        val anchorPlaceable = measurables.first { it.layoutId == "anchor" }.measure(constraints)
+        val anchorPlaceable = measurables.fastFirst { it.layoutId == "anchor" }.measure(constraints)
 
         val firstBaseline = anchorPlaceable[FirstBaseline]
         val lastBaseline = anchorPlaceable[LastBaseline]
@@ -137,8 +139,8 @@ fun BadgedBox(
             anchorPlaceable.placeRelative(0, 0)
 
             // Desired Badge placement
-            var badgeX = anchorPlaceable.width + badgeHorizontalOffset.roundToPx()
-            var badgeY = -badgePlaceable.height / 2 + badgeVerticalOffset.roundToPx()
+            var badgeX = anchorPlaceable.width - badgeHorizontalOffset.roundToPx()
+            var badgeY = -badgePlaceable.height + badgeVerticalOffset.roundToPx()
             // Badge correction logic if the badge will be cut off by the grandparent bounds.
             val badgeAbsoluteTop = layoutAbsoluteTop + badgeY
             val badgeAbsoluteRight = layoutAbsoluteLeft + badgeX + badgePlaceable.width.toFloat()
@@ -176,7 +178,6 @@ fun BadgedBox(
  * [containerColor] is not a color from the theme.
  * @param content optional content to be rendered inside this badge
  */
-@ExperimentalMaterial3Api
 @Composable
 fun Badge(
     modifier: Modifier = Modifier,
@@ -209,21 +210,17 @@ fun Badge(
     ) {
         if (content != null) {
             // Not using Surface composable because it blocks touch propagation behind it.
-            CompositionLocalProvider(
-                LocalContentColor provides contentColor
-            ) {
-                val style = MaterialTheme.typography.fromToken(BadgeTokens.LargeLabelTextFont)
-                ProvideTextStyle(
-                    value = style,
-                    content = { content() }
-                )
-            }
+            val style = BadgeTokens.LargeLabelTextFont.value
+            ProvideContentColorTextStyle(
+                contentColor = contentColor,
+                textStyle = style,
+                content = { content() }
+            )
         }
     }
 }
 
 /** Default values used for [Badge] implementations. */
-@ExperimentalMaterial3Api
 object BadgeDefaults {
     /** Default container color for a badge. */
     val containerColor: Color @Composable get() = BadgeTokens.Color.value
@@ -235,10 +232,14 @@ object BadgeDefaults {
 internal val BadgeWithContentHorizontalPadding = 4.dp
 
 /*@VisibleForTesting*/
-// Horizontally align start/end of text badge 4dp from the top end corner of its anchor
-internal val BadgeWithContentHorizontalOffset = -4.dp
-internal val BadgeWithContentVerticalOffset = -4.dp
+// Offsets for badge when there is short or long content
+// Horizontally align start/end of text badge 12.dp from the top end corner of its anchor
+// Vertical overlap with anchor is 14.dp
+internal val BadgeWithContentHorizontalOffset = 12.dp
+internal val BadgeWithContentVerticalOffset = 14.dp
 
 /*@VisibleForTesting*/
-// Horizontally align start/end of icon only badge 0.dp from the end/start edge of anchor
-internal val BadgeOffset = 0.dp
+// Offsets for badge when there is no content
+// Horizontally align start/end of icon only badge 6.dp from the end/start edge of anchor
+// Vertical overlap with anchor is 6.dp
+internal val BadgeOffset = 6.dp

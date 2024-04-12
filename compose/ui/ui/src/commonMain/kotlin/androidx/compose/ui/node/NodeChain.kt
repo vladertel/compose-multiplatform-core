@@ -23,6 +23,9 @@ import androidx.compose.ui.CombinedModifier
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.areObjectsOfSameType
+import androidx.compose.ui.input.pointer.SuspendPointerInputElement
+import androidx.compose.ui.internal.checkPrecondition
+import androidx.compose.ui.internal.checkPreconditionNotNull
 import androidx.compose.ui.layout.ModifierInfo
 
 private val SentinelHead = object : Modifier.Node() {
@@ -60,7 +63,7 @@ internal class NodeChain(val layoutNode: LayoutNode) {
      *  owner or one per chain.
      */
     private fun padChain(): Modifier.Node {
-        check(head !== SentinelHead) { "padChain called on already padded chain" }
+        checkPrecondition(head !== SentinelHead) { "padChain called on already padded chain" }
         val currentHead = head
         currentHead.parent = SentinelHead
         SentinelHead.child = currentHead
@@ -68,13 +71,15 @@ internal class NodeChain(val layoutNode: LayoutNode) {
     }
 
     private fun trimChain(paddedHead: Modifier.Node): Modifier.Node {
-        check(paddedHead === SentinelHead) { "trimChain called on already trimmed chain" }
+        checkPrecondition(paddedHead === SentinelHead) {
+            "trimChain called on already trimmed chain"
+        }
         val result = SentinelHead.child ?: tail
         result.parent = null
         SentinelHead.child = null
         SentinelHead.aggregateChildKindSet = 0.inv()
         SentinelHead.updateCoordinator(null)
-        check(result !== SentinelHead) { "trimChain did not update the head" }
+        checkPrecondition(result !== SentinelHead) { "trimChain did not update the head" }
         return result
     }
 
@@ -120,7 +125,7 @@ internal class NodeChain(val layoutNode: LayoutNode) {
             // removed we will break into a structural update.
             var node: Modifier.Node? = paddedHead.child
             while (node != null && i < beforeSize) {
-                checkNotNull(before) { "expected prior modifier list to be non-empty" }
+                checkPreconditionNotNull(before) { "expected prior modifier list to be non-empty" }
                 val prev = before[i]
                 val next = after[i]
                 when (actionForModifiers(prev, next)) {
@@ -150,8 +155,8 @@ internal class NodeChain(val layoutNode: LayoutNode) {
             }
             if (i < beforeSize) {
                 coordinatorSyncNeeded = true
-                checkNotNull(before) { "expected prior modifier list to be non-empty" }
-                checkNotNull(node) { "structuralUpdate requires a non-null tail" }
+                checkPreconditionNotNull(before) { "expected prior modifier list to be non-empty" }
+                checkPreconditionNotNull(node) { "structuralUpdate requires a non-null tail" }
                 // there must have been a structural change
                 // we only need to diff what is left of the list, so we use `i` to determine how
                 // much of the list is left.
@@ -180,7 +185,7 @@ internal class NodeChain(val layoutNode: LayoutNode) {
             }
             syncAggregateChildKindSet()
         } else if (after.size == 0) {
-            checkNotNull(before) { "expected prior modifier list to be non-empty" }
+            checkPreconditionNotNull(before) { "expected prior modifier list to be non-empty" }
             // common case where we we are removing all the modifiers.
             var node = paddedHead.child
             while (node != null && i < before.size) {
@@ -217,6 +222,16 @@ internal class NodeChain(val layoutNode: LayoutNode) {
     internal fun resetState() {
         tailToHead {
             if (it.isAttached) it.reset()
+        }
+        current?.let { elements ->
+            elements.forEachIndexed { i, element ->
+                // we need to make sure the suspending pointer input modifier node is updated after
+                // being reset so we use the latest lambda, even if the keys provided as input
+                // didn't change.
+                if (element is SuspendPointerInputElement) {
+                    elements[i] = ForceUpdateElement(element)
+                }
+            }
         }
         runDetachLifecycle()
         markAsDetached()
@@ -577,7 +592,9 @@ internal class NodeChain(val layoutNode: LayoutNode) {
             }
             else -> BackwardsCompatNode(element)
         }
-        check(!node.isAttached) { "createAndInsertNodeAsParent called on an attached node" }
+        checkPrecondition(!node.isAttached) {
+            "createAndInsertNodeAsParent called on an attached node"
+        }
         node.insertedNodeAwaitingAttachForInvalidation = true
         return insertParent(node, child)
     }
@@ -615,7 +632,7 @@ internal class NodeChain(val layoutNode: LayoutNode) {
             }
             else -> BackwardsCompatNode(element)
         }
-        check(!node.isAttached) {
+        checkPrecondition(!node.isAttached) {
             "A ModifierNodeElement cannot return an already attached node from create() "
         }
         node.insertedNodeAwaitingAttachForInvalidation = true
@@ -795,12 +812,15 @@ private const val ActionReuse = 2
  * 3. else REPLACE (NO REUSE, NO UPDATE)
  */
 internal fun actionForModifiers(prev: Modifier.Element, next: Modifier.Element): Int {
-    return if (prev == next)
+    return if (prev == next) {
         ActionReuse
-    else if (areObjectsOfSameType(prev, next))
+    } else if (areObjectsOfSameType(prev, next) ||
+        (prev is ForceUpdateElement && areObjectsOfSameType(prev.original, next))
+    ) {
         ActionUpdate
-    else
+    } else {
         ActionReplace
+    }
 }
 
 private fun <T : Modifier.Node> ModifierNodeElement<T>.updateUnsafe(
@@ -832,4 +852,16 @@ private fun Modifier.fillVector(
         }
     }
     return result
+}
+
+@Suppress("ModifierNodeInspectableProperties")
+private data class ForceUpdateElement(val original: ModifierNodeElement<*>) :
+    ModifierNodeElement<Modifier.Node>() {
+    override fun create(): Modifier.Node {
+        throw IllegalStateException("Shouldn't be called")
+    }
+
+    override fun update(node: Modifier.Node) {
+        throw IllegalStateException("Shouldn't be called")
+    }
 }

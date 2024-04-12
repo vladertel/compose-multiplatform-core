@@ -51,11 +51,9 @@ public class PerfettoHelper(
     var perfettoPid: Int? = null
 
     /**
-     * For now, we use --background-wait only when unbundled.
-     *
-     * Eventually, we should also use it when using bundled platform version that support it (T+?)
+     * --background-wait requires unbundled or API 33 bundled version of perfetto
      */
-    private val useBackgroundWait = unbundled
+    private val useBackgroundWait = unbundled || Build.VERSION.SDK_INT >= 33
 
     private fun perfettoStartupException(label: String, cause: Exception?): IllegalStateException {
         return IllegalStateException(
@@ -379,7 +377,9 @@ public class PerfettoHelper(
         private const val PERFETTO_TXT_PROTO_ARG = " --txt"
 
         // Max wait count for checking if perfetto is stopped successfully
-        private const val PERFETTO_KILL_WAIT_COUNT = 30
+        // Note: this is increased due to frequency of data source timeouts seen in b/323601788,
+        //  total kill wait must be much larger than PerfettoConfig data_source_stop_timeout_ms
+        private const val PERFETTO_KILL_WAIT_COUNT = 50
 
         // Check if perfetto is stopped every 100 millis.
         private const val PERFETTO_KILL_WAIT_TIME_MS: Long = 100
@@ -421,8 +421,6 @@ public class PerfettoHelper(
                     // supported by a device. That is why we need to search from most specific to
                     // least specific. For e.g. emulators claim to support aarch64, when in reality
                     // they can only support x86 or x86_64.
-                    // Note: Cuttlefish is x86 but claims support for x86_64
-                    Build.MODEL.contains("Cuttlefish") -> "x86" // TODO(204892353): handle properly
                     Build.SUPPORTED_64_BIT_ABIS.any { it.startsWith("x86_64") } -> "x86_64"
                     Build.SUPPORTED_32_BIT_ABIS.any { it.startsWith("x86") } -> "x86"
                     Build.SUPPORTED_64_BIT_ABIS.any { it.startsWith("arm64") } -> "aarch64"

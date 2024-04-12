@@ -21,11 +21,10 @@ import androidx.benchmark.macro.CompilationMode
 import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.filters.LargeTest
-import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.Direction
-import androidx.test.uiautomator.UiDevice
 import androidx.testutils.createCompilationParams
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -40,12 +39,14 @@ class SwipeBenchmark(
     @get:Rule
     val benchmarkRule = MacrobenchmarkRule()
 
-    private lateinit var device: UiDevice
-
     @Before
     fun setUp() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        device = UiDevice.getInstance(instrumentation)
+        disableChargingExperience()
+    }
+
+    @After
+    fun destroy() {
+        enableChargingExperience()
     }
 
     @Test
@@ -64,8 +65,13 @@ class SwipeBenchmark(
             val swipeToDismissBox = device.findObject(By.desc(CONTENT_DESCRIPTION))
             // Setting a gesture margin is important otherwise gesture nav is triggered.
             swipeToDismissBox.setGestureMargin(device.displayWidth / 5)
-            repeat(10) {
-                swipeToDismissBox.swipe(Direction.RIGHT, 0.75f)
+            repeat(3) {
+                swipeToDismissBox.swipe(Direction.RIGHT, 1f, SWIPE_SPEED)
+                // Sleeping the current thread for sometime before swiping again. This is required
+                // for cuttlefish_wear emulator as swipes are not completed when performed
+                // repeatedly. See b/328016250 for more details.
+                // TODO(b/329837878): Remove the sleep once infra improves
+                Thread.sleep(500)
                 device.waitForIdle()
             }
         }
@@ -80,4 +86,6 @@ class SwipeBenchmark(
         @JvmStatic
         fun parameters() = createCompilationParams()
     }
+
+    private val SWIPE_SPEED = 500
 }

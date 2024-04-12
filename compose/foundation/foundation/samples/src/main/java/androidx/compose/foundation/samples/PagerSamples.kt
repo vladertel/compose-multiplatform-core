@@ -17,6 +17,7 @@
 package androidx.compose.foundation.samples
 
 import androidx.annotation.Sampled
+import androidx.compose.animation.core.animate
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -58,7 +60,6 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
 @Sampled
 @Composable
 fun SimpleHorizontalPagerSample() {
@@ -81,7 +82,6 @@ fun SimpleHorizontalPagerSample() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Sampled
 @Composable
 fun SimpleVerticalPagerSample() {
@@ -104,7 +104,6 @@ fun SimpleVerticalPagerSample() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Sampled
 @Composable
 fun PagerWithStateSample() {
@@ -128,6 +127,65 @@ fun PagerWithStateSample() {
 }
 
 @OptIn(ExperimentalFoundationApi::class)
+@Sampled
+@Composable
+fun PagerCustomAnimateScrollToPage() {
+    suspend fun PagerState.customAnimateScrollToPage(page: Int) {
+        val preJumpPosition = if (page > currentPage) {
+            (page - 1).coerceAtLeast(0)
+        } else {
+            (page + 1).coerceAtMost(pageCount)
+        }
+        scroll {
+            // Update the target page
+            updateTargetPage(page)
+
+            // pre-jump to 1 page before our target page
+            updateCurrentPage(preJumpPosition, 0.0f)
+            val targetPageDiff = page - currentPage
+            val distance = targetPageDiff * layoutInfo.pageSize.toFloat()
+            var previousValue = 0.0f
+            animate(
+                0f,
+                distance,
+            ) { currentValue, _ ->
+                previousValue += scrollBy(currentValue - previousValue)
+            }
+        }
+    }
+
+    val state = rememberPagerState(initialPage = 5) { 10 }
+    val scope = rememberCoroutineScope()
+
+    Column {
+        HorizontalPager(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(0.9f),
+            state = state
+        ) { page ->
+            Box(
+                modifier = Modifier
+                    .padding(10.dp)
+                    .background(Color.Blue)
+                    .fillMaxWidth()
+                    .aspectRatio(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = page.toString(), fontSize = 32.sp)
+            }
+        }
+
+        Button(onClick = {
+            scope.launch {
+                state.customAnimateScrollToPage(1)
+            }
+        }) {
+            Text(text = "Jump to Page 1")
+        }
+    }
+}
+
 @Sampled
 @Composable
 fun CustomPageSizeSample() {
@@ -165,7 +223,6 @@ fun CustomPageSizeSample() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Sampled
 @Composable
 fun ObservingStateChangesInPagerStateSample() {
@@ -198,7 +255,6 @@ fun ObservingStateChangesInPagerStateSample() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Sampled
 @Composable
 fun AnimateScrollPageSample() {
@@ -237,7 +293,6 @@ fun AnimateScrollPageSample() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Sampled
 @Composable
 fun ScrollToPageSample() {
@@ -272,7 +327,6 @@ fun ScrollToPageSample() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Sampled
 @Composable
 fun HorizontalPagerWithScrollableContent() {
@@ -341,7 +395,6 @@ fun HorizontalPagerWithScrollableContent() {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Sampled
 @Composable
 fun UsingPagerLayoutInfoForSideEffectSample() {

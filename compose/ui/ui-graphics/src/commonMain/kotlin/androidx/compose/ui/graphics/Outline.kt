@@ -16,6 +16,7 @@
 
 package androidx.compose.ui.graphics
 
+import androidx.annotation.FloatRange
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -23,6 +24,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.boundingRect
+import androidx.compose.ui.geometry.isSimple
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -71,7 +73,7 @@ sealed class Outline {
         internal val roundRectPath: Path?
 
         init {
-            roundRectPath = if (!roundRect.hasSameCornerRadius()) {
+            roundRectPath = if (!roundRect.isSimple) {
                 Path().apply { addRoundRect(roundRect) }
             } else {
                 null
@@ -147,8 +149,7 @@ fun Path.addOutline(outline: Outline) = when (outline) {
 fun DrawScope.drawOutline(
     outline: Outline,
     color: Color,
-    /*@FloatRange(from = 0.0, to = 1.0)*/
-    alpha: Float = 1.0f,
+    @FloatRange(from = 0.0, to = 1.0) alpha: Float = 1.0f,
     style: DrawStyle = Fill,
     colorFilter: ColorFilter? = null,
     blendMode: BlendMode = DrawScope.DefaultBlendMode
@@ -187,8 +188,7 @@ fun DrawScope.drawOutline(
 fun DrawScope.drawOutline(
     outline: Outline,
     brush: Brush,
-    /*@FloatRange(from = 0.0, to = 1.0)*/
-    alpha: Float = 1.0f,
+    @FloatRange(from = 0.0, to = 1.0) alpha: Float = 1.0f,
     style: DrawStyle = Fill,
     colorFilter: ColorFilter? = null,
     blendMode: BlendMode = DrawScope.DefaultBlendMode

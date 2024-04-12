@@ -16,15 +16,15 @@
 
 package androidx.compose.ui.input.pointer.util
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.internal.checkPrecondition
+import androidx.compose.ui.internal.throwIllegalArgumentException
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.util.fastCoerceAtLeast
 import androidx.compose.ui.util.fastForEach
 import kotlin.math.abs
 import kotlin.math.sign
@@ -49,8 +49,15 @@ private const val HorizonMilliseconds: Int = 100
  * have been received.
  */
 class VelocityTracker {
-    private val xVelocityTracker = VelocityTracker1D() // non-differential, Lsq2 1D velocity tracker
-    private val yVelocityTracker = VelocityTracker1D() // non-differential, Lsq2 1D velocity tracker
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    private val strategy = if (VelocityTrackerStrategyUseImpulse) {
+        VelocityTracker1D.Strategy.Impulse
+    } else {
+        VelocityTracker1D.Strategy.Lsq2 // non-differential, Lsq2 1D velocity tracker
+    }
+    private val xVelocityTracker = VelocityTracker1D(strategy = strategy)
+    private val yVelocityTracker = VelocityTracker1D(strategy = strategy)
 
     internal var currentPointerPositionAccumulator = Offset.Zero
     internal var lastMoveEventTimeStamp = 0L
@@ -73,10 +80,34 @@ class VelocityTracker {
     /**
      * Computes the estimated velocity of the pointer at the time of the last provided data point.
      *
+     * The velocity calculated will not be limited. Unlike [calculateVelocity(maximumVelocity)]
+     * the resulting velocity won't be limited.
+     *
      * This can be expensive. Only call this when you need the velocity.
      */
-    fun calculateVelocity(): Velocity {
-        return Velocity(xVelocityTracker.calculateVelocity(), yVelocityTracker.calculateVelocity())
+    fun calculateVelocity(): Velocity =
+        calculateVelocity(Velocity(Float.MAX_VALUE, Float.MAX_VALUE))
+
+    /**
+     * Computes the estimated velocity of the pointer at the time of the last provided data point.
+     *
+     * The method allows specifying the maximum absolute value for the calculated
+     * velocity. If the absolute value of the calculated velocity exceeds the specified
+     * maximum, the return value will be clamped down to the maximum. For example, if
+     * the absolute maximum velocity is specified as "20", a calculated velocity of "25"
+     * will be returned as "20", and a velocity of "-30" will be returned as "-20".
+     *
+     * @param maximumVelocity the absolute values of the X and Y maximum velocities to
+     * be returned in units/second. `units` is the units of the positions provided to this
+     * VelocityTracker.
+     */
+    fun calculateVelocity(maximumVelocity: Velocity): Velocity {
+        checkPrecondition(maximumVelocity.x > 0f && maximumVelocity.y > 0) {
+            "maximumVelocity should be a positive value. You specified=$maximumVelocity"
+        }
+        val velocityX = xVelocityTracker.calculateVelocity(maximumVelocity.x)
+        val velocityY = yVelocityTracker.calculateVelocity(maximumVelocity.y)
+        return Velocity(velocityX, velocityY)
     }
 
     /**
@@ -85,6 +116,7 @@ class VelocityTracker {
     fun resetTracking() {
         xVelocityTracker.resetTracking()
         yVelocityTracker.resetTracking()
+        lastMoveEventTimeStamp = 0L
     }
 }
 
@@ -186,9 +218,10 @@ class VelocityTracker1D internal constructor(
     }
 
     /**
-     * Computes the estimated velocity at the time of the last provided data point. The units of
-     * velocity will be `units/second`, where `units` is the units of the data points provided via
-     * [addDataPoint].
+     * Computes the estimated velocity at the time of the last provided data point.
+     *
+     * The units of velocity will be `units/second`, where `units` is the units of the data
+     * points provided via [addDataPoint].
      *
      * This can be expensive. Only call this when you need the velocity.
      */
@@ -211,7 +244,11 @@ class VelocityTracker1D internal constructor(
             val age: Float = (newestSample.time - sample.time).toFloat()
             val delta: Float =
                 abs(sample.time - previousSample.time).toFloat()
-            previousSample = sample
+            previousSample = if (strategy == Strategy.Lsq2 || isDataDifferential) {
+                sample
+            } else {
+                newestSample
+            }
             if (age > HorizonMilliseconds || delta > AssumePointerMoveStoppedMilliseconds) {
                 break
             }
@@ -239,6 +276,33 @@ class VelocityTracker1D internal constructor(
         // We're unable to make a velocity estimate but we did have at least one
         // valid pointer position.
         return 0f
+    }
+
+    /**
+     * Computes the estimated velocity at the time of the last provided data point.
+     *
+     * The method allows specifying the maximum absolute value for the calculated
+     * velocity. If the absolute value of the calculated velocity exceeds the specified
+     * maximum, the return value will be clamped down to the maximum. For example, if
+     * the absolute maximum velocity is specified as "20", a calculated velocity of "25"
+     * will be returned as "20", and a velocity of "-30" will be returned as "-20".
+     *
+     * @param maximumVelocity the absolute value of the maximum velocity to be returned in
+     * units/second, where `units` is the units of the positions provided to this VelocityTracker.
+     */
+    fun calculateVelocity(maximumVelocity: Float): Float {
+        checkPrecondition(maximumVelocity > 0f) {
+            "maximumVelocity should be a positive value. You specified=$maximumVelocity"
+        }
+        val velocity = calculateVelocity()
+
+        return if (velocity == 0.0f) {
+            0.0f
+        } else if (velocity > 0) {
+            velocity.coerceAtMost(maximumVelocity)
+        } else {
+            velocity.coerceAtLeast(-maximumVelocity)
+        }
     }
 
     /**
@@ -307,84 +371,23 @@ private fun Array<DataPointAtTime?>.set(index: Int, time: Long, dataPoint: Float
  *
  * @param event Pointer change to track.
  */
-@OptIn(ExperimentalComposeUiApi::class)
 fun VelocityTracker.addPointerInputChange(event: PointerInputChange) {
-    if (VelocityTrackerAddPointsFix) {
-        addPointerInputChangeWithFix(event)
-    } else {
-        addPointerInputChangeLegacy(event)
-    }
-}
-
-@OptIn(ExperimentalComposeUiApi::class)
-private fun VelocityTracker.addPointerInputChangeLegacy(event: PointerInputChange) {
-
-    // Register down event as the starting point for the accumulator
+    // If this is ACTION_DOWN: Reset the tracking.
     if (event.changedToDownIgnoreConsumed()) {
-        currentPointerPositionAccumulator = event.position
         resetTracking()
     }
 
-    // To calculate delta, for each step we want to  do currentPosition - previousPosition.
-    // Initially the previous position is the previous position of the current event
-    var previousPointerPosition = event.previousPosition
+    // If this is not ACTION_UP event: Add events to the tracker as per the platform implementation.
+    // In the platform implementation the historical events array is used, they store the current
+    // event data in the position HistoricalArray.Size. Our historical array doesn't have access
+    // to the final position, but we can get that information from the original event data X and Y
+    // coordinates.
     @OptIn(ExperimentalComposeUiApi::class)
-    event.historical.fastForEach {
-        // Historical data happens within event.position and event.previousPosition
-        // That means, event.previousPosition < historical data < event.position
-        // Initially, the first delta will happen between the previousPosition and
-        // the first position in historical delta. For subsequent historical data, the
-        // deltas happen between themselves. That's why we need to update previousPointerPosition
-        // everytime.
-        val historicalDelta = it.position - previousPointerPosition
-        previousPointerPosition = it.position
-
-        // Update the current position with the historical delta and add it to the tracker
-        currentPointerPositionAccumulator += historicalDelta
-        addPosition(it.uptimeMillis, currentPointerPositionAccumulator)
-    }
-
-    // For the last position in the event
-    // If there's historical data, the delta is event.position - lastHistoricalPoint
-    // If there's no historical data, the delta is event.position - event.previousPosition
-    val delta = event.position - previousPointerPosition
-    currentPointerPositionAccumulator += delta
-    addPosition(event.uptimeMillis, currentPointerPositionAccumulator)
-}
-
-private fun VelocityTracker.addPointerInputChangeWithFix(event: PointerInputChange) {
-    // If this is ACTION_DOWN: Register down event as the starting point for the accumulator
-    // Since compose uses relative positions, for a more accurate velocity calculation we'll need
-    // to transform all events positions. We use the start of the movement signaled by the DOWN
-    // event as the start point. Any subsequent event will be accumulated into
-    // [currentPointerPositionAccumulator] and used to update the tracker.
-    // We also use this to reset [lastMoveEventTimeStamp].
-    if (event.changedToDownIgnoreConsumed()) {
-        lastMoveEventTimeStamp = 0L
-        currentPointerPositionAccumulator = event.position
-        resetTracking()
-        return
-    }
-
-    // If this is a ACTION_MOVE event: Add events to the tracker as per the platform implementation.
-    // ACTION_MOVE may or may not have a historical array. If they do have a historical array, use
-    // the data provided by the array only, if they do not have historical data, use the data
-    // provided by the event itself. This is in line with the platform implementation.
-    @OptIn(ExperimentalComposeUiApi::class)
-    if (!event.changedToUpIgnoreConsumed() && !event.changedToDownIgnoreConsumed()) {
-        lastMoveEventTimeStamp = event.uptimeMillis
-        if (event.historical.isEmpty()) {
-            val delta = event.position - event.previousPosition
-            currentPointerPositionAccumulator += delta
-            addPosition(event.uptimeMillis, currentPointerPositionAccumulator)
-        } else {
-            event.historical.fastForEach {
-                val historicalDelta = it.position - currentPointerPositionAccumulator
-                // Update the current position with the historical delta and add it to the tracker
-                currentPointerPositionAccumulator += historicalDelta
-                addPosition(it.uptimeMillis, currentPointerPositionAccumulator)
-            }
+    if (!event.changedToUpIgnoreConsumed()) {
+        event.historical.fastForEach {
+            addPosition(it.uptimeMillis, it.originalEventPosition)
         }
+        addPosition(event.uptimeMillis, event.originalEventPosition)
     }
 
     // If this is ACTION_UP. Fix for b/238654963. If there's been enough time after the last MOVE
@@ -392,6 +395,7 @@ private fun VelocityTracker.addPointerInputChangeWithFix(event: PointerInputChan
     if (event.changedToUpIgnoreConsumed() && (event.uptimeMillis - lastMoveEventTimeStamp) > 40L) {
         resetTracking()
     }
+    lastMoveEventTimeStamp = event.uptimeMillis
 }
 
 internal data class DataPointAtTime(var time: Long, var dataPoint: Float)
@@ -428,10 +432,10 @@ internal fun polyFitLeastSquares(
     coefficients: FloatArray = FloatArray((degree + 1).coerceAtLeast(0))
 ): FloatArray {
     if (degree < 1) {
-        throw IllegalArgumentException("The degree must be at positive integer")
+        throwIllegalArgumentException("The degree must be at positive integer")
     }
     if (sampleCount == 0) {
-        throw IllegalArgumentException("At least one point must be provided")
+        throwIllegalArgumentException("At least one point must be provided")
     }
 
     val truncatedDegree =
@@ -442,8 +446,8 @@ internal fun polyFitLeastSquares(
         }
 
     // Shorthands for the purpose of notation equivalence to original C++ code.
-    val m: Int = sampleCount
-    val n: Int = truncatedDegree + 1
+    val m = sampleCount
+    val n = truncatedDegree + 1
 
     // Expand the X vector to a matrix A, pre-multiplied by the weights.
     val a = Matrix(n, m)
@@ -462,10 +466,8 @@ internal fun polyFitLeastSquares(
     val r = Matrix(n, n)
     for (j in 0 until n) {
         val w = q[j]
-        val aw = a[j]
-        for (h in 0 until m) {
-            w[h] = aw[h]
-        }
+        a[j].copyInto(w, 0, 0, m)
+
         for (i in 0 until j) {
             val z = q[i]
             val dot = w.dot(z)
@@ -474,22 +476,11 @@ internal fun polyFitLeastSquares(
             }
         }
 
-        val norm: Float = w.norm()
-        if (norm < 0.000001f) {
-            // TODO(b/129494471): Determine what this actually means and see if there are
-            // alternatives to throwing an Exception here.
-
-            // Vectors are linearly dependent or zero so no solution.
-            throw IllegalArgumentException(
-                "Vectors are linearly dependent or zero so no " +
-                    "solution. TODO(shepshapard), actually determine what this means"
-            )
-        }
-
-        val inverseNorm: Float = 1.0f / norm
+        val inverseNorm = 1.0f / w.norm().fastCoerceAtLeast(1e-6f)
         for (h in 0 until m) {
             w[h] *= inverseNorm
         }
+
         val v = r[j]
         for (i in 0 until n) {
             v[i] = if (i < j) 0.0f else w.dot(a[i])
@@ -514,11 +505,12 @@ internal fun polyFitLeastSquares(
     }
 
     for (i in n - 1 downTo 0) {
-        coefficients[i] = q[i].dot(wy)
+        var c = q[i].dot(wy)
+        val ri = r[i]
         for (j in n - 1 downTo i + 1) {
-            coefficients[i] -= r[i, j] * coefficients[j]
+            c -= ri[j] * coefficients[j]
         }
-        coefficients[i] /= r[i, i]
+        coefficients[i] = c / ri[i]
     }
 
     return coefficients
@@ -599,6 +591,8 @@ internal fun polyFitLeastSquares(
  *
  * Note that approach 2) is sensitive to the proper ordering of the data in time, since
  * the boundary condition must be applied to the oldest sample to be accurate.
+ *
+ * NOTE: [sampleCount] MUST be >= 2
  */
 private fun calculateImpulseVelocity(
     dataPoints: FloatArray,
@@ -606,33 +600,22 @@ private fun calculateImpulseVelocity(
     sampleCount: Int,
     isDataDifferential: Boolean
 ): Float {
-    if (sampleCount < 2) {
-        return 0f
-    }
-    if (sampleCount == 2) {
-        if (time[0] == time[1]) {
-            return 0f
-        }
-        val dataPointsDelta =
-        // For differential data ponits, each measurement reflects the amount of change in the
-        // subject's position. However, the first sample is discarded in computation because we
-            // don't know the time duration over which this change has occurred.
-            if (isDataDifferential) dataPoints[0]
-            else dataPoints[0] - dataPoints[1]
-        return dataPointsDelta / (time[0] - time[1])
-    }
     var work = 0f
-    for (i in (sampleCount - 1) downTo 1) {
-        if (time[i] == time[i - 1]) {
+    val start = sampleCount - 1
+    var nextTime = time[start]
+    for (i in start downTo 1) {
+        val currentTime = nextTime
+        nextTime = time[i - 1]
+        if (currentTime == nextTime) {
             continue
         }
-        val vPrev = kineticEnergyToVelocity(work)
         val dataPointsDelta =
             if (isDataDifferential) -dataPoints[i - 1]
             else dataPoints[i] - dataPoints[i - 1]
-        val vCurr = dataPointsDelta / (time[i] - time[i - 1])
+        val vCurr = dataPointsDelta / (currentTime - nextTime)
+        val vPrev = kineticEnergyToVelocity(work)
         work += (vCurr - vPrev) * abs(vCurr)
-        if (i == (sampleCount - 1)) {
+        if (i == start) {
             work = (work * 0.5f)
         }
     }
@@ -676,14 +659,15 @@ private inline operator fun Matrix.set(row: Int, col: Int, value: Float) {
 }
 
 /**
- * A flag to indicate that we'll use the fix of how we add points to the velocity tracker.
- *
- * This flag will be removed by 1.6 beta01. If you find any issues with the new fix, flip this
- * flag to false to confirm they are newly introduced then file a bug.
+ * Selecting flag to enable impulse strategy for the velocity trackers.
+ * This is an experiment flag and will be removed once the experiments with the fix a finished. The
+ * final goal is that we will use the true path once the flag is removed. If you find any issues
+ * with the new fix, flip this flag to false to confirm they are newly introduced then file a bug.
+ * Tracking bug: (b/318621681)
  */
 @Suppress("GetterSetterNames", "OPT_IN_MARKER_ON_WRONG_TARGET")
 @get:Suppress("GetterSetterNames")
 @get:ExperimentalComposeUiApi
 @set:ExperimentalComposeUiApi
 @ExperimentalComposeUiApi
-var VelocityTrackerAddPointsFix: Boolean by mutableStateOf(false)
+var VelocityTrackerStrategyUseImpulse = false

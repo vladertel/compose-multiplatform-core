@@ -16,17 +16,17 @@
 
 package androidx.compose.foundation.lazy.grid
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollScope
-import androidx.compose.foundation.lazy.layout.LazyAnimateScrollScope
-import androidx.compose.ui.unit.Density
+import androidx.compose.foundation.lazy.layout.LazyLayoutAnimateScrollScope
 import androidx.compose.ui.util.fastFirstOrNull
-import kotlin.math.abs
 import kotlin.math.max
 
+@OptIn(ExperimentalFoundationApi::class)
 internal class LazyGridAnimateScrollScope(
     private val state: LazyGridState
-) : LazyAnimateScrollScope {
-    override val density: Density get() = state.density
+) : LazyLayoutAnimateScrollScope {
 
     override val firstVisibleItemIndex: Int get() = state.firstVisibleItemIndex
 
@@ -37,45 +37,38 @@ internal class LazyGridAnimateScrollScope(
 
     override val itemCount: Int get() = state.layoutInfo.totalItemsCount
 
-    override fun getTargetItemOffset(index: Int): Int? =
-        state.layoutInfo.visibleItemsInfo
-            .fastFirstOrNull {
-                it.index == index
-            }?.let { item ->
-                if (state.isVertical) {
-                    item.offset.y
-                } else {
-                    item.offset.x
-                }
-            }
+    private val visibleItemsAverageSize: Int
+        get() = calculateLineAverageMainAxisSize(state.layoutInfo)
 
     override fun ScrollScope.snapToItem(index: Int, scrollOffset: Int) {
-        state.snapToItemIndexInternal(index, scrollOffset)
+        state.snapToItemIndexInternal(index, scrollOffset, forceRemeasure = true)
     }
 
-    override fun expectedDistanceTo(index: Int, targetScrollOffset: Int): Float {
-        val slotsPerLine = state.slotsPerLine
-        val averageLineMainAxisSize = calculateLineAverageMainAxisSize(
-            state.layoutInfo,
-            state.isVertical
-        )
-        val before = index < firstVisibleItemIndex
-        val linesDiff =
-            (index - firstVisibleItemIndex + (slotsPerLine - 1) * if (before) -1 else 1) /
-                slotsPerLine
+    override fun calculateDistanceTo(targetIndex: Int): Float {
+        val visibleItem =
+            state.layoutInfo.visibleItemsInfo.fastFirstOrNull { it.index == targetIndex }
 
-        var coercedOffset = minOf(abs(targetScrollOffset), averageLineMainAxisSize)
-        if (targetScrollOffset < 0) coercedOffset *= -1
-        return (averageLineMainAxisSize * linesDiff).toFloat() +
-            coercedOffset - firstVisibleItemScrollOffset
+        return if (visibleItem == null) {
+            val slotsPerLine = state.slotsPerLine
+            val averageLineMainAxisSize = visibleItemsAverageSize
+            val before = targetIndex < firstVisibleItemIndex
+            val linesDiff =
+                (targetIndex - firstVisibleItemIndex + (slotsPerLine - 1) * if (before) -1 else 1) /
+                    slotsPerLine
+            (averageLineMainAxisSize * linesDiff).toFloat() - firstVisibleItemScrollOffset
+        } else {
+            if (state.layoutInfo.orientation == Orientation.Vertical) {
+                visibleItem.offset.y
+            } else {
+                visibleItem.offset.x
+            }.toFloat()
+        }
     }
-
-    override val numOfItemsForTeleport: Int get() = 100 * state.slotsPerLine
 
     private fun calculateLineAverageMainAxisSize(
-        layoutInfo: LazyGridLayoutInfo,
-        isVertical: Boolean
+        layoutInfo: LazyGridLayoutInfo
     ): Int {
+        val isVertical = layoutInfo.orientation == Orientation.Vertical
         val visibleItems = layoutInfo.visibleItemsInfo
         val lineOf: (Int) -> Int = {
             if (isVertical) visibleItems[it].row else visibleItems[it].column

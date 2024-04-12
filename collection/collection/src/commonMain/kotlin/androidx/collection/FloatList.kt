@@ -21,6 +21,15 @@ package androidx.collection
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+// DO NOT MAKE CHANGES to the kotlin source file.
+//
+// This file was generated from a template in the template directory.
+// Make a change to the original template and run the generateCollections.sh script
+// to ensure the change is available on all versions of the map.
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 /**
  * [FloatList] is a [List]-like collection for [Float] values. It allows retrieving
@@ -33,7 +42,7 @@ import kotlin.jvm.JvmField
  * the appropriate synchronization. It is also not safe to mutate during reentrancy --
  * in the middle of a [forEach], for example. However, concurrent reads are safe.
  */
-public sealed class FloatList constructor(initialCapacity: Int) {
+public sealed class FloatList(initialCapacity: Int) {
     @JvmField
     @PublishedApi
     internal var content: FloatArray = if (initialCapacity == 0) {
@@ -50,12 +59,14 @@ public sealed class FloatList constructor(initialCapacity: Int) {
     /**
      * The number of elements in the [FloatList].
      */
+    @get:androidx.annotation.IntRange(from = 0)
     public val size: Int
         get() = _size
 
     /**
-     * Returns the last valid index in the [FloatList].
+     * Returns the last valid index in the [FloatList]. This can be `-1` when the list is empty.
      */
+    @get:androidx.annotation.IntRange(from = -1)
     public inline val lastIndex: Int get() = _size - 1
 
     /**
@@ -80,7 +91,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
     /**
      * Returns `true` if any of the elements give a `true` return value for [predicate].
      */
-    public inline fun any(predicate: (Float) -> Boolean): Boolean {
+    public inline fun any(predicate: (element: Float) -> Boolean): Boolean {
         contract { callsInPlace(predicate) }
         forEach {
             if (predicate(it)) {
@@ -94,7 +105,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
      * Returns `true` if any of the elements give a `true` return value for [predicate] while
      * iterating in the reverse order.
      */
-    public inline fun reversedAny(predicate: (Float) -> Boolean): Boolean {
+    public inline fun reversedAny(predicate: (element: Float) -> Boolean): Boolean {
         contract { callsInPlace(predicate) }
         forEachReversed {
             if (predicate(it)) {
@@ -137,6 +148,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
      * @return The number of elements in this list for which [predicate] returns true.
      */
     public inline fun count(predicate: (element: Float) -> Boolean): Int {
+        contract { callsInPlace(predicate) }
         var count = 0
         forEach { if (predicate(it)) count++ }
         return count
@@ -156,8 +168,9 @@ public sealed class FloatList constructor(initialCapacity: Int) {
     /**
      * Returns the first element in the [FloatList] for which [predicate] returns `true` or
      * throws [NoSuchElementException] if nothing matches.
+     * @see indexOfFirst
      */
-    public inline fun first(predicate: (Float) -> Boolean): Float {
+    public inline fun first(predicate: (element: Float) -> Boolean): Float {
         contract { callsInPlace(predicate) }
         forEach { item ->
             if (predicate(item)) return item
@@ -168,8 +181,12 @@ public sealed class FloatList constructor(initialCapacity: Int) {
     /**
      * Accumulates values, starting with [initial], and applying [operation] to each element
      * in the [FloatList] in order.
+     * @param initial The value of `acc` for the first call to [operation] or return value if
+     * there are no elements in this list.
+     * @param operation function that takes current accumulator value and an element, and
+     * calculates the next accumulator value.
      */
-    public inline fun <R> fold(initial: R, operation: (acc: R, Float) -> R): R {
+    public inline fun <R> fold(initial: R, operation: (acc: R, element: Float) -> R): R {
         contract { callsInPlace(operation) }
         var acc = initial
         forEach { item ->
@@ -182,7 +199,10 @@ public sealed class FloatList constructor(initialCapacity: Int) {
      * Accumulates values, starting with [initial], and applying [operation] to each element
      * in the [FloatList] in order.
      */
-    public inline fun <R> foldIndexed(initial: R, operation: (index: Int, acc: R, Float) -> R): R {
+    public inline fun <R> foldIndexed(
+        initial: R,
+        operation: (index: Int, acc: R, element: Float) -> R
+    ): R {
         contract { callsInPlace(operation) }
         var acc = initial
         forEachIndexed { i, item ->
@@ -194,8 +214,12 @@ public sealed class FloatList constructor(initialCapacity: Int) {
     /**
      * Accumulates values, starting with [initial], and applying [operation] to each element
      * in the [FloatList] in reverse order.
+     * @param initial The value of `acc` for the first call to [operation] or return value if
+     * there are no elements in this list.
+     * @param operation function that takes an element and the current accumulator value, and
+     * calculates the next accumulator value.
      */
-    public inline fun <R> foldRight(initial: R, operation: (Float, acc: R) -> R): R {
+    public inline fun <R> foldRight(initial: R, operation: (element: Float, acc: R) -> R): R {
         contract { callsInPlace(operation) }
         var acc = initial
         forEachReversed { item ->
@@ -210,7 +234,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
      */
     public inline fun <R> foldRightIndexed(
         initial: R,
-        operation: (index: Int, Float, acc: R) -> R
+        operation: (index: Int, element: Float, acc: R) -> R
     ): R {
         contract { callsInPlace(operation) }
         var acc = initial
@@ -222,8 +246,10 @@ public sealed class FloatList constructor(initialCapacity: Int) {
 
     /**
      * Calls [block] for each element in the [FloatList], in order.
+     * @param block will be executed for every element in the list, accepting an element from
+     * the list
      */
-    public inline fun forEach(block: (Float) -> Unit) {
+    public inline fun forEach(block: (element: Float) -> Unit) {
         contract { callsInPlace(block) }
         val content = content
         for (i in 0 until _size) {
@@ -233,8 +259,10 @@ public sealed class FloatList constructor(initialCapacity: Int) {
 
     /**
      * Calls [block] for each element in the [FloatList] along with its index, in order.
+     * @param block will be executed for every element in the list, accepting the index and
+     * the element at that index.
      */
-    public inline fun forEachIndexed(block: (Int, Float) -> Unit) {
+    public inline fun forEachIndexed(block: (index: Int, element: Float) -> Unit) {
         contract { callsInPlace(block) }
         val content = content
         for (i in 0 until _size) {
@@ -244,8 +272,10 @@ public sealed class FloatList constructor(initialCapacity: Int) {
 
     /**
      * Calls [block] for each element in the [FloatList] in reverse order.
+     * @param block will be executed for every element in the list, accepting an element from
+     * the list
      */
-    public inline fun forEachReversed(block: (Float) -> Unit) {
+    public inline fun forEachReversed(block: (element: Float) -> Unit) {
         contract { callsInPlace(block) }
         val content = content
         for (i in _size - 1 downTo 0) {
@@ -256,8 +286,10 @@ public sealed class FloatList constructor(initialCapacity: Int) {
     /**
      * Calls [block] for each element in the [FloatList] along with its index, in reverse
      * order.
+     * @param block will be executed for every element in the list, accepting the index and
+     * the element at that index.
      */
-    public inline fun forEachReversedIndexed(block: (Int, Float) -> Unit) {
+    public inline fun forEachReversedIndexed(block: (index: Int, element: Float) -> Unit) {
         contract { callsInPlace(block) }
         val content = content
         for (i in _size - 1 downTo 0) {
@@ -269,7 +301,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
      * Returns the element at the given [index] or throws [IndexOutOfBoundsException] if
      * the [index] is out of bounds of this collection.
      */
-    public operator fun get(index: Int): Float {
+    public operator fun get(@androidx.annotation.IntRange(from = 0) index: Int): Float {
         if (index !in 0 until _size) {
             throw IndexOutOfBoundsException("Index $index must be in 0..$lastIndex")
         }
@@ -280,7 +312,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
      * Returns the element at the given [index] or throws [IndexOutOfBoundsException] if
      * the [index] is out of bounds of this collection.
      */
-    public fun elementAt(index: Int): Float {
+    public fun elementAt(@androidx.annotation.IntRange(from = 0) index: Int): Float {
         if (index !in 0 until _size) {
             throw IndexOutOfBoundsException("Index $index must be in 0..$lastIndex")
         }
@@ -290,10 +322,16 @@ public sealed class FloatList constructor(initialCapacity: Int) {
     /**
      * Returns the element at the given [index] or [defaultValue] if [index] is out of bounds
      * of the collection.
+     * @param index The index of the element whose value should be returned
+     * @param defaultValue A lambda to call with [index] as a parameter to return a value at
+     * an index not in the list.
      */
-    public fun elementAtOrElse(index: Int, defaultValue: Float): Float {
+    public inline fun elementAtOrElse(
+        @androidx.annotation.IntRange(from = 0) index: Int,
+        defaultValue: (index: Int) -> Float
+    ): Float {
         if (index !in 0 until _size) {
-            return defaultValue
+            return defaultValue(index)
         }
         return content[index]
     }
@@ -314,7 +352,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
      * Returns the index if the first element in the [FloatList] for which [predicate]
      * returns `true`.
      */
-    public inline fun indexOfFirst(predicate: (Float) -> Boolean): Int {
+    public inline fun indexOfFirst(predicate: (element: Float) -> Boolean): Int {
         contract { callsInPlace(predicate) }
         forEachIndexed { i, item ->
             if (predicate(item)) {
@@ -328,7 +366,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
      * Returns the index if the last element in the [FloatList] for which [predicate]
      * returns `true`.
      */
-    public inline fun indexOfLast(predicate: (Float) -> Boolean): Int {
+    public inline fun indexOfLast(predicate: (element: Float) -> Boolean): Int {
         contract { callsInPlace(predicate) }
         forEachReversedIndexed { i, item ->
             if (predicate(item)) {
@@ -362,8 +400,9 @@ public sealed class FloatList constructor(initialCapacity: Int) {
     /**
      * Returns the last element in the [FloatList] for which [predicate] returns `true` or
      * throws [NoSuchElementException] if nothing matches.
+     * @see indexOfLast
      */
-    public inline fun last(predicate: (Float) -> Boolean): Float {
+    public inline fun last(predicate: (element: Float) -> Boolean): Float {
         contract { callsInPlace(predicate) }
         forEachReversed { item ->
             if (predicate(item)) {
@@ -384,6 +423,67 @@ public sealed class FloatList constructor(initialCapacity: Int) {
             }
         }
         return -1
+    }
+
+    /**
+     * Creates a String from the elements separated by [separator] and using [prefix] before
+     * and [postfix] after, if supplied.
+     *
+     * When a non-negative value of [limit] is provided, a maximum of [limit] items are used
+     * to generate the string. If the collection holds more than [limit] items, the string
+     * is terminated with [truncated].
+     */
+    @JvmOverloads
+    public fun joinToString(
+        separator: CharSequence = ", ",
+        prefix: CharSequence = "",
+        postfix: CharSequence = "", // I know this should be suffix, but this is kotlin's name
+        limit: Int = -1,
+        truncated: CharSequence = "...",
+    ): String = buildString {
+        append(prefix)
+        this@FloatList.forEachIndexed { index, element ->
+            if (index == limit) {
+                append(truncated)
+                return@buildString
+            }
+            if (index != 0) {
+                append(separator)
+            }
+            append(element)
+        }
+        append(postfix)
+    }
+
+    /**
+     * Creates a String from the elements separated by [separator] and using [prefix] before
+     * and [postfix] after, if supplied. [transform] dictates how each element will be represented.
+     *
+     * When a non-negative value of [limit] is provided, a maximum of [limit] items are used
+     * to generate the string. If the collection holds more than [limit] items, the string
+     * is terminated with [truncated].
+     */
+    @JvmOverloads
+    public inline fun joinToString(
+        separator: CharSequence = ", ",
+        prefix: CharSequence = "",
+        postfix: CharSequence = "", // I know this should be suffix, but this is kotlin's name
+        limit: Int = -1,
+        truncated: CharSequence = "...",
+        crossinline transform: (Float) -> CharSequence
+    ): String = buildString {
+        append(prefix)
+        this@FloatList.forEachIndexed { index, element ->
+            if (index == limit) {
+                append(truncated)
+                return@buildString
+            }
+            if (index != 0) {
+                append(separator)
+            }
+            append(transform(element))
+        }
+        append(postfix)
     }
 
     /**
@@ -419,23 +519,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
      * Returns a String representation of the list, surrounded by "[]" and each element
      * separated by ", ".
      */
-    override fun toString(): String {
-        if (isEmpty()) {
-            return "[]"
-        }
-        val last = lastIndex
-        return buildString {
-            append('[')
-            val content = content
-            for (i in 0 until last) {
-                append(content[i])
-                append(',')
-                append(' ')
-            }
-            append(content[last])
-            append(']')
-        }
-    }
+    override fun toString(): String = joinToString(prefix = "[", postfix = "]")
 }
 
 /**
@@ -453,7 +537,7 @@ public sealed class FloatList constructor(initialCapacity: Int) {
  * @constructor Creates a [MutableFloatList] with a [capacity] of `initialCapacity`.
  */
 public class MutableFloatList(
-    initialCapacity: Int = DefaultCapacity
+    initialCapacity: Int = 16
 ) : FloatList(initialCapacity) {
     /**
      * Returns the total number of elements that can be held before the [MutableFloatList] must
@@ -475,10 +559,14 @@ public class MutableFloatList(
     }
 
     /**
-     * Adds [element] to the [MutableFloatList] at the given [index], shifting over any elements
-     * that are in the way.
+     * Adds [element] to the [MutableFloatList] at the given [index], shifting over any
+     * elements at [index] and after, if any.
+     * @throws IndexOutOfBoundsException if [index] isn't between 0 and [size], inclusive
      */
-    public fun add(index: Int, element: Float) {
+    public fun add(@androidx.annotation.IntRange(from = 0) index: Int, element: Float) {
+        if (index !in 0.._size) {
+            throw IndexOutOfBoundsException("Index $index must be in 0..$_size")
+        }
         ensureCapacity(_size + 1)
         val content = content
         if (index != _size) {
@@ -495,10 +583,17 @@ public class MutableFloatList(
 
     /**
      * Adds all [elements] to the [MutableFloatList] at the given [index], shifting over any
-     * elements that are in the way.
+     * elements at [index] and after, if any.
      * @return `true` if the [MutableFloatList] was changed or `false` if [elements] was empty
+     * @throws IndexOutOfBoundsException if [index] isn't between 0 and [size], inclusive.
      */
-    public fun addAll(index: Int, elements: FloatArray): Boolean {
+    public fun addAll(
+        @androidx.annotation.IntRange(from = 0) index: Int,
+        elements: FloatArray
+    ): Boolean {
+        if (index !in 0.._size) {
+            throw IndexOutOfBoundsException("Index $index must be in 0..$_size")
+        }
         if (elements.isEmpty()) return false
         ensureCapacity(_size + elements.size)
         val content = content
@@ -517,10 +612,17 @@ public class MutableFloatList(
 
     /**
      * Adds all [elements] to the [MutableFloatList] at the given [index], shifting over any
-     * elements that are in the way.
+     * elements at [index] and after, if any.
      * @return `true` if the [MutableFloatList] was changed or `false` if [elements] was empty
+     * @throws IndexOutOfBoundsException if [index] isn't between 0 and [size], inclusive
      */
-    public fun addAll(index: Int, elements: FloatList): Boolean {
+    public fun addAll(
+        @androidx.annotation.IntRange(from = 0) index: Int,
+        elements: FloatList
+    ): Boolean {
+        if (index !in 0.._size) {
+            throw IndexOutOfBoundsException("Index $index must be in 0..$_size")
+        }
         if (elements.isEmpty()) return false
         ensureCapacity(_size + elements._size)
         val content = content
@@ -544,7 +646,7 @@ public class MutableFloatList(
 
     /**
      * Adds all [elements] to the end of the [MutableFloatList] and returns `true` if the
-     * [MutableFloatList] was changed.
+     * [MutableFloatList] was changed or `false` if [elements] was empty.
      */
     public fun addAll(elements: FloatList): Boolean {
         return addAll(_size, elements)
@@ -552,23 +654,21 @@ public class MutableFloatList(
 
     /**
      * Adds all [elements] to the end of the [MutableFloatList] and returns `true` if the
-     * [MutableFloatList] was changed.
+     * [MutableFloatList] was changed or `false` if [elements] was empty.
      */
     public fun addAll(elements: FloatArray): Boolean {
         return addAll(_size, elements)
     }
 
     /**
-     * Adds all [elements] to the end of the [MutableFloatList] and returns `true` if the
-     * [MutableFloatList] was changed.
+     * Adds all [elements] to the end of the [MutableFloatList].
      */
     public operator fun plusAssign(elements: FloatList) {
         addAll(_size, elements)
     }
 
     /**
-     * Adds all [elements] to the end of the [MutableFloatList] and returns `true` if the
-     * [MutableFloatList] was changed.
+     * Adds all [elements] to the end of the [MutableFloatList].
      */
     public operator fun plusAssign(elements: FloatArray) {
         addAll(_size, elements)
@@ -596,6 +696,7 @@ public class MutableFloatList(
 
     /**
      * Ensures that there is enough space to store [capacity] elements in the [MutableFloatList].
+     * @see trim
      */
     public fun ensureCapacity(capacity: Int) {
         val oldContent = content
@@ -675,8 +776,12 @@ public class MutableFloatList(
 
     /**
      * Removes the element at the given [index] and returns it.
+     * @throws IndexOutOfBoundsException if [index] isn't between 0 and [lastIndex], inclusive
      */
-    public fun removeAt(index: Int): Float {
+    public fun removeAt(@androidx.annotation.IntRange(from = 0) index: Int): Float {
+        if (index !in 0 until _size) {
+            throw IndexOutOfBoundsException("Index $index must be in 0..$lastIndex")
+        }
         val content = content
         val item = content[index]
         if (index != lastIndex) {
@@ -693,9 +798,20 @@ public class MutableFloatList(
 
     /**
      * Removes items from index [start] (inclusive) to [end] (exclusive).
+     * @throws IndexOutOfBoundsException if [start] or [end] isn't between 0 and [size], inclusive
+     * @throws IllegalArgumentException if [start] is greater than [end]
      */
-    public fun removeRange(start: Int, end: Int) {
-        if (end > start) {
+    public fun removeRange(
+        @androidx.annotation.IntRange(from = 0) start: Int,
+        @androidx.annotation.IntRange(from = 0) end: Int
+    ) {
+        if (start !in 0.._size || end !in 0.._size) {
+            throw IndexOutOfBoundsException("Start ($start) and end ($end) must be in 0..$_size")
+        }
+        if (end < start) {
+            throw IllegalArgumentException("Start ($start) is more than end ($end)")
+        }
+        if (end != start) {
             if (end < _size) {
                 content.copyInto(
                     destination = content,
@@ -743,8 +859,15 @@ public class MutableFloatList(
     /**
      * Sets the value at [index] to [element].
      * @return the previous value set at [index]
+     * @throws IndexOutOfBoundsException if [index] isn't between 0 and [lastIndex], inclusive
      */
-    public operator fun set(index: Int, element: Float): Float {
+    public operator fun set(
+        @androidx.annotation.IntRange(from = 0) index: Int,
+        element: Float
+    ): Float {
+        if (index !in 0 until _size) {
+            throw IndexOutOfBoundsException("set index $index must be between 0 .. $lastIndex")
+        }
         val content = content
         val old = content[index]
         content[index] = element
@@ -766,20 +889,80 @@ public class MutableFloatList(
     }
 }
 
-@Suppress("ConstPropertyName")
-private const val DefaultCapacity = 16
-
-// Empty array used when nothing is allocated
-@Suppress("PrivatePropertyName")
-private val EmptyFloatArray = FloatArray(0)
+private val EmptyFloatList: FloatList = MutableFloatList(0)
 
 /**
- * Creates and returns an empty [MutableFloatList] with a capacity of 16.
+ * @return a read-only [FloatList] with nothing in it.
+ */
+public fun emptyFloatList(): FloatList = EmptyFloatList
+
+/**
+ * @return a read-only [FloatList] with nothing in it.
+ */
+public fun floatListOf(): FloatList = EmptyFloatList
+
+/**
+ * @return a new read-only [FloatList] with [element1] as the only item in the list.
+ */
+public fun floatListOf(element1: Float): FloatList = mutableFloatListOf(element1)
+
+/**
+ * @return a new read-only [FloatList] with 2 elements, [element1] and [element2], in order.
+ */
+public fun floatListOf(element1: Float, element2: Float): FloatList =
+    mutableFloatListOf(element1, element2)
+
+/**
+ * @return a new read-only [FloatList] with 3 elements, [element1], [element2], and [element3],
+ * in order.
+ */
+public fun floatListOf(element1: Float, element2: Float, element3: Float): FloatList =
+    mutableFloatListOf(element1, element2, element3)
+
+/**
+ * @return a new read-only [FloatList] with [elements] in order.
+ */
+public fun floatListOf(vararg elements: Float): FloatList =
+    MutableFloatList(elements.size).apply { plusAssign(elements) }
+
+/**
+ * @return a new empty [MutableFloatList] with the default capacity.
  */
 public inline fun mutableFloatListOf(): MutableFloatList = MutableFloatList()
 
 /**
- * Creates and returns a [MutableFloatList] with the given values.
+ * @return a new [MutableFloatList] with [element1] as the only item in the list.
+ */
+public fun mutableFloatListOf(element1: Float): MutableFloatList {
+    val list = MutableFloatList(1)
+    list += element1
+    return list
+}
+
+/**
+ * @return a new [MutableFloatList] with 2 elements, [element1] and [element2], in order.
+ */
+public fun mutableFloatListOf(element1: Float, element2: Float): MutableFloatList {
+    val list = MutableFloatList(2)
+    list += element1
+    list += element2
+    return list
+}
+
+/**
+ * @return a new [MutableFloatList] with 3 elements, [element1], [element2], and [element3],
+ * in order.
+ */
+public fun mutableFloatListOf(element1: Float, element2: Float, element3: Float): MutableFloatList {
+    val list = MutableFloatList(3)
+    list += element1
+    list += element2
+    list += element3
+    return list
+}
+
+/**
+ * @return a new [MutableFloatList] with the given elements, in order.
  */
 public inline fun mutableFloatListOf(vararg elements: Float): MutableFloatList =
-    MutableFloatList(elements.size).also { it.addAll(elements) }
+    MutableFloatList(elements.size).apply { plusAssign(elements) }

@@ -14,22 +14,6 @@
  * limitations under the License.
  */
 
-/*
- * Copyright 2022 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package androidx.camera.extensions.internal
 
 import android.content.Context
@@ -37,21 +21,22 @@ import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraExtensionCharacteristics.EXTENSION_FACE_RETOUCH
 import android.hardware.camera2.CaptureFailure
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
+import android.hardware.camera2.params.OutputConfiguration
+import android.hardware.camera2.params.SessionConfiguration
 import android.media.ImageReader
 import android.media.ImageWriter
 import android.os.Build
 import android.util.Pair
+import android.util.Range
 import android.util.Size
 import android.view.Surface
 import androidx.annotation.RequiresApi
 import androidx.camera.camera2.Camera2Config
-import androidx.camera.camera2.impl.Camera2ImplConfig
-import androidx.camera.camera2.internal.compat.params.OutputConfigurationCompat
-import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.core.CameraFilter
 import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
@@ -62,21 +47,28 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
 import androidx.camera.core.impl.CameraConfig
+import androidx.camera.core.impl.CameraInfoInternal
 import androidx.camera.core.impl.Config
 import androidx.camera.core.impl.ExtendedCameraConfigProviderStore
 import androidx.camera.core.impl.Identifier
 import androidx.camera.core.impl.MutableOptionsBundle
+import androidx.camera.core.impl.OutputSurface
+import androidx.camera.core.impl.OutputSurfaceConfiguration
 import androidx.camera.core.impl.SessionProcessor
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
+import androidx.camera.extensions.ExtensionMode
+import androidx.camera.extensions.impl.advanced.AdvancedExtenderImpl
 import androidx.camera.extensions.impl.advanced.Camera2OutputConfigImpl
 import androidx.camera.extensions.impl.advanced.Camera2OutputConfigImplBuilder
 import androidx.camera.extensions.impl.advanced.Camera2SessionConfigImpl
-import androidx.camera.extensions.impl.advanced.Camera2SessionConfigImplBuilder
+import androidx.camera.extensions.impl.advanced.OutputSurfaceConfigurationImpl
 import androidx.camera.extensions.impl.advanced.OutputSurfaceImpl
 import androidx.camera.extensions.impl.advanced.RequestProcessorImpl
 import androidx.camera.extensions.impl.advanced.SessionProcessorImpl
 import androidx.camera.extensions.internal.sessionprocessor.AdvancedSessionProcessor
+import androidx.camera.extensions.util.Camera2SessionConfigImplBuilder
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.testing.fakes.FakeCameraInfoInternal
 import androidx.camera.testing.impl.CameraUtil
 import androidx.camera.testing.impl.SurfaceTextureProvider
 import androidx.camera.testing.impl.SurfaceTextureProvider.SurfaceTextureCallback
@@ -95,8 +87,10 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.After
+import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -116,6 +110,8 @@ class AdvancedSessionProcessorTest {
 
     @Before
     fun setUp() = runBlocking {
+        // Pixel lacks some Extensions-Interface methods / classes which cause the test failure.
+        assumeFalse(Build.MODEL.uppercase().startsWith("PIXEL"))
         ExtensionVersion.injectInstance(null)
         cameraProvider = ProcessCameraProvider.getInstance(context)[10, TimeUnit.SECONDS]
         withContext(Dispatchers.Main) {
@@ -128,7 +124,7 @@ class AdvancedSessionProcessorTest {
     fun tearDown() = runBlocking {
         if (::cameraProvider.isInitialized) {
             withContext(Dispatchers.Main) {
-                cameraProvider.shutdown()[10, TimeUnit.SECONDS]
+                cameraProvider.shutdownAsync()[10, TimeUnit.SECONDS]
             }
         }
     }
@@ -175,24 +171,25 @@ class AdvancedSessionProcessorTest {
     }
 
     @Test
+    @Ignore("b/331617278")
     fun useCasesCanWork_directlyUseOutputSurface() = runBlocking {
         val fakeSessionProcessImpl = FakeSessionProcessImpl(
             // Directly use output surface
             previewConfigBlock = { outputSurfaceImpl ->
                 Camera2OutputConfigImplBuilder
-                    .newSurfaceConfig(outputSurfaceImpl.surface)
+                    .newSurfaceConfig(outputSurfaceImpl.surface!!)
                     .build()
             },
             // Directly use output surface
             captureConfigBlock = { outputSurfaceImpl ->
                 Camera2OutputConfigImplBuilder
-                    .newSurfaceConfig(outputSurfaceImpl.surface)
+                    .newSurfaceConfig(outputSurfaceImpl.surface!!)
                     .build()
             },
             // Directly use output surface
             analysisConfigBlock = { outputSurfaceImpl ->
                 Camera2OutputConfigImplBuilder
-                    .newSurfaceConfig(outputSurfaceImpl.surface)
+                    .newSurfaceConfig(outputSurfaceImpl.surface!!)
                     .build()
             }
         )
@@ -204,18 +201,20 @@ class AdvancedSessionProcessorTest {
     }
 
     @Test
+    @Ignore("b/331617278")
     fun canInvokeStartTrigger() = runBlocking {
         assumeTrue(ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_3))
         val fakeSessionProcessImpl = FakeSessionProcessImpl()
         val advancedSessionProcessor = AdvancedSessionProcessor(
-            fakeSessionProcessImpl, emptyList(), context)
+            fakeSessionProcessImpl, emptyList(),
+            object : VendorExtender {}, context)
 
         val parametersMap: MutableMap<CaptureRequest.Key<*>, Any> = mutableMapOf(
             CaptureRequest.CONTROL_AF_MODE to CaptureRequest.CONTROL_AF_MODE_AUTO,
             CaptureRequest.JPEG_QUALITY to 0
         )
 
-        val config = Camera2ImplConfig.Builder().also {
+        val config = RequestOptionConfig.Builder().also {
             for (key in parametersMap.keys) {
                 @Suppress("UNCHECKED_CAST")
                 val anyKey = key as CaptureRequest.Key<Any>
@@ -228,6 +227,7 @@ class AdvancedSessionProcessorTest {
     }
 
     @Test
+    @Ignore("b/331617278")
     fun getRealtimeLatencyEstimate_advancedSessionProcessorInvokesSessionProcessorImpl() =
         runBlocking {
             assumeTrue(ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4))
@@ -237,7 +237,7 @@ class AdvancedSessionProcessorTest {
                 override fun getRealtimeCaptureLatency(): Pair<Long, Long> = Pair(1000L, 10L)
             }
             val advancedSessionProcessor = AdvancedSessionProcessor(
-                fakeSessionProcessImpl, emptyList(), context
+                fakeSessionProcessImpl, emptyList(), object : VendorExtender {}, context
             )
 
             val realtimeCaptureLatencyEstimate = advancedSessionProcessor.realtimeCaptureLatency
@@ -246,15 +246,264 @@ class AdvancedSessionProcessorTest {
             assertThat(realtimeCaptureLatencyEstimate?.second).isEqualTo(10L)
         }
 
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    @Ignore("b/331617278")
+    fun isCurrentExtensionTypeAvailableReturnsCorrectFalseValue() =
+        runBlocking {
+            assumeTrue(ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4))
+            ClientVersion.setCurrentVersion(ClientVersion("1.4.0"))
+
+            val advancedVendorExtender = AdvancedVendorExtender(FakeAdvancedExtenderImpl())
+
+            val advancedSessionProcessor = AdvancedSessionProcessor(
+                FakeSessionProcessImpl(), emptyList(), advancedVendorExtender, context
+            )
+
+            assertThat(advancedSessionProcessor.isCurrentExtensionModeAvailable).isFalse()
+        }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    @Ignore("b/331617278")
+    fun isCurrentExtensionTypeAvailableReturnsCorrectTrueValue() =
+        runBlocking {
+            assumeTrue(ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4))
+            ClientVersion.setCurrentVersion(ClientVersion("1.4.0"))
+
+            val advancedVendorExtender = AdvancedVendorExtender(
+                FakeAdvancedExtenderImpl(
+                    testCaptureResultKeys = mutableListOf(
+                        CaptureResult.EXTENSION_CURRENT_TYPE as CaptureResult.Key<Any>
+                    )
+                )
+            )
+
+            val advancedSessionProcessor = AdvancedSessionProcessor(
+                FakeSessionProcessImpl(), emptyList(), advancedVendorExtender, context
+            )
+
+            assertThat(advancedSessionProcessor.isCurrentExtensionModeAvailable).isTrue()
+        }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    @Ignore("b/331617278")
+    fun isExtensionStrengthAvailableReturnsCorrectFalseValue() =
+        runBlocking {
+            assumeTrue(ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4))
+            ClientVersion.setCurrentVersion(ClientVersion("1.4.0"))
+
+            val advancedVendorExtender = AdvancedVendorExtender(FakeAdvancedExtenderImpl())
+
+            val advancedSessionProcessor = AdvancedSessionProcessor(
+                FakeSessionProcessImpl(), emptyList(), advancedVendorExtender, context
+            )
+
+            assertThat(advancedSessionProcessor.isExtensionStrengthAvailable).isFalse()
+        }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Suppress("UNCHECKED_CAST")
+    @Test
+    @Ignore("b/331617278")
+    fun isExtensionStrengthAvailableReturnsCorrectTrueValue() =
+        runBlocking {
+            assumeTrue(ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4))
+            ClientVersion.setCurrentVersion(ClientVersion("1.4.0"))
+
+            val advancedVendorExtender = AdvancedVendorExtender(
+                FakeAdvancedExtenderImpl(
+                    testCaptureRequestKeys = mutableListOf(
+                        CaptureRequest.EXTENSION_STRENGTH as CaptureRequest.Key<Any>
+                    )
+                )
+            )
+
+            val advancedSessionProcessor = AdvancedSessionProcessor(
+                FakeSessionProcessImpl(), emptyList(), advancedVendorExtender, context
+            )
+
+            assertThat(advancedSessionProcessor.isExtensionStrengthAvailable).isTrue()
+        }
+
+    private class FakeAdvancedExtenderImpl(
+        val testCaptureRequestKeys: MutableList<CaptureRequest.Key<Any>> = mutableListOf(),
+        val testCaptureResultKeys: MutableList<CaptureResult.Key<Any>> = mutableListOf(),
+    ) : AdvancedExtenderImpl {
+        override fun isExtensionAvailable(
+            cameraId: String,
+            characteristicsMap: MutableMap<String, CameraCharacteristics>
+        ): Boolean = true
+
+        override fun init(
+            cameraId: String,
+            characteristicsMap: MutableMap<String, CameraCharacteristics>
+        ) {
+        }
+
+        override fun getEstimatedCaptureLatencyRange(
+            cameraId: String,
+            captureOutputSize: Size?,
+            imageFormat: Int
+        ): Range<Long>? = null
+
+        override fun getSupportedPreviewOutputResolutions(cameraId: String):
+            MutableMap<Int, MutableList<Size>> = mutableMapOf()
+
+        override fun getSupportedCaptureOutputResolutions(cameraId: String):
+            MutableMap<Int, MutableList<Size>> = mutableMapOf()
+
+        override fun getSupportedPostviewResolutions(captureSize: Size):
+            MutableMap<Int, MutableList<Size>> = mutableMapOf()
+
+        override fun getSupportedYuvAnalysisResolutions(cameraId: String): MutableList<Size>? = null
+        override fun createSessionProcessor(): SessionProcessorImpl = FakeSessionProcessImpl()
+        override fun getAvailableCaptureRequestKeys(): MutableList<CaptureRequest.Key<Any>> =
+            testCaptureRequestKeys
+
+        override fun getAvailableCaptureResultKeys(): MutableList<CaptureResult.Key<Any>> =
+            testCaptureResultKeys
+
+        override fun isCaptureProcessProgressAvailable(): Boolean = false
+        override fun isPostviewAvailable(): Boolean = false
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Ignore("b/331617278")
+    fun getCurrentExtensionType_advancedSessionProcessorMonitorSessionProcessorImplResults(): Unit =
+        runBlocking {
+            assumeTrue(ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4))
+            ClientVersion.setCurrentVersion(ClientVersion("1.4.0"))
+
+            val fakeSessionProcessImpl = object : SessionProcessorImpl by FakeSessionProcessImpl() {
+                private var repeatingCallback: SessionProcessorImpl.CaptureCallback? = null
+
+                override fun startRepeating(callback: SessionProcessorImpl.CaptureCallback): Int {
+                    repeatingCallback = callback
+                    return 0
+                }
+
+                fun updateCurrentExtensionType(extensionType: Int) {
+                    repeatingCallback!!.onCaptureCompleted(
+                        0,
+                        0,
+                        mapOf(CaptureResult.EXTENSION_CURRENT_TYPE to extensionType)
+                    )
+                }
+            }
+            val advancedSessionProcessor = AdvancedSessionProcessor(
+                fakeSessionProcessImpl, emptyList(), object : VendorExtender {
+                    override fun isCurrentExtensionModeAvailable(): Boolean {
+                        return true
+                    }
+                }, context, ExtensionMode.AUTO
+            )
+
+            // Starts repeating first to let fakeSessionProcessImpl obtain the
+            // AdvancedSessionProcessor's SessionProcessorImplCaptureCallbackAdapter instance
+            advancedSessionProcessor.startRepeating(object : SessionProcessor.CaptureCallback {})
+            val receivedTypeList = mutableListOf<Int>()
+            // Sets the count as 2 for receiving the initial extension type and the updated
+            // FACE_RETOUCH type
+            val countDownLatch = CountDownLatch(2)
+            withContext(Dispatchers.Main) {
+                advancedSessionProcessor.currentExtensionMode.observeForever {
+                    receivedTypeList.add(it)
+                    countDownLatch.countDown()
+                }
+            }
+            // Updates the current extension type capture result with Camera2 FACE_RETOUCH mode
+            fakeSessionProcessImpl.updateCurrentExtensionType(EXTENSION_FACE_RETOUCH)
+            // Verifies the new type value is updated to the type LiveData
+            assertThat(countDownLatch.await(200, TimeUnit.MILLISECONDS)).isTrue()
+            assertThat(receivedTypeList).containsExactlyElementsIn(
+                listOf(
+                    ExtensionMode.AUTO,
+                    ExtensionMode.FACE_RETOUCH
+                )
+            )
+        }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Ignore("b/331617278")
+    fun setExtensionStrength_advancedSessionProcessorInvokesSessionProcessorImpl() =
+        runBlocking {
+            assumeTrue(ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4))
+            ClientVersion.setCurrentVersion(ClientVersion("1.4.0"))
+            val setParametersLatch = CountDownLatch(1)
+            val startRepeatingLatch = CountDownLatch(1)
+
+            val fakeSessionProcessImpl = object : SessionProcessorImpl by FakeSessionProcessImpl() {
+                private val UNKNOWN_STRENGTH = -1
+                private var strength = UNKNOWN_STRENGTH
+                override fun setParameters(parameters: MutableMap<CaptureRequest.Key<*>, Any>) {
+                    if (parameters.containsKey(CaptureRequest.EXTENSION_STRENGTH)) {
+                        strength = parameters[CaptureRequest.EXTENSION_STRENGTH] as Int
+                        setParametersLatch.countDown()
+                    }
+                }
+
+                override fun startRepeating(callback: SessionProcessorImpl.CaptureCallback): Int {
+                    if (strength != UNKNOWN_STRENGTH) {
+                        // Updates the new strength result value to onCaptureCompleted
+                        callback.onCaptureCompleted(
+                            0,
+                            0,
+                            mapOf(CaptureResult.EXTENSION_STRENGTH to strength)
+                        )
+                    }
+                    startRepeatingLatch.countDown()
+                    return 0
+                }
+            }
+            val advancedSessionProcessor = AdvancedSessionProcessor(
+                fakeSessionProcessImpl, emptyList(), object : VendorExtender {
+                    override fun isExtensionStrengthAvailable(): Boolean {
+                        return true
+                    }
+                }, context
+            )
+
+            // Starts repeating first to verify that setExtensionStrength function will directly
+            // invoke the SessionProcessImpl#startRepeating function.
+            advancedSessionProcessor.startRepeating(object : SessionProcessor.CaptureCallback {})
+            val newExtensionStrength = 50
+            advancedSessionProcessor.setExtensionStrength(newExtensionStrength)
+            // Verifies that setExtensionStrength will invoke the SessionProcessImpl#setParameters
+            // function.
+            assertThat(setParametersLatch.await(200, TimeUnit.MILLISECONDS)).isTrue()
+            // Verifies that SessionProcessImpl#startRepeating function is invoked to apply the new
+            // strength value.
+            assertThat(startRepeatingLatch.await(200, TimeUnit.MILLISECONDS)).isTrue()
+            // Verifies the new strength value is updated to the strength LiveData
+            val expectedStrengthLatch = CountDownLatch(1)
+            withContext(Dispatchers.Main) {
+                advancedSessionProcessor.extensionStrength.observeForever {
+                    if (it == newExtensionStrength) {
+                        expectedStrengthLatch.countDown()
+                    }
+                }
+            }
+            assertThat(expectedStrengthLatch.await(200, TimeUnit.MILLISECONDS)).isTrue()
+        }
+
+    @RequiresApi(28)
     private suspend fun assumeAllowsSharedSurface() = withContext(Dispatchers.Main) {
         val imageReader = ImageReader.newInstance(640, 480, ImageFormat.YUV_420_888, 2)
-        val maxSharedSurfaceCount =
-            OutputConfigurationCompat(imageReader.surface).maxSharedSurfaceCount
+        val outputConfiguration = OutputConfiguration(imageReader.surface)
+        val maxSharedSurfaceCount = outputConfiguration.maxSharedSurfaceCount
         imageReader.close()
 
         val camera = cameraProvider.bindToLifecycle(fakeLifecycleOwner, cameraSelector)
-        val hardwareLevel = Camera2CameraInfo.from(camera.cameraInfo)
-            .getCameraCharacteristic(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
+        val cameraCharacteristics = (camera.cameraInfo as CameraInfoInternal)
+            .cameraCharacteristics as CameraCharacteristics
+
+        val hardwareLevel = cameraCharacteristics
+            .get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
         assumeTrue(maxSharedSurfaceCount > 1 &&
             hardwareLevel != CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY)
     }
@@ -262,6 +511,7 @@ class AdvancedSessionProcessorTest {
     // Surface sharing of YUV format is supported after API 28.
     @SdkSuppress(minSdkVersion = 28)
     @Test
+    @Ignore("b/331617278")
     fun useCasesCanWork_hasSharedSurfaceOutput() = runBlocking {
         assumeAllowsSharedSurface()
         var sharedConfigId = -1
@@ -270,13 +520,13 @@ class AdvancedSessionProcessorTest {
             // Directly use output surface
             previewConfigBlock = { outputSurfaceImpl ->
                 Camera2OutputConfigImplBuilder
-                    .newSurfaceConfig(outputSurfaceImpl.surface)
+                    .newSurfaceConfig(outputSurfaceImpl.surface!!)
                     .build()
             },
             // Directly use output surface
             captureConfigBlock = { outputSurfaceImpl ->
                 Camera2OutputConfigImplBuilder
-                    .newSurfaceConfig(outputSurfaceImpl.surface)
+                    .newSurfaceConfig(outputSurfaceImpl.surface!!)
                     .build()
             },
             // Directly use output surface with shared ImageReader surface.
@@ -286,7 +536,7 @@ class AdvancedSessionProcessorTest {
                 ).build()
                 sharedConfigId = sharedConfig.id
 
-                Camera2OutputConfigImplBuilder.newSurfaceConfig(outputSurfaceImpl.surface)
+                Camera2OutputConfigImplBuilder.newSurfaceConfig(outputSurfaceImpl.surface!!)
                     .addSurfaceSharingOutputConfig(sharedConfig)
                     .build()
             },
@@ -311,13 +561,14 @@ class AdvancedSessionProcessorTest {
             return emptyList()
         }
         return CameraUtil.getPhysicalCameraIds(
-            Camera2CameraInfo.from(cameraInfos.get(0)).cameraId
+            (cameraInfos.get(0) as CameraInfoInternal).cameraId
         )
     }
 
     // Test if physicalCameraId is set and returned in the image received in the image processor.
     @SdkSuppress(minSdkVersion = 28) // physical camera id is supported in API28+
     @Test
+    @Ignore("b/331617278")
     fun useCasesCanWork_setPhysicalCameraId() = runBlocking {
         assumeAllowsSharedSurface()
         val physicalCameraIdList = getPhysicalCameraId(cameraSelector)
@@ -334,14 +585,14 @@ class AdvancedSessionProcessorTest {
             // Directly use output surface
             previewConfigBlock = { outputSurfaceImpl ->
                 Camera2OutputConfigImplBuilder
-                    .newSurfaceConfig(outputSurfaceImpl.surface)
+                    .newSurfaceConfig(outputSurfaceImpl.surface!!)
                     .setPhysicalCameraId(physicalCameraId)
                     .build()
             },
             // Directly use output surface
             captureConfigBlock = {
                 Camera2OutputConfigImplBuilder
-                    .newSurfaceConfig(it.surface)
+                    .newSurfaceConfig(it.surface!!)
                     .build()
             },
             // Has intermediate image reader to process YUV
@@ -386,6 +637,77 @@ class AdvancedSessionProcessorTest {
             .isEqualTo(physicalCameraId)
     }
 
+    private fun createOutputSurface(width: Int, height: Int, format: Int): OutputSurface {
+        val captureImageReader = ImageReader.newInstance(width, height, format, 1)
+        return OutputSurface.create(captureImageReader.surface, Size(width, height), format)
+    }
+
+    @Test
+    @Ignore("b/331617278")
+    fun canSetSessionTypeFromOemImpl() {
+        assumeTrue(ClientVersion.isMinimumCompatibleVersion(Version.VERSION_1_4) &&
+            ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4))
+        // 1. Arrange.
+        val sessionTypeToVerify = 4
+        val fakeSessionProcessImpl = FakeSessionProcessImpl()
+        fakeSessionProcessImpl.sessionType = sessionTypeToVerify
+        val advancedSessionProcessor = AdvancedSessionProcessor(fakeSessionProcessImpl,
+            emptyList(), object : VendorExtender {}, context)
+        val fakeCameraInfo = FakeCameraInfoInternal("0", context)
+        val previewOutputSurface = createOutputSurface(640, 480, ImageFormat.YUV_420_888)
+        val imageCaptureSurface = createOutputSurface(640, 480, ImageFormat.JPEG)
+
+        // 2. Act.
+        val sessionConfig = advancedSessionProcessor
+            .initSession(fakeCameraInfo,
+                OutputSurfaceConfiguration.create(
+                    previewOutputSurface, imageCaptureSurface, null, null));
+
+        // 3. Assert.
+        assertThat(sessionConfig.sessionType).isEqualTo(sessionTypeToVerify)
+    }
+
+    @Test
+    @Ignore("b/331617278")
+    fun defaultSessionType() {
+        // 1. Arrange.
+        val fakeSessionProcessImpl = FakeSessionProcessImpl()
+        fakeSessionProcessImpl.sessionType = -1
+        val advancedSessionProcessor = AdvancedSessionProcessor(fakeSessionProcessImpl,
+            emptyList(), object : VendorExtender {}, context)
+        val fakeCameraInfo = FakeCameraInfoInternal("0", context)
+        val previewOutputSurface = createOutputSurface(640, 480, ImageFormat.YUV_420_888)
+        val imageCaptureSurface = createOutputSurface(640, 480, ImageFormat.JPEG)
+
+        // 2. Act.
+        val sessionConfig = advancedSessionProcessor
+            .initSession(fakeCameraInfo,
+                OutputSurfaceConfiguration.create(
+                    previewOutputSurface, imageCaptureSurface, null, null));
+
+        // 3. Assert.
+        assertThat(sessionConfig.sessionType).isEqualTo(SessionConfiguration.SESSION_REGULAR)
+    }
+
+    @Test
+    @Ignore("b/331617278")
+    fun getSupportedPostviewSizeIsCorrect() {
+        // 1. Arrange
+        val postviewSizes = mutableMapOf(
+            ImageFormat.JPEG to listOf(Size(1920, 1080), Size(640, 480))
+        )
+        val vendorExtender = object : VendorExtender {
+            override fun getSupportedPostviewResolutions(captureSize: Size) = postviewSizes
+        }
+        val advancedSessionProcessor = AdvancedSessionProcessor(FakeSessionProcessImpl(),
+            emptyList(), vendorExtender, context
+        )
+
+        // 2. Act and Assert
+        assertThat(advancedSessionProcessor.getSupportedPostviewSize(Size(1920, 1080))
+            .get(ImageFormat.JPEG)).containsExactly(Size(1920, 1080), Size(640, 480))
+    }
+
     /**
      * Verify if the given use cases have expected output.
      * 1) Preview frame is received
@@ -399,7 +721,7 @@ class AdvancedSessionProcessorTest {
         imageAnalysis: ImageAnalysis? = null
     ) {
         val advancedSessionProcessor = AdvancedSessionProcessor(fakeSessionProcessImpl,
-            emptyList(), context)
+            emptyList(), object : VendorExtender {}, context)
         val latchPreviewFrame = CountDownLatch(1)
         val latchAnalysis = CountDownLatch(1)
         val deferCapturedImage = CompletableDeferred<ImageProxy>()
@@ -473,15 +795,16 @@ private suspend fun <T> Deferred<T>.awaitWithTimeout(timeMillis: Long): T {
  * to allow tests to access the [RequestProcessorImpl] to receive the Image for
  * [ImageReaderOutputConfigImpl].
  */
+@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class FakeSessionProcessImpl(
     var previewConfigBlock: (OutputSurfaceImpl) -> Camera2OutputConfigImpl = { outputSurfaceImpl ->
         Camera2OutputConfigImplBuilder
-            .newSurfaceConfig(outputSurfaceImpl.surface)
+            .newSurfaceConfig(outputSurfaceImpl.surface!!)
             .build()
     },
     var captureConfigBlock: (OutputSurfaceImpl) -> Camera2OutputConfigImpl = { outputSurfaceImpl ->
             Camera2OutputConfigImplBuilder
-                .newSurfaceConfig(outputSurfaceImpl.surface)
+                .newSurfaceConfig(outputSurfaceImpl.surface!!)
                 .build()
     },
     var analysisConfigBlock: ((OutputSurfaceImpl) -> Camera2OutputConfigImpl)? = null,
@@ -496,16 +819,17 @@ class FakeSessionProcessImpl(
     private var startTriggerParametersDeferred =
         CompletableDeferred<MutableMap<CaptureRequest.Key<*>, Any>>()
 
+    var sessionType: Int = -1
     override fun initSession(
-        cameraId: String?,
-        cameraCharacteristicsMap: MutableMap<String, CameraCharacteristics>?,
-        context: Context?,
-        previewSurfaceConfig: OutputSurfaceImpl?,
-        captureSurfaceConfig: OutputSurfaceImpl?,
+        cameraId: String,
+        cameraCharacteristicsMap: MutableMap<String, CameraCharacteristics>,
+        context: Context,
+        previewSurfaceConfig: OutputSurfaceImpl,
+        captureSurfaceConfig: OutputSurfaceImpl,
         analysisSurfaceConfig: OutputSurfaceImpl?
     ): Camera2SessionConfigImpl {
-        captureOutputConfig = captureConfigBlock.invoke(captureSurfaceConfig!!)
-        previewOutputConfig = previewConfigBlock.invoke(previewSurfaceConfig!!)
+        captureOutputConfig = captureConfigBlock.invoke(captureSurfaceConfig)
+        previewOutputConfig = previewConfigBlock.invoke(previewSurfaceConfig)
         analysisSurfaceConfig?.let {
             analysisOutputConfig = analysisConfigBlock?.invoke(it)
         }
@@ -519,22 +843,40 @@ class FakeSessionProcessImpl(
         val sessionBuilder = Camera2SessionConfigImplBuilder().apply {
             addOutputConfig(previewOutputConfig)
             addOutputConfig(captureOutputConfig)
-            analysisOutputConfig?.let { addOutputConfig(analysisOutputConfig) }
+            analysisOutputConfig?.let { addOutputConfig(it) }
+        }
+
+        if (ExtensionVersion.isMinimumCompatibleVersion(Version.VERSION_1_4) && sessionType != -1) {
+            sessionBuilder.setSessionType(sessionType)
         }
         return sessionBuilder.build()
+    }
+
+    override fun initSession(
+        cameraId: String,
+        cameraCharacteristicsMap: MutableMap<String, CameraCharacteristics>,
+        context: Context,
+        surfaceConfigs: OutputSurfaceConfigurationImpl
+    ): Camera2SessionConfigImpl {
+        return initSession(
+            cameraId, cameraCharacteristicsMap, context,
+            surfaceConfigs.previewOutputSurface,
+            surfaceConfigs.imageCaptureOutputSurface,
+            surfaceConfigs.imageAnalysisOutputSurface
+        )
     }
 
     override fun deInitSession() {
     }
 
-    override fun setParameters(parameters: MutableMap<CaptureRequest.Key<*>, Any>?) {
+    override fun setParameters(parameters: MutableMap<CaptureRequest.Key<*>, Any>) {
     }
 
     override fun startTrigger(
-        triggers: MutableMap<CaptureRequest.Key<*>, Any>?,
-        callback: SessionProcessorImpl.CaptureCallback?
+        triggers: MutableMap<CaptureRequest.Key<*>, Any>,
+        callback: SessionProcessorImpl.CaptureCallback
     ): Int {
-        startTriggerParametersDeferred.complete(triggers!!)
+        startTriggerParametersDeferred.complete(triggers)
         return 0
     }
 
@@ -545,15 +887,15 @@ class FakeSessionProcessImpl(
             .isEqualTo(parameters)
     }
 
-    override fun onCaptureSessionStart(requestProcessor: RequestProcessorImpl?) {
+    override fun onCaptureSessionStart(requestProcessor: RequestProcessorImpl) {
         this.requestProcessor = requestProcessor
-        onCaptureSessionStarted?.invoke(requestProcessor!!)
+        onCaptureSessionStarted?.invoke(requestProcessor)
     }
 
     override fun onCaptureSessionEnd() {
     }
 
-    override fun startRepeating(callback: SessionProcessorImpl.CaptureCallback?): Int {
+    override fun startRepeating(callback: SessionProcessorImpl.CaptureCallback): Int {
         val idList = ArrayList<Int>()
         idList.add(previewOutputConfig.id)
         analysisOutputConfig?.let { idList.add(it.id) }
@@ -565,42 +907,42 @@ class FakeSessionProcessImpl(
         val request = RequestProcessorRequest(idList, mapOf(), CameraDevice.TEMPLATE_PREVIEW)
         requestProcessor!!.setRepeating(request, object : RequestProcessorImpl.Callback {
             override fun onCaptureStarted(
-                request: RequestProcessorImpl.Request?,
+                request: RequestProcessorImpl.Request,
                 frameNumber: Long,
                 timestamp: Long
             ) {
-                callback?.onCaptureStarted(currentSequenceId, timestamp)
+                callback.onCaptureStarted(currentSequenceId, timestamp)
             }
 
             override fun onCaptureProgressed(
-                request: RequestProcessorImpl.Request?,
-                partialResult: CaptureResult?
+                request: RequestProcessorImpl.Request,
+                partialResult: CaptureResult
             ) {
             }
 
             @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
             override fun onCaptureCompleted(
-                request: RequestProcessorImpl.Request?,
-                totalCaptureResult: TotalCaptureResult?
+                request: RequestProcessorImpl.Request,
+                totalCaptureResult: TotalCaptureResult
             ) {
-                callback?.onCaptureProcessStarted(currentSequenceId)
-                callback?.onCaptureCompleted(
-                    totalCaptureResult!!.get(CaptureResult.SENSOR_TIMESTAMP)!!,
+                callback.onCaptureProcessStarted(currentSequenceId)
+                callback.onCaptureCompleted(
+                    totalCaptureResult.get(CaptureResult.SENSOR_TIMESTAMP)!!,
                     currentSequenceId, mapOf()
                 )
-                callback?.onCaptureSequenceCompleted(currentSequenceId)
+                callback.onCaptureSequenceCompleted(currentSequenceId)
             }
 
             override fun onCaptureFailed(
-                request: RequestProcessorImpl.Request?,
-                captureFailure: CaptureFailure?
+                request: RequestProcessorImpl.Request,
+                captureFailure: CaptureFailure
             ) {
-                callback?.onCaptureFailed(currentSequenceId)
-                callback?.onCaptureSequenceAborted(currentSequenceId)
+                callback.onCaptureFailed(currentSequenceId)
+                callback.onCaptureSequenceAborted(currentSequenceId)
             }
 
             override fun onCaptureBufferLost(
-                request: RequestProcessorImpl.Request?,
+                request: RequestProcessorImpl.Request,
                 frameNumber: Long,
                 outputStreamId: Int
             ) {
@@ -619,7 +961,7 @@ class FakeSessionProcessImpl(
         requestProcessor?.stopRepeating()
     }
 
-    override fun startCapture(callback: SessionProcessorImpl.CaptureCallback?): Int {
+    override fun startCapture(callback: SessionProcessorImpl.CaptureCallback): Int {
         val idList = ArrayList<Int>()
         idList.add(captureOutputConfig.id)
 
@@ -627,53 +969,61 @@ class FakeSessionProcessImpl(
         val request = RequestProcessorRequest(idList, mapOf(), CameraDevice.TEMPLATE_STILL_CAPTURE)
         requestProcessor?.submit(request, object : RequestProcessorImpl.Callback {
             override fun onCaptureStarted(
-                request: RequestProcessorImpl.Request?,
+                request: RequestProcessorImpl.Request,
                 frameNumber: Long,
                 timestamp: Long
             ) {
-                callback?.onCaptureStarted(currentSequenceId, timestamp)
+                callback.onCaptureStarted(currentSequenceId, timestamp)
             }
 
             override fun onCaptureProgressed(
-                request: RequestProcessorImpl.Request?,
-                partialResult: CaptureResult?
+                request: RequestProcessorImpl.Request,
+                partialResult: CaptureResult
             ) {
             }
 
             @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
             override fun onCaptureCompleted(
-                request: RequestProcessorImpl.Request?,
-                totalCaptureResult: TotalCaptureResult?
+                request: RequestProcessorImpl.Request,
+                totalCaptureResult: TotalCaptureResult
             ) {
-                callback?.onCaptureCompleted(
-                    totalCaptureResult!!.get(CaptureResult.SENSOR_TIMESTAMP)!!, currentSequenceId,
+                callback.onCaptureCompleted(
+                    totalCaptureResult.get(CaptureResult.SENSOR_TIMESTAMP)!!, currentSequenceId,
                     mapOf()
                 )
             }
 
             override fun onCaptureFailed(
-                request: RequestProcessorImpl.Request?,
-                captureFailure: CaptureFailure?
+                request: RequestProcessorImpl.Request,
+                captureFailure: CaptureFailure
             ) {
-                callback?.onCaptureFailed(currentSequenceId)
+                callback.onCaptureFailed(currentSequenceId)
             }
 
             override fun onCaptureBufferLost(
-                request: RequestProcessorImpl.Request?,
+                request: RequestProcessorImpl.Request,
                 frameNumber: Long,
                 outputStreamId: Int
             ) {
             }
 
             override fun onCaptureSequenceCompleted(sequenceId: Int, frameNumber: Long) {
-                callback?.onCaptureSequenceCompleted(currentSequenceId)
+                callback.onCaptureSequenceCompleted(currentSequenceId)
             }
 
             override fun onCaptureSequenceAborted(sequenceId: Int) {
-                callback?.onCaptureSequenceAborted(currentSequenceId)
+                callback.onCaptureSequenceAborted(currentSequenceId)
             }
         })
         return currentSequenceId
+    }
+
+    override fun startCaptureWithPostview(callback: SessionProcessorImpl.CaptureCallback): Int {
+        return startCapture(callback)
+    }
+
+    override fun getRealtimeCaptureLatency(): Pair<Long, Long>? {
+        return null
     }
 
     override fun abortCapture(captureSequenceId: Int) {

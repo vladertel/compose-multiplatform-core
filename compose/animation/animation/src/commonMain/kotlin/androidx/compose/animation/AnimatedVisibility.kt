@@ -26,6 +26,7 @@ import androidx.compose.animation.core.InternalAnimationApi
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.createChildTransition
+import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.internal.JvmDefaultWithCompatibility
 import androidx.compose.foundation.layout.Column
@@ -54,7 +55,9 @@ import androidx.compose.ui.platform.debugInspectorInfo
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.fastMaxBy
+import androidx.compose.ui.util.fastMaxOfOrNull
 
 /**
  * [AnimatedVisibility] composable animates the appearance and disappearance of its content, as
@@ -383,7 +386,7 @@ fun AnimatedVisibility(
     label: String = "AnimatedVisibility",
     content: @Composable() AnimatedVisibilityScope.() -> Unit
 ) {
-    val transition = updateTransition(visibleState, label)
+    val transition = rememberTransition(visibleState, label)
     AnimatedVisibilityImpl(transition, { it }, modifier, enter, exit, content = content)
 }
 
@@ -458,7 +461,7 @@ fun RowScope.AnimatedVisibility(
     label: String = "AnimatedVisibility",
     content: @Composable() AnimatedVisibilityScope.() -> Unit
 ) {
-    val transition = updateTransition(visibleState, label)
+    val transition = rememberTransition(visibleState, label)
     AnimatedVisibilityImpl(transition, { it }, modifier, enter, exit, content = content)
 }
 
@@ -534,7 +537,7 @@ fun ColumnScope.AnimatedVisibility(
     label: String = "AnimatedVisibility",
     content: @Composable() AnimatedVisibilityScope.() -> Unit
 ) {
-    val transition = updateTransition(visibleState, label)
+    val transition = rememberTransition(visibleState, label)
     AnimatedVisibilityImpl(transition, { it }, modifier, enter, exit, content = content)
 }
 
@@ -630,9 +633,6 @@ interface AnimatedVisibilityScope {
      * [transition] allows custom enter/exit animations to be specified. It will run simultaneously
      * with the built-in enter/exit transitions specified in [AnimatedVisibility].
      */
-    @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-    @get:ExperimentalAnimationApi
-    @ExperimentalAnimationApi
     val transition: Transition<EnterExitState>
 
     /**
@@ -648,11 +648,8 @@ interface AnimatedVisibilityScope {
      * does not matter, as the transition animations will start simultaneously. See [EnterTransition]
      * and [ExitTransition] for details on the three types of transition.
      *
-     * By default, the enter transition will be a combination of [fadeIn] and [expandIn] of the
-     * content from the bottom end. And the exit transition will be shrinking the content towards
-     * the bottom end while fading out (i.e. [fadeOut] + [shrinkOut]). The expanding and shrinking
-     * will likely also animate the parent and siblings if they rely on the size of
-     * appearing/disappearing content.
+     * By default, the enter transition will be a [fadeIn] of the content. And the exit transition
+     * will be fading out the content using [fadeOut].
      *
      * In some cases it may be desirable to have [AnimatedVisibility] apply no animation at all for
      * enter and/or exit, such that children of [AnimatedVisibility] can each have their distinct
@@ -661,10 +658,9 @@ interface AnimatedVisibilityScope {
      *
      * @sample androidx.compose.animation.samples.AnimateEnterExitPartialContent
      */
-    @ExperimentalAnimationApi
     fun Modifier.animateEnterExit(
-        enter: EnterTransition = fadeIn() + expandIn(),
-        exit: ExitTransition = fadeOut() + shrinkOut(),
+        enter: EnterTransition = fadeIn(),
+        exit: ExitTransition = fadeOut(),
         label: String = "animateEnterExit"
     ): Modifier = composed(
         inspectorInfo = debugInspectorInfo {
@@ -674,7 +670,7 @@ interface AnimatedVisibilityScope {
             properties["label"] = label
         }
     ) {
-        this.then(transition.createModifier(enter, exit, label))
+        this.then(transition.createModifier(enter, exit, label = label))
     }
 }
 
@@ -782,7 +778,7 @@ internal fun <T> AnimatedEnterExitImpl(
     content: @Composable() AnimatedVisibilityScope.() -> Unit
 ) {
     if (visible(transition.targetState) || visible(transition.currentState) ||
-        transition.isSeeking
+        transition.isSeeking || transition.hasInitialValueAnimations
     ) {
         val childTransition = transition.createChildTransition(label = "EnterExitTransition") {
             transition.targetEnterExit(visible, it)
@@ -815,17 +811,25 @@ internal fun <T> AnimatedEnterExitImpl(
             Layout(
                 content = { scope.content() },
                 modifier = modifier
-                    .then(childTransition.createModifier(enter, exit, "Built-in")
+                    .then(childTransition
+                        .createModifier(enter, exit, label = "Built-in")
                         .then(if (onLookaheadMeasured != null) {
                             Modifier.layout { measurable, constraints ->
-                                measurable.measure(constraints).run {
-                                    if (isLookingAhead) {
-                                        onLookaheadMeasured.invoke(IntSize(width, height))
+                                measurable
+                                    .measure(constraints)
+                                    .run {
+                                        if (isLookingAhead) {
+                                            onLookaheadMeasured.invoke(
+                                                IntSize(
+                                                    width,
+                                                    height
+                                                )
+                                            )
+                                        }
+                                        layout(width, height) {
+                                            place(0, 0)
+                                        }
                                     }
-                                    layout(width, height) {
-                                        place(0, 0)
-                                    }
-                                }
                             }
                         } else Modifier)
                     ),
@@ -842,15 +846,22 @@ private val Transition<EnterExitState>.exitFinished
 private class AnimatedEnterExitMeasurePolicy(
     val scope: AnimatedVisibilityScopeImpl
 ) : MeasurePolicy {
+    var hasLookaheadOccurred = false
     override fun MeasureScope.measure(
         measurables: List<Measurable>,
         constraints: Constraints
     ): MeasureResult {
-        val placeables = measurables.map { it.measure(constraints) }
+        val placeables = measurables.fastMap { it.measure(constraints) }
         val maxWidth: Int = placeables.fastMaxBy { it.width }?.width ?: 0
         val maxHeight = placeables.fastMaxBy { it.height }?.height ?: 0
         // Position the children.
-        scope.targetSize.value = IntSize(maxWidth, maxHeight)
+        if (isLookingAhead) {
+            hasLookaheadOccurred = true
+            scope.targetSize.value = IntSize(maxWidth, maxHeight)
+        } else if (!hasLookaheadOccurred) {
+            // Not in lookahead scope.
+            scope.targetSize.value = IntSize(maxWidth, maxHeight)
+        }
         return layout(maxWidth, maxHeight) {
             placeables.fastForEach {
                 it.place(0, 0)
@@ -861,22 +872,22 @@ private class AnimatedEnterExitMeasurePolicy(
     override fun IntrinsicMeasureScope.minIntrinsicWidth(
         measurables: List<IntrinsicMeasurable>,
         height: Int
-    ) = measurables.asSequence().map { it.minIntrinsicWidth(height) }.maxOrNull() ?: 0
+    ) = measurables.fastMaxOfOrNull { it.minIntrinsicWidth(height) } ?: 0
 
     override fun IntrinsicMeasureScope.minIntrinsicHeight(
         measurables: List<IntrinsicMeasurable>,
         width: Int
-    ) = measurables.asSequence().map { it.minIntrinsicHeight(width) }.maxOrNull() ?: 0
+    ) = measurables.fastMaxOfOrNull { it.minIntrinsicHeight(width) } ?: 0
 
     override fun IntrinsicMeasureScope.maxIntrinsicWidth(
         measurables: List<IntrinsicMeasurable>,
         height: Int
-    ) = measurables.asSequence().map { it.maxIntrinsicWidth(height) }.maxOrNull() ?: 0
+    ) = measurables.fastMaxOfOrNull { it.maxIntrinsicWidth(height) } ?: 0
 
     override fun IntrinsicMeasureScope.maxIntrinsicHeight(
         measurables: List<IntrinsicMeasurable>,
         width: Int
-    ) = measurables.asSequence().map { it.maxIntrinsicHeight(width) }.maxOrNull() ?: 0
+    ) = measurables.fastMaxOfOrNull { it.maxIntrinsicHeight(width) } ?: 0
 }
 
 // This converts Boolean visible to EnterExitState

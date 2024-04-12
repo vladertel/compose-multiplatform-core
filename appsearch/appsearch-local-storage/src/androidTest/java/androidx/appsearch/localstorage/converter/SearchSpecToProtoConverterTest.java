@@ -25,9 +25,10 @@ import static com.google.common.truth.Truth.assertThat;
 
 import androidx.appsearch.app.JoinSpec;
 import androidx.appsearch.app.SearchSpec;
+import androidx.appsearch.localstorage.AppSearchConfigImpl;
 import androidx.appsearch.localstorage.AppSearchImpl;
-import androidx.appsearch.localstorage.DefaultIcingOptionsConfig;
 import androidx.appsearch.localstorage.IcingOptionsConfig;
+import androidx.appsearch.localstorage.LocalStorageIcingOptionsConfig;
 import androidx.appsearch.localstorage.OptimizeStrategy;
 import androidx.appsearch.localstorage.UnlimitedLimitConfig;
 import androidx.appsearch.localstorage.util.PrefixUtil;
@@ -63,7 +64,8 @@ public class SearchSpecToProtoConverterTest {
     @Rule
     public final TemporaryFolder mTemporaryFolder = new TemporaryFolder();
 
-    private final IcingOptionsConfig mDefaultIcingOptionsConfig = new DefaultIcingOptionsConfig();
+    private final IcingOptionsConfig mLocalStorageIcingOptionsConfig =
+            new LocalStorageIcingOptionsConfig();
 
     private AppSearchImpl mAppSearchImpl;
 
@@ -71,8 +73,10 @@ public class SearchSpecToProtoConverterTest {
     public void setUp() throws Exception {
         mAppSearchImpl = AppSearchImpl.create(
                 mTemporaryFolder.newFolder(),
-                new UnlimitedLimitConfig(),
-                mDefaultIcingOptionsConfig,
+                new AppSearchConfigImpl(
+                        new UnlimitedLimitConfig(),
+                        mLocalStorageIcingOptionsConfig
+                ),
                 /*initStatsBuilder=*/ null,
                 ALWAYS_OPTIMIZE,
                 /*visibilityChecker=*/null);
@@ -108,7 +112,7 @@ public class SearchSpecToProtoConverterTest {
                 prefix2, ImmutableMap.of(
                         prefix2 + "typeA", configProto,
                         prefix2 + "typeB", configProto)),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         // Convert SearchSpec to proto.
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
 
@@ -158,7 +162,7 @@ public class SearchSpecToProtoConverterTest {
                 prefix2, ImmutableMap.of(
                         prefix2 + "typeA", configProto,
                         prefix2 + "typeB", configProto)),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
 
         // Convert SearchSpec to proto.
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
@@ -232,7 +236,7 @@ public class SearchSpecToProtoConverterTest {
                         ImmutableMap.of(
                                 prefix2 + "typeA", configProto,
                                 prefix2 + "typeB", configProto)),
-                        mDefaultIcingOptionsConfig);
+                        mLocalStorageIcingOptionsConfig);
 
         VisibilityStore visibilityStore = new VisibilityStore(mAppSearchImpl);
         converter.removeInaccessibleSchemaFilter(
@@ -285,7 +289,7 @@ public class SearchSpecToProtoConverterTest {
                 /*namespaceMap=*/ImmutableMap.of(prefix, ImmutableSet.of(prefix + namespace)),
                 /*schemaMap=*/ImmutableMap.of(prefix, ImmutableMap.of(prefix + schemaType,
                 SchemaTypeConfigProto.getDefaultInstance())),
-                mDefaultIcingOptionsConfig).toScoringSpecProto();
+                mLocalStorageIcingOptionsConfig).toScoringSpecProto();
         TypePropertyWeights typePropertyWeights = TypePropertyWeights.newBuilder()
                 .setSchemaType(prefix + schemaType)
                 .addPropertyWeights(PropertyWeight.newBuilder()
@@ -314,7 +318,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(),
                 /*namespaceMap=*/ImmutableMap.of(),
                 /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig).toScoringSpecProto();
+                mLocalStorageIcingOptionsConfig).toScoringSpecProto();
 
         assertThat(scoringSpecProto.getOrderBy().getNumber())
                 .isEqualTo(ScoringSpecProto.Order.Code.ASC_VALUE);
@@ -339,7 +343,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(),
                 /*namespaceMap=*/ImmutableMap.of(),
                 /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         ResultSpecProto resultSpecProto = convert.toResultSpecProto(
                 /*namespaceMap=*/ImmutableMap.of(),
                 /*schemaMap=*/ImmutableMap.of());
@@ -377,7 +381,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(),
                 /*namespaceMap=*/ImmutableMap.of(),
                 /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
 
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(
                 /*namespaceMap=*/ImmutableMap.of(),
@@ -425,7 +429,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(personPrefix, actionPrefix),
                 namespaceMap,
                 schemaMap,
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
 
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(
                 namespaceMap,
@@ -442,7 +446,7 @@ public class SearchSpecToProtoConverterTest {
     }
 
     @Test
-    public void testToResultSpecProto_projection_withJoinSpec_packageFilter() throws Exception {
+    public void testToResultSpecProto_projection_withJoinSpec_packageFilter() {
         String personPrefix = PrefixUtil.createPrefix("contacts", "database");
         String actionPrefix = PrefixUtil.createPrefix("aiai", "database");
 
@@ -476,7 +480,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(personPrefix, actionPrefix),
                 namespaceMap,
                 schemaMap,
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
 
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(
                 namespaceMap,
@@ -495,6 +499,143 @@ public class SearchSpecToProtoConverterTest {
         assertThat(nestedResultSpecProto.getTypePropertyMasks(0).getPaths(0)).isEqualTo("type");
     }
 
+    // Previously, there was a bug where a wildcard filter would be added for each prefix in
+    // the SearchSpec.
+    @Test
+    public void testToResultSpecProto_projection_withWildcard() {
+        String personPrefix = PrefixUtil.createPrefix("contacts", "database");
+        String actionPrefix = PrefixUtil.createPrefix("aiai", "database");
+
+        SearchSpec searchSpec = new SearchSpec.Builder()
+                .addProjection(SearchSpec.PROJECTION_SCHEMA_TYPE_WILDCARD, ImmutableList.of("name"))
+                .build();
+
+        SearchSpecToProtoConverter converter = new SearchSpecToProtoConverter(
+                /*queryExpression=*/"query",
+                searchSpec,
+                /*prefixes=*/ImmutableSet.of(personPrefix, actionPrefix),
+                /*namespaceMap=*/ImmutableMap.of(),
+                /*schemaMap=*/ImmutableMap.of(),
+                mLocalStorageIcingOptionsConfig);
+
+        ResultSpecProto resultSpecProto = converter.toResultSpecProto(
+                /*namespaceMap=*/ImmutableMap.of(),
+                /*schemaMap=*/ImmutableMap.of());
+
+        assertThat(resultSpecProto.getTypePropertyMasksCount()).isEqualTo(1);
+        assertThat(resultSpecProto.getTypePropertyMasks(0).getSchemaType()).isEqualTo(
+                SearchSpec.SCHEMA_TYPE_WILDCARD);
+        assertThat(resultSpecProto.getTypePropertyMasks(0).getPaths(0)).isEqualTo("name");
+    }
+
+    // Previously, there was a bug where a wildcard filter would be added for each prefix in
+    // the SearchSpec. Therefore, if there were no prefixes, the wildcard filter would not be added
+    // either.
+    @Test
+    public void testToResultSpecProto_projectionNoPrefixes_withWildcard() {
+        SearchSpec searchSpec = new SearchSpec.Builder()
+                .addProjection(SearchSpec.PROJECTION_SCHEMA_TYPE_WILDCARD, ImmutableList.of("name"))
+                .build();
+
+        SearchSpecToProtoConverter converter = new SearchSpecToProtoConverter(
+                /*queryExpression=*/"query",
+                searchSpec,
+                /*prefixes=*/ImmutableSet.of(),
+                /*namespaceMap=*/ImmutableMap.of(),
+                /*schemaMap=*/ImmutableMap.of(),
+                mLocalStorageIcingOptionsConfig);
+
+        ResultSpecProto resultSpecProto = converter.toResultSpecProto(
+                /*namespaceMap=*/ImmutableMap.of(),
+                /*schemaMap=*/ImmutableMap.of());
+
+        assertThat(resultSpecProto.getTypePropertyMasksCount()).isEqualTo(1);
+        assertThat(resultSpecProto.getTypePropertyMasks(0).getSchemaType()).isEqualTo(
+                SearchSpec.SCHEMA_TYPE_WILDCARD);
+        assertThat(resultSpecProto.getTypePropertyMasks(0).getPaths(0)).isEqualTo("name");
+    }
+
+    // @exportToFramework:startStrip()
+    // TODO(b/274157614): Export this to framework when property filters are made public
+    @Test
+    public void testToSearchSpecProto_propertyFilter_withJoinSpec_packageFilter() {
+        String personPrefix = PrefixUtil.createPrefix("contacts", "database");
+        String actionPrefix = PrefixUtil.createPrefix("aiai", "database");
+
+        SchemaTypeConfigProto configProto = SchemaTypeConfigProto.getDefaultInstance();
+        Map<String, Map<String, SchemaTypeConfigProto>> schemaMap = ImmutableMap.of(
+                personPrefix, ImmutableMap.of(personPrefix + "Person", configProto),
+                actionPrefix, ImmutableMap.of(actionPrefix + "ContactAction", configProto));
+        Map<String, Set<String>> namespaceMap = ImmutableMap.of(
+                personPrefix, ImmutableSet.of(personPrefix + "namespaceA"),
+                actionPrefix, ImmutableSet.of(actionPrefix + "namespaceA"));
+
+        SearchSpec nestedSearchSpec = new SearchSpec.Builder()
+                .setResultGrouping(SearchSpec.GROUPING_TYPE_PER_PACKAGE, 10)
+                .addFilterProperties("ContactAction", ImmutableList.of("type"))
+                .build();
+
+        // Create a JoinSpec object and set it in the converter
+        JoinSpec joinSpec = new JoinSpec.Builder("childPropertyExpression")
+                .setNestedSearch("nestedQuery", nestedSearchSpec)
+                .build();
+
+        SearchSpec searchSpec = new SearchSpec.Builder()
+                .setJoinSpec(joinSpec)
+                .setResultGrouping(SearchSpec.GROUPING_TYPE_PER_PACKAGE, 10)
+                .addFilterProperties("Person", ImmutableList.of("name"))
+                .build();
+
+        SearchSpecToProtoConverter converter = new SearchSpecToProtoConverter(
+                /*queryExpression=*/"query",
+                searchSpec,
+                /*prefixes=*/ImmutableSet.of(personPrefix, actionPrefix),
+                namespaceMap,
+                schemaMap,
+                mLocalStorageIcingOptionsConfig);
+
+        SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
+
+        assertThat(searchSpecProto.getTypePropertyFiltersCount()).isEqualTo(1);
+        assertThat(searchSpecProto.getTypePropertyFilters(0).getSchemaType()).isEqualTo(
+                "contacts$database/Person");
+        assertThat(searchSpecProto.getTypePropertyFilters(0).getPaths(0)).isEqualTo("name");
+
+        SearchSpecProto nestedSearchSpecProto =
+                searchSpecProto.getJoinSpec().getNestedSpec().getSearchSpec();
+        assertThat(nestedSearchSpecProto.getTypePropertyFiltersCount()).isEqualTo(1);
+        assertThat(nestedSearchSpecProto.getTypePropertyFilters(0).getSchemaType()).isEqualTo(
+                "aiai$database/ContactAction");
+        assertThat(nestedSearchSpecProto.getTypePropertyFilters(0).getPaths(0)).isEqualTo("type");
+    }
+
+    // TODO(b/274157614): Export this to framework when property filters are made public
+    @Test
+    public void testToSearchSpecProto_propertyFilter_withWildcard() {
+        String personPrefix = PrefixUtil.createPrefix("contacts", "database");
+        String actionPrefix = PrefixUtil.createPrefix("aiai", "database");
+
+        SearchSpec searchSpec = new SearchSpec.Builder()
+                .addFilterProperties(SearchSpec.SCHEMA_TYPE_WILDCARD, ImmutableList.of("name"))
+                .build();
+
+        SearchSpecToProtoConverter converter = new SearchSpecToProtoConverter(
+                /*queryExpression=*/"query",
+                searchSpec,
+                /*prefixes=*/ImmutableSet.of(personPrefix, actionPrefix),
+                /*namespaceMap=*/ImmutableMap.of(),
+                /*schemaMap=*/ImmutableMap.of(),
+                mLocalStorageIcingOptionsConfig);
+
+        SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
+
+        assertThat(searchSpecProto.getTypePropertyFiltersCount()).isEqualTo(1);
+        assertThat(searchSpecProto.getTypePropertyFilters(0).getSchemaType()).isEqualTo(
+                SearchSpec.SCHEMA_TYPE_WILDCARD);
+        assertThat(searchSpecProto.getTypePropertyFilters(0).getPaths(0)).isEqualTo("name");
+    }
+
+    // @exportToFramework:endStrip()
     @Test
     public void testToResultSpecProto_weight_withJoinSpec_packageFilter() throws Exception {
         String personPrefix = PrefixUtil.createPrefix("contacts", "database");
@@ -531,7 +672,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(personPrefix, actionPrefix),
                 namespaceMap,
                 schemaMap,
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
 
         ScoringSpecProto scoringSpecProto = converter.toScoringSpecProto();
 
@@ -569,7 +710,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(prefix1, prefix2),
                 /*namespaceMap=*/ImmutableMap.of(),
                 /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(
                 /*namespaceMap=*/ImmutableMap.of(
                         prefix1, ImmutableSet.of(
@@ -622,7 +763,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(prefix1, prefix2),
                 namespaceMap,
                 /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(
                 namespaceMap,
                 /*schemaMap=*/ImmutableMap.of());
@@ -671,7 +812,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(prefix1, prefix2),
                 /*namespaceMap=*/ImmutableMap.of(),
                 schemaMap,
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(
                 /*namespaceMap=*/ImmutableMap.of(),
                 schemaMap);
@@ -717,7 +858,7 @@ public class SearchSpecToProtoConverterTest {
                 searchSpec,
                 /*prefixes=*/ImmutableSet.of(prefix1, prefix2),
                 namespaceMap, /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(
                 namespaceMap,
                 /*schemaMap=*/ImmutableMap.of());
@@ -756,7 +897,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(prefix1, prefix2),
                 /*namespaceMap=*/ImmutableMap.of(),
                 schemaMap,
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(
                 /*namespaceMap=*/ImmutableMap.of(),
                 schemaMap);
@@ -800,7 +941,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(prefix1, prefix2),
                 namespaceMap,
                 schemaMap,
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(namespaceMap, schemaMap);
 
         assertThat(resultSpecProto.getResultGroupingsCount()).isEqualTo(4);
@@ -892,7 +1033,7 @@ public class SearchSpecToProtoConverterTest {
                 /*prefixes=*/ImmutableSet.of(prefix1, prefix2),
                 namespaceMap,
                 schemaMap,
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         ResultSpecProto resultSpecProto = converter.toResultSpecProto(namespaceMap, schemaMap);
 
         assertThat(resultSpecProto.getResultGroupingsCount()).isEqualTo(8);
@@ -987,7 +1128,7 @@ public class SearchSpecToProtoConverterTest {
                 searchSpec,
                 /*prefixes=*/ImmutableSet.of(prefix1, prefix2),
                 namespaceMap, /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
 
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
 
@@ -1013,7 +1154,7 @@ public class SearchSpecToProtoConverterTest {
                 prefix2, ImmutableSet.of("package$database2/namespace3",
                         "package$database2/namespace4")),
                 /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
 
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
         // Only search prefix1 will return namespace 1 and 2.
@@ -1036,7 +1177,7 @@ public class SearchSpecToProtoConverterTest {
                 prefix1, ImmutableSet.of("package$database1/namespace1",
                         "package$database1/namespace2")),
                 /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
         // If the searching namespace filter is not empty, the target namespace filter will be the
         // intersection of the searching namespace filters that users want to search over and
@@ -1060,7 +1201,7 @@ public class SearchSpecToProtoConverterTest {
                 prefix1, ImmutableSet.of("package$database1/namespace1",
                         "package$database1/namespace2")),
                 /*schemaMap=*/ImmutableMap.of(),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
         // If the searching namespace filter is not empty, the target namespace filter will be the
         // intersection of the searching namespace filters that users want to search over and
@@ -1088,7 +1229,7 @@ public class SearchSpecToProtoConverterTest {
                 prefix2, ImmutableMap.of(
                         "package$database2/typeC", schemaTypeConfigProto,
                         "package$database2/typeD", schemaTypeConfigProto)),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
         // Empty searching filter will get all types for target filter
         assertThat(searchSpecProto.getSchemaTypeFiltersList()).containsExactly(
@@ -1117,7 +1258,7 @@ public class SearchSpecToProtoConverterTest {
                 prefix2, ImmutableMap.of(
                         "package$database2/typeC", schemaTypeConfigProto,
                         "package$database2/typeD", schemaTypeConfigProto)),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
         // Only search prefix1 will return typeA and B.
         assertThat(searchSpecProto.getSchemaTypeFiltersList()).containsExactly(
@@ -1142,7 +1283,7 @@ public class SearchSpecToProtoConverterTest {
                 prefix1, ImmutableMap.of(
                         "package$database1/typeA", schemaTypeConfigProto,
                         "package$database1/typeB", schemaTypeConfigProto)),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
         // If the searching schema filter is not empty, the target schema filter will be the
         // intersection of the schema filters that users want to search over and those candidates
@@ -1169,7 +1310,7 @@ public class SearchSpecToProtoConverterTest {
                 prefix1, ImmutableMap.of(
                         "package$database1/typeA", schemaTypeConfigProto,
                         "package$database1/typeB", schemaTypeConfigProto)),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
         SearchSpecProto searchSpecProto = converter.toSearchSpecProto();
         // If there is no intersection of the schema filters that user want to search over and
         // those filters which are stored in AppSearch, return empty.
@@ -1199,7 +1340,7 @@ public class SearchSpecToProtoConverterTest {
                         "package$database/schema1", schemaTypeConfigProto,
                         "package$database/schema2", schemaTypeConfigProto,
                         "package$database/schema3", schemaTypeConfigProto)),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
 
         converter.removeInaccessibleSchemaFilter(
                 new CallerAccess(/*callingPackageName=*/"otherPackageName"),
@@ -1246,7 +1387,7 @@ public class SearchSpecToProtoConverterTest {
                         searchSpec, /*prefixes=*/ImmutableSet.of(prefix),
                         /*namespaceMap=*/namespaceMap,
                         /*schemaMap=*/ImmutableMap.of(),
-                        mDefaultIcingOptionsConfig);
+                        mLocalStorageIcingOptionsConfig);
         assertThat(emptySchemaConverter.hasNothingToSearch()).isTrue();
 
         SearchSpecToProtoConverter emptyNamespaceConverter =
@@ -1255,7 +1396,7 @@ public class SearchSpecToProtoConverterTest {
                         searchSpec, /*prefixes=*/ImmutableSet.of(prefix),
                         /*namespaceMap=*/ImmutableMap.of(),
                         schemaMap,
-                        mDefaultIcingOptionsConfig);
+                        mLocalStorageIcingOptionsConfig);
         assertThat(emptyNamespaceConverter.hasNothingToSearch()).isTrue();
 
         SearchSpecToProtoConverter nonEmptyConverter =
@@ -1263,7 +1404,7 @@ public class SearchSpecToProtoConverterTest {
                         /*queryExpression=*/"",
                         searchSpec, /*prefixes=*/ImmutableSet.of(prefix),
                         namespaceMap, schemaMap,
-                        mDefaultIcingOptionsConfig);
+                        mLocalStorageIcingOptionsConfig);
         assertThat(nonEmptyConverter.hasNothingToSearch()).isFalse();
 
         // remove all target schema filter, and the query becomes nothing to search.
@@ -1301,7 +1442,7 @@ public class SearchSpecToProtoConverterTest {
                         "package$database/schema1", schemaTypeConfigProto,
                         "package$database/schema2", schemaTypeConfigProto,
                         "package$database/schema3", schemaTypeConfigProto)),
-                mDefaultIcingOptionsConfig);
+                mLocalStorageIcingOptionsConfig);
 
         converter.removeInaccessibleSchemaFilter(
                 new CallerAccess(/*callingPackageName=*/"otherPackageName"),
@@ -1349,7 +1490,7 @@ public class SearchSpecToProtoConverterTest {
                         searchSpec, /*prefixes=*/ImmutableSet.of(prefix1, prefix2),
                         namespaceMap,
                         schemaTypeMap,
-                        mDefaultIcingOptionsConfig);
+                        mLocalStorageIcingOptionsConfig);
 
         TypePropertyWeights expectedTypePropertyWeight1 =
                 TypePropertyWeights.newBuilder().setSchemaType(prefix1 + schemaTypeA)
@@ -1400,7 +1541,7 @@ public class SearchSpecToProtoConverterTest {
                         /*schemaMap=*/ImmutableMap.of(
                         prefix1,
                         ImmutableMap.of(prefix1 + "typeA", schemaTypeConfigProto)),
-                        mDefaultIcingOptionsConfig);
+                        mLocalStorageIcingOptionsConfig);
 
         ScoringSpecProto convertedScoringSpecProto = converter.toScoringSpecProto();
 

@@ -138,8 +138,16 @@ private class SaveableHolder<T>(
     private var key: String,
     private var value: T,
     private var inputs: Array<out Any?>
-) : () -> Any?, SaverScope, RememberObserver {
+) : SaverScope, RememberObserver {
     private var entry: SaveableStateRegistry.Entry? = null
+    /**
+     * Value provider called by the registry.
+     */
+    private val valueProvider = {
+        with(saver) {
+            save(requireNotNull(value) { "Value should be initialized" })
+        }
+    }
 
     fun update(
         saver: Saver<T, Any>,
@@ -171,16 +179,9 @@ private class SaveableHolder<T>(
         val registry = registry
         require(entry == null) { "entry($entry) is not null" }
         if (registry != null) {
-            registry.requireCanBeSaved(invoke())
-            entry = registry.registerProvider(key, this)
+            registry.requireCanBeSaved(valueProvider())
+            entry = registry.registerProvider(key, valueProvider)
         }
-    }
-
-    /**
-     * Value provider called by the registry.
-     */
-    override fun invoke(): Any? = with(saver) {
-        save(requireNotNull(value) { "Value should be initialized" })
     }
 
     override fun canBeSaved(value: Any): Boolean {
@@ -254,14 +255,17 @@ private fun SaveableStateRegistry.requireCanBeSaved(value: Any?) {
                         "rememberSaveable()."
                 }
             } else {
-                "$value cannot be saved using the current SaveableStateRegistry. The default " +
-                    "implementation only supports types which can be stored inside the Bundle" +
-                    ". Please consider implementing a custom Saver for this class and pass it" +
-                    " to rememberSaveable()."
+                generateCannotBeSavedErrorMessage(value)
             }
         )
     }
 }
+
+internal fun generateCannotBeSavedErrorMessage(value: Any): String =
+    "$value cannot be saved using the current SaveableStateRegistry. The default " +
+        "implementation only supports types which can be stored inside the Bundle" +
+        ". Please consider implementing a custom Saver for this class and pass it" +
+        " to rememberSaveable()."
 
 /**
  * The maximum radix available for conversion to and from strings.

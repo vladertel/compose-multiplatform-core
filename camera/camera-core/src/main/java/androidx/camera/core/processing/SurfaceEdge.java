@@ -117,9 +117,6 @@ public class SurfaceEdge {
     private int mRotationDegrees;
 
     // Guarded by main thread.
-    @Nullable
-    private SurfaceOutputImpl mConsumerToNotify;
-    // Guarded by main thread.
     private boolean mHasConsumer = false;
 
     // Guarded by main thread.
@@ -231,7 +228,8 @@ public class SurfaceEdge {
             throws DeferrableSurface.SurfaceClosedException {
         checkMainThread();
         checkNotClosed();
-        mSettableSurface.setProvider(provider, this::disconnect);
+        SettableSurface settableSurface = mSettableSurface;
+        settableSurface.setProvider(provider, settableSurface::close);
     }
 
     /**
@@ -263,10 +261,11 @@ public class SurfaceEdge {
                 }));
         try {
             DeferrableSurface deferrableSurface = surfaceRequest.getDeferrableSurface();
-            if (mSettableSurface.setProvider(deferrableSurface, this::disconnect)) {
+            SettableSurface settableSurface = mSettableSurface;
+            if (settableSurface.setProvider(deferrableSurface, settableSurface::close)) {
                 // TODO(b/286817690): consider close the deferrableSurface directly when the
                 //  SettableSurface is closed. The delay might cause issues on legacy devices.
-                mSettableSurface.getTerminationFuture().addListener(deferrableSurface::close,
+                settableSurface.getTerminationFuture().addListener(deferrableSurface::close,
                         directExecutor());
             }
         } catch (DeferrableSurface.SurfaceClosedException e) {
@@ -314,7 +313,7 @@ public class SurfaceEdge {
         checkNotClosed();
         checkAndSetHasConsumer();
         SettableSurface settableSurface = mSettableSurface;
-        return transformAsync(mSettableSurface.getSurface(),
+        return transformAsync(settableSurface.getSurface(),
                 surface -> {
                     checkNotNull(surface);
                     try {
@@ -328,7 +327,7 @@ public class SurfaceEdge {
                     surfaceOutputImpl.getCloseFuture().addListener(
                             settableSurface::decrementUseCount,
                             directExecutor());
-                    mConsumerToNotify = surfaceOutputImpl;
+                    settableSurface.setConsumer(surfaceOutputImpl);
                     return immediateFuture(surfaceOutputImpl);
                 }, mainThreadExecutor());
     }
@@ -355,8 +354,10 @@ public class SurfaceEdge {
             // If the edge is still connectable, no-ops.
             return;
         }
-        disconnectWithoutCheckingClosed();
+
+        // If the edge is already connected by a downstream node, reset the connection and notify.
         mHasConsumer = false;
+        mSettableSurface.close();
         mSettableSurface = new SettableSurface(mStreamSpec.getResolution(), mFormat);
         for (Runnable onInvalidated : mOnInvalidatedListeners) {
             onInvalidated.run();
@@ -374,7 +375,7 @@ public class SurfaceEdge {
     @MainThread
     public final void close() {
         checkMainThread();
-        disconnectWithoutCheckingClosed();
+        mSettableSurface.close();
         mIsClosed = true;
     }
 
@@ -388,6 +389,7 @@ public class SurfaceEdge {
      * {@link SurfaceOutputImpl}. By calling {@link SettableSurface#close()}, it also decrements the
      * ref-count on downstream Surfaces so they can be released.
      *
+     * @throws IllegalStateException if the edge is already closed.
      * @see DeferrableSurface#close().
      * @see #invalidate()
      */
@@ -395,15 +397,7 @@ public class SurfaceEdge {
     public final void disconnect() {
         checkMainThread();
         checkNotClosed();
-        disconnectWithoutCheckingClosed();
-    }
-
-    private void disconnectWithoutCheckingClosed() {
         mSettableSurface.close();
-        if (mConsumerToNotify != null) {
-            mConsumerToNotify.requestClose();
-            mConsumerToNotify = null;
-        }
     }
 
     /**
@@ -536,7 +530,7 @@ public class SurfaceEdge {
     /**
      * Gets whether the buffer needs to be horizontally mirrored based on {@link UseCase} config.
      */
-    public boolean getMirroring() {
+    public boolean isMirroring() {
         return mMirroring;
     }
 
@@ -594,6 +588,9 @@ public class SurfaceEdge {
 
         private DeferrableSurface mProvider;
 
+        @Nullable
+        private SurfaceOutputImpl mConsumer;
+
         SettableSurface(@NonNull Size size, @CameraEffect.Formats int format) {
             super(size, format);
         }
@@ -610,6 +607,12 @@ public class SurfaceEdge {
             return mProvider == null && !isClosed();
         }
 
+        @MainThread
+        public void setConsumer(@NonNull SurfaceOutputImpl surfaceOutput) {
+            checkState(mConsumer == null, "Consumer can only be linked once.");
+            mConsumer = surfaceOutput;
+        }
+
         @VisibleForTesting
         boolean hasProvider() {
             return mProvider != null;
@@ -620,6 +623,9 @@ public class SurfaceEdge {
          *
          * <p>This method is idempotent. Calling it with the same provider no-ops.
          *
+         * @param provider         the provider to link.
+         * @param onProviderClosed a callback to be invoked when the provider is closed. The
+         *                         callback will be invoked on the main thread.
          * @return true if the provider is set; false if the same provider has already been set.
          * @throws IllegalStateException    if the provider has already been set.
          * @throws IllegalArgumentException if the provider's size is different than the size of
@@ -641,9 +647,11 @@ public class SurfaceEdge {
                     + "provider, call SurfaceEdge#invalidate before calling "
                     + "SurfaceEdge#setProvider");
             checkArgument(getPrescribedSize().equals(provider.getPrescribedSize()),
-                    "The provider's size must match the parent");
+                    String.format("The provider's size(%s) must match the parent(%s)",
+                            getPrescribedSize(), provider.getPrescribedSize()));
             checkArgument(getPrescribedStreamFormat() == provider.getPrescribedStreamFormat(),
-                    "The provider's format must match the parent");
+                    String.format("The provider's format(%s) must match the parent(%s)",
+                            getPrescribedStreamFormat(), provider.getPrescribedStreamFormat()));
             checkState(!isClosed(), "The parent is closed. Call SurfaceEdge#invalidate() before "
                     + "setting a new provider.");
             mProvider = provider;
@@ -651,8 +659,24 @@ public class SurfaceEdge {
             provider.incrementUseCount();
             getTerminationFuture().addListener(provider::decrementUseCount, directExecutor());
             // When the child is closed, close the parent too to stop rendering.
-            provider.getCloseFuture().addListener(onProviderClosed, directExecutor());
+            provider.getCloseFuture().addListener(onProviderClosed, mainThreadExecutor());
             return true;
+        }
+
+        @Override
+        public void close() {
+            super.close();
+            runOnMain(() -> {
+                if (mConsumer != null) {
+                    mConsumer.requestClose();
+                }
+                if (mProvider == null) {
+                    // This could happen if the edge is connected to VideoCapture and recording is
+                    // not started when the edge is closed. In that case, cancel the completer to
+                    // avoid the "garbage collected" logging.
+                    mCompleter.setCancelled();
+                }
+            });
         }
     }
 }

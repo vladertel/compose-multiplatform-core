@@ -16,12 +16,23 @@
 
 package androidx.compose.ui.inspection
 
+import android.util.Log
 import android.view.View
 import android.view.inspector.WindowInspector
+import androidx.collection.LongList
+import androidx.collection.LongObjectMap
+import androidx.collection.MutableLongObjectMap
+import androidx.collection.longObjectMapOf
+import androidx.collection.mutableIntListOf
+import androidx.collection.mutableLongObjectMapOf
 import androidx.compose.ui.inspection.compose.AndroidComposeViewWrapper
 import androidx.compose.ui.inspection.compose.convertToParameterGroup
 import androidx.compose.ui.inspection.compose.flatten
+import androidx.compose.ui.inspection.framework.addSlotTable
 import androidx.compose.ui.inspection.framework.flatten
+import androidx.compose.ui.inspection.framework.hasSlotTable
+import androidx.compose.ui.inspection.framework.isAndroidComposeView
+import androidx.compose.ui.inspection.framework.signature
 import androidx.compose.ui.inspection.inspector.InspectorNode
 import androidx.compose.ui.inspection.inspector.LayoutInspectorTree
 import androidx.compose.ui.inspection.inspector.NodeParameterReference
@@ -31,7 +42,10 @@ import androidx.compose.ui.inspection.proto.convert
 import androidx.compose.ui.inspection.proto.toComposableRoot
 import androidx.compose.ui.inspection.util.NO_ANCHOR_ID
 import androidx.compose.ui.inspection.util.ThreadUtils
+import androidx.compose.ui.inspection.util.groupByToLongObjectMap
+import androidx.compose.ui.platform.isDebugInspectorInfoEnabled
 import androidx.compose.ui.unit.IntOffset
+import androidx.inspection.ArtTooling
 import androidx.inspection.Connection
 import androidx.inspection.Inspector
 import androidx.inspection.InspectorEnvironment
@@ -47,6 +61,7 @@ import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.GetPara
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.GetParameterDetailsResponse
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.GetParametersCommand
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.GetParametersResponse
+import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.ParameterGroup
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.Response
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.UnknownCommandResponse
 import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.UpdateSettingsCommand
@@ -55,6 +70,7 @@ import layoutinspector.compose.inspection.LayoutInspectorComposeProtocol.UpdateS
 private const val LAYOUT_INSPECTION_ID = "layoutinspector.compose.inspection"
 private const val MAX_RECURSIONS = 2
 private const val MAX_ITERABLE_SIZE = 5
+private const val TAG = "ComposeLayoutInspector"
 
 // created by java.util.ServiceLoader
 class ComposeLayoutInspectorFactory :
@@ -78,20 +94,30 @@ class ComposeLayoutInspector(
         val trees: List<CacheTree>
     ) {
         /** The cached nodes as a map from node id to InspectorNode */
-        val lookup: Map<Long, InspectorNode>
-            get() = _lookup ?: trees.flatMap { it.nodes }
-                .flatMap { it.flatten() }
-                .associateBy { it.id }
-                .also { _lookup = it }
+        val lookup: LongObjectMap<InspectorNode>
+            get() = _lookup ?: createLookup()
 
-        private var _lookup: Map<Long, InspectorNode>? = null
+        private fun createLookup(): LongObjectMap<InspectorNode> {
+            val result = mutableLongObjectMapOf<InspectorNode>()
+            val stack = mutableListOf<InspectorNode>()
+            trees.forEach { stack.addAll(it.nodes) }
+            while (stack.isNotEmpty()) {
+                val node = stack.removeLast()
+                stack.addAll(node.children)
+                result.put(node.id, node)
+            }
+            _lookup = result
+            return result
+        }
+
+        private var _lookup: LongObjectMap<InspectorNode>? = null
     }
 
     /** Cache data for a tree of [InspectorNode]s under a [viewParent] */
     internal class CacheTree(
         val viewParent: View,
         val nodes: List<InspectorNode>,
-        val viewsToSkip: List<Long>
+        val viewsToSkip: LongList
     )
 
     private val layoutInspectorTree = LayoutInspectorTree()
@@ -103,17 +129,21 @@ class ComposeLayoutInspector(
 
     // Sidestep threading concerns by only ever accessing cachedNodes on the inspector thread
     private val inspectorThread = Thread.currentThread()
-    private val _cachedNodes = mutableMapOf<Long, CacheData>()
+    private val _cachedNodes = mutableLongObjectMapOf<CacheData>()
     private var cachedGeneration = 0
     private var cachedSystemComposablesSkipped = false
     private var cachedHasAllParameters = false
-    private val cachedNodes: MutableMap<Long, CacheData>
+    private val cachedNodes: MutableLongObjectMap<CacheData>
         get() {
             check(Thread.currentThread() == inspectorThread) {
                 "cachedNodes should be accessed by the inspector thread"
             }
             return _cachedNodes
         }
+
+    init {
+        enableInspection(environment.artTooling())
+    }
 
     override fun onReceiveCommand(data: ByteArray, callback: CommandCallback) {
         val command = try {
@@ -232,18 +262,21 @@ class ComposeLayoutInspector(
                 getAllParametersCommand.skipSystemComposables,
                 true,
                 getAllParametersCommand.generation
-            )?.lookup?.values ?: emptyList()
+            )?.lookup ?: longObjectMapOf()
 
         callback.reply {
             val stringTable = StringTable()
-            val parameterGroups = allComposables.map { composable ->
-                composable.convertToParameterGroup(
-                    composable,
-                    layoutInspectorTree,
-                    getAllParametersCommand.rootViewId,
-                    getAllParametersCommand.maxRecursions.orElse(MAX_RECURSIONS),
-                    getAllParametersCommand.maxInitialIterableSize.orElse(MAX_ITERABLE_SIZE),
-                    stringTable
+            val parameterGroups = mutableListOf<ParameterGroup>()
+            allComposables.forEachValue { composable ->
+                parameterGroups.add(
+                    composable.convertToParameterGroup(
+                        composable,
+                        layoutInspectorTree,
+                        getAllParametersCommand.rootViewId,
+                        getAllParametersCommand.maxRecursions.orElse(MAX_RECURSIONS),
+                        getAllParametersCommand.maxInitialIterableSize.orElse(MAX_ITERABLE_SIZE),
+                        stringTable
+                    )
                 )
             }
 
@@ -259,12 +292,14 @@ class ComposeLayoutInspector(
         getParameterDetailsCommand: GetParameterDetailsCommand,
         callback: CommandCallback
     ) {
+        val indices = mutableIntListOf()
+        getParameterDetailsCommand.reference.compositeIndexList.forEach { indices.add(it) }
         val reference = NodeParameterReference(
             getParameterDetailsCommand.reference.composableId,
             getParameterDetailsCommand.reference.anchorHash,
             getParameterDetailsCommand.reference.kind.convert(),
             getParameterDetailsCommand.reference.parameterIndex,
-            getParameterDetailsCommand.reference.compositeIndexList
+            indices
         )
         val foundComposable =
             if (delayParameterExtractions && !cachedHasAllParameters &&
@@ -350,11 +385,18 @@ class ComposeLayoutInspector(
             layoutInspectorTree.resetAccumulativeState()
             layoutInspectorTree.includeAllParameters = includeAllParameters
             val composeViews = getAndroidComposeViews(rootViewId, skipSystemComposables, generation)
-            val composeViewsByRoot = composeViews.groupBy { it.rootView.uniqueDrawingId }
-            val data = composeViewsByRoot.mapValues { (_, composeViews) ->
-                CacheData(
-                    composeViews.first().rootView,
-                    composeViews.map { CacheTree(it.viewParent, it.createNodes(), it.viewsToSkip) }
+            val composeViewsByRoot =
+                mutableLongObjectMapOf<MutableList<AndroidComposeViewWrapper>>()
+            composeViews.groupByToLongObjectMap(composeViewsByRoot) { it.rootView.uniqueDrawingId }
+            val data = mutableLongObjectMapOf<CacheData>()
+            composeViewsByRoot.forEach { key, value ->
+                data.put(key,
+                    CacheData(
+                        value.first().rootView,
+                        value.map {
+                            CacheTree(it.viewParent, it.createNodes(), it.viewsToSkip)
+                        }
+                    )
                 )
             }
             layoutInspectorTree.resetAccumulativeState()
@@ -416,6 +458,82 @@ class ComposeLayoutInspector(
             }
         }
         return wrappers
+    }
+
+    /**
+     * Enable inspection in this app.
+     */
+    @Suppress("BanUncheckedReflection")
+    private fun enableInspection(artTooling: ArtTooling) {
+        // Enable debug inspector information.
+        enableDebugInspectorInfo()
+
+        // Install a hook that will add a slot table to any AndroidComposeViews added later.
+        // This is needed to get composables from dialogs etc.
+        val wrapper = Class.forName("androidx.compose.ui.platform.WrappedComposition")
+        val method = wrapper.declaredMethods.firstOrNull { it.name == "setContent" } ?: return
+        val field = wrapper.getDeclaredMethod("getOwner")
+        val signature = method.signature
+        artTooling.registerEntryHook(wrapper, signature) { wr, _ ->
+            val owner = field(wr) as? View
+            owner?.addSlotTable()
+        }
+
+        // Add slot tables to all already existing AndroidComposeViews:
+        addSlotTableToComposeViews()
+    }
+
+    /**
+     * Add a slot table to all AndroidComposeViews that doesn't already have one.
+     */
+    private fun addSlotTableToComposeViews() = ThreadUtils.runOnMainThread {
+        val roots = WindowInspector.getGlobalWindowViews()
+        val composeViews = roots.flatMap { it.flatten() }.filter { it.isAndroidComposeView() }
+
+        if (composeViews.any { !it.hasSlotTable }) {
+            val slotTablesAdded = composeViews.sumOf { it.addSlotTable() }
+            if (slotTablesAdded > 0) {
+                // The slot tables added to existing views will be empty until the composables
+                // are reloaded. Do that now:
+                hotReload()
+            }
+        }
+    }.get()
+
+    /**
+     * Perform a hot reload after adding SlotTable storage.
+     *
+     * This will populate the slot tables that were just added.
+     */
+    @Suppress("BanUncheckedReflection")
+    private fun hotReload() {
+        val hotReload = Class.forName("androidx.compose.runtime.HotReloader")
+        val companion = hotReload.getField("Companion").get(null)
+        val save = companion.javaClass.getDeclaredMethod("saveStateAndDispose", Any::class.java)
+        val load = companion.javaClass.getDeclaredMethod("loadStateAndCompose", Any::class.java)
+        save.isAccessible = true
+        load.isAccessible = true
+        // Add a context parameter even though it is not currently used.
+        // (It was required in earlier versions of the Compose runtime.)
+        val context = Class.forName("android.app.ActivityThread")
+            .getDeclaredMethod("currentApplication").apply { isAccessible = true }.invoke(null)
+        val state = save(companion, context)
+        load(companion, state)
+    }
+
+    private fun enableDebugInspectorInfo() {
+        // Set isDebugInspectorInfoEnabled to true via reflection such that R8 cannot see the
+        // assignment. This allows the InspectorInfo lambdas to be stripped from release builds.
+        if (!isDebugInspectorInfoEnabled) {
+            try {
+                val packageClass = Class.forName("androidx.compose.ui.platform.InspectableValueKt")
+                val field = packageClass.getDeclaredField("isDebugInspectorInfoEnabled")
+                field.isAccessible = true
+                field.setBoolean(null, true)
+            } catch (ex: Exception) {
+                Log.w(TAG, "Could not access isDebugInspectorInfoEnabled.", ex)
+            }
+        }
     }
 }
 

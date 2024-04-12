@@ -16,7 +16,6 @@
 package androidx.build
 
 import androidx.build.uptodatedness.cacheEvenIfNoOutputs
-import com.android.build.gradle.LibraryExtension
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.Locale
@@ -63,18 +62,22 @@ open class GMavenZipTask : Zip() {
     fun addCandidate(artifact: Artifact) {
         val groupSubdir = artifact.mavenGroup.replace('.', '/')
         val projectSubdir = File("$groupSubdir/${artifact.projectName}")
-        val includes =
-            listOfNotNull(
-                "${artifact.version}/**",
-                if (includeMetadata) "maven-metadata.*" else null
-            )
-        // We specifically pass the subdirectory into 'from' so that changes in other artifacts
-        // won't cause this task to become out of date
-        val fromDir = project.file("$androidxRepoOut/$projectSubdir")
-        from(fromDir) { spec ->
-            spec.into("m2repository/$projectSubdir")
-            for (inclusion in includes) {
-                include(inclusion)
+        val artifactSubdir = File("$projectSubdir/${artifact.version}")
+        // We specifically pass the subdirectory and specific files into 'from' so that Gradle
+        // knows that other directories aren't related:
+        // 1. changes in other directories shouldn't cause this task to become out of date
+        // 2. contents of other directories shouldn't be cached:
+        //    https://github.com/gradle/gradle/issues/24368
+        from("$androidxRepoOut/$artifactSubdir") { spec ->
+            spec.into("m2repository/$artifactSubdir")
+        }
+        if (includeMetadata) {
+            val suffixes = setOf("", ".md5", ".sha1", ".sha256", ".sha512")
+            for (suffix in suffixes) {
+                val filename = "maven-metadata.xml$suffix"
+                from("$androidxRepoOut/$projectSubdir/$filename") { spec ->
+                    spec.into("m2repository/$projectSubdir")
+                }
             }
         }
     }
@@ -132,22 +135,22 @@ object Release {
     /**
      * Registers the project to be included in its group's zip file as well as the global zip files.
      */
-    fun register(project: Project, extension: AndroidXExtension) {
-        if (!extension.shouldPublish()) {
+    fun register(project: Project, androidXExtension: AndroidXExtension) {
+        if (!androidXExtension.shouldPublish()) {
             project.logger.info(
                 "project ${project.name} isn't part of release," +
                     " because its \"publish\" property is explicitly set to Publish.NONE"
             )
             return
         }
-        if (!extension.isPublishConfigured()) {
+        if (!androidXExtension.isPublishConfigured()) {
             project.logger.info(
                 "project ${project.name} isn't part of release, because" +
                     " it does not set the \"publish\" property."
             )
             return
         }
-        if (!extension.shouldRelease() && !isSnapshotBuild()) {
+        if (!androidXExtension.shouldRelease() && !isSnapshotBuild()) {
             project.logger.info(
                 "project ${project.name} isn't part of release, because its" +
                     " \"publish\" property is SNAPSHOT_ONLY, but it is not a snapshot build"
@@ -156,11 +159,11 @@ object Release {
         }
 
         val mavenGroup =
-            extension.mavenGroup?.group
+            androidXExtension.mavenGroup?.group
                 ?: throw IllegalArgumentException(
                     "Cannot register a project to release if it does not have a mavenGroup set up"
                 )
-        if (!extension.isVersionSet()) {
+        if (!androidXExtension.isVersionSet()) {
             throw IllegalArgumentException(
                 "Cannot register a project to release if it does not have a mavenVersion set up"
             )
@@ -175,14 +178,14 @@ object Release {
                 getGlobalFullZipTask(project)
             )
 
-        val artifacts = extension.publishedArtifacts
+        val artifacts = androidXExtension.publishedArtifacts
         val publishTask = project.tasks.named("publish")
         zipTasks.forEach {
             it.configure { zipTask ->
                 artifacts.forEach { artifact -> zipTask.addCandidate(artifact) }
 
                 // Add additional artifacts needed for Gradle Plugins
-                if (extension.type == LibraryType.GRADLE_PLUGIN) {
+                if (androidXExtension.type == LibraryType.GRADLE_PLUGIN) {
                     project.extensions
                         .getByType(GradlePluginDevelopmentExtension::class.java)
                         .plugins
@@ -427,18 +430,6 @@ open class VerifyGMavenZipTask : DefaultTask() {
     }
 }
 
-/** Let you configure a library variant associated with [Release.DEFAULT_PUBLISH_CONFIG] */
-@Suppress("DEPRECATION") // LibraryVariant
-fun LibraryExtension.defaultPublishVariant(
-    config: (com.android.build.gradle.api.LibraryVariant) -> Unit
-) {
-    libraryVariants.all { variant ->
-        if (variant.name == Release.DEFAULT_PUBLISH_CONFIG) {
-            config(variant)
-        }
-    }
-}
-
 val AndroidXExtension.publishedArtifacts: List<Artifact>
     get() {
         val groupString = mavenGroup?.group!!
@@ -468,9 +459,11 @@ val AndroidXExtension.publishedArtifacts: List<Artifact>
 private val AndroidXExtension.publishPlatforms: List<String>
     get() {
         val potentialTargets =
-            project.multiplatformExtension?.targets?.asMap?.keys?.map { it.lowercase() }
-                ?: emptySet()
-        val declaredTargets = potentialTargets.filter { it != "metadata" }
+            project.multiplatformExtension?.targets?.asMap?.filterValues {
+                it.publishable
+            }?.keys?.map { it.lowercase() } ?: emptySet()
+        val declaredTargets = potentialTargets
+            .filter { it != "metadata" }
         return declaredTargets.toList()
     }
 

@@ -34,9 +34,6 @@ android {
             shrinkResources true
         }
     }
-    lintOptions {
-        disable("SyntheticAccessor")
-    }
     namespace "androidx.camera.integration.viewfinder"
 }
 
@@ -60,6 +57,9 @@ dependencies {
     implementation(libs.constraintLayout)
 
     compileOnly(libs.kotlinCompiler)
+
+    // Align dependencies in debugRuntimeClasspath and debugAndroidTestRuntimeClasspath.
+    androidTestImplementation("androidx.annotation:annotation-experimental:1.4.0")
 
     // Testing framework
     androidTestImplementation(libs.testExtJunit)

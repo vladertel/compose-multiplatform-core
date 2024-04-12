@@ -32,6 +32,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.workers.WorkerExecutor
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 /** Base class for invoking Metalava. */
 @CacheableTask
@@ -44,19 +45,50 @@ constructor(@Internal protected val workerExecutor: WorkerExecutor) : DefaultTas
     /** Android's boot classpath */
     @get:Classpath lateinit var bootClasspath: FileCollection
 
-    /** Dependencies of [sourcePaths]. */
+    /** Dependencies (compiled classes) of [sourcePaths]. */
     @get:Classpath lateinit var dependencyClasspath: FileCollection
 
+    /**
+     * Specifies both the source files and their corresponding compiled class files
+     *
+     * We specify the source files to pass to Metalava because that's the format that
+     * Metalava needs.
+     *
+     * However, Metalava is only supposed to read the public API, so we don't need to
+     * rerun Metalava if no API changes occurred.
+     *
+     * Gradle doesn't offer all of the same abilities as Metalava for writing a signature file
+     * and validating its compatibility, but Gradle does offer the ability to check whether
+     * two sets of classes have the same API.
+     *
+     * So, we ask Gradle to rerun this task only if the public API changes, which we implement by
+     * declaring the compiled classes as inputs rather than the sources
+     */
+    fun putSourcePaths(sourcePaths: FileCollection, compiledSources: FileCollection) {
+        this.sourcePaths = sourcePaths
+        this.compiledSources = compiledSources
+    }
+
     /** Source files against which API signatures will be validated. */
-    @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
+    @get:Internal // UP-TO-DATE checking is done based on the compiled classes
     var sourcePaths: FileCollection = project.files()
+    /** Class files compiled from sourcePaths */
+    @get:Classpath var compiledSources: FileCollection = project.files()
+
+    /** Multiplatform source files from the module's common sourceset */
+    @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
+    var commonModuleSourcePaths: FileCollection = project.files()
 
     @get:[Optional InputFile PathSensitive(PathSensitivity.NONE)]
     abstract val manifestPath: RegularFileProperty
 
     @get:Input abstract val k2UastEnabled: Property<Boolean>
 
+    @get:Input abstract val kotlinSourceLevel: Property<KotlinVersion>
+
     fun runWithArgs(args: List<String>) {
-        runMetalavaWithArgs(metalavaClasspath, args, k2UastEnabled.get(), workerExecutor)
+        runMetalavaWithArgs(
+            metalavaClasspath, args, k2UastEnabled.get(), kotlinSourceLevel.get(), workerExecutor
+        )
     }
 }

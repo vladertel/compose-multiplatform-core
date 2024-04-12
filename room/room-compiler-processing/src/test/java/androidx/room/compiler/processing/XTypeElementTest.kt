@@ -32,6 +32,8 @@ import androidx.room.compiler.processing.util.getDeclaredField
 import androidx.room.compiler.processing.util.getDeclaredMethodByJvmName
 import androidx.room.compiler.processing.util.getField
 import androidx.room.compiler.processing.util.getMethodByJvmName
+import androidx.room.compiler.processing.util.runJavaProcessorTest
+import androidx.room.compiler.processing.util.runKspTest
 import androidx.room.compiler.processing.util.runProcessorTest
 import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
@@ -267,6 +269,38 @@ class XTypeElementTest(
             }
             invocation.processingEnv.requireTypeElement("foo.bar.JavaClassWithInterface").let {
                 assertThat(it.superClass?.asTypeName()).isEqualTo(XTypeName.ANY_OBJECT)
+            }
+        }
+    }
+
+    @Test
+    fun superTypeWithAlias() {
+        runTest(
+            sources = listOf(
+                Source.kotlin(
+                    "foo.bar.KotlinClass.kt",
+                    """
+                    package foo.bar
+                    class MyClass : MyAliasClass(), MyAliasInterface
+                    typealias MyAliasClass = MyBaseClass
+                    typealias MyAliasInterface = MyBaseInterface
+                    abstract class MyBaseClass
+                    interface MyBaseInterface
+                    """.trimIndent()
+                ),
+            )
+        ) { invocation ->
+            invocation.processingEnv.requireTypeElement("foo.bar.MyClass").let { myClass ->
+                val myBaseClassName = XClassName.get("foo.bar", "MyBaseClass")
+                val myBaseInterfaceName = XClassName.get("foo.bar", "MyBaseInterface")
+                assertThat(myClass.superClass?.asTypeName()).isEqualTo(myBaseClassName)
+                assertThat(myClass.superInterfaces.map { it.asTypeName() }.toList())
+                    .containsExactly(myBaseInterfaceName)
+                assertThat(myClass.getSuperInterfaceElements().map { it.asClassName() }.toList())
+                    .containsExactly(myBaseInterfaceName)
+                assertThat(myClass.type.superTypes.map { it.asTypeName() }.toList())
+                    .containsExactly(myBaseClassName, myBaseInterfaceName)
+                    .inOrder()
             }
         }
     }
@@ -707,8 +741,11 @@ class XTypeElementTest(
         val src = Source.kotlin(
             "Foo.kt",
             """
+            annotation class MyAnnotation
             interface MyInterface {
-                var x:Int
+                var x: Int
+                var y: Int
+                  @MyAnnotation get
             }
             """.trimIndent()
         )
@@ -720,6 +757,14 @@ class XTypeElementTest(
             }
             element.getMethodByJvmName("setX").let {
                 assertThat(it.isAbstract()).isTrue()
+            }
+            element.getMethodByJvmName("getY").let {
+                if (!isPreCompiled && invocation.isKsp) {
+                  // The modifier set is empty for both the property and accessor
+                  assertThat(it.isAbstract()).isFalse()
+                } else {
+                  assertThat(it.isAbstract()).isTrue()
+                }
             }
         }
     }
@@ -807,16 +852,46 @@ class XTypeElementTest(
                     ).containsExactly(
                         "getMutable", "setMutable", "getImmutable"
                     )
-                methods.forEach {
-                    assertWithMessage("${subject.qualifiedName}.${it.jvmName}()")
-                        .that(it.isKotlinPropertyMethod())
-                        .apply {
-                            if (subject.name.contains("Kotlin")) {
-                                isTrue()
-                            } else {
-                                isFalse()
-                            }
-                        }
+
+                subject.getDeclaredMethodByJvmName("getMutable").let {
+                    if (subject.name.contains("Kotlin")) {
+                        assertThat(it.isKotlinPropertyMethod()).isTrue()
+                        assertThat(it.isKotlinPropertySetter()).isFalse()
+                        assertThat(it.isKotlinPropertyGetter()).isTrue()
+                        assertThat(it.propertyName).isEqualTo("mutable")
+                    } else {
+                        assertThat(it.isKotlinPropertyMethod()).isFalse()
+                        assertThat(it.isKotlinPropertySetter()).isFalse()
+                        assertThat(it.isKotlinPropertyGetter()).isFalse()
+                        assertThat(it.propertyName).isNull()
+                    }
+                }
+
+                subject.getDeclaredMethodByJvmName("setMutable").let {
+                    if (subject.name.contains("Kotlin")) {
+                        assertThat(it.isKotlinPropertyMethod()).isTrue()
+                        assertThat(it.isKotlinPropertySetter()).isTrue()
+                        assertThat(it.propertyName).isEqualTo("mutable")
+                    } else {
+                        assertThat(it.isKotlinPropertyMethod()).isFalse()
+                        assertThat(it.isKotlinPropertySetter()).isFalse()
+                        assertThat(it.isKotlinPropertyGetter()).isFalse()
+                        assertThat(it.propertyName).isNull()
+                    }
+                }
+
+                subject.getDeclaredMethodByJvmName("getImmutable").let {
+                    if (subject.name.contains("Kotlin")) {
+                        assertThat(it.isKotlinPropertyMethod()).isTrue()
+                        assertThat(it.isKotlinPropertySetter()).isFalse()
+                        assertThat(it.isKotlinPropertyGetter()).isTrue()
+                        assertThat(it.propertyName).isEqualTo("immutable")
+                    } else {
+                        assertThat(it.isKotlinPropertyMethod()).isFalse()
+                        assertThat(it.isKotlinPropertySetter()).isFalse()
+                        assertThat(it.isKotlinPropertyGetter()).isFalse()
+                        assertThat(it.propertyName).isNull()
+                    }
                 }
             }
         }
@@ -836,9 +911,11 @@ class XTypeElementTest(
             val subject = it.processingEnv.requireTypeElement("Subject")
             val fields = subject.getDeclaredFields()
             assertThat(fields).isEmpty()
+
             val method = subject.getDeclaredMethodByJvmName("getMyLazy")
             assertThat(method).isNotNull()
             assertThat(method.isKotlinPropertyMethod()).isTrue()
+            assertThat(method.isKotlinPropertySetter()).isFalse()
         }
     }
 
@@ -1808,6 +1885,46 @@ class XTypeElementTest(
                 assertWithMessage("$qName  enum entries are not type elements")
                     .that(typeElement.getEnclosedElements().filter { it.isTypeElement() })
                     .isEmpty()
+                // TODO(kuanyingchou): https://github.com/google/ksp/issues/1761
+                val parent = typeElement.superClass!!.typeElement!!
+                if (qName == "test.KotlinEnum" && !isPreCompiled && invocation.isKsp) {
+                    assertThat(parent.asClassName()).isEqualTo(Any::class.asClassName())
+                } else {
+                    assertThat(parent.asClassName()).isEqualTo(Enum::class.asClassName())
+                }
+                // TODO(kuanyingchou): make this more consistent.
+                val methodNames = typeElement.getDeclaredMethods().map { it.jvmName }
+                if (qName == "test.KotlinEnum") {
+                    if (invocation.isKsp) {
+                        if (isPreCompiled) {
+                            assertThat(methodNames).containsExactly(
+                                "enumMethod",
+                                "values",
+                                "valueOf",
+                            )
+                        } else {
+                            // `values` and `valueOf` will be added in KSP2.
+                            assertThat(methodNames).containsExactly(
+                                "enumMethod",
+                            )
+                        }
+                    } else {
+                        assertThat(methodNames).containsExactly(
+                            "values",
+                            "valueOf",
+                            "enumMethod",
+                            // `entries` became stable in Kotlin 1.9.0 but somehow only appears
+                            // in KAPT. We can't find an `entries` property in KSP yet.
+                            "getEntries"
+                        )
+                    }
+                } else {
+                    assertThat(methodNames).containsExactly(
+                        "values",
+                        "valueOf",
+                        "enumMethod",
+                    )
+                }
             }
         }
     }
@@ -2384,28 +2501,57 @@ class XTypeElementTest(
     }
 
     @Test
-    fun overrideConsideringOwner() {
-        val src = Source.kotlin(
-            "Subject.kt",
+    fun isRecordClass() {
+        val javaSrc = Source.java(
+            "JavaRecord",
             """
-            abstract class MyDatabase : RoomDatabase(), MyInterface
-
-            abstract class RoomDatabase {
-              open fun runInTransaction(body: Runnable) {
-
-              }
-            }
-
-            interface MyInterface {
-              fun runInTransaction(body: Runnable)
-            }
+            public record JavaRecord(String name) { }
             """.trimIndent()
         )
-        runProcessorTest(sources = listOf(src)) {
-            val subject = it.processingEnv.requireTypeElement("MyDatabase")
-            val methods = subject.getAllMethods().filter { it.name == "runInTransaction" }.toList()
-            assertThat(methods.size).isEqualTo(1)
-            assertThat(methods.single().isAbstract()).isFalse()
+        val kotlinSrc = Source.kotlin(
+            "KotlinRecord.kt",
+            """
+            @JvmRecord
+            data class KotlinRecord(val name: String)
+            """.trimIndent()
+        )
+        val handler: (XTestInvocation) -> Unit = {
+            val javaElement = it.processingEnv.requireTypeElement("JavaRecord")
+            assertThat(javaElement.isRecordClass())
+            if (it.isKsp) {
+                val kotlinElement = it.processingEnv.requireTypeElement("KotlinRecord")
+                assertThat(kotlinElement.isRecordClass())
+            }
+        }
+        // Run only javac and KSP tests as @JvmRecord is broken with KAPT (KT-44706)
+        if (isPreCompiled) {
+            val compiled = compileFiles(
+                sources = listOf(javaSrc, kotlinSrc),
+                kotlincArguments = listOf("-jvm-target=16")
+            )
+            runJavaProcessorTest(
+                sources = listOf(
+                    Source.java("PlaceholderJava", "public class PlaceholderJava {}")
+                ),
+                classpath = compiled,
+                handler = handler
+            )
+            runKspTest(
+                sources = listOf(Source.kotlin("placeholder.kt", "class PlaceholderKotlin")),
+                kotlincArguments = listOf("-jvm-target=16"),
+                classpath = compiled,
+                handler = handler
+            )
+        } else {
+            runJavaProcessorTest(
+                sources = listOf(javaSrc),
+                handler = handler
+            )
+            runKspTest(
+                sources = listOf(javaSrc, kotlinSrc),
+                kotlincArguments = listOf("-jvm-target=16"),
+                handler = handler
+            )
         }
     }
 

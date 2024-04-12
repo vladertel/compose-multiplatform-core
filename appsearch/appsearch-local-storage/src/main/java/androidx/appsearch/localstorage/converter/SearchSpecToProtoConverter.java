@@ -291,6 +291,27 @@ public final class SearchSpecToProtoConverter {
                 .addAllSchemaTypeFilters(mTargetPrefixedSchemaFilters)
                 .setUseReadOnlySearch(mIcingOptionsConfig.getUseReadOnlySearch());
 
+        // Convert type property filter map into type property mask proto.
+        for (Map.Entry<String, List<String>> entry :
+                mSearchSpec.getFilterProperties().entrySet()) {
+            if (entry.getKey().equals(SearchSpec.SCHEMA_TYPE_WILDCARD)) {
+                protoBuilder.addTypePropertyFilters(TypePropertyMask.newBuilder()
+                        .setSchemaType(SearchSpec.SCHEMA_TYPE_WILDCARD)
+                        .addAllPaths(entry.getValue())
+                        .build());
+            } else {
+                for (String prefix : mCurrentSearchSpecPrefixFilters) {
+                    String prefixedSchemaType = prefix + entry.getKey();
+                    if (mTargetPrefixedSchemaFilters.contains(prefixedSchemaType)) {
+                        protoBuilder.addTypePropertyFilters(TypePropertyMask.newBuilder()
+                                .setSchemaType(prefixedSchemaType)
+                                .addAllPaths(entry.getValue())
+                                .build());
+                    }
+                }
+            }
+        }
+
         @SearchSpec.TermMatch int termMatchCode = mSearchSpec.getTermMatch();
         TermMatchType.Code termMatchCodeProto = TermMatchType.Code.forNumber(termMatchCode);
         if (termMatchCodeProto == null || termMatchCodeProto.equals(TermMatchType.Code.UNKNOWN)) {
@@ -391,7 +412,7 @@ public final class SearchSpecToProtoConverter {
                     joinSpec.getMaxJoinedResultCount());
         }
 
-        // Rewrites the typePropertyMasks that exist in {@code prefixes}.
+        // Add result groupings for the available prefixes
         int groupingType = mSearchSpec.getResultGroupingTypeFlags();
         ResultSpecProto.ResultGroupingType resultGroupingType =
                 ResultSpecProto.ResultGroupingType.NONE;
@@ -445,17 +466,18 @@ public final class SearchSpecToProtoConverter {
                 TypePropertyPathToProtoConverter
                         .toTypePropertyMaskBuilderList(mSearchSpec.getProjections());
         // Rewrite filters to include a database prefix.
-        resultSpecBuilder.clearTypePropertyMasks();
         for (int i = 0; i < typePropertyMaskBuilders.size(); i++) {
             String unprefixedType = typePropertyMaskBuilders.get(i).getSchemaType();
-            boolean isWildcard =
-                    unprefixedType.equals(SearchSpec.PROJECTION_SCHEMA_TYPE_WILDCARD);
-            // Qualify the given schema types
-            for (String prefix : mCurrentSearchSpecPrefixFilters) {
-                String prefixedType = isWildcard ? unprefixedType : prefix + unprefixedType;
-                if (isWildcard || mTargetPrefixedSchemaFilters.contains(prefixedType)) {
-                    resultSpecBuilder.addTypePropertyMasks(typePropertyMaskBuilders.get(i)
-                            .setSchemaType(prefixedType).build());
+            if (unprefixedType.equals(SearchSpec.PROJECTION_SCHEMA_TYPE_WILDCARD)) {
+                resultSpecBuilder.addTypePropertyMasks(typePropertyMaskBuilders.get(i).build());
+            } else {
+                // Qualify the given schema types
+                for (String prefix : mCurrentSearchSpecPrefixFilters) {
+                    String prefixedType = prefix + unprefixedType;
+                    if (mTargetPrefixedSchemaFilters.contains(prefixedType)) {
+                        resultSpecBuilder.addTypePropertyMasks(typePropertyMaskBuilders.get(i)
+                                .setSchemaType(prefixedType).build());
+                    }
                 }
             }
         }

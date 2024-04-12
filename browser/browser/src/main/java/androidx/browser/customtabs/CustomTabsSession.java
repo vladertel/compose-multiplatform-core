@@ -35,7 +35,6 @@ import android.widget.RemoteViews;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresFeature;
-import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
 import androidx.browser.customtabs.CustomTabsService.Relation;
 import androidx.browser.customtabs.CustomTabsService.Result;
@@ -157,6 +156,25 @@ public final class CustomTabsSession {
         bundle.putParcelable(CustomTabsIntent.EXTRA_REMOTEVIEWS, remoteViews);
         bundle.putIntArray(CustomTabsIntent.EXTRA_REMOTEVIEWS_VIEW_IDS, clickableIDs);
         bundle.putParcelable(CustomTabsIntent.EXTRA_REMOTEVIEWS_PENDINGINTENT, pendingIntent);
+        addIdToBundle(bundle);
+        try {
+            return mService.updateVisuals(mCallback, bundle);
+        } catch (RemoteException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Sets a {@link PendingIntent} object to be sent when the user swipes up from the secondary
+     * (bottom) toolbar.
+     *
+     * @param pendingIntent {@link PendingIntent} to send.
+     * @return Whether the update succeeded.
+     */
+    public boolean setSecondaryToolbarSwipeUpGesture(@Nullable PendingIntent pendingIntent) {
+        Bundle bundle = new Bundle();
+        bundle.putParcelable(CustomTabsIntent.EXTRA_SECONDARY_TOOLBAR_SWIPE_UP_GESTURE,
+                pendingIntent);
         addIdToBundle(bundle);
         try {
             return mService.updateVisuals(mCallback, bundle);
@@ -334,8 +352,9 @@ public final class CustomTabsSession {
      *                                       implementation.
      */
     public boolean isEngagementSignalsApiAvailable(@NonNull Bundle extras) throws RemoteException {
+        Bundle extrasWithId = createBundleWithId(extras);
         try {
-            return mService.isEngagementSignalsApiAvailable(mCallback, extras);
+            return mService.isEngagementSignalsApiAvailable(mCallback, extrasWithId);
         } catch (SecurityException e) {
             throw new UnsupportedOperationException("This method isn't supported by the "
                     + "Custom Tabs implementation.", e);
@@ -362,9 +381,11 @@ public final class CustomTabsSession {
             "androidx.browser.customtabs.CustomTabsSession#isEngagementSignalsApiAvailable")
     public boolean setEngagementSignalsCallback(@NonNull EngagementSignalsCallback callback,
             @NonNull Bundle extras) throws RemoteException {
+        Bundle extrasWithId = createBundleWithId(extras);
         IEngagementSignalsCallback wrapper = createEngagementSignalsCallbackWrapper(callback);
         try {
-            return mService.setEngagementSignalsCallback(mCallback, wrapper.asBinder(), extras);
+            return mService.setEngagementSignalsCallback(mCallback, wrapper.asBinder(),
+                    extrasWithId);
         } catch (SecurityException e) {
             throw new UnsupportedOperationException("This method isn't supported by the "
                     + "Custom Tabs implementation.", e);
@@ -412,10 +433,12 @@ public final class CustomTabsSession {
     public boolean setEngagementSignalsCallback(@NonNull Executor executor,
             @NonNull EngagementSignalsCallback callback,
             @NonNull Bundle extras) throws RemoteException {
+        Bundle extrasWithId = createBundleWithId(extras);
         IEngagementSignalsCallback wrapper =
                 createEngagementSignalsCallbackWrapper(callback, executor);
         try {
-            return mService.setEngagementSignalsCallback(mCallback, wrapper.asBinder(), extras);
+            return mService.setEngagementSignalsCallback(mCallback, wrapper.asBinder(),
+                    extrasWithId);
         } catch (SecurityException e) {
             throw new UnsupportedOperationException("This method isn't supported by the "
                     + "Custom Tabs implementation.", e);
@@ -501,12 +524,12 @@ public final class CustomTabsSession {
     }
 
     /**
-     * A class to be used instead of {@link CustomTabsSession} before we are connected
-     * {@link CustomTabsService}.
+     * A class to be used instead of {@link CustomTabsSession} when a Custom Tab is launched before
+     * a Service connection is established.
      *
      * Use {@link CustomTabsClient#attachSession(PendingSession)} to get {@link CustomTabsSession}.
      */
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    @ExperimentalPendingSession
     public static class PendingSession {
         @Nullable
         private final CustomTabsCallback mCallback;

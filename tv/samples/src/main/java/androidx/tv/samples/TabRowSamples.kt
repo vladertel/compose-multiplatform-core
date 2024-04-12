@@ -19,10 +19,8 @@ package androidx.tv.samples
 import androidx.annotation.Sampled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,7 +55,6 @@ fun PillIndicatorTabRow() {
 
   TabRow(
     selectedTabIndex = selectedTabIndex,
-    separator = { Spacer(modifier = Modifier.width(12.dp)) },
     modifier = Modifier.focusRestorer()
   ) {
     tabs.forEachIndexed { index, tab ->
@@ -89,11 +86,10 @@ fun UnderlinedIndicatorTabRow() {
 
   TabRow(
     selectedTabIndex = selectedTabIndex,
-    separator = { Spacer(modifier = Modifier.width(12.dp)) },
-    indicator = { tabPositions, isActivated ->
+    indicator = { tabPositions, doesTabRowHaveFocus ->
       TabRowDefaults.UnderlinedIndicator(
         currentTabPosition = tabPositions[selectedTabIndex],
-        isActivated = isActivated,
+        doesTabRowHaveFocus = doesTabRowHaveFocus,
       )
     },
     modifier = Modifier.focusRestorer()
@@ -108,7 +104,7 @@ fun UnderlinedIndicatorTabRow() {
           Text(
             text = tab,
             fontSize = 12.sp,
-            modifier = Modifier.padding(bottom = 4.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
           )
         }
       }
@@ -137,7 +133,6 @@ fun TabRowWithDebounce() {
 
   TabRow(
     selectedTabIndex = selectedTabIndex,
-    separator = { Spacer(modifier = Modifier.width(12.dp)) },
     modifier = Modifier.focusRestorer()
   ) {
     tabs.forEachIndexed { index, tab ->
@@ -181,19 +176,19 @@ fun OnClickNavigation() {
   ) {
     TabRow(
       selectedTabIndex = focusedTabIndex,
-      indicator = { tabPositions, isActivated ->
+      indicator = { tabPositions, doesTabRowHaveFocus ->
         // FocusedTab's indicator
         TabRowDefaults.PillIndicator(
           currentTabPosition = tabPositions[focusedTabIndex],
           activeColor = Color.Blue.copy(alpha = 0.4f),
           inactiveColor = Color.Transparent,
-          isActivated = isActivated,
+          doesTabRowHaveFocus = doesTabRowHaveFocus,
         )
 
         // SelectedTab's indicator
         TabRowDefaults.PillIndicator(
           currentTabPosition = tabPositions[activeTabIndex],
-          isActivated = isActivated,
+          doesTabRowHaveFocus = doesTabRowHaveFocus,
         )
       },
       modifier = Modifier.focusRestorer()
