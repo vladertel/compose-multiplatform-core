@@ -50,9 +50,9 @@ abstract class SafeArgsPlugin protected constructor(
         action: (com.android.build.gradle.api.BaseVariant) -> Unit
     ) {
         when {
-            extension is AppExtension -> extension.applicationVariants.all(action)
+            extension is AppExtension -> extension.applicationVariants.configureEach(action)
             extension is LibraryExtension -> {
-                extension.libraryVariants.all(action)
+                extension.libraryVariants.configureEach(action)
             }
             else -> throw GradleException(
                 "safeargs plugin must be used with android app," +
@@ -106,7 +106,7 @@ abstract class SafeArgsPlugin protected constructor(
         }
 
         forEachVariant(extension) { variant ->
-            val task = project.tasks.create(
+            val task = project.tasks.register(
                 "generateSafeArgs${variant.name.replaceFirstChar {
                     if (it.isLowerCase()) it.titlecase(Locale.US) else it.toString()
                 }}",
@@ -141,7 +141,7 @@ abstract class SafeArgsPlugin protected constructor(
                 task.generateKotlin.set(generateKotlin)
             }
             @Suppress("DEPRECATION") // For BaseVariant should be replaced in later studio versions
-            variant.registerJavaGeneratingTask(task, task.outputDir.asFile.get())
+            variant.registerJavaGeneratingTask(task, task.get().outputDir.asFile.get())
         }
     }
 

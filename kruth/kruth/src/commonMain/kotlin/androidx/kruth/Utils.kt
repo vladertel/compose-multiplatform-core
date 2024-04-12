@@ -19,9 +19,12 @@ package androidx.kruth
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
+internal const val HUMAN_UNDERSTANDABLE_EMPTY_STRING = "\"\" (empty String)"
+
 /**
  * Same as [requireNotNull] but throws [NullPointerException] instead of [IllegalArgumentException].
- * Used for better behaviour compatibility with Truth.
+ *
+ * Used for better behaviour compatibility with Truth, which uses Guava's checkNotNull.
  */
 @OptIn(ExperimentalContracts::class)
 internal inline fun <T : Any> requireNonNull(
@@ -57,3 +60,71 @@ internal fun <T> Iterable<T>.retainMatchingToString(itemsToCheck: Iterable<T>): 
         (list != null) && (item !in list)
     }
 }
+
+internal fun Iterable<*>.hasMatchingToStringPair(items: Iterable<*>): Boolean =
+    if (isEmpty() || items.isEmpty()) {
+        false // Bail early to avoid calling hashCode() on the elements unnecessarily.
+    } else {
+        retainMatchingToString(items).isNotEmpty()
+    }
+
+// TODO(b/317811086): Truth does some extra String processing here for nested classes and Subjects
+//  for j2cl that we do not yet have implemented. It is possible we don't need anything, but we need
+//  to double check and add a test.
+internal fun Any?.typeName(): String =
+    when (this) {
+        null -> {
+            // The name "null type" comes from the interface javax.lang.model.type.NullType
+            "null type"
+        }
+
+        is Map.Entry<*, *> -> {
+            // Fix for interesting bug when entry.getValue() returns itself b/170390717
+            val valueTypeName = if (value === this) "Map.Entry" else value.typeName()
+            "Map.Entry<${key.typeName()}, $valueTypeName>"
+        }
+
+        else -> this::class.simpleName ?: "unknown type"
+    }
+
+internal fun Iterable<*>.countDuplicatesAndAddTypeInfo(): String {
+    val homogeneousTypeName = homogeneousTypeName()
+
+    return if (homogeneousTypeName != null) {
+        "${countDuplicates()} ($homogeneousTypeName)"
+    } else {
+        addTypeInfoToEveryItem().countDuplicates()
+    }
+}
+
+internal fun Iterable<*>.countDuplicates(): String =
+    groupingBy { it }
+        .eachCount()
+        .entries
+        .joinToString(
+            prefix = "[",
+            postfix = "]",
+            transform = { (item, count) ->
+                if (count > 1) "$item [$count copies]" else item.toString()
+            },
+        )
+
+/**
+ * Returns the name of the single type of all given items or `null` if no such type exists.
+ */
+private fun Iterable<*>.homogeneousTypeName(): String? {
+    var homogeneousTypeName: String? = null
+
+    for (item in this) {
+        when {
+            item == null -> return null
+            homogeneousTypeName == null -> homogeneousTypeName = item.typeName() // First item
+            item.typeName() != homogeneousTypeName -> return null // Heterogeneous collection
+        }
+    }
+
+    return homogeneousTypeName
+}
+
+private fun Iterable<*>.addTypeInfoToEveryItem(): List<String> =
+    map { "$it (${it.typeName()})" }

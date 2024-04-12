@@ -87,6 +87,13 @@ class ScatterMapTest {
     }
 
     @Test
+    fun insertIndex0() {
+        val map = MutableScatterMap<Float, Long>()
+        map.put(1f, 100L)
+        assertEquals(100L, map[1f])
+    }
+
+    @Test
     fun addToSizedMap() {
         val map = MutableScatterMap<String, String>(12)
         map["Hello"] = "World"
@@ -326,6 +333,39 @@ class ScatterMapTest {
     }
 
     @Test
+    fun compute() {
+        val map = MutableScatterMap<String, String?>()
+        map["Hello"] = "World"
+
+        var computed = map.compute("Hello") { _, _ ->
+            "New World"
+        }
+        assertEquals("New World", map["Hello"])
+        assertEquals("New World", computed)
+
+        computed = map.compute("Bonjour") { _, _ ->
+            "Monde"
+        }
+        assertEquals("Monde", map["Bonjour"])
+        assertEquals("Monde", computed)
+
+        map.compute("Bonjour") { _, v ->
+            v ?: "Welt"
+        }
+        assertEquals("Monde", map["Bonjour"])
+
+        map.compute("Hallo") { _, _ ->
+            null
+        }
+        assertNull(map["Hallo"])
+
+        map.compute("Hallo") { _, v ->
+            v ?: "Welt"
+        }
+        assertEquals("Welt", map["Hallo"])
+    }
+
+    @Test
     fun remove() {
         val map = MutableScatterMap<String?, String?>()
         assertNull(map.remove("Hello"))
@@ -346,7 +386,7 @@ class ScatterMapTest {
     @Test
     fun removeThenAdd() {
         // Use a size of 6 to fit in a single entry in the metadata table
-        val map = MutableScatterMap<String?, String?>(6)
+        val map = MutableScatterMap<String, String>(6)
         map["Hello"] = "World"
         map["Bonjour"] = "Monde"
         map["Hallo"] = "Welt"
@@ -354,7 +394,7 @@ class ScatterMapTest {
         map["Ciao"] = "Mondo"
         map["Annyeong"] = "Sesang"
 
-        // Removing all the entries will mark the medata as deleted
+        // Removing all the entries will mark the metadata as deleted
         map.remove("Hello")
         map.remove("Bonjour")
         map.remove("Hallo")
@@ -368,10 +408,27 @@ class ScatterMapTest {
 
         // Make sure reinserting an entry after filling the table
         // with "Deleted" markers works
-        map["Hola"] = "Mundo"
+        map["Hello"] = "World"
 
         assertEquals(1, map.size)
         assertEquals(capacity, map.capacity)
+    }
+
+    @Test
+    fun removeIf() {
+        val map = MutableScatterMap<String, String>()
+        map["Hello"] = "World"
+        map["Bonjour"] = "Monde"
+        map["Hallo"] = "Welt"
+        map["Konnichiwa"] = "Sekai"
+        map["Ciao"] = "Mondo"
+        map["Annyeong"] = "Sesang"
+
+        map.removeIf { key, value -> key.startsWith('H') || value.startsWith('S') }
+
+        assertEquals(2, map.size)
+        assertEquals("Monde", map["Bonjour"])
+        assertEquals("Mondo", map["Ciao"])
     }
 
     @Test
@@ -423,6 +480,34 @@ class ScatterMapTest {
         map["Hallo"] = "Welt"
 
         map -= listOf("Hallo", "Bonjour").asSequence()
+
+        assertEquals(1, map.size)
+        assertNull(map["Hallo"])
+        assertNull(map["Bonjour"])
+    }
+
+    @Test
+    fun minusScatterSet() {
+        val map = MutableScatterMap<String, String>()
+        map["Hello"] = "World"
+        map["Bonjour"] = "Monde"
+        map["Hallo"] = "Welt"
+
+        map -= scatterSetOf("Hallo", "Bonjour")
+
+        assertEquals(1, map.size)
+        assertNull(map["Hallo"])
+        assertNull(map["Bonjour"])
+    }
+
+    @Test
+    fun minusObjectList() {
+        val map = MutableScatterMap<String, String>()
+        map["Hello"] = "World"
+        map["Bonjour"] = "Monde"
+        map["Hallo"] = "Welt"
+
+        map -= objectListOf("Hallo", "Bonjour")
 
         assertEquals(1, map.size)
         assertNull(map["Hallo"])
@@ -562,6 +647,38 @@ class ScatterMapTest {
         assertTrue(
             "{Hello=World, Bonjour=Monde}" == map2.toString() ||
                 "{Bonjour=Monde, Hello=World}" == map2.toString()
+        )
+    }
+
+    @Test
+    fun joinToString() {
+        val map = mutableScatterMapOf(1 to 1f, 2 to 2f, 3 to 3f, 4 to 4f, 5 to 5f)
+        val order = IntArray(5)
+        var index = 0
+        map.forEach { key, _ ->
+            order[index++] = key
+        }
+        assertEquals(
+            "${order[0]}=${order[0].toFloat()}, ${order[1]}=${order[1].toFloat()}, " +
+                "${order[2]}=${order[2].toFloat()}, ${order[3]}=${order[3].toFloat()}, " +
+                "${order[4]}=${order[4].toFloat()}",
+            map.joinToString()
+        )
+        assertEquals(
+            "x${order[0]}=${order[0].toFloat()}, ${order[1]}=${order[1].toFloat()}, " +
+                "${order[2]}=${order[2].toFloat()}...",
+            map.joinToString(prefix = "x", postfix = "y", limit = 3)
+        )
+        assertEquals(
+            ">${order[0]}=${order[0].toFloat()}-${order[1]}=${order[1].toFloat()}-" +
+                "${order[2]}=${order[2].toFloat()}-${order[3]}=${order[3].toFloat()}-" +
+                "${order[4]}=${order[4].toFloat()}<",
+            map.joinToString(separator = "-", prefix = ">", postfix = "<")
+        )
+        val names = arrayOf("one", "two", "three", "four", "five")
+        assertEquals(
+            "${names[order[0]]}, ${names[order[1]]}, ${names[order[2]]}...",
+            map.joinToString(limit = 3) { key, _ -> names[key] }
         )
     }
 
@@ -809,6 +926,21 @@ class ScatterMapTest {
     }
 
     @Test
+    fun asMapToList() {
+        val map = mutableScatterMapOf<Int, Int>()
+        map[0] = 0
+        map[1] = -1
+
+        val list = map
+            .asMap()
+            .toList() // this requires the iterator to return new Entry instances
+
+        assertEquals(map.size, list.size)
+        assertTrue(list.contains(0 to 0))
+        assertTrue(list.contains(1 to -1))
+    }
+
+    @Test
     fun asMutableMapClear() {
         val map = MutableScatterMap<String?, String?>()
         map["Hello"] = "World"
@@ -976,7 +1108,7 @@ class ScatterMapTest {
         assertEquals(size, map.size)
 
         assertTrue(iterator.hasNext())
-        assertEquals("World", iterator.next())
+        assertEquals("Monde", iterator.next())
         iterator.remove()
         assertEquals(2, map.size)
 
@@ -1079,7 +1211,7 @@ class ScatterMapTest {
         assertEquals(size, map.size)
 
         assertTrue(iterator.hasNext())
-        assertEquals("Hello", iterator.next())
+        assertEquals("Bonjour", iterator.next())
         iterator.remove()
         assertEquals(2, map.size)
 
@@ -1253,8 +1385,8 @@ class ScatterMapTest {
 
         assertTrue(iterator.hasNext())
         val next = iterator.next()
-        assertEquals("Hello", next.key)
-        assertEquals("World", next.value)
+        assertEquals("Bonjour", next.key)
+        assertEquals("Monde", next.value)
         iterator.remove()
         assertEquals(2, map.size)
 

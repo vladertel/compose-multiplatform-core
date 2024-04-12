@@ -64,6 +64,22 @@ interface XProcessingEnv {
     val jvmVersion: Int
 
     /**
+     * Information of target platforms of the processing environment.
+     *
+     * There can be multiple platforms in a metadata compilation. This is due to the fact that when
+     * processing `common` source sets (which will be used to compile to multiple platforms), the
+     * `targetPlatforms` set will contain an entry for each of the platforms the `common` code will
+     * be used for.
+     *
+     * If a non-common source set (e.g. linuxX64) is being processed, then `targetPlatforms` will
+     * contain only one entry that corresponds to the platform.
+     *
+     * For details, see the official Kotlin documentation at
+     * https://kotlinlang.org/docs/ksp-multiplatform.html#compilation-and-processing.
+     */
+    val targetPlatforms: Set<Platform>
+
+    /**
      * Looks for the [XTypeElement] with the given qualified name and returns `null` if it does not
      * exist.
      */
@@ -188,6 +204,13 @@ interface XProcessingEnv {
         KSP
     }
 
+    enum class Platform {
+        JVM,
+        NATIVE,
+        JS,
+        UNKNOWN
+    }
+
     companion object {
         /**
          * Creates a new [XProcessingEnv] implementation derived from the given Java [env].
@@ -225,5 +248,14 @@ interface XProcessingEnv {
      */
     fun getTypeElementsFromPackage(packageName: String): List<XTypeElement>
 
-    // TODO: Add support for getting top level members in a package
+    /**
+     * Returns [XElement]s with the given package name. Note that this call can be expensive.
+     *
+     * @param packageName the package name to look up.
+     *
+     * @return A list of [XElement] with matching package name. This will return declarations
+     * from both dependencies and source. If the package is not found an empty list will be
+     * returned.
+     */
+    fun getElementsFromPackage(packageName: String): List<XElement>
 }

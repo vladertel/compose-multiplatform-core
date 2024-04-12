@@ -16,6 +16,7 @@
 
 package androidx.kruth
 
+import androidx.kruth.Fact.Companion.simpleFact
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
@@ -705,7 +706,7 @@ class SubjectTest {
                 metadata = FailureMetadata(messagesToPrepend = listOf("msg1", "msg2")),
             ) {
                 fun fail() {
-                    failWithActual("msg3", "msg4")
+                    failWithActual(simpleFact("msg3"), simpleFact("msg4"))
                 }
             }
 
@@ -715,7 +716,7 @@ class SubjectTest {
                 msg2
                 msg3
                 msg4
-                But was: 0
+                but was: 0
             """.trimIndent()
         ) { subject.fail() }
     }
@@ -728,7 +729,7 @@ class SubjectTest {
                 metadata = FailureMetadata(messagesToPrepend = listOf("msg1", "msg2")),
             ) {
                 fun fail() {
-                    failWithActual("msg3", "msg4")
+                    failWithActual(simpleFact("msg3"), simpleFact("msg4"))
                 }
             }
 
@@ -738,9 +739,52 @@ class SubjectTest {
                 msg2
                 msg3
                 msg4
-                But was:
+                but was:
                     a
                     b
+            """.trimIndent()
+        ) { subject.fail() }
+    }
+
+    @Test
+    fun failWithoutActual_printsAllMessagesPlusActualValue() {
+        val subject =
+            object : Subject<Int>(
+                actual = 0,
+                metadata = FailureMetadata(messagesToPrepend = listOf("msg1", "msg2")),
+            ) {
+                fun fail() {
+                    failWithoutActual(simpleFact("msg3"), simpleFact("msg4"))
+                }
+            }
+
+        assertFailsWithMessage(
+            """
+                msg1
+                msg2
+                msg3
+                msg4
+            """.trimIndent()
+        ) { subject.fail() }
+    }
+
+    @Test
+    fun failWithoutActual_printsAllMessagesPlusMultilineActualValue() {
+        val subject = object : Subject<String>(
+            actual = "a\nb",
+            metadata = FailureMetadata(messagesToPrepend = listOf("msg1", "msg2")),
+        ) {
+            fun fail() {
+                failWithoutActual(simpleFact("msg3"), simpleFact("msg4"))
+            }
+        }
+
+        assertFailsWithMessage(
+            """
+                msg1
+                msg2
+                msg3
+                msg4
             """.trimIndent()
         ) { subject.fail() }
     }
@@ -773,7 +817,10 @@ private class ThrowsOnEqualsNull {
 /**
  * Copied from Truth.
  */
-private class ForbidsEqualityChecksSubject(actual: Any?) : Subject<Any>(actual) {
+private class ForbidsEqualityChecksSubject(
+    actual: Any?
+) : Subject<Any>(actual = actual, metadata = FailureMetadata()) {
+
     // Not sure how to feel about this, but people do it:
     override fun isEqualTo(expected: Any?) {
         throw UnsupportedOperationException()

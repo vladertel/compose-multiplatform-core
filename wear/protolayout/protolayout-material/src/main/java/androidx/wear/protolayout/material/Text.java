@@ -19,11 +19,11 @@ package androidx.wear.protolayout.material;
 import static androidx.wear.protolayout.ColorBuilders.argb;
 import static androidx.wear.protolayout.LayoutElementBuilders.TEXT_ALIGN_CENTER;
 import static androidx.wear.protolayout.LayoutElementBuilders.TEXT_OVERFLOW_ELLIPSIZE_END;
-import static androidx.wear.protolayout.material.Helper.checkNotNull;
-import static androidx.wear.protolayout.material.Helper.staticString;
 import static androidx.wear.protolayout.material.Typography.TYPOGRAPHY_DISPLAY1;
 import static androidx.wear.protolayout.material.Typography.getFontStyleBuilder;
 import static androidx.wear.protolayout.material.Typography.getLineHeightForTypography;
+import static androidx.wear.protolayout.materialcore.Helper.checkNotNull;
+import static androidx.wear.protolayout.materialcore.Helper.staticString;
 
 import android.content.Context;
 
@@ -43,7 +43,6 @@ import androidx.wear.protolayout.ModifiersBuilders.Modifiers;
 import androidx.wear.protolayout.TypeBuilders.StringLayoutConstraint;
 import androidx.wear.protolayout.TypeBuilders.StringProp;
 import androidx.wear.protolayout.expression.Fingerprint;
-import androidx.wear.protolayout.expression.ProtoLayoutExperimental;
 import androidx.wear.protolayout.material.Typography.TypographyName;
 import androidx.wear.protolayout.proto.LayoutElementProto;
 
@@ -84,13 +83,16 @@ public class Text implements LayoutElement {
     public static final class Builder implements LayoutElement.Builder {
         @NonNull private final Context mContext;
         @NonNull private ColorProp mColor = argb(Colors.DEFAULT.getOnPrimary());
-        private @TypographyName int mTypographyName = TYPOGRAPHY_DISPLAY1;
+        @TypographyName private int mTypographyName = TYPOGRAPHY_DISPLAY1;
         private boolean mItalic = false;
         private boolean mUnderline = false;
         private boolean mIsScalable = true;
         @Nullable private Integer mCustomWeight = null;
 
         @NonNull
+        @SuppressWarnings(
+                "deprecation") // Default value from initial release is TEXT_OVERFLOW_ELLIPSIZE_END
+        // so we can't change it as it would be a breaking change for developers.
         private final LayoutElementBuilders.Text.Builder mElementBuilder =
                 new LayoutElementBuilders.Text.Builder()
                         .setMaxLines(1)
@@ -146,6 +148,9 @@ public class Text implements LayoutElement {
          * Sets whether the text size will change if user has changed the default font size. If not
          * set, true will be used.
          */
+        // Text size is always set in SP, however, by setting this field, we do calculation to
+        // interpret it like DP. When getting the text font's size in getters, there is no way to
+        // know whether that size was scaled or not.
         Builder setIsScalable(boolean isScalable) {
             this.mIsScalable = isScalable;
             return this;
@@ -218,24 +223,6 @@ public class Text implements LayoutElement {
         @NonNull
         public Builder setWeight(@FontWeight int weight) {
             this.mCustomWeight = weight;
-            return this;
-        }
-
-        /**
-         * Sets whether the {@link Text} excludes extra top and bottom padding above the normal
-         * ascent and descent. The default is false.
-         */
-        // TODO(b/252767963): Coordinate the transition of the default from false->true along with
-        // other impacted UI Libraries - needs care as will have an impact on layout and needs to be
-        // communicated clearly.
-        @NonNull
-        @ProtoLayoutExperimental
-        @SuppressWarnings("MissingGetterMatchingBuilder")
-        public Builder setExcludeFontPadding(boolean excludeFontPadding) {
-            this.mElementBuilder.setAndroidTextStyle(
-                    new LayoutElementBuilders.AndroidTextStyle.Builder()
-                            .setExcludeFontPadding(excludeFontPadding)
-                            .build());
             return this;
         }
 
@@ -318,15 +305,6 @@ public class Text implements LayoutElement {
     /** Returns whether the Text is underlined. */
     public boolean isUnderline() {
         return checkNotNull(checkNotNull(mText.getFontStyle()).getUnderline()).getValue();
-    }
-
-    /**
-     * Returns whether the Text has extra top and bottom padding above the normal ascent and descent
-     * excluded.
-     */
-    @ProtoLayoutExperimental
-    public boolean hasExcludeFontPadding() {
-        return checkNotNull(mText.getAndroidTextStyle()).getExcludeFontPadding();
     }
 
     /**

@@ -85,12 +85,10 @@ public class NavDeepLink internal constructor(
         get() = pathArgs + queryArgsMap.values.flatMap { it.arguments } + fragArgs
 
     public var isExactDeepLink: Boolean = false
-        /** @suppress */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         get
         internal set
 
-    /** @suppress */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public constructor(uri: String) : this(uri, null, null)
 
@@ -155,7 +153,6 @@ public class NavDeepLink internal constructor(
         // If both are null return true, otherwise see if they match
     }
 
-    /** @suppress */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public fun getMimeTypeMatchRating(mimeType: String): Int {
         return if (this.mimeType == null || !mimeTypePattern!!.matcher(mimeType).matches()) {
@@ -166,7 +163,6 @@ public class NavDeepLink internal constructor(
 
     @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS", "NullableCollection")
     /** Pattern.compile has no nullability for the regex parameter
-     * @suppress
      */
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     public fun getMatchingArguments(
@@ -309,11 +305,9 @@ public class NavDeepLink internal constructor(
                     val argument = arguments[argName]
                     if (parseArgumentForRepeatedParam(bundle, argName, value, argument)) {
                         // Passing in a value the exact same as the placeholder will be treated the
-                        // as if no value was passed, being replaced if it is optional or throwing an
-                        // error if it is required.
-                        if (value != "{$argName}" &&
-                            parseArgument(queryParamBundle, argName, value, argument)
-                        ) {
+                        // as if no value was passed (unless value is based on String),
+                        // being replaced if it is optional or throwing an error if it is required.
+                        if (parseArgument(queryParamBundle, argName, value, argument)) {
                             return false
                         }
                     }
@@ -435,7 +429,6 @@ public class NavDeepLink internal constructor(
      */
     public class Builder {
 
-        /** @suppress */
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
         public constructor()
 

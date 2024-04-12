@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 
-
+/**
+ * This file was created using the `create_project.py` script located in the
+ * `<AndroidX root>/development/project-creator` directory.
+ *
+ * Please use that script when creating a new project, rather than copying an existing project and
+ * modifying its settings.
+ */
 import androidx.build.BundleInsideHelper
-import androidx.build.KmpPlatformsKt
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     id("AndroidXPlugin")
     alias(libs.plugins.kotlinSerialization)
 }
-
-def enableNative = KmpPlatformsKt.enableNative(project)
 
 androidXMultiplatform {
     jvm() {
@@ -36,6 +38,7 @@ androidXMultiplatform {
     mac()
     linux()
     ios()
+    // NOTE, if you add android target here, make sure to add the proguard file as well.
 
     defaultPlatform(PlatformIdentifier.JVM)
 
@@ -74,22 +77,20 @@ androidXMultiplatform {
                 implementation(project(":kruth:kruth"))
             }
         }
-        if (enableNative) {
-            nativeMain {
-                dependsOn(commonMain)
-                dependencies {
-                    implementation(libs.kotlinSerializationCore)
-                    implementation(libs.kotlinSerializationProtobuf)
-                }
+        nativeMain {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.kotlinSerializationCore)
+                implementation(libs.kotlinSerializationProtobuf)
             }
+        }
 
-            nativeTest {
-                dependsOn(commonTest)
-                dependencies {
-                    implementation(libs.kotlinTest)
-                    implementation(project(":internal-testutils-datastore"))
-                    implementation(project(":kruth:kruth"))
-                }
+        nativeTest {
+            dependsOn(commonTest)
+            dependencies {
+                implementation(libs.kotlinTest)
+                implementation(project(":internal-testutils-datastore"))
+                implementation(project(":kruth:kruth"))
             }
         }
 
@@ -109,11 +110,14 @@ androidXMultiplatform {
 BundleInsideHelper.forInsideJarKmp(
         project,
         /* from = */ "com.google.protobuf",
-        /* to =   */ "androidx.datastore.preferences.protobuf"
+        /* to =   */ "androidx.datastore.preferences.protobuf",
+        // proto-lite dependency includes .proto files, which are not used and would clash if
+        // users also use proto library directly
+        /* dropResourcesWithSuffix = */ ".proto"
 )
 
 dependencies {
-    bundleInside(project(path: ":datastore:datastore-preferences-proto", configuration: "export"))
+    bundleInside(project(":datastore:datastore-preferences-proto"))
 }
 
 androidx {

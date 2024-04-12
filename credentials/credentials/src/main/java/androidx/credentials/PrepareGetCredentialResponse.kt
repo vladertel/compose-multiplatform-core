@@ -113,7 +113,7 @@ class PrepareGetCredentialResponse private constructor(
      * [CredentialManager.getCredential] or [CredentialManager.getCredentialAsync] to perform the
      * remaining flows to officially retrieve a credential.
      *
-     * @property frameworkHandle the framework handle representing this pending operation. Must not
+     * @param frameworkHandle the framework handle representing this pending operation. Must not
      * be null at API level >= 34.
      * @throws NullPointerException If [frameworkHandle] is null at API level >= 34.
      */
@@ -174,7 +174,6 @@ class PrepareGetCredentialResponse private constructor(
         /**
          * Builds a [PrepareGetCredentialResponse].
          */
-        @SuppressLint("SyntheticAccessor")
         fun build(): androidx.credentials.PrepareGetCredentialResponse {
             return androidx.credentials.PrepareGetCredentialResponse(
                 pendingGetCredentialHandle,
@@ -217,7 +216,6 @@ class PrepareGetCredentialResponse private constructor(
         /**
          * Builds a [PrepareGetCredentialResponse].
          */
-        @SuppressLint("SyntheticAccessor")
         fun build(): androidx.credentials.PrepareGetCredentialResponse {
             return androidx.credentials.PrepareGetCredentialResponse(
                 null,

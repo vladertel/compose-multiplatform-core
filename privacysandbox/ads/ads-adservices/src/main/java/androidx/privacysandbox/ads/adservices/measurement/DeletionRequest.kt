@@ -16,10 +16,13 @@
 
 package androidx.privacysandbox.ads.adservices.measurement
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Build
+import android.os.ext.SdkExtensions
 import androidx.annotation.IntDef
 import androidx.annotation.RequiresApi
+import androidx.annotation.RequiresExtension
 import androidx.annotation.RestrictTo
 import java.time.Instant
 
@@ -57,7 +60,7 @@ import java.time.Instant
  *     https://example.com}, {@code https://b.example.com} and {@code https://abcexample.com}
  *     will NOT match. A null or empty list will match everything.
  */
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@RequiresApi(android.os.Build.VERSION_CODES.O)
 class DeletionRequest(
     @DeletionMode val deletionMode: Int,
     @MatchBehavior val matchBehavior: Int,
@@ -96,6 +99,21 @@ class DeletionRequest(
         return "DeletionRequest { DeletionMode=$deletionModeStr, " +
             "MatchBehavior=$matchBehaviorStr, " +
             "Start=$start, End=$end, DomainUris=$domainUris, OriginUris=$originUris }"
+    }
+
+    @SuppressLint("ClassVerificationFailure", "NewApi")
+    @RequiresExtension(extension = SdkExtensions.AD_SERVICES, version = 4)
+    @RequiresExtension(extension = Build.VERSION_CODES.S, version = 9)
+    @RequiresExtension(extension = Build.VERSION_CODES.R, version = 11)
+    internal fun convertToAdServices(): android.adservices.measurement.DeletionRequest {
+        return android.adservices.measurement.DeletionRequest.Builder()
+            .setDeletionMode(deletionMode)
+            .setMatchBehavior(matchBehavior)
+            .setStart(start)
+            .setEnd(end)
+            .setDomainUris(domainUris)
+            .setOriginUris(originUris)
+            .build()
     }
 
     companion object {
@@ -149,7 +167,7 @@ class DeletionRequest(
      *     {@link #MATCH_BEHAVIOR_PRESERVE}: This option will preserve the data associated with the
      *     supplied params (Origin URIs & Domain URIs) and select remaining records for deletion.
      */
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(android.os.Build.VERSION_CODES.O)
     public class Builder constructor(
         @DeletionMode private val deletionMode: Int,
         @MatchBehavior private val matchBehavior: Int

@@ -46,13 +46,16 @@ internal sealed class KspMethodElement(
     override val name: String
         get() = declaration.simpleName.asString()
 
+    override val propertyName = null
+
     @OptIn(KspExperimental::class)
     override val jvmName: String by lazy {
-        val jvmName = runCatching {
+        if (!isKotlinPropertyMethod()) {
             // see https://github.com/google/ksp/issues/716
-            env.resolver.getJvmName(declaration)
+            env.resolver.getJvmName(declaration) ?: name
+        } else {
+            name
         }
-        jvmName.getOrNull() ?: declaration.simpleName.asString()
     }
 
     override val parameters: List<XExecutableParameterElement> by lazy {
@@ -140,8 +143,12 @@ internal sealed class KspMethodElement(
     override fun isExtensionFunction() = declaration.extensionReceiver != null
 
     override fun overrides(other: XMethodElement, owner: XTypeElement): Boolean {
-        return env.resolver.overrides(this, other, owner as? KspTypeElement)
+        return env.resolver.overrides(this, other)
     }
+
+    override fun isKotlinPropertySetter() = false
+
+    override fun isKotlinPropertyGetter() = false
 
     override fun isKotlinPropertyMethod() = false
 

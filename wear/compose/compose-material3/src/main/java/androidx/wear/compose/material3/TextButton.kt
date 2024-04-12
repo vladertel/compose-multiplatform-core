@@ -20,26 +20,29 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.takeOrElse
+import androidx.wear.compose.material3.tokens.FilledTextButtonTokens
+import androidx.wear.compose.material3.tokens.FilledTonalTextButtonTokens
+import androidx.wear.compose.material3.tokens.OutlinedTextButtonTokens
+import androidx.wear.compose.material3.tokens.TextButtonTokens
+import androidx.wear.compose.material3.tokens.TextToggleButtonTokens
 
 /**
  * Wear Material [TextButton] is a circular, text-only button with transparent background and
  * no border. It offers a single slot for text.
  *
  * Set the size of the [TextButton] with [Modifier.touchTargetAwareSize]
- * to ensure that the recommended minimum touch target size is available.
- *
- * The recommended [TextButton] sizes are [TextButtonDefaults.DefaultButtonSize],
+ * to ensure that the recommended minimum touch target size is available. The recommended
+ * [TextButton] sizes are [TextButtonDefaults.DefaultButtonSize],
  * [TextButtonDefaults.LargeButtonSize] and [TextButtonDefaults.SmallButtonSize].
+ * [TextButton] uses [Typography.labelMedium] by default and this should be
+ * overridden to [Typography.labelLarge] when using [TextButtonDefaults.LargeButtonSize].
  *
  * The default [TextButton] has no border and a transparent background for low emphasis actions.
  * For actions that require high emphasis, set [colors] to
@@ -51,10 +54,13 @@ import androidx.compose.ui.unit.dp
  *
  * [TextButton] can be enabled or disabled. A disabled button will not respond to click events.
  *
- * TODO(b/261838497) Add Material3 samples and UX guidance links
+ * TODO(b/261838497) Add Material3 UX guidance links
  *
  * Example of a [TextButton]:
  * @sample androidx.wear.compose.material3.samples.TextButtonSample
+ *
+ * Example of a large, filled tonal [TextButton]:
+ * @sample androidx.wear.compose.material3.samples.LargeFilledTonalTextButtonSample
  *
  * @param onClick Will be called when the user clicks the button.
  * @param modifier Modifier to be applied to the button.
@@ -66,10 +72,10 @@ import androidx.compose.ui.unit.dp
  * for this button in different states.
  * @param border Optional [BorderStroke] that will be used to resolve the text button border in
  * different states. See [ButtonDefaults.outlinedButtonBorder].
- * @param interactionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this Button. You can create and pass in your own remembered
- * [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this Button in different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this button. You can use this to change the button's appearance
+ * or preview the button in different states. Note that if `null` is provided, interactions will
+ * still happen internally.
  * @param content The content displayed on the text button, expected to be text or image.
  */
 @Composable
@@ -80,21 +86,22 @@ fun TextButton(
     shape: Shape = TextButtonDefaults.shape,
     colors: TextButtonColors = TextButtonDefaults.textButtonColors(),
     border: BorderStroke? = null,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    interactionSource: MutableInteractionSource? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    androidx.wear.compose.materialcore.Button(
+    androidx.wear.compose.materialcore.RoundButton(
         onClick = onClick,
         modifier.minimumInteractiveComponentSize(),
         enabled = enabled,
         backgroundColor = { colors.containerColor(enabled = it) },
         interactionSource = interactionSource,
         shape = shape,
-        border = { rememberUpdatedState(border) },
+        border = { border },
         buttonSize = TextButtonDefaults.DefaultButtonSize,
+        ripple = rippleOrFallbackImplementation(),
         content = provideScopeContent(
             colors.contentColor(enabled = enabled),
-            MaterialTheme.typography.labelMedium,
+            TextButtonTokens.ContentFont.value,
             content
         )
     )
@@ -107,14 +114,19 @@ fun TextButton(
  *
  * Set the size of the [TextToggleButton] with Modifier.[touchTargetAwareSize]
  * to ensure that the background padding will correctly reach the edge of the minimum touch target.
- * The recommended text button sizes are [TextButtonDefaults.DefaultButtonSize],
+ * The recommended [TextToggleButton] sizes are [TextButtonDefaults.DefaultButtonSize],
  * [TextButtonDefaults.LargeButtonSize] and [TextButtonDefaults.SmallButtonSize].
+ * [TextToggleButton] uses [Typography.labelMedium] by default and this should be overridden to
+ * [Typography.labelLarge] when using [TextButtonDefaults.LargeButtonSize].
  *
  * [TextToggleButton] can be enabled or disabled. A disabled button will not respond to
  * click events. When enabled, the checked and unchecked events are propagated by [onCheckedChange].
  *
- * A simple text toggle button using the default colors
+ * A simple text toggle button using the default colors:
  * @sample androidx.wear.compose.material3.samples.TextToggleButtonSample
+ *
+ * Example of a large text toggle button:
+ * @sample androidx.wear.compose.material3.samples.LargeTextToggleButtonSample
  *
  * @param checked Boolean flag indicating whether this toggle button is currently checked.
  * @param onCheckedChange Callback to be invoked when this toggle button is clicked.
@@ -123,10 +135,10 @@ fun TextButton(
  * this toggle button will not be clickable.
  * @param colors [ToggleButtonColors] that will be used to resolve the container and
  * content color for this toggle button.
- * @param interactionSource The [MutableInteractionSource] representing the stream of
- * [Interaction]s for this toggle button. You can create and pass in your own remembered
- * [MutableInteractionSource] if you want to observe [Interaction]s and customize the
- * appearance / behavior of this ToggleButton in different [Interaction]s.
+ * @param interactionSource an optional hoisted [MutableInteractionSource] for observing and
+ * emitting [Interaction]s for this toggle button. You can use this to change the toggle button's
+ * appearance or preview the toggle button in different states. Note that if `null` is provided,
+ * interactions will still happen internally.
  * @param shape Defines the shape for this toggle button. It is strongly recommended to use the
  * default as this shape is a key characteristic of the Wear Material 3 Theme.
  * @param border Optional [BorderStroke] for the [TextToggleButton].
@@ -139,8 +151,8 @@ fun TextToggleButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     colors: ToggleButtonColors = TextButtonDefaults.textToggleButtonColors(),
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-    shape: Shape = CircleShape,
+    interactionSource: MutableInteractionSource? = null,
+    shape: Shape = TextButtonDefaults.shape,
     border: BorderStroke? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -152,13 +164,14 @@ fun TextToggleButton(
         backgroundColor = { isEnabled, isChecked ->
             colors.containerColor(enabled = isEnabled, checked = isChecked)
         },
-        border = { _, _ -> rememberUpdatedState(border) },
+        border = { _, _ -> border },
         toggleButtonSize = TextButtonDefaults.DefaultButtonSize,
         interactionSource = interactionSource,
         shape = shape,
+        ripple = rippleOrFallbackImplementation(),
         content = provideScopeContent(
             colors.contentColor(enabled = enabled, checked = checked),
-            MaterialTheme.typography.labelMedium,
+            TextToggleButtonTokens.ContentFont.value,
             content
         )
     )
@@ -171,7 +184,16 @@ object TextButtonDefaults {
     /**
      * Recommended [Shape] for [TextButton].
      */
-    val shape = CircleShape
+    val shape: Shape @Composable get() = TextButtonTokens.ContainerShape.value
+
+    /**
+     * Creates a [TextButtonColors] with the colors for a filled [TextButton]- by default, a
+     * colored background with a contrasting content color.
+     * If the text button is disabled then the colors will default to [ColorScheme.onSurface] with
+     * suitable alpha values applied.
+     */
+    @Composable
+    fun filledTextButtonColors() = MaterialTheme.colorScheme.defaultFilledTextButtonColors
 
     /**
      * Creates a [TextButtonColors] with the colors for a filled [TextButton]- by default, a
@@ -184,20 +206,30 @@ object TextButtonDefaults {
      *
      * @param containerColor The background color of this text button when enabled
      * @param contentColor The content color of this text button when enabled
+     * @param disabledContainerColor the background color of this text button when not enabled
+     * @param disabledContentColor the content color of this text button when not enabled
      */
     @Composable
     fun filledTextButtonColors(
-        containerColor: Color = MaterialTheme.colorScheme.primary,
-        contentColor: Color = MaterialTheme.colorScheme.onPrimary,
-    ): TextButtonColors {
-        return textButtonColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-            disabledContainerColor = MaterialTheme.colorScheme.onSurface.toDisabledColor(
-                disabledAlpha = DisabledContainerAlpha
-            ),
-        )
-    }
+        containerColor: Color = Color.Unspecified,
+        contentColor: Color = Color.Unspecified,
+        disabledContainerColor: Color = Color.Unspecified,
+        disabledContentColor: Color = Color.Unspecified,
+    ): TextButtonColors = MaterialTheme.colorScheme.defaultFilledTextButtonColors.copy(
+        containerColor = containerColor,
+        contentColor = contentColor,
+        disabledContainerColor = disabledContainerColor,
+        disabledContentColor = disabledContentColor
+    )
+
+    /**
+     * Creates a [TextButtonColors] with the colors for a filled, tonal [TextButton]- by default,
+     * a muted colored background with a contrasting content color.
+     * If the text button is disabled then the colors will default to [ColorScheme.onSurface] with
+     * suitable alpha values applied.
+     */
+    @Composable
+    fun filledTonalTextButtonColors() = MaterialTheme.colorScheme.defaultFilledTonalTextButtonColors
 
     /**
      * Creates a [TextButtonColors] with the colors for a filled, tonal [TextButton]- by default,
@@ -210,20 +242,29 @@ object TextButtonDefaults {
      *
      * @param containerColor The background color of this text button when enabled
      * @param contentColor The content color of this text button when enabled
+     * @param disabledContainerColor the background color of this text button when not enabled
+     * @param disabledContentColor the content color of this text button when not enabled
      */
     @Composable
     fun filledTonalTextButtonColors(
-        containerColor: Color = MaterialTheme.colorScheme.surface,
-        contentColor: Color = MaterialTheme.colorScheme.onSurface,
-    ): TextButtonColors {
-        return textButtonColors(
-            containerColor = containerColor,
-            contentColor = contentColor,
-            disabledContainerColor = MaterialTheme.colorScheme.onSurface.toDisabledColor(
-                disabledAlpha = DisabledContainerAlpha
-            ),
-        )
-    }
+        containerColor: Color = Color.Unspecified,
+        contentColor: Color = Color.Unspecified,
+        disabledContainerColor: Color = Color.Unspecified,
+        disabledContentColor: Color = Color.Unspecified,
+    ): TextButtonColors = MaterialTheme.colorScheme.defaultFilledTextButtonColors.copy(
+        containerColor = containerColor,
+        contentColor = contentColor,
+        disabledContainerColor = disabledContainerColor,
+        disabledContentColor = disabledContentColor
+    )
+
+    /**
+     * Creates a [TextButtonColors] with the colors for an outlined [TextButton]- by default,
+     * a transparent background with contrasting content color. If the button is disabled,
+     * then the colors will default to [ColorScheme.onSurface] with suitable alpha values applied.
+     */
+    @Composable
+    fun outlinedTextButtonColors() = MaterialTheme.colorScheme.defaultOutlinedTextButtonColors
 
     /**
      * Creates a [TextButtonColors] with the colors for an outlined [TextButton]- by default,
@@ -235,17 +276,21 @@ object TextButtonDefaults {
      * @sample androidx.wear.compose.material3.samples.OutlinedTextButtonSample
      *
      * @param contentColor The content color of this text button when enabled
+     * @param disabledContentColor The content color of this text button when not enabled
      */
     @Composable
     fun outlinedTextButtonColors(
-        contentColor: Color = MaterialTheme.colorScheme.onBackground,
-    ): TextButtonColors {
-        return textButtonColors(
-            containerColor = Color.Transparent,
-            contentColor = contentColor
-        )
-    }
+        contentColor: Color = Color.Unspecified,
+        disabledContentColor: Color = Color.Unspecified,
+    ): TextButtonColors = MaterialTheme.colorScheme.defaultOutlinedTextButtonColors.copy(
+        containerColor = Color.Transparent,
+        contentColor = contentColor,
+        disabledContainerColor = Color.Transparent,
+        disabledContentColor = disabledContentColor
+    )
 
+    @Composable
+    fun textButtonColors() = MaterialTheme.colorScheme.defaultTextButtonColors
     /**
      * Creates a [TextButtonColors] for a text button - by default, a transparent
      * background with contrasting content color. If the button is disabled
@@ -259,10 +304,10 @@ object TextButtonDefaults {
     @Composable
     fun textButtonColors(
         containerColor: Color = Color.Transparent,
-        contentColor: Color = MaterialTheme.colorScheme.onBackground,
+        contentColor: Color = Color.Unspecified,
         disabledContainerColor: Color = Color.Transparent,
-        disabledContentColor: Color = MaterialTheme.colorScheme.onSurface.toDisabledColor()
-    ): TextButtonColors = TextButtonColors(
+        disabledContentColor: Color = Color.Unspecified,
+    ): TextButtonColors = MaterialTheme.colorScheme.defaultTextButtonColors.copy(
         containerColor = containerColor,
         contentColor = contentColor,
         disabledContainerColor = disabledContainerColor,
@@ -272,8 +317,8 @@ object TextButtonDefaults {
     /**
      * Creates a [ToggleButtonColors] for a [TextToggleButton]
      * - by default, a colored background with a contrasting content color.
-     * If the button is disabled, then the
-     * colors will have an alpha ([ContentAlpha.disabled]) value applied.
+     * If the button is disabled, then the colors will have an alpha ([DisabledContainerAlpha]
+     * or [DisabledContentAlpha]) value applied.
      *
      * @param checkedContainerColor the container color of this [TextToggleButton] when enabled
      * and checked
@@ -294,14 +339,26 @@ object TextButtonDefaults {
      */
     @Composable
     fun textToggleButtonColors(
-        checkedContainerColor: Color = MaterialTheme.colorScheme.primary,
-        checkedContentColor: Color = MaterialTheme.colorScheme.onPrimary,
-        uncheckedContainerColor: Color = MaterialTheme.colorScheme.surface,
-        uncheckedContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-        disabledCheckedContainerColor: Color = checkedContainerColor.toDisabledColor(),
-        disabledCheckedContentColor: Color = checkedContentColor.toDisabledColor(),
-        disabledUncheckedContainerColor: Color = uncheckedContainerColor.toDisabledColor(),
-        disabledUncheckedContentColor: Color = uncheckedContentColor.toDisabledColor(),
+        checkedContainerColor: Color = TextToggleButtonTokens.CheckedContainerColor.value,
+        checkedContentColor: Color = TextToggleButtonTokens.CheckedContentColor.value,
+        uncheckedContainerColor: Color = TextToggleButtonTokens.UncheckedContainerColor.value,
+        uncheckedContentColor: Color = TextToggleButtonTokens.UncheckedContentColor.value,
+        disabledCheckedContainerColor: Color =
+            TextToggleButtonTokens.DisabledCheckedContainerColor.value.toDisabledColor(
+                disabledAlpha = TextToggleButtonTokens.DisabledCheckedContainerOpacity
+            ),
+        disabledCheckedContentColor: Color =
+            TextToggleButtonTokens.DisabledCheckedContentColor.value.toDisabledColor(
+                disabledAlpha = TextToggleButtonTokens.DisabledCheckedContentOpacity
+            ),
+        disabledUncheckedContainerColor: Color =
+            TextToggleButtonTokens.DisabledUncheckedContainerColor.value.toDisabledColor(
+                disabledAlpha = TextToggleButtonTokens.DisabledUncheckedContainerOpacity
+            ),
+        disabledUncheckedContentColor: Color =
+            TextToggleButtonTokens.DisabledUncheckedContentColor.value.toDisabledColor(
+                disabledAlpha = TextToggleButtonTokens.DisabledUncheckedContentOpacity
+            ),
     ): ToggleButtonColors {
         return ToggleButtonColors(
             checkedContainerColor = checkedContainerColor,
@@ -316,22 +373,77 @@ object TextButtonDefaults {
     }
 
     /**
-     * The recommended size for a small button.
-     * It is recommended to apply this size using [Modifier.touchTargetAwareSize].
+     * The recommended size for a small button - for this size, it is recommended to set
+     * the text style to [Typography.labelMedium]. It is recommended to apply this size
+     * using [Modifier.touchTargetAwareSize].
      */
-    val SmallButtonSize = 48.dp
+    val SmallButtonSize = TextButtonTokens.ContainerSmallSize
 
     /**
      * The default size applied for buttons.
      * It is recommended to apply this size using [Modifier.touchTargetAwareSize].
      */
-    val DefaultButtonSize = 52.dp
+    val DefaultButtonSize = TextButtonTokens.ContainerDefaultSize
 
     /**
      * The recommended size for a large button.
      * It is recommended to apply this size using [Modifier.touchTargetAwareSize].
      */
-    val LargeButtonSize = 60.dp
+    val LargeButtonSize = TextButtonTokens.ContainerLargeSize
+
+    private val ColorScheme.defaultFilledTextButtonColors: TextButtonColors
+        get() {
+            return defaultFilledTextButtonColorsCached ?: TextButtonColors(
+                containerColor = fromToken(FilledTextButtonTokens.ContainerColor),
+                contentColor = fromToken(FilledTextButtonTokens.ContentColor),
+                disabledContainerColor = fromToken(FilledTextButtonTokens.DisabledContainerColor)
+                    .toDisabledColor(
+                        disabledAlpha = FilledTextButtonTokens.DisabledContainerOpacity
+                    ),
+                disabledContentColor = fromToken(FilledTextButtonTokens.DisabledContentColor)
+                    .toDisabledColor(disabledAlpha = FilledTextButtonTokens.DisabledContentOpacity)
+            ).also { defaultFilledTextButtonColorsCached = it }
+        }
+
+    private val ColorScheme.defaultFilledTonalTextButtonColors: TextButtonColors
+        get() {
+            return defaultFilledTonalTextButtonColorsCached ?: TextButtonColors(
+                containerColor = fromToken(FilledTonalTextButtonTokens.ContainerColor),
+                contentColor = fromToken(FilledTonalTextButtonTokens.ContentColor),
+                disabledContainerColor =
+                fromToken(FilledTonalTextButtonTokens.DisabledContainerColor).toDisabledColor(
+                    disabledAlpha = FilledTonalTextButtonTokens.DisabledContainerOpacity
+                ),
+                disabledContentColor = fromToken(FilledTonalTextButtonTokens.DisabledContentColor)
+                    .toDisabledColor(
+                        disabledAlpha = FilledTonalTextButtonTokens.DisabledContentOpacity
+                    )
+            ).also { defaultFilledTonalTextButtonColorsCached = it }
+        }
+
+    private val ColorScheme.defaultOutlinedTextButtonColors: TextButtonColors
+        get() {
+            return defaultOutlinedTextButtonColorsCached ?: TextButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = fromToken(OutlinedTextButtonTokens.ContentColor),
+                disabledContainerColor = Color.Transparent,
+                disabledContentColor = fromToken(OutlinedTextButtonTokens.DisabledContentColor)
+                    .toDisabledColor(
+                        disabledAlpha = OutlinedTextButtonTokens.DisabledContentOpacity
+                    )
+            ).also { defaultOutlinedTextButtonColorsCached = it }
+        }
+
+    private val ColorScheme.defaultTextButtonColors: TextButtonColors
+        get() {
+            return defaultTextButtonColorsCached ?: TextButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = fromToken(TextButtonTokens.ContentColor),
+                disabledContainerColor = Color.Transparent,
+                disabledContentColor = fromToken(TextButtonTokens.DisabledContentColor)
+                    .toDisabledColor(disabledAlpha = TextButtonTokens.DisabledContentOpacity)
+            ).also { defaultTextButtonColorsCached = it }
+        }
 }
 
 /**
@@ -348,20 +460,32 @@ object TextButtonDefaults {
  * @param disabledContentColor the content color of this text button when not enabled.
  */
 @Immutable
-class TextButtonColors constructor(
+class TextButtonColors(
     val containerColor: Color,
     val contentColor: Color,
     val disabledContainerColor: Color,
     val disabledContentColor: Color,
 ) {
+
+    internal fun copy(
+        containerColor: Color,
+        contentColor: Color,
+        disabledContainerColor: Color,
+        disabledContentColor: Color
+    ) = TextButtonColors(
+        containerColor = containerColor.takeOrElse { this.containerColor },
+        contentColor = contentColor.takeOrElse { this.contentColor },
+        disabledContainerColor = disabledContainerColor.takeOrElse { this.disabledContainerColor },
+        disabledContentColor = disabledContentColor.takeOrElse { this.disabledContentColor }
+    )
     /**
      * Represents the container color for this text button, depending on [enabled].
      *
      * @param enabled whether the text button is enabled
      */
-    @Composable
-    internal fun containerColor(enabled: Boolean): State<Color> {
-        return rememberUpdatedState(if (enabled) containerColor else disabledContainerColor)
+    @Stable
+    internal fun containerColor(enabled: Boolean): Color {
+        return if (enabled) containerColor else disabledContainerColor
     }
 
     /**
@@ -369,9 +493,9 @@ class TextButtonColors constructor(
      *
      * @param enabled whether the text button is enabled
      */
-    @Composable
-    internal fun contentColor(enabled: Boolean): State<Color> {
-        return rememberUpdatedState(if (enabled) contentColor else disabledContentColor)
+    @Stable
+    internal fun contentColor(enabled: Boolean): Color {
+        return if (enabled) contentColor else disabledContentColor
     }
 
     override fun equals(other: Any?): Boolean {

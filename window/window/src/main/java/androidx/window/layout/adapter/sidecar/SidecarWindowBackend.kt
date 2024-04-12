@@ -15,7 +15,6 @@
  */
 package androidx.window.layout.adapter.sidecar
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.util.Log
@@ -131,7 +130,7 @@ internal class SidecarWindowBackend @VisibleForTesting constructor(
      * Checks if there are no more registered callbacks left for the activity and inform
      * extension if needed.
      */
-    @GuardedBy("sLock")
+    @GuardedBy("globalLock")
     private fun callbackRemovedForActivity(activity: Activity) {
         val hasRegisteredCallback = windowLayoutChangeCallbacks.any { wrapper ->
             wrapper.activity == activity
@@ -145,7 +144,6 @@ internal class SidecarWindowBackend @VisibleForTesting constructor(
 
     @VisibleForTesting
     internal inner class ExtensionListenerImpl : ExtensionCallbackInterface {
-        @SuppressLint("SyntheticAccessor")
         override fun onWindowLayoutChanged(
             activity: Activity,
             newLayout: WindowLayoutInfo

@@ -28,7 +28,8 @@
         <ignore path="**/src/test/**" />
         <ignore path="**/src/androidTest/**" />
         <!-- Required for Kotlin multi-platform tests. -->
-        <ignore path="**/src/androidAndroidTest/**" />
+        <ignore path="**/src/androidInstrumentedTest/**" />
+        <ignore path="**/src/androidUnitTest/**" />
         <ignore path="**/src/jvmTest/**" />
         <ignore path="**/src/commonTest/**" />
         <!-- Required for AppSearch icing tests. -->
@@ -40,6 +41,7 @@
     <issue id="WrongThread" severity="fatal" />
     <issue id="MissingTestSizeAnnotation" severity="fatal" />
     <issue id="IgnoreClassLevelDetector" severity="fatal" />
+    <issue id="WithPluginClasspathUsage" severity="fatal" />
     <!-- Disable all lint checks on transformed classes by default. b/283812176 -->
     <issue id="all">
         <ignore path="**/.transforms/**" />

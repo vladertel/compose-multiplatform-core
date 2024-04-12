@@ -16,16 +16,14 @@
 
 package androidx.compose.ui.focus
 
-import androidx.compose.ui.ExperimentalComposeUiApi
-
 /**
  * The [FocusDirection] is used to specify the direction for a [FocusManager.moveFocus]
  * request.
  *
  * @sample androidx.compose.ui.samples.MoveFocusSample
  */
-@kotlin.jvm.JvmInline
-value class FocusDirection internal constructor(@Suppress("unused") private val value: Int) {
+@JvmInline
+value class FocusDirection internal constructor(private val value: Int) {
 
     override fun toString(): String {
         return when (this) {
@@ -35,9 +33,7 @@ value class FocusDirection internal constructor(@Suppress("unused") private val 
             Right -> "Right"
             Up -> "Up"
             Down -> "Down"
-            @OptIn(ExperimentalComposeUiApi::class)
             Enter -> "Enter"
-            @OptIn(ExperimentalComposeUiApi::class)
             Exit -> "Exit"
             else -> "Invalid FocusDirection"
         }
@@ -96,46 +92,12 @@ value class FocusDirection internal constructor(@Suppress("unused") private val 
          *  Direction used in [FocusManager.moveFocus] to indicate that you are searching for the
          *  next focusable item that is a child of the currently focused item.
          */
-        @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-        @get:ExperimentalComposeUiApi
-        @ExperimentalComposeUiApi
         val Enter: FocusDirection = FocusDirection(7)
 
         /**
          *  Direction used in [FocusManager.moveFocus] to indicate that you want to move focus to
          *  the parent of the currently focused item.
          */
-        @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-        @get:ExperimentalComposeUiApi
-        @ExperimentalComposeUiApi
         val Exit: FocusDirection = FocusDirection(8)
-
-        /**
-         *  Direction used in [FocusManager.moveFocus] to indicate that you are searching for the
-         *  next focusable item that is a child of the currently focused item.
-         */
-        @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET", "Unused")
-        @get:ExperimentalComposeUiApi
-        @ExperimentalComposeUiApi
-        @Deprecated(
-            "Use FocusDirection.Enter instead.",
-            ReplaceWith("Enter", "androidx.compose.ui.focus.FocusDirection.Companion.Enter"),
-            DeprecationLevel.WARNING
-        )
-        val In: FocusDirection = Enter
-
-        /**
-         *  Direction used in [FocusManager.moveFocus] to indicate that you want to move focus to
-         *  the parent of the currently focused item.
-         */
-        @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET", "Unused")
-        @get:ExperimentalComposeUiApi
-        @ExperimentalComposeUiApi
-        @Deprecated(
-            "Use FocusDirection.Exit instead.",
-            ReplaceWith("Exit", "androidx.compose.ui.focus.FocusDirection.Companion.Exit"),
-            DeprecationLevel.WARNING
-        )
-        val Out: FocusDirection = Exit
     }
 }

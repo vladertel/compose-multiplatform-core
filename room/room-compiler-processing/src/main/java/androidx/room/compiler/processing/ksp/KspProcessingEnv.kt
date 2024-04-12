@@ -17,6 +17,8 @@
 package androidx.room.compiler.processing.ksp
 
 import androidx.room.compiler.processing.XConstructorType
+import androidx.room.compiler.processing.XElement
+import androidx.room.compiler.processing.XExecutableElementStore
 import androidx.room.compiler.processing.XExecutableType
 import androidx.room.compiler.processing.XFiler
 import androidx.room.compiler.processing.XMessager
@@ -28,13 +30,17 @@ import androidx.room.compiler.processing.XTypeElement
 import androidx.room.compiler.processing.javac.XTypeElementStore
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getClassDeclarationByName
+import com.google.devtools.ksp.processing.JsPlatformInfo
 import com.google.devtools.ksp.processing.JvmPlatformInfo
+import com.google.devtools.ksp.processing.NativePlatformInfo
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFile
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeAlias
 import com.google.devtools.ksp.symbol.KSTypeArgument
@@ -55,6 +61,16 @@ internal class KspProcessingEnv(
     private val jvmPlatformInfo by lazy {
         delegate.platforms.filterIsInstance<JvmPlatformInfo>().firstOrNull()
     }
+
+    override val targetPlatforms: Set<XProcessingEnv.Platform> =
+        delegate.platforms.map { platform ->
+            when (platform) {
+                is JvmPlatformInfo -> XProcessingEnv.Platform.JVM
+                is NativePlatformInfo -> XProcessingEnv.Platform.NATIVE
+                is JsPlatformInfo -> XProcessingEnv.Platform.JS
+                else -> XProcessingEnv.Platform.UNKNOWN
+            }
+        }.toSet()
 
     override val jvmVersion by lazy {
        when (val jvmTarget = jvmPlatformInfo?.jvmTarget) {
@@ -100,6 +116,13 @@ internal class KspProcessingEnv(
             }
         )
 
+    private val executableElementStore =
+        XExecutableElementStore(
+            wrap = { functionDeclaration: KSFunctionDeclaration ->
+                KspExecutableElement.create(this, functionDeclaration)
+            }
+        )
+
     override val messager: XMessager = KspMessager(logger)
 
     private val arrayTypeFactory by lazy {
@@ -124,6 +147,10 @@ internal class KspProcessingEnv(
 
     override fun findTypeElement(qName: String): KspTypeElement? {
         return typeElementStore[qName]
+    }
+
+    fun wrapFunctionDeclaration(ksFunction: KSFunctionDeclaration): KspExecutableElement {
+        return executableElementStore[ksFunction]
     }
 
     @OptIn(KspExperimental::class)
@@ -201,6 +228,18 @@ internal class KspProcessingEnv(
     override fun getArrayType(type: XType): KspArrayType {
         check(type is KspType)
         return arrayTypeFactory.createWithComponentType(type)
+    }
+
+    @OptIn(KspExperimental::class)
+    override fun getElementsFromPackage(packageName: String): List<XElement> {
+        return resolver.getDeclarationsFromPackage(packageName).map {
+            when (it) {
+                is KSClassDeclaration -> wrapClassDeclaration(it)
+                is KSPropertyDeclaration -> KspFieldElement.create(this, it)
+                is KSFunctionDeclaration -> KspMethodElement.create(this, it)
+                else -> error("Unknown element type")
+            }
+        }.toList()
     }
 
     /**

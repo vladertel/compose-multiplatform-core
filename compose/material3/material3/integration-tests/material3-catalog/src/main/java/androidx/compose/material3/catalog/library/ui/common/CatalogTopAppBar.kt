@@ -19,7 +19,7 @@ package androidx.compose.material3.catalog.library.ui.common
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.PushPin
@@ -82,19 +82,19 @@ fun CatalogTopAppBar(
                                 MaterialTheme.colorScheme.primary
                             else
                                 LocalContentColor.current,
-                            contentDescription = null
+                            contentDescription = stringResource(id = R.string.favorite_button)
                         )
                     }
                     IconButton(onClick = onThemeClick) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_palette_24dp),
-                            contentDescription = null
+                            contentDescription = stringResource(id = R.string.change_theme_button)
                         )
                     }
                     IconButton(onClick = { moreMenuExpanded = true }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = null
+                            contentDescription = stringResource(id = R.string.more_menu_button)
                         )
                     }
                 }
@@ -136,8 +136,8 @@ fun CatalogTopAppBar(
             if (showBackNavigationIcon) {
                 IconButton(onClick = onBackClick) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = null
+                        imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                        contentDescription = stringResource(id = R.string.back_button)
                     )
                 }
             }

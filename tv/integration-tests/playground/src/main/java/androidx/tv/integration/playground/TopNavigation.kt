@@ -26,7 +26,11 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -42,17 +46,23 @@ enum class Navigation(val displayName: String, val action: @Composable () -> Uni
     ModalNavigationDrawer("Modal Navigation Drawer", { ModalNavigationDrawer() }),
     LazyRowsAndColumns("Lazy Rows and Columns", { LazyRowsAndColumns() }),
     FeaturedCarousel("Featured Carousel", { FeaturedCarouselContent() }),
-    ImmersiveList("Immersive List", { ImmersiveListContent() }),
     TextField("Text Field", { TextFieldContent() }),
-    StickyHeader("Sticky Header", { StickyHeaderContent() }),
+    StickyHeader("Sticky Header", { StickyHeaderContent() });
+
+    fun toRouteValue(): String {
+        return "/${displayName.lowercase().replace(' ', '-')}";
+    }
 }
 
 @Composable
 internal fun TopNavigation(
+    initialSelectedTab: Navigation,
     updateSelectedTab: (Navigation) -> Unit = {},
 ) {
-    var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = Navigation.values().map { it.displayName }
+    var selectedTabIndex by remember {
+        mutableStateOf(Navigation.values().indexOf(initialSelectedTab))
+    }
 
     // Pill indicator
     PillIndicatorTabRow(
@@ -79,27 +89,25 @@ internal fun TopNavigation(
 /**
  * Pill indicator tab row for reference
  */
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun PillIndicatorTabRow(
     tabs: List<String>,
     selectedTabIndex: Int,
     updateSelectedTab: (Int) -> Unit
 ) {
-    val focusRestorerModifiers = createCustomInitialFocusRestorerModifiers()
+    val focusRequester = remember { FocusRequester() }
 
     TabRow(
         selectedTabIndex = selectedTabIndex,
-        modifier = Modifier
-            .then(focusRestorerModifiers.parentModifier)
+        modifier = Modifier.focusRestorer { focusRequester }
     ) {
         tabs.forEachIndexed { index, tab ->
             key(index) {
                 Tab(
                     selected = index == selectedTabIndex,
                     onFocus = { updateSelectedTab(index) },
-                    modifier = Modifier
-                        .ifElse(index == 0, focusRestorerModifiers.childModifier)
+                    modifier = Modifier.ifElse(index == 0, Modifier.focusRequester(focusRequester))
                 ) {
                     Text(
                         text = tab,
@@ -115,33 +123,33 @@ fun PillIndicatorTabRow(
 /**
  * Underlined indicator tab row for reference
  */
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun UnderlinedIndicatorTabRow(
     tabs: List<String>,
     selectedTabIndex: Int,
     updateSelectedTab: (Int) -> Unit
 ) {
-    val focusRestorerModifiers = createCustomInitialFocusRestorerModifiers()
+    val focusRequester = remember { FocusRequester() }
 
     TabRow(
         selectedTabIndex = selectedTabIndex,
         separator = { Spacer(modifier = Modifier.width(12.dp)) },
-        indicator = { tabPositions, isActivated ->
+        indicator = { tabPositions, doesTabRowHaveFocus ->
             TabRowDefaults.UnderlinedIndicator(
                 currentTabPosition = tabPositions[selectedTabIndex],
-                isActivated = isActivated,
+                doesTabRowHaveFocus = doesTabRowHaveFocus,
             )
         },
         modifier = Modifier
-            .then(focusRestorerModifiers.parentModifier),
+            .focusRestorer { focusRequester },
     ) {
         tabs.forEachIndexed { index, tab ->
             Tab(
                 selected = index == selectedTabIndex,
                 onFocus = { updateSelectedTab(index) },
                 modifier = Modifier
-                    .ifElse(index == 0, focusRestorerModifiers.childModifier),
+                    .ifElse(index == 0, Modifier.focusRequester(focusRequester)),
                 colors = TabDefaults.underlinedIndicatorTabColors(),
             ) {
                 Text(

@@ -31,6 +31,8 @@ import androidx.wear.compose.foundation.samples.ExpandableTextSample
 import androidx.wear.compose.foundation.samples.ExpandableWithItemsSample
 import androidx.wear.compose.foundation.samples.HierarchicalFocusCoordinatorSample
 import androidx.wear.compose.foundation.samples.OversizeComposable
+import androidx.wear.compose.foundation.samples.RotaryScrollSample
+import androidx.wear.compose.foundation.samples.RotarySnapSample
 import androidx.wear.compose.foundation.samples.ScalingLazyColumnEdgeAnchoredAndAnimatedScrollTo
 import androidx.wear.compose.foundation.samples.SimpleCurvedWorld
 import androidx.wear.compose.foundation.samples.SimpleScalingLazyColumn
@@ -38,9 +40,10 @@ import androidx.wear.compose.foundation.samples.SimpleScalingLazyColumnWithConte
 import androidx.wear.compose.foundation.samples.SimpleScalingLazyColumnWithSnap
 import androidx.wear.compose.foundation.samples.SimpleSwipeToDismissBox
 import androidx.wear.compose.foundation.samples.StatefulSwipeToDismissBox
-import androidx.wear.compose.foundation.samples.SwipeToRevealWithExpandables
 import androidx.wear.compose.integration.demos.common.ComposableDemo
 import androidx.wear.compose.integration.demos.common.DemoCategory
+import androidx.wear.compose.material.samples.SwipeToRevealCardSample
+import androidx.wear.compose.material.samples.SwipeToRevealChipSample
 
 // Declare the swipe to dismiss demos so that we can use this variable as the background composable
 // for the SwipeToDismissDemo itself.
@@ -114,7 +117,15 @@ val WearFoundationDemos = DemoCategory(
         )),
         ComposableDemo("Scrollable Column") { ScrollableColumnDemo() },
         ComposableDemo("Scrollable Row") { ScrollableRowDemo() },
-        DemoCategory("Rotary Input", RotaryInputDemos),
+        DemoCategory("Rotary Input", listOf(
+            DemoCategory("Samples", listOf(
+                ComposableDemo(".rotary with scroll") { RotaryScrollSample() },
+                ComposableDemo(".rotary with snap") { RotarySnapSample() },
+                ComposableDemo("RotaryEvent") { ScrollUsingRotatingCrownDemo() },
+                ComposableDemo("PreRotaryEvent") { InterceptScrollDemo() }
+            )),
+            DemoCategory("Demos", listOf())
+        )),
         ComposableDemo("Focus Sample") { HierarchicalFocusCoordinatorSample() },
         DemoCategory("Scaling Lazy Column", listOf(
                 ComposableDemo(
@@ -150,21 +161,28 @@ val WearFoundationDemos = DemoCategory(
         DemoCategory(
             "Swipe To Reveal",
             listOf(
-                ComposableDemo("Swipe To Reveal Chip") {
-                    SwipeToRevealChips()
-                },
-                ComposableDemo("Swipe To Reveal Card") {
-                    SwipeToRevealCards()
-                },
-                ComposableDemo("Swipe To Reveal - Custom") {
-                    SwipeToRevealWithSingleAction()
-                },
-                ComposableDemo("Swipe To Reveal - RTL") {
-                    SwipeToRevealInRtl()
-                },
-                ComposableDemo("Swipe To Reveal - Expandable") {
-                    SwipeToRevealWithExpandables()
-                }
+                DemoCategory(
+                    "Samples",
+                    listOf(
+                        ComposableDemo("Material S2R Chip") { params ->
+                            SwipeToRevealChipSample(params.swipeToDismissBoxState)
+                        },
+                        ComposableDemo("Material S2R Card") { params ->
+                            SwipeToRevealCardSample(params.swipeToDismissBoxState)
+                        },
+                    )
+                ),
+                DemoCategory(
+                    "Demos",
+                    listOf(
+                        ComposableDemo("S2R Chip") { params ->
+                            SwipeToRevealChips(params.swipeToDismissBoxState)
+                        },
+                        ComposableDemo("S2R Card") { params ->
+                            SwipeToRevealCards(params.swipeToDismissBoxState)
+                        },
+                    )
+                )
             )
         )
     ),

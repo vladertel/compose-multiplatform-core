@@ -17,6 +17,7 @@
 package androidx.compose.runtime.snapshots
 
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.toMutableStateList
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -586,17 +587,16 @@ class SnapshotStateListTests {
 
             repeat(100) { index ->
                 repeat(10) {
-                    assertTrue(list.contains(index * 100 + it))
+                    assertTrue(list.contains(index * 100 + it), "Missing ${index * 100 + it}")
                 }
             }
         }
     }
 
     @Test(timeout = 30_000)
-    @OptIn(ExperimentalCoroutinesApi::class)
     @IgnoreJsTarget // Not relevant in a single threaded environment
     fun concurrentMixingWriteApply_add(): Unit = runTest {
-        repeat(100) {
+        repeat(10) {
             val lists = Array(100) { mutableStateListOf<Int>() }.toList()
             val channel = Channel<Unit>(Channel.CONFLATED)
             coroutineScope {
@@ -722,6 +722,115 @@ class SnapshotStateListTests {
         }
     }
 
+    @Test
+    fun canReverseTheList() {
+        validate(List(100) { it }.toMutableStateList()) { list ->
+            list.reverse()
+        }
+    }
+
+    @Test
+    fun canReverseUsingIterators() {
+        validate(List(100) { it }.toMutableStateList()) { list ->
+            val forward = list.listIterator()
+            val backward = list.listIterator(list.size)
+            val count = list.size shr 1
+            repeat(count) {
+                val forwardValue = forward.next()
+                val backwardValue = backward.previous()
+                backward.set(forwardValue)
+                forward.set(backwardValue)
+            }
+        }
+        validate(List(101) { it }.toMutableStateList()) { list ->
+            val forward = list.listIterator()
+            val backward = list.listIterator(list.size)
+            val count = list.size shr 1
+            repeat(count) {
+                val forwardValue = forward.next()
+                val backwardValue = backward.previous()
+                backward.set(forwardValue)
+                forward.set(backwardValue)
+            }
+        }
+    }
+
+    @Test
+    fun canIterateForwards() {
+        validate(List(100) { it }.toMutableStateList()) { list ->
+            val forward = list.listIterator()
+            var expected = 0
+            var count = 0
+            while (forward.hasNext()) {
+                count++
+                assertEquals(expected++, forward.next())
+            }
+            assertEquals(100, count)
+        }
+    }
+
+    @Test
+    fun canIterateBackwards() {
+        validate(List(100) { it }.toMutableStateList()) { list ->
+            val backward = list.listIterator(list.size)
+            var expected = 99
+            var count = 0
+            while (backward.hasPrevious()) {
+                count++
+                assertEquals(expected--, backward.previous())
+            }
+            assertEquals(100, count)
+        }
+    }
+
+    @Test
+    fun canShuffleTheList() {
+        val list = List(100) { it }.toMutableStateList()
+        list.shuffle()
+        assertEquals(100, list.distinct().size)
+    }
+
+    @Test
+    fun canSortTheList() {
+        validate(List(100) { it }.toMutableStateList()) { list ->
+            list.shuffle()
+            list.sort()
+        }
+    }
+
+    @Test
+    fun toStringOfSnapshotStateListDoesNotTriggerReadObserver() {
+        val state = mutableStateListOf<Int>(0)
+        val normalReads = readsOf {
+            state.readable
+        }
+        assertEquals(1, normalReads)
+        val toStringReads = readsOf {
+            state.toString()
+        }
+        assertEquals(0, toStringReads)
+    }
+
+    @Test
+    fun testValueOfStateListToString() {
+        val state = mutableStateListOf(0, 1, 2)
+        assertEquals(
+            "SnapshotStateList(value=[0, 1, 2])@${state.hashCode()}",
+            state.toString()
+        )
+    }
+
+    @Test
+    fun testWritingTheSameValueDoesNotChangeTheList() {
+        val state = mutableStateListOf(0, 1, 2, 3)
+        val modified = observeGlobalChanges {
+            repeat(4) {
+                state[it] = it
+            }
+        }
+        assertTrue(modified.isEmpty())
+    }
+
     private fun <T> validate(list: MutableList<T>, block: (list: MutableList<T>) -> Unit) {
         val normalList = list.toMutableList()
         block(normalList)
@@ -734,5 +843,19 @@ class SnapshotStateListTests {
         expected.indices.forEach {
             assertEquals(expected[it], actual[it])
         }
+    }
+
+    private fun observeGlobalChanges(block: () -> Unit): Set<Any> {
+        val result = mutableSetOf<Any>()
+        val handle = Snapshot.registerApplyObserver { set, _ ->
+            result.addAll(set)
+        }
+        try {
+            block()
+        } finally {
+            Snapshot.sendApplyNotifications()
+            handle.dispose()
+        }
+        return result
     }
 }

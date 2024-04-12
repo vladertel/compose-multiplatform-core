@@ -71,7 +71,7 @@ val DefaultFillType = PathFillType.NonZero
 
 inline fun PathData(block: PathBuilder.() -> Unit) = with(PathBuilder()) {
     block()
-    getNodes()
+    nodes
 }
 
 fun addPathNodes(pathStr: String?) = if (pathStr == null) {
@@ -94,9 +94,10 @@ sealed class VNode {
     abstract fun DrawScope.draw()
 }
 
-internal class VectorComponent : VNode() {
-    val root = GroupComponent().apply {
-        invalidateListener = {
+internal class VectorComponent(val root: GroupComponent) : VNode() {
+
+    init {
+        root.invalidateListener = {
             doInvalidate()
         }
     }
@@ -643,7 +644,7 @@ internal fun Color.rgbEqual(other: Color) =
  * if the bitmap has an Alpha8 or ARGB8888 configuration
  */
 internal fun ColorFilter?.tintableWithAlphaMask() = if (this is BlendModeColorFilter) {
-    this.blendMode == BlendMode.SrcIn
+    this.blendMode == BlendMode.SrcIn || this.blendMode == BlendMode.SrcOver
 } else {
     this == null
 }

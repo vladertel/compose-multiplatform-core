@@ -24,7 +24,7 @@ import androidx.build.addToBuildOnServer
 import androidx.build.getDistributionDirectory
 import androidx.build.getPrebuiltsRoot
 import androidx.build.getSupportRootFolder
-import androidx.build.gitclient.MultiGitClient
+import androidx.build.gitclient.getHeadShaProvider
 import androidx.inspection.gradle.EXPORT_INSPECTOR_DEPENDENCIES
 import androidx.inspection.gradle.IMPORT_INSPECTOR_DEPENDENCIES
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
@@ -83,7 +83,10 @@ private val excludeTaskNames =
         "bundleDebugLocalLintAar",
         "bundleReleaseLocalLintAar",
         "bundleDebugAar",
-        "bundleReleaseAar"
+        "bundleReleaseAar",
+        "bundleAndroidMainAar",
+        "bundleAndroidMainLocalLintAar",
+        "repackageAndroidMainAar",
     )
 
 /**
@@ -140,7 +143,7 @@ fun Project.listSbomConfigurationNamesForArchive(task: AbstractArchiveTask): Lis
     // its configurations.
     // If a project has multiple shadowJar tasks, we ask the developer to provide
     // this metadata somehow by failing below
-    if (taskName == "shadowJar") {
+    if (taskName == "shadowJar" || taskName == "shadowLibraryJar") {
         // If the task is a ShadowJar task, we can just ask it which configurations it intends to
         // embed
         // We separately validate that this list is correct in
@@ -152,10 +155,14 @@ fun Project.listSbomConfigurationNamesForArchive(task: AbstractArchiveTask): Lis
         }
     }
 
+    if (taskName == "stubAar") {
+        return listOf()
+    }
+
     throw GradleException(
         "Not sure which external dependencies are included in $projectPath:$taskName of type " +
             "${task::class.java} (this is used for publishing sboms). Please update " +
-            "AndroidXImplPlugin's listSbomConfigurationNamesForArchive and " +
+            "Sbom.kt's listSbomConfigurationNamesForArchive and " +
             "shouldSbomIncludeConfigurationName"
     )
 }
@@ -206,40 +213,40 @@ fun Project.configureSbomPublishing() {
     val projectName = project.name
     val projectVersion = project.version.toString()
 
-    project.configurations.create(sbomEmptyConfiguration)
+    project.configurations.create(sbomEmptyConfiguration) { emptyConfiguration ->
+        emptyConfiguration.isCanBeConsumed = false
+    }
     project.apply(plugin = "org.spdx.sbom")
     val repos = getRepoPublicUrls()
-    val gitsClient = MultiGitClient.create(project)
+    val headShaProvider = getHeadShaProvider(project)
     val supportRootDir = getSupportRootFolder()
 
     val allowPublicRepos = System.getenv("ALLOW_PUBLIC_REPOS") != null
     val sbomPublishDir = project.getSbomPublishDir()
 
-    val sbomBuiltFile = project.layout.buildDirectory.file(
-        "spdx/release.spdx.json"
-    ).get().getAsFile()
+    val sbomBuiltFile =
+        project.layout.buildDirectory.file("spdx/release.spdx.json").get().getAsFile()
 
-    val publishTask = project.tasks.register("exportSboms", Copy::class.java) { publishTask ->
-        publishTask.destinationDir = sbomPublishDir
-        val sbomBuildDir = sbomBuiltFile.parentFile
-        publishTask.from(sbomBuildDir)
-        publishTask.rename(sbomBuiltFile.name, "$projectName-$projectVersion.spdx.json")
+    val publishTask =
+        project.tasks.register("exportSboms", Copy::class.java) { publishTask ->
+            publishTask.destinationDir = sbomPublishDir
+            val sbomBuildDir = sbomBuiltFile.parentFile
+            publishTask.from(sbomBuildDir)
+            publishTask.rename(sbomBuiltFile.name, "$projectName-$projectVersion.spdx.json")
 
-        publishTask.doFirst {
-            if (!sbomBuiltFile.exists()) {
-                throw GradleException(
-                    "sbom file does not exist: $sbomBuiltFile"
-                )
+            publishTask.doFirst {
+                if (!sbomBuiltFile.exists()) {
+                    throw GradleException("sbom file does not exist: $sbomBuiltFile")
+                }
             }
         }
-    }
 
     project.tasks.withType(SpdxSbomTask::class.java).configureEach { task ->
         val sbomProjectDir = project.projectDir
 
         task.taskExtension.set(
             object : DefaultSpdxSbomTaskExtension() {
-                override fun mapRepoUri(repoUri: URI, artifact: ModuleVersionIdentifier): URI {
+                override fun mapRepoUri(repoUri: URI?, artifact: ModuleVersionIdentifier): URI {
                     val uriString = repoUri.toString()
                     for (repo in repos) {
                         val ourRepoUrl = repo.key
@@ -262,10 +269,8 @@ fun Project.configureSbomPublishing() {
                     original: ScmInfo,
                     projectInfo: ProjectInfo
                 ): ScmInfo {
-                    val gitClient = gitsClient.getGitClient(projectInfo.projectDirectory)
-                    val commit = gitClient.getHeadSha()
                     val url = getGitRemoteUrl(projectInfo.projectDirectory, supportRootDir)
-                    return ScmInfo.from("git", url, commit)
+                    return ScmInfo.from("git", url, headShaProvider.get())
                 }
 
                 override fun shouldCreatePackageForProject(projectInfo: ProjectInfo): Boolean {
@@ -302,9 +307,7 @@ fun Project.configureSbomPublishing() {
             target.getConfigurations().set(sbomConfigurations)
         }
         project.addToBuildOnServer(tasks.named("spdxSbomForRelease"))
-        publishTask.configure { task ->
-            task.dependsOn("spdxSbomForRelease")
-        }
+        publishTask.configure { task -> task.dependsOn("spdxSbomForRelease") }
     }
 }
 

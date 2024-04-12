@@ -28,10 +28,9 @@ import android.window.BackEvent
 import androidx.activity.BackEventCompat
 import androidx.annotation.AnimatorRes
 import androidx.annotation.LayoutRes
-import androidx.annotation.RequiresApi
-import androidx.core.view.ViewCompat
 import androidx.fragment.app.test.FragmentTestActivity
 import androidx.fragment.test.R
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelStore
 import androidx.test.annotation.UiThreadTest
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -147,7 +146,6 @@ class FragmentAnimatorTest {
 
     // Ensure that showing and popping a Fragment uses the enter and popExit animators
     // This tests reordered transactions
-    @RequiresApi(16)
     @Test
     fun showAnimatorsReordered() {
         val fm = activityRule.activity.supportFragmentManager
@@ -191,7 +189,6 @@ class FragmentAnimatorTest {
 
     // Ensure that showing and popping a Fragment uses the enter and popExit animators
     // This tests ordered transactions
-    @RequiresApi(16)
     @Test
     fun showAnimatorsOrdered() {
         val fm = activityRule.activity.supportFragmentManager
@@ -410,7 +407,6 @@ class FragmentAnimatorTest {
 
     // Ensure that removing and popping a Fragment uses the exit and popEnter animators,
     // but the animators are delayed when an entering Fragment is postponed.
-    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     @Test
     fun postponedRemoveAnimators() {
         val fm = activityRule.activity.supportFragmentManager
@@ -463,7 +459,7 @@ class FragmentAnimatorTest {
         assertThat(fragment1.requireView()).isNotNull()
         assertThat(fragment1.requireView().visibility).isEqualTo(View.VISIBLE)
         assertThat(fragment1.requireView().alpha).isWithin(0f).of(1f)
-        assertThat(ViewCompat.isAttachedToWindow(fragment1.requireView())).isTrue()
+        assertThat(fragment1.requireView().isAttachedToWindow()).isTrue()
 
         fragment2.startPostponedEnterTransition()
         activityRule.waitForExecution()
@@ -503,7 +499,7 @@ class FragmentAnimatorTest {
 
         assertThat(fragment1.view).isNotNull()
         assertThat(fragment1.requireView().alpha).isWithin(0f).of(1f)
-        assertThat(ViewCompat.isAttachedToWindow(fragment1.requireView())).isTrue()
+        assertThat(fragment1.requireView().isAttachedToWindow()).isTrue()
         assertThat(fragment1.isAdded).isTrue()
 
         assertThat(fragment2.view).isNull()
@@ -723,6 +719,83 @@ class FragmentAnimatorTest {
 
         // Make sure the original fragment was correctly readded to the container
         assertThat(fragment1.requireView().parent).isNotNull()
+    }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @Test
+    fun replaceOperationWithAnimatorsThenCancel() {
+        val fm1 = activityRule.activity.supportFragmentManager
+
+        val fragment1 = AnimatorFragment(R.layout.scene1)
+        fm1.beginTransaction()
+            .replace(R.id.fragmentContainer, fragment1, "1")
+            .addToBackStack(null)
+            .commit()
+        activityRule.waitForExecution()
+
+        val fragment2 = AnimatorFragment()
+
+        fm1.beginTransaction()
+            .setCustomAnimations(
+                android.R.animator.fade_in,
+                android.R.animator.fade_out,
+                android.R.animator.fade_in,
+                android.R.animator.fade_out
+            )
+            .replace(R.id.fragmentContainer, fragment2, "2")
+            .addToBackStack(null)
+            .commit()
+        activityRule.executePendingTransactions(fm1)
+
+        assertThat(fragment2.wasStarted).isTrue()
+        // We need to wait for the exit animation to end
+        assertThat(fragment1.endLatch.await(1000, TimeUnit.MILLISECONDS)).isTrue()
+
+        val dispatcher = activityRule.activity.onBackPressedDispatcher
+        activityRule.runOnUiThread {
+            dispatcher.dispatchOnBackStarted(BackEventCompat(0.1F, 0.1F, 0.1F, BackEvent.EDGE_LEFT))
+        }
+        activityRule.executePendingTransactions(fm1)
+
+        fragment2.resumeLatch = CountDownLatch(1)
+
+        activityRule.runOnUiThread {
+            dispatcher.dispatchOnBackProgressed(
+                BackEventCompat(0.2F, 0.2F, 0.2F, BackEvent.EDGE_LEFT)
+            )
+        }
+        activityRule.executePendingTransactions(fm1)
+
+        if (FragmentManager.USE_PREDICTIVE_BACK) {
+            assertThat(fragment1.startLatch.await(1000, TimeUnit.MILLISECONDS)).isTrue()
+            assertThat(fragment2.startLatch.await(1000, TimeUnit.MILLISECONDS)).isTrue()
+            assertThat(fragment1.inProgress).isTrue()
+            assertThat(fragment2.inProgress).isTrue()
+        } else {
+            assertThat(fragment1.inProgress).isFalse()
+            assertThat(fragment1.inProgress).isFalse()
+        }
+
+        activityRule.runOnUiThread {
+            dispatcher.dispatchOnBackCancelled()
+        }
+        activityRule.executePendingTransactions(fm1)
+
+        assertThat(fragment2.wasStarted).isTrue()
+        // Now fragment1 should be animating away
+        assertThat(fragment1.isAdded).isFalse()
+
+        // Now fragment2 should be animating back in
+        assertThat(fragment2.isAdded).isTrue()
+        assertThat(fm1.findFragmentByTag("2")).isEqualTo(fragment2)
+
+        assertThat(fragment2.resumeLatch.await(1000, TimeUnit.MILLISECONDS)).isTrue()
+
+        // Make sure the original fragment was correctly readded to the container
+        assertThat(fragment2.view?.parent).isNotNull()
+
+        assertThat(fragment1.lifecycle.currentState).isEqualTo(Lifecycle.State.CREATED)
+        assertThat(fragment1.view).isNull()
     }
 
     private fun assertEnterPopExit(fragment: AnimatorFragment) {

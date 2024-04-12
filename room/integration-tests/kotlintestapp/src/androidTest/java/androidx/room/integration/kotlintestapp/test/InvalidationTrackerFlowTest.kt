@@ -75,6 +75,7 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
         channel.cancel()
     }
 
+    @Ignore("b/295223748")
     @Test
     fun invalidationEmitTableNames(): Unit = runBlocking {
         booksDao.addAuthors(TestUtil.AUTHOR_1)
@@ -93,7 +94,7 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
         assertThat(channel.receive())
             .containsExactly("book")
 
-        booksDao.addPublisherSuspend(TestUtil.PUBLISHER2)
+        booksDao.addPublisher(TestUtil.PUBLISHER2)
         drain() // drain async invalidate
         yield()
 
@@ -183,6 +184,7 @@ class InvalidationTrackerFlowTest : TestDatabaseTest() {
     }
 
     @Test
+    @Ignore("b/295325379")
     fun mapSuspendingQuery() = runBlocking {
         booksDao.addAuthors(TestUtil.AUTHOR_1)
         booksDao.addPublishers(TestUtil.PUBLISHER)

@@ -16,6 +16,7 @@
 
 package androidx.test.uiautomator;
 
+import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.annotation.SuppressLint;
 import android.app.Instrumentation;
@@ -78,12 +79,16 @@ public class UiDevice implements Searchable {
 
     static final String TAG = UiDevice.class.getSimpleName();
 
+    private static final int MAX_UIAUTOMATION_RETRY = 3;
+    private static final int UIAUTOMATION_RETRY_INTERVAL = 500; // ms
+    // Workaround for stale accessibility cache issues: duration after which the a11y service flags
+    // should be reset (when fetching a UiAutomation instance) to periodically invalidate the cache.
+    private static final long SERVICE_FLAGS_TIMEOUT = 2_000; // ms
+
     // Use a short timeout after HOME or BACK key presses, as no events might be generated if
     // already on the home page or if there is nothing to go back to.
     private static final long KEY_PRESS_EVENT_TIMEOUT = 1_000; // ms
     private static final long ROTATION_TIMEOUT = 2_000; // ms
-    private static final int MAX_UIAUTOMATION_RETRY = 3;
-    private static final int UIAUTOMATION_RETRY_INTERVAL = 500;
 
     // Singleton instance.
     private static UiDevice sInstance;
@@ -96,6 +101,7 @@ public class UiDevice implements Searchable {
 
     // Track accessibility service flags to determine when the underlying connection has changed.
     private int mCachedServiceFlags = -1;
+    private long mLastServiceFlagsTime = -1;
     private boolean mCompressed = false;
 
     // Lazily created UI context per display, used to access UI components/configurations.
@@ -280,13 +286,16 @@ public class UiDevice implements Searchable {
     }
 
     /**
-     * Retrieves a singleton instance of UiDevice
+     * Retrieves a singleton instance of UiDevice. A new instance will be created if
+     * instrumentation is also new.
      *
      * @return UiDevice instance
      */
     @NonNull
     public static UiDevice getInstance(@NonNull Instrumentation instrumentation) {
-        if (sInstance == null) {
+        if (sInstance == null || !instrumentation.equals(sInstance.mInstrumentation)) {
+            Log.i(TAG, String.format("Creating a new instance, old instance exists: %b",
+                    (sInstance != null)));
             sInstance = new UiDevice(instrumentation);
         }
         return sInstance;
@@ -513,12 +522,12 @@ public class UiDevice implements Searchable {
      * Simulates a short press on the Recent Apps button.
      *
      * @return true if successful, else return false
-     * @throws RemoteException
+     * @throws RemoteException never
      */
     public boolean pressRecentApps() throws RemoteException {
         waitForIdle();
         Log.d(TAG, "Pressing recent apps button.");
-        return getInteractionController().toggleRecentApps();
+        return getUiAutomation().performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS);
     }
 
     /**
@@ -529,7 +538,8 @@ public class UiDevice implements Searchable {
     public boolean openNotification() {
         waitForIdle();
         Log.d(TAG, "Opening notification.");
-        return  getInteractionController().openNotification();
+        return getUiAutomation().performGlobalAction(
+                AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);
     }
 
     /**
@@ -540,7 +550,8 @@ public class UiDevice implements Searchable {
     public boolean openQuickSettings() {
         waitForIdle();
         Log.d(TAG, "Opening quick settings.");
-        return getInteractionController().openQuickSettings();
+        return getUiAutomation().performGlobalAction(
+                AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS);
     }
 
     /**
@@ -559,6 +570,7 @@ public class UiDevice implements Searchable {
      *
      * @param displayId the display ID. Use {@link Display#getDisplayId()} to get the ID.
      * @return width in pixels
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
      */
     public @Px int getDisplayWidth(int displayId) {
         return getDisplaySize(displayId).x;
@@ -580,6 +592,7 @@ public class UiDevice implements Searchable {
      *
      * @param displayId the display ID. Use {@link Display#getDisplayId()} to get the ID.
      * @return height in pixels
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
      */
     public @Px int getDisplayHeight(int displayId) {
         return getDisplaySize(displayId).y;
@@ -798,23 +811,50 @@ public class UiDevice implements Searchable {
     }
 
     /**
-     * @return true if device is in its natural orientation (0 or 180 degrees)
+     * @return true if default display is in its natural or flipped (180 degrees) orientation
      */
     public boolean isNaturalOrientation() {
-        int ret = getDisplayRotation();
-        return ret == UiAutomation.ROTATION_FREEZE_0 || ret == UiAutomation.ROTATION_FREEZE_180;
+        return isNaturalOrientation(Display.DEFAULT_DISPLAY);
     }
 
     /**
-     * @return the current rotation of the display, as defined in {@link Surface}
+     * @return true if display with {@code displayId} is in its natural or flipped (180 degrees)
+     * orientation
+     * @see Display#getDisplayId()
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    private boolean isNaturalOrientation(int displayId) {
+        int ret = getDisplayRotation(displayId);
+        return ret == UiAutomation.ROTATION_FREEZE_0
+                || ret == UiAutomation.ROTATION_FREEZE_180;
+    }
+
+    /**
+     * @return the current rotation of the default display
+     * @see Display#getRotation()
      */
     public int getDisplayRotation() {
-        waitForIdle();
-        return getDisplayById(Display.DEFAULT_DISPLAY).getRotation();
+        return getDisplayRotation(Display.DEFAULT_DISPLAY);
     }
 
     /**
-     * Freezes the device rotation at its current state.
+     * @return the current rotation of the display with {@code displayId}
+     * @see Display#getDisplayId()
+     * @see Display#getRotation()
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    public int getDisplayRotation(int displayId) {
+        waitForIdle();
+        Display display = getDisplayById(displayId);
+        if (display == null) {
+            throw new IllegalArgumentException(String.format("Display %d not found or not "
+                    + "accessible", displayId));
+        }
+        return display.getRotation();
+    }
+
+    /**
+     * Freezes the default display rotation at its current state.
      * @throws RemoteException never
      */
     public void freezeRotation() throws RemoteException {
@@ -823,8 +863,35 @@ public class UiDevice implements Searchable {
     }
 
     /**
-     * Un-freezes the device rotation allowing its contents to rotate with the device physical
-     * rotation. During testing, it is best to keep the device frozen in a specific orientation.
+     * Freezes the rotation of the display with {@code displayId} at its current state.
+     * <p>Note: Only works on Android API level 30 (R) or above, where multi-display is
+     * officially supported.
+     * @see Display#getDisplayId()
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    @RequiresApi(30)
+    public void freezeRotation(int displayId) {
+        Log.d(TAG, String.format("Freezing rotation on display %d.", displayId));
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                executeShellCommand(String.format("cmd window user-rotation -d %d lock",
+                        displayId));
+            } else {
+                int rotation = getDisplayRotation(displayId);
+                executeShellCommand(String.format("cmd window set-user-rotation lock -d %d %d",
+                        displayId, rotation));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Un-freezes the default display rotation allowing its contents to rotate with its physical
+     * rotation. During testing, it is best to keep the default display frozen in a specific
+     * orientation.
+     * <p>Note: Need to wait a short period for the rotation animation to complete before
+     * performing another operation.
      * @throws RemoteException never
      */
     public void unfreezeRotation() throws RemoteException {
@@ -833,8 +900,36 @@ public class UiDevice implements Searchable {
     }
 
     /**
-     * Orients the device to the left and freezes rotation. Use {@link #unfreezeRotation()} to
-     * un-freeze the rotation.
+     * Un-freezes the rotation of the display with {@code displayId} allowing its contents to
+     * rotate with its physical rotation. During testing, it is best to keep the display frozen
+     * in a specific orientation.
+     * <p>Note: Need to wait a short period for the rotation animation to complete before
+     * performing another operation.
+     * <p>Note: Some secondary displays don't have rotation sensors and therefore won't respond
+     * to this method.
+     * <p>Note: Only works on Android API level 30 (R) or above, where multi-display is
+     * officially supported.
+     * @see Display#getDisplayId()
+     */
+    @RequiresApi(30)
+    public void unfreezeRotation(int displayId) {
+        Log.d(TAG, String.format("Unfreezing rotation on display %d.", displayId));
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                executeShellCommand(String.format("cmd window user-rotation -d %d free",
+                        displayId));
+            } else {
+                executeShellCommand(String.format("cmd window set-user-rotation free -d %d",
+                        displayId));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Orients the default display to the left and freezes rotation. Use
+     * {@link #unfreezeRotation()} to un-freeze the rotation.
      * <p>Note: This rotation is relative to the natural orientation which depends on the device
      * type (e.g. phone vs. tablet). Consider using {@link #setOrientationPortrait()} and
      * {@link #setOrientationLandscape()}.
@@ -842,12 +937,29 @@ public class UiDevice implements Searchable {
      */
     public void setOrientationLeft() throws RemoteException {
         Log.d(TAG, "Setting orientation to left.");
-        rotate(UiAutomation.ROTATION_FREEZE_90);
+        rotateWithUiAutomation(UiAutomation.ROTATION_FREEZE_90);
     }
 
     /**
-     * Orients the device to the right and freezes rotation. Use {@link #unfreezeRotation()} to
-     * un-freeze the rotation.
+     * Orients the display with {@code displayId} to the left and freezes rotation. Use
+     * {@link #unfreezeRotation()} to un-freeze the rotation.
+     * <p>Note: This rotation is relative to the natural orientation which depends on the device
+     * type (e.g. phone vs. tablet). Consider using {@link #setOrientationPortrait()} and
+     * {@link #setOrientationLandscape()}.
+     * <p>Note: Only works on Android API level 30 (R) or above, where multi-display is
+     * officially supported.
+     * @see Display#getDisplayId()
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    @RequiresApi(30)
+    public void setOrientationLeft(int displayId) {
+        Log.d(TAG, String.format("Setting orientation to left on display %d.", displayId));
+        rotateWithCommand(Surface.ROTATION_90, displayId);
+    }
+
+    /**
+     * Orients the default display to the right and freezes rotation. Use
+     * {@link #unfreezeRotation()} to un-freeze the rotation.
      * <p>Note: This rotation is relative to the natural orientation which depends on the device
      * type (e.g. phone vs. tablet). Consider using {@link #setOrientationPortrait()} and
      * {@link #setOrientationLandscape()}.
@@ -855,11 +967,28 @@ public class UiDevice implements Searchable {
      */
     public void setOrientationRight() throws RemoteException {
         Log.d(TAG, "Setting orientation to right.");
-        rotate(UiAutomation.ROTATION_FREEZE_270);
+        rotateWithUiAutomation(UiAutomation.ROTATION_FREEZE_270);
     }
 
     /**
-     * Orients the device to its natural orientation (0 or 180 degrees) and freezes rotation. Use
+     * Orients the display with {@code displayId} to the right and freezes rotation. Use
+     * {@link #unfreezeRotation()} to un-freeze the rotation.
+     * <p>Note: This rotation is relative to the natural orientation which depends on the device
+     * type (e.g. phone vs. tablet). Consider using {@link #setOrientationPortrait()} and
+     * {@link #setOrientationLandscape()}.
+     * <p>Note: Only works on Android API level 30 (R) or above, where multi-display is
+     * officially supported.
+     * @see Display#getDisplayId()
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    @RequiresApi(30)
+    public void setOrientationRight(int displayId) {
+        Log.d(TAG, String.format("Setting orientation to right on display %d.", displayId));
+        rotateWithCommand(Surface.ROTATION_270, displayId);
+    }
+
+    /**
+     * Orients the default display to its natural orientation and freezes rotation. Use
      * {@link #unfreezeRotation()} to un-freeze the rotation.
      * <p>Note: The natural orientation depends on the device type (e.g. phone vs. tablet).
      * Consider using {@link #setOrientationPortrait()} and {@link #setOrientationLandscape()}.
@@ -867,54 +996,141 @@ public class UiDevice implements Searchable {
      */
     public void setOrientationNatural() throws RemoteException {
         Log.d(TAG, "Setting orientation to natural.");
-        rotate(UiAutomation.ROTATION_FREEZE_0);
+        rotateWithUiAutomation(UiAutomation.ROTATION_FREEZE_0);
     }
 
     /**
-     * Orients the device to its portrait orientation (height > width) and freezes rotation. Use
-     * {@link #unfreezeRotation()} to un-freeze the rotation.
+     * Orients the display with {@code displayId} to its natural orientation and freezes rotation
+     * . Use {@link #unfreezeRotation()} to un-freeze the rotation.
+     * <p>Note: The natural orientation depends on the device type (e.g. phone vs. tablet).
+     * Consider using {@link #setOrientationPortrait()} and {@link #setOrientationLandscape()}.
+     * <p>Note: Only works on Android API level 30 (R) or above, where multi-display is
+     * officially supported.
+     * @see Display#getDisplayId()
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    @RequiresApi(30)
+    public void setOrientationNatural(int displayId) {
+        Log.d(TAG, String.format("Setting orientation to natural on display %d.", displayId));
+        rotateWithCommand(Surface.ROTATION_0, displayId);
+    }
+
+    /**
+     * Orients the default display to its portrait orientation (height >= width) and freezes
+     * rotation. Use {@link #unfreezeRotation()} to un-freeze the rotation.
      * @throws RemoteException never
      */
     public void setOrientationPortrait() throws RemoteException {
         Log.d(TAG, "Setting orientation to portrait.");
-        if (getDisplayHeight() > getDisplayWidth()) {
+        if (getDisplayHeight() >= getDisplayWidth()) {
             freezeRotation(); // Already in portrait orientation.
         } else if (isNaturalOrientation()) {
-            rotate(UiAutomation.ROTATION_FREEZE_90);
+            rotateWithUiAutomation(UiAutomation.ROTATION_FREEZE_90);
         } else {
-            rotate(UiAutomation.ROTATION_FREEZE_0);
+            rotateWithUiAutomation(UiAutomation.ROTATION_FREEZE_0);
         }
     }
 
     /**
-     * Orients the device to its landscape orientation (width > height) and freezes rotation. Use
-     * {@link #unfreezeRotation()} to un-freeze the rotation.
+     * Orients the display with {@code displayId} to its portrait orientation (height >= width) and
+     * freezes rotation. Use {@link #unfreezeRotation()} to un-freeze the rotation.
+     * <p>Note: Only works on Android API level 30 (R) or above, where multi-display is
+     * officially supported.
+     * @see Display#getDisplayId()
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    @RequiresApi(30)
+    public void setOrientationPortrait(int displayId) {
+        Log.d(TAG, String.format("Setting orientation to portrait on display %d.", displayId));
+        if (getDisplayHeight(displayId) >= getDisplayWidth(displayId)) {
+            freezeRotation(displayId); // Already in portrait orientation.
+        } else if (isNaturalOrientation(displayId)) {
+            rotateWithCommand(Surface.ROTATION_90, displayId);
+        } else {
+            rotateWithCommand(Surface.ROTATION_0, displayId);
+        }
+    }
+
+    /**
+     * Orients the default display to its landscape orientation (width >= height) and freezes
+     * rotation. Use {@link #unfreezeRotation()} to un-freeze the rotation.
      * @throws RemoteException never
      */
     public void setOrientationLandscape() throws RemoteException {
         Log.d(TAG, "Setting orientation to landscape.");
-        if (getDisplayWidth() > getDisplayHeight()) {
+        if (getDisplayWidth() >= getDisplayHeight()) {
             freezeRotation(); // Already in landscape orientation.
         } else if (isNaturalOrientation()) {
-            rotate(UiAutomation.ROTATION_FREEZE_90);
+            rotateWithUiAutomation(UiAutomation.ROTATION_FREEZE_90);
         } else {
-            rotate(UiAutomation.ROTATION_FREEZE_0);
+            rotateWithUiAutomation(UiAutomation.ROTATION_FREEZE_0);
         }
     }
 
-    // Rotates the device and waits for the rotation to be detected.
-    private void rotate(int rotation) {
+    /**
+     * Orients the display with {@code displayId} to its landscape orientation (width >= height) and
+     * freezes rotation. Use {@link #unfreezeRotation()} to un-freeze the rotation.
+     * <p>Note: Only works on Android API level 30 (R) or above, where multi-display is
+     * officially supported.
+     * @see Display#getDisplayId()
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    @RequiresApi(30)
+    public void setOrientationLandscape(int displayId) {
+        Log.d(TAG, String.format("Setting orientation to landscape on display %d.", displayId));
+        if (getDisplayWidth(displayId) >= getDisplayHeight(displayId)) {
+            freezeRotation(displayId); // Already in landscape orientation.
+        } else if (isNaturalOrientation(displayId)) {
+            rotateWithCommand(Surface.ROTATION_90, displayId);
+        } else {
+            rotateWithCommand(Surface.ROTATION_0, displayId);
+        }
+    }
+
+    /** Rotates the default display using UiAutomation and waits for the rotation to be detected. */
+    private void rotateWithUiAutomation(int rotation) {
         getUiAutomation().setRotation(rotation);
+        waitRotationComplete(rotation, Display.DEFAULT_DISPLAY);
+    }
+
+    /**
+     * Rotates the display using shell command and waits for the rotation to be detected.
+     *
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    @RequiresApi(30)
+    private void rotateWithCommand(int rotation, int displayId) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                executeShellCommand(String.format("cmd window user-rotation -d %d lock %d",
+                        displayId, rotation));
+            } else {
+                executeShellCommand(String.format("cmd window set-user-rotation lock -d %d %d",
+                        displayId, rotation));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        waitRotationComplete(rotation, displayId);
+    }
+
+    /**
+     * Waits for the display with {@code displayId} to be in {@code rotation}.
+     *
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
+     */
+    private void waitRotationComplete(int rotation, int displayId) {
         Condition<UiDevice, Boolean> rotationCondition = new Condition<UiDevice, Boolean>() {
             @Override
             public Boolean apply(UiDevice device) {
-                return device.getDisplayRotation() == rotation;
+                return device.getDisplayRotation(displayId) == rotation;
             }
 
             @NonNull
             @Override
             public String toString() {
-                return String.format("Condition[displayRotation=%d]", rotation);
+                return String.format("Condition[displayRotation=%d, displayId=%d]", rotation,
+                        displayId);
             }
         };
         if (!wait(rotationCondition, ROTATION_TIMEOUT)) {
@@ -970,7 +1186,6 @@ public class UiDevice implements Searchable {
      */
     @Deprecated
     public void dumpWindowHierarchy(@NonNull String fileName) {
-
         File dumpFile = new File(fileName);
         if (!dumpFile.isAbsolute()) {
             dumpFile = mInstrumentation.getContext().getFileStreamPath(fileName);
@@ -989,8 +1204,9 @@ public class UiDevice implements Searchable {
      * @throws IOException
      */
     public void dumpWindowHierarchy(@NonNull File dest) throws IOException {
+        Log.d(TAG, String.format("Dumping window hierarchy to %s.", dest));
         try (OutputStream stream = new BufferedOutputStream(new FileOutputStream(dest))) {
-            dumpWindowHierarchy(stream);
+            AccessibilityNodeInfoDumper.dumpWindowHierarchy(this, stream);
         }
     }
 
@@ -1001,6 +1217,7 @@ public class UiDevice implements Searchable {
      * @throws IOException
      */
     public void dumpWindowHierarchy(@NonNull OutputStream out) throws IOException {
+        Log.d(TAG, String.format("Dumping window hierarchy to %s.", out));
         AccessibilityNodeInfoDumper.dumpWindowHierarchy(this, out);
     }
 
@@ -1150,6 +1367,11 @@ public class UiDevice implements Searchable {
         }
     }
 
+    /**
+     * Gets the display with {@code displayId}. The display may be null because it may be a private
+     * virtual display, for example.
+     */
+    @Nullable
     Display getDisplayById(int displayId) {
         return mDisplayManager.getDisplay(displayId);
     }
@@ -1159,10 +1381,15 @@ public class UiDevice implements Searchable {
      * on the current orientation of the display.
      *
      * @see Display#getRealSize(Point)
+     * @throws IllegalArgumentException when the display with {@code displayId} is not accessible.
      */
     Point getDisplaySize(int displayId) {
         Point p = new Point();
         Display display = getDisplayById(displayId);
+        if (display == null) {
+            throw new IllegalArgumentException(String.format("Display %d not found or not "
+                    + "accessible", displayId));
+        }
         display.getRealSize(p);
         return p;
     }
@@ -1249,13 +1476,19 @@ public class UiDevice implements Searchable {
         if (uiAutomation == null) {
             throw new NullPointerException("Got null UiAutomation from instrumentation.");
         }
+
         // Verify and update the accessibility service flags if necessary. These might get reset
         // if the underlying UiAutomationConnection is recreated.
         AccessibilityServiceInfo serviceInfo = uiAutomation.getServiceInfo();
         if (serviceInfo == null) {
             Log.w(TAG, "Cannot verify accessibility service flags. "
                     + "Multi-window support (searching non-active windows) may be disabled.");
-        } else if (serviceInfo.flags != mCachedServiceFlags) {
+            return uiAutomation;
+        }
+
+        boolean serviceFlagsChanged = serviceInfo.flags != mCachedServiceFlags;
+        if (serviceFlagsChanged
+                || SystemClock.uptimeMillis() - mLastServiceFlagsTime > SERVICE_FLAGS_TIMEOUT) {
             // Enable multi-window support for API 21+.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 serviceInfo.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
@@ -1266,10 +1499,14 @@ public class UiDevice implements Searchable {
             } else {
                 serviceInfo.flags |= AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS;
             }
-            Log.d(TAG,
-                    String.format("Setting accessibility service flags: %d", serviceInfo.flags));
+
+            if (serviceFlagsChanged) {
+                Log.d(TAG, String.format("Setting accessibility service flags: %d",
+                        serviceInfo.flags));
+            }
             uiAutomation.setServiceInfo(serviceInfo);
             mCachedServiceFlags = serviceInfo.flags;
+            mLastServiceFlagsTime = SystemClock.uptimeMillis();
         }
 
         return uiAutomation;

@@ -51,7 +51,7 @@ class PerfettoSdkOverheadBenchmark {
         InstrumentationRegistry.getInstrumentation().targetContext.packageName
 
     @get:Rule
-    val benchmarkRule = BenchmarkRule(MicrobenchmarkConfig(shouldEnableTraceAppTag = true))
+    val benchmarkRule = BenchmarkRule(MicrobenchmarkConfig(traceAppTagEnabled = true))
 
     private val testData = Array(50_000) { UUID.randomUUID().toString() }
 
@@ -78,10 +78,10 @@ class PerfettoSdkOverheadBenchmark {
     fun traceBeginEnd_perfettoSdkTrace() {
         PerfettoCapture().enableAndroidxTracingPerfetto(
             PerfettoSdkConfig(targetPackage, InitialProcessState.Alive)
-        ).let { response ->
+        ).let { (resultCode, _) ->
             assertTrue(
                 "Ensuring Perfetto SDK is enabled",
-                response == null || response.contains("already enabled")
+                resultCode in arrayOf(1, 2) // 1 = success, 2 = already enabled
             )
         }
         var ix = 0

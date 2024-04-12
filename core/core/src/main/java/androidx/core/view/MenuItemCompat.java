@@ -135,6 +135,7 @@ public final class MenuItemCompat {
      *
      * @deprecated Use {@link MenuItem#setShowAsAction(int)} directly.
      */
+    @androidx.annotation.ReplaceWith(expression = "item.setShowAsAction(actionEnum)")
     @Deprecated
     public static void setShowAsAction(MenuItem item, int actionEnum) {
         item.setShowAsAction(actionEnum);
@@ -153,6 +154,7 @@ public final class MenuItemCompat {
      *
      * @deprecated Use {@link MenuItem#setActionView(View)} directly.
      */
+    @androidx.annotation.ReplaceWith(expression = "item.setActionView(view)")
     @Deprecated
     public static MenuItem setActionView(MenuItem item, View view) {
         return item.setActionView(view);
@@ -175,6 +177,7 @@ public final class MenuItemCompat {
      *
      * @deprecated Use {@link MenuItem#setActionView(int)} directly.
      */
+    @androidx.annotation.ReplaceWith(expression = "item.setActionView(resId)")
     @Deprecated
     public static MenuItem setActionView(MenuItem item, int resId) {
         return item.setActionView(resId);
@@ -188,6 +191,7 @@ public final class MenuItemCompat {
      *
      * @deprecated Use {@link MenuItem#getActionView()} directly.
      */
+    @androidx.annotation.ReplaceWith(expression = "item.getActionView()")
     @Deprecated
     public static View getActionView(MenuItem item) {
         return item.getActionView();
@@ -252,6 +256,7 @@ public final class MenuItemCompat {
      *
      * @deprecated Use {@link MenuItem#expandActionView()} directly.
      */
+    @androidx.annotation.ReplaceWith(expression = "item.expandActionView()")
     @Deprecated
     public static boolean expandActionView(MenuItem item) {
         return item.expandActionView();
@@ -271,6 +276,7 @@ public final class MenuItemCompat {
      *
      * @deprecated Use {@link MenuItem#collapseActionView()} directly.
      */
+    @androidx.annotation.ReplaceWith(expression = "item.collapseActionView()")
     @Deprecated
     public static boolean collapseActionView(MenuItem item) {
         return item.collapseActionView();
@@ -287,6 +293,7 @@ public final class MenuItemCompat {
      *
      * @deprecated Use {@link MenuItem#isActionViewExpanded()} directly.
      */
+    @androidx.annotation.ReplaceWith(expression = "item.isActionViewExpanded()")
     @Deprecated
     public static boolean isActionViewExpanded(MenuItem item) {
         return item.isActionViewExpanded();
@@ -298,6 +305,7 @@ public final class MenuItemCompat {
      * The menu item must be configured to expand or collapse its action view using the flag
      * {@link #SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW}.
      *
+     * @param item item on which to set the listener.
      * @param listener Listener that will respond to expand/collapse events
      * @return This menu item instance for call chaining
      *
@@ -394,6 +402,7 @@ public final class MenuItemCompat {
      * <p>
      * See {@link Menu} for the menu types that support shortcuts.
      *
+     * @param item item for which to set the shortcut.
      * @param numericChar The numeric shortcut key. This is the shortcut when
      *        using a numeric (e.g., 12-key) keyboard.
      * @param numericModifiers The numeric modifier associated with the shortcut. It should
@@ -424,6 +433,7 @@ public final class MenuItemCompat {
      * <p>
      * See {@link Menu} for the menu types that support shortcuts.
      *
+     * @param item item for which to set the shortcut.
      * @param numericChar The numeric shortcut key.  This is the shortcut when
      *                 using a 12-key (numeric) keyboard.
      * @param numericModifiers The modifier associated with the shortcut. It should
@@ -474,6 +484,7 @@ public final class MenuItemCompat {
      * <p>
      * See {@link Menu} for the menu types that support shortcuts.
      *
+     * @param item item for which to set the shortcut.
      * @param alphaChar The alphabetic shortcut key. This is the shortcut when
      *        using a keyboard with alphabetic keys.
      * @param alphaModifiers The modifier associated with the shortcut. It should
@@ -522,6 +533,7 @@ public final class MenuItemCompat {
      * automatically mutate the icon and apply the specified tint and
      * tint mode.
      *
+     * @param item item for which to set the tint.
      * @param tint the tint to apply, may be {@code null} to clear tint
      *
      * @see #getIconTintList(MenuItem)
@@ -558,6 +570,7 @@ public final class MenuItemCompat {
      * {@link #setIconTintList(MenuItem, ColorStateList)} to the item's icon. The default mode is
      * {@link PorterDuff.Mode#SRC_IN}.
      *
+     * @param item item for which to set the tint mode.
      * @param tintMode the blending mode used to apply the tint, may be
      *                 {@code null} to clear tint
      * @see #setIconTintList(MenuItem, ColorStateList)

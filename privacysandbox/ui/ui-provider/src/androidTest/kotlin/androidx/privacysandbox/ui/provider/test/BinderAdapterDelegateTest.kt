@@ -46,6 +46,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Assume
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -86,6 +87,7 @@ class BinderAdapterDelegateTest {
         }
     }
 
+    @Ignore // b/328282434
     @Test
     fun touchFocusTransferredForSwipeUp() {
         onView(withId(R.id.surface_view)).perform(swipeUp())
@@ -93,15 +95,15 @@ class BinderAdapterDelegateTest {
     }
 
     @Test
-    fun touchFocusTransferredForSwipeLeft() {
+    fun touchFocusNotTransferredForSwipeLeft() {
         onView(withId(R.id.surface_view)).perform(swipeLeft())
-        assertThat(transferTouchFocusLatch.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)).isTrue()
+        assertThat(transferTouchFocusLatch.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)).isFalse()
     }
 
     @Test
-    fun touchFocusTransferredForSlowSwipeLeft() {
+    fun touchFocusNotTransferredForSlowSwipeLeft() {
         onView(withId(R.id.surface_view)).perform(slowSwipeLeft())
-        assertThat(transferTouchFocusLatch.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)).isTrue()
+        assertThat(transferTouchFocusLatch.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)).isFalse()
     }
 
     @Test

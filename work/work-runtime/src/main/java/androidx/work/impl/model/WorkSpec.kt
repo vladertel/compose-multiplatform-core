@@ -102,8 +102,8 @@ data class WorkSpec(
      * Time in millis when work was marked as ENQUEUED in database.
      */
     @JvmField
-    @ColumnInfo(name = "last_enqueue_time")
-    var lastEnqueueTime: Long = 0,
+    @ColumnInfo(name = "last_enqueue_time", defaultValue = "$NOT_ENQUEUED")
+    var lastEnqueueTime: Long = NOT_ENQUEUED,
 
     @JvmField
     @ColumnInfo(name = "minimum_retention_duration")
@@ -186,6 +186,9 @@ data class WorkSpec(
         defaultValue = "${WorkInfo.STOP_REASON_NOT_STOPPED}"
     )
     val stopReason: Int = WorkInfo.STOP_REASON_NOT_STOPPED,
+
+    @ColumnInfo(name = "trace_tag")
+    var traceTag: String? = null,
 ) {
     constructor(
         id: String,
@@ -215,6 +218,7 @@ data class WorkSpec(
         nextScheduleTimeOverride = other.nextScheduleTimeOverride,
         nextScheduleTimeOverrideGeneration = other.nextScheduleTimeOverrideGeneration,
         stopReason = other.stopReason,
+        traceTag = other.traceTag,
     )
 
     /**
@@ -526,7 +530,7 @@ data class WorkSpec(
                 }
 
                 schedule
-            } else if (lastEnqueueTime == 0L) {
+            } else if (lastEnqueueTime == NOT_ENQUEUED) {
                 // If never enqueued, we aren't scheduled to run.
                 Long.MAX_VALUE // 200 million years.
             } else {
@@ -539,3 +543,5 @@ data class WorkSpec(
 data class WorkGenerationalId(val workSpecId: String, val generation: Int)
 
 fun WorkSpec.generationalId() = WorkGenerationalId(id, generation)
+
+private const val NOT_ENQUEUED = -1L

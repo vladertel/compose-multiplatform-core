@@ -29,6 +29,7 @@ import android.os.Build
 import android.view.Surface
 import androidx.annotation.GuardedBy
 import androidx.annotation.RequiresApi
+import androidx.camera.camera2.pipe.AudioRestrictionMode
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.RequestTemplate
@@ -50,7 +51,7 @@ import kotlinx.atomicfu.atomic
  * This interface has been modified to correct nullness, adjust exceptions, and to return or produce
  * wrapper interfaces instead of the native Camera2 types.
  */
-internal interface CameraDeviceWrapper : UnsafeWrapper {
+internal interface CameraDeviceWrapper : UnsafeWrapper, AudioRestrictionController.Listener {
     /** @see [CameraDevice.getId] */
     val cameraId: CameraId
 
@@ -103,10 +104,14 @@ internal interface CameraDeviceWrapper : UnsafeWrapper {
 
     /** @see CameraDevice.createExtensionSession */
     @RequiresApi(Build.VERSION_CODES.S)
-    fun createExtensionSession(config: SessionConfigData): Boolean
+    fun createExtensionSession(config: ExtensionSessionConfigData): Boolean
 
     /** Invoked when the [CameraDevice] has been closed */
     fun onDeviceClosed()
+
+    /** @see CameraDevice.getCameraAudioRestriction */
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun getCameraAudioRestriction(): AudioRestrictionMode
 }
 
 internal fun CameraDevice?.closeWithTrace() {
@@ -135,38 +140,49 @@ internal class AndroidCameraDevice(
     override fun createCaptureSession(
         outputs: List<Surface>,
         stateCallback: CameraCaptureSessionWrapper.StateCallback
-    ): Boolean = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+    ): Boolean {
         val previousStateCallback = _lastStateCallback.value
         check(_lastStateCallback.compareAndSet(previousStateCallback, stateCallback))
-
-        // This function was deprecated in Android Q, but is required for some configurations when
-        // running on older versions of the OS.
-        @Suppress("deprecation")
-        cameraDevice.createCaptureSession(
-            outputs,
-            AndroidCaptureSessionStateCallback(
-                this,
-                stateCallback,
-                previousStateCallback,
-                cameraErrorListener,
-                interopSessionStateCallback,
+        val result = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+            // This function was deprecated in Android Q, but is required for some configurations when
+            // running on older versions of the OS.
+            @Suppress("deprecation")
+            cameraDevice.createCaptureSession(
+                outputs,
+                AndroidCaptureSessionStateCallback(
+                    this,
+                    stateCallback,
+                    previousStateCallback,
+                    cameraErrorListener,
+                    interopSessionStateCallback,
+                    threads.camera2Handler
+                ),
                 threads.camera2Handler
-            ),
-            threads.camera2Handler
-        )
-    } != null
+            )
+        }
+        if (result == null) {
+            // CameraCaptureSession.StateCallback.onConfigureFailed isn't called in certain
+            // situations, such as when the camera is closed, or when it encounters an error. As
+            // such, we need to make sure we finalize the previous session too.
+            Log.warn {
+                "Failed to create capture session from $cameraDevice. Finalizing previous session"
+            }
+            previousStateCallback?.onSessionFinalized()
+        }
+        return result != null
+    }
 
     @RequiresApi(Build.VERSION_CODES.S)
-    override fun createExtensionSession(config: SessionConfigData): Boolean =
-        catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
-            checkNotNull(config.extensionStateCallback) {
-                "extensionStateCallback must be set to create Extension session"
-            }
-            checkNotNull(config.extensionMode) {
-                "extensionMode must be set to create Extension session"
-            }
-            val stateCallback = config.extensionStateCallback
-            val previousStateCallback = _lastStateCallback.getAndSet(stateCallback)
+    override fun createExtensionSession(config: ExtensionSessionConfigData): Boolean {
+        checkNotNull(config.extensionStateCallback) {
+            "extensionStateCallback must be set to create Extension session"
+        }
+        checkNotNull(config.extensionMode) {
+            "extensionMode must be set to create Extension session"
+        }
+        val stateCallback = config.extensionStateCallback
+        val previousStateCallback = _lastStateCallback.getAndSet(stateCallback)
+        val result = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
             val sessionConfig =
                 Api31Compat.newExtensionSessionConfiguration(
                     config.extensionMode,
@@ -183,122 +199,188 @@ internal class AndroidCameraDevice(
                         config.executor
                     ),
                 )
+
+            if (config.postviewOutputConfiguration != null &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+            ) {
+                val postviewOutput = config.postviewOutputConfiguration
+                    .unwrapAs(OutputConfiguration::class)
+                checkNotNull(postviewOutput) {
+                    "Failed to unwrap Postview OutputConfiguration"
+                }
+                Api34Compat.setPostviewOutputConfiguration(sessionConfig, postviewOutput)
+            }
+
             Api31Compat.createExtensionCaptureSession(cameraDevice, sessionConfig)
-        } != null
+        }
+        if (result == null) {
+            // CameraCaptureSession.StateCallback.onConfigureFailed isn't called in certain
+            // situations, such as when the camera is closed, or when it encounters an error. As
+            // such, we need to make sure we finalize the previous session too.
+            Log.warn {
+                "Failed to create extension session from $cameraDevice. Finalizing previous session"
+            }
+            previousStateCallback?.onSessionFinalized()
+        }
+        return result != null
+    }
 
     @RequiresApi(23)
     override fun createReprocessableCaptureSession(
         input: InputConfiguration,
         outputs: List<Surface>,
         stateCallback: CameraCaptureSessionWrapper.StateCallback
-    ): Boolean = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+    ): Boolean {
         val previousStateCallback = _lastStateCallback.value
         check(_lastStateCallback.compareAndSet(previousStateCallback, stateCallback))
-
-        // This function was deprecated in Android Q, but is required for some configurations when
-        // running on older versions of the OS.
-        Api23Compat.createReprocessableCaptureSession(
-            cameraDevice,
-            input,
-            outputs,
-            AndroidCaptureSessionStateCallback(
-                this,
-                stateCallback,
-                previousStateCallback,
-                cameraErrorListener,
-                interopSessionStateCallback,
+        val result = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+            // This function was deprecated in Android Q, but is required for some configurations when
+            // running on older versions of the OS.
+            Api23Compat.createReprocessableCaptureSession(
+                cameraDevice,
+                input,
+                outputs,
+                AndroidCaptureSessionStateCallback(
+                    this,
+                    stateCallback,
+                    previousStateCallback,
+                    cameraErrorListener,
+                    interopSessionStateCallback,
+                    threads.camera2Handler
+                ),
                 threads.camera2Handler
-            ),
-            threads.camera2Handler
-        )
-    } != null
+            )
+        }
+        if (result == null) {
+            // CameraCaptureSession.StateCallback.onConfigureFailed isn't called in certain
+            // situations, such as when the camera is closed, or when it encounters an error. As
+            // such, we need to make sure we finalize the previous session too.
+            Log.warn {
+                "Failed to create reprocess session from $cameraDevice. Finalizing previous session"
+            }
+            previousStateCallback?.onSessionFinalized()
+        }
+        return result != null
+    }
 
     @RequiresApi(23)
     override fun createConstrainedHighSpeedCaptureSession(
         outputs: List<Surface>,
         stateCallback: CameraCaptureSessionWrapper.StateCallback
-    ): Boolean = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+    ): Boolean {
         val previousStateCallback = _lastStateCallback.value
         check(_lastStateCallback.compareAndSet(previousStateCallback, stateCallback))
-
-        // This function was deprecated in Android Q, but is required for some configurations when
-        // running on older versions of the OS.
-        Api23Compat.createConstrainedHighSpeedCaptureSession(
-            cameraDevice,
-            outputs,
-            AndroidCaptureSessionStateCallback(
-                this,
-                stateCallback,
-                previousStateCallback,
-                cameraErrorListener,
-                interopSessionStateCallback,
+        val result = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+            // This function was deprecated in Android Q, but is required for some configurations when
+            // running on older versions of the OS.
+            Api23Compat.createConstrainedHighSpeedCaptureSession(
+                cameraDevice,
+                outputs,
+                AndroidCaptureSessionStateCallback(
+                    this,
+                    stateCallback,
+                    previousStateCallback,
+                    cameraErrorListener,
+                    interopSessionStateCallback,
+                    threads.camera2Handler
+                ),
                 threads.camera2Handler
-            ),
-            threads.camera2Handler
-        )
-    } != null
+            )
+        }
+        if (result == null) {
+            // CameraCaptureSession.StateCallback.onConfigureFailed isn't called in certain
+            // situations, such as when the camera is closed, or when it encounters an error. As
+            // such, we need to make sure we finalize the previous session too.
+            Log.warn {
+                "Failed to create capture session from $cameraDevice. Finalizing previous session"
+            }
+            previousStateCallback?.onSessionFinalized()
+        }
+        return result != null
+    }
 
     @RequiresApi(24)
     override fun createCaptureSessionByOutputConfigurations(
         outputConfigurations: List<OutputConfigurationWrapper>,
         stateCallback: CameraCaptureSessionWrapper.StateCallback
-    ): Boolean = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+    ): Boolean {
         val previousStateCallback = _lastStateCallback.value
         check(_lastStateCallback.compareAndSet(previousStateCallback, stateCallback))
-
-        // This function was deprecated in Android Q, but is required for some configurations when
-        // running on older versions of the OS.
-        Api24Compat.createCaptureSessionByOutputConfigurations(
-            cameraDevice,
-            outputConfigurations.map { it.unwrapAs(OutputConfiguration::class) },
-            AndroidCaptureSessionStateCallback(
-                this,
-                stateCallback,
-                previousStateCallback,
-                cameraErrorListener,
-                interopSessionStateCallback,
+        val result = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+            // This function was deprecated in Android Q, but is required for some configurations when
+            // running on older versions of the OS.
+            Api24Compat.createCaptureSessionByOutputConfigurations(
+                cameraDevice,
+                outputConfigurations.map { it.unwrapAs(OutputConfiguration::class) },
+                AndroidCaptureSessionStateCallback(
+                    this,
+                    stateCallback,
+                    previousStateCallback,
+                    cameraErrorListener,
+                    interopSessionStateCallback,
+                    threads.camera2Handler
+                ),
                 threads.camera2Handler
-            ),
-            threads.camera2Handler
-        )
-    } != null
+            )
+        }
+        if (result == null) {
+            // CameraCaptureSession.StateCallback.onConfigureFailed isn't called in certain
+            // situations, such as when the camera is closed, or when it encounters an error. As
+            // such, we need to make sure we finalize the previous session too.
+            Log.warn {
+                "Failed to create capture session from $cameraDevice. Finalizing previous session"
+            }
+            previousStateCallback?.onSessionFinalized()
+        }
+        return result != null
+    }
 
     @RequiresApi(24)
     override fun createReprocessableCaptureSessionByConfigurations(
         inputConfig: InputConfigData,
         outputs: List<OutputConfigurationWrapper>,
         stateCallback: CameraCaptureSessionWrapper.StateCallback
-    ): Boolean = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+    ): Boolean {
         val previousStateCallback = _lastStateCallback.value
         check(_lastStateCallback.compareAndSet(previousStateCallback, stateCallback))
-
-        // This function was deprecated in Android Q, but is required for some configurations when
-        // running on older versions of the OS.
-        Api24Compat.createCaptureSessionByOutputConfigurations(
-            cameraDevice,
-            Api23Compat.newInputConfiguration(
-                inputConfig.width, inputConfig.height, inputConfig.format
-            ),
-            outputs.map { it.unwrapAs(OutputConfiguration::class) },
-            AndroidCaptureSessionStateCallback(
-                this,
-                stateCallback,
-                previousStateCallback,
-                cameraErrorListener,
-                interopSessionStateCallback,
+        val result = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+            // This function was deprecated in Android Q, but is required for some configurations when
+            // running on older versions of the OS.
+            Api24Compat.createCaptureSessionByOutputConfigurations(
+                cameraDevice,
+                Api23Compat.newInputConfiguration(
+                    inputConfig.width, inputConfig.height, inputConfig.format
+                ),
+                outputs.map { it.unwrapAs(OutputConfiguration::class) },
+                AndroidCaptureSessionStateCallback(
+                    this,
+                    stateCallback,
+                    previousStateCallback,
+                    cameraErrorListener,
+                    interopSessionStateCallback,
+                    threads.camera2Handler
+                ),
                 threads.camera2Handler
-            ),
-            threads.camera2Handler
-        )
-    } != null
+            )
+        }
+        if (result == null) {
+            // CameraCaptureSession.StateCallback.onConfigureFailed isn't called in certain
+            // situations, such as when the camera is closed, or when it encounters an error. As
+            // such, we need to make sure we finalize the previous session too.
+            Log.warn {
+                "Failed to create reprocess session from $cameraDevice. Finalizing previous session"
+            }
+            previousStateCallback?.onSessionFinalized()
+        }
+        return result != null
+    }
 
     @RequiresApi(28)
-    override fun createCaptureSession(config: SessionConfigData): Boolean =
-        catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
-            val stateCallback = config.stateCallback
-            val previousStateCallback = _lastStateCallback.value
-            check(_lastStateCallback.compareAndSet(previousStateCallback, stateCallback))
-
+    override fun createCaptureSession(config: SessionConfigData): Boolean {
+        val stateCallback = config.stateCallback
+        val previousStateCallback = _lastStateCallback.value
+        check(_lastStateCallback.compareAndSet(previousStateCallback, stateCallback))
+        val result = catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
             val sessionConfig =
                 Api28Compat.newSessionConfiguration(
                     config.sessionType,
@@ -315,14 +397,21 @@ internal class AndroidCameraDevice(
                 )
 
             if (config.inputConfiguration != null) {
-                Api28Compat.setInputConfiguration(
-                    sessionConfig,
-                    Api23Compat.newInputConfiguration(
-                        config.inputConfiguration.width,
-                        config.inputConfiguration.height,
-                        config.inputConfiguration.format
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    Api28Compat.setInputConfiguration(
+                        sessionConfig,
+                        Api31Compat.newInputConfiguration(config.inputConfiguration, cameraId.value)
                     )
-                )
+                } else {
+                    Api28Compat.setInputConfiguration(
+                        sessionConfig,
+                        Api23Compat.newInputConfiguration(
+                            config.inputConfiguration.single().width,
+                            config.inputConfiguration.single().height,
+                            config.inputConfiguration.single().format
+                        )
+                    )
+                }
             }
 
             val requestBuilder = cameraDevice.createCaptureRequest(config.sessionTemplateId)
@@ -341,7 +430,18 @@ internal class AndroidCameraDevice(
             }
             Api28Compat.setSessionParameters(sessionConfig, requestBuilder.build())
             Api28Compat.createCaptureSession(cameraDevice, sessionConfig)
-        } != null
+        }
+        if (result == null) {
+            // CameraCaptureSession.StateCallback.onConfigureFailed isn't called in certain
+            // situations, such as when the camera is closed, or when it encounters an error. As
+            // such, we need to make sure we finalize the previous session too.
+            Log.warn {
+                "Failed to create capture session from $cameraDevice. Finalizing previous session"
+            }
+            previousStateCallback?.onSessionFinalized()
+        }
+        return result != null
+    }
 
     override fun createCaptureRequest(template: RequestTemplate): CaptureRequest.Builder? =
         catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
@@ -355,6 +455,20 @@ internal class AndroidCameraDevice(
         Api23Compat.createReprocessCaptureRequest(cameraDevice, inputResult)
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
+    override fun getCameraAudioRestriction(): AudioRestrictionMode {
+        return AudioRestrictionMode(
+            Api30Compat.getCameraAudioRestriction(cameraDevice)
+        )
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    override fun onCameraAudioRestrictionUpdated(mode: AudioRestrictionMode) {
+        catchAndReportCameraExceptions(cameraId, cameraErrorListener) {
+            Api30Compat.setCameraAudioRestriction(cameraDevice, mode.value)
+        }
+    }
+
     override fun onDeviceClosed() {
         val lastStateCallback = _lastStateCallback.getAndSet(null)
         lastStateCallback?.onSessionFinalized()
@@ -366,6 +480,8 @@ internal class AndroidCameraDevice(
             CameraDevice::class -> cameraDevice as T
             else -> null
         }
+
+    override fun toString(): String = "AndroidCameraDevice(camera=$cameraId)"
 }
 
 /**
@@ -476,7 +592,7 @@ internal class VirtualAndroidCameraDevice(
     }
 
     @RequiresApi(31)
-    override fun createExtensionSession(config: SessionConfigData) = synchronized(lock) {
+    override fun createExtensionSession(config: ExtensionSessionConfigData) = synchronized(lock) {
         if (disconnected) {
             Log.warn { "createExtensionSession failed: Virtual device disconnected" }
             config.extensionStateCallback!!.onSessionFinalized()
@@ -524,5 +640,15 @@ internal class VirtualAndroidCameraDevice(
 
     internal fun disconnect() = synchronized(lock) {
         disconnected = true
+    }
+
+    @RequiresApi(30)
+    override fun getCameraAudioRestriction(): AudioRestrictionMode {
+        return androidCameraDevice.getCameraAudioRestriction()
+    }
+
+    @RequiresApi(30)
+    override fun onCameraAudioRestrictionUpdated(mode: AudioRestrictionMode) {
+        androidCameraDevice.onCameraAudioRestrictionUpdated(mode)
     }
 }
