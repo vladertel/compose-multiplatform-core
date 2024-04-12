@@ -85,42 +85,28 @@ class WrapJsComposableLambdaLowering(
     context: IrPluginContext,
     symbolRemapper: DeepCopySymbolRemapper,
     metrics: ModuleMetrics,
-    signatureBuilder: IdSignatureSerializer,
     stabilityInferencer: StabilityInferencer,
-    private val decoysEnabled: Boolean
-) : AbstractDecoysLowering(
-    context,
-    symbolRemapper,
-    metrics,
-    stabilityInferencer,
-    signatureBuilder
+) : AbstractComposeLowering(
+    context = context,
+    symbolRemapper = symbolRemapper,
+    metrics = metrics,
+    stabilityInferencer = stabilityInferencer
 ) {
     private val rememberFunSymbol by lazy {
         val composerParamTransformer = ComposerParamTransformer(
-            context, symbolRemapper, stabilityInferencer, decoysEnabled, metrics
+            context = context,
+            symbolRemapper = symbolRemapper,
+            stabilityInferencer = stabilityInferencer,
+            decoysEnabled = false,
+            metrics = metrics
         )
         symbolRemapper.getReferencedSimpleFunction(
             getTopLevelFunctions(ComposeCallableIds.remember).map { it.owner }.first {
                 it.valueParameters.size == 2 && !it.valueParameters.first().isVararg
             }.symbol
         ).owner.let {
-            if (!decoysEnabled) {
-                composerParamTransformer.visitSimpleFunction(it) as IrSimpleFunction
-            } else if (!it.isDecoy()) {
-                // If a module didn't have any explicit remember calls,
-                // so `fun remember` wasn't transformed yet, then we have to transform it now.
-                val createDecoysTransformer = CreateDecoysTransformer(
-                    context, symbolRemapper, signatureBuilder, stabilityInferencer, metrics
-                )
-                createDecoysTransformer.visitSimpleFunction(it) as IrSimpleFunction
-                createDecoysTransformer.updateParents()
-                composerParamTransformer.visitSimpleFunction(
-                    it.getComposableForDecoy().owner as IrSimpleFunction
-                ) as IrSimpleFunction
-            } else {
-                it.getComposableForDecoy().owner as IrSimpleFunction
-            }
-        }.symbol
+            (composerParamTransformer.visitSimpleFunction(it) as IrSimpleFunction).symbol
+        }
     }
 
     override fun lower(module: IrModuleFragment) {
