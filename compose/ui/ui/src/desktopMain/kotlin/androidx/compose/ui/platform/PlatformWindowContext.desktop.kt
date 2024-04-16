@@ -23,7 +23,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.density
@@ -34,7 +33,7 @@ import javax.swing.SwingUtilities
 import kotlin.math.roundToInt
 
 /**
- * Tracking a state of window.
+ * Tracks the state of a window.
  */
 internal class PlatformWindowContext {
     private val _windowInfo = WindowInfoImpl()
@@ -47,6 +46,18 @@ internal class PlatformWindowContext {
      * Used for determining the right blending mode for [Dialog]'s scrim.
      */
     var isWindowTransparent: Boolean by mutableStateOf(false)
+
+    /**
+     * Indicates whether the window is minimized (iconified) or not.
+     * Used for Lifecycle events.
+     */
+    var isWindowMinimized: Boolean = false
+
+    /**
+     * Indicates whether the Compose container attached to the window or not.
+     * Used for Lifecycle events.
+     */
+    var isComposeContainerAttached: Boolean = false
 
     fun setKeyboardModifiers(modifiers: PointerKeyboardModifiers) {
         _windowInfo.keyboardModifiers = modifiers

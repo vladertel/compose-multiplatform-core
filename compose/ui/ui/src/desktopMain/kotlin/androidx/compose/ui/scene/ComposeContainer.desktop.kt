@@ -44,6 +44,7 @@ import androidx.compose.ui.window.WindowExceptionHandler
 import androidx.compose.ui.window.density
 import androidx.compose.ui.window.layoutDirectionFor
 import androidx.compose.ui.window.sizeInPx
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.Lifecycle.State
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -150,10 +151,6 @@ internal class ComposeContainer(
     val preferredSize by mediator::preferredSize
 
     override val lifecycle = LifecycleRegistry(this)
-    private var isDisposed = false
-    private var isDetached = true
-    private var isMinimized = false
-    private var isFocused = false
 
     init {
         setWindow(window)
@@ -165,8 +162,7 @@ internal class ComposeContainer(
     }
 
     fun dispose() {
-        isDisposed = true
-        updateLifecycleState()
+        lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
 
         _windowContainer?.removeComponentListener(this)
         mediator.dispose()
@@ -192,18 +188,18 @@ internal class ComposeContainer(
     override fun windowClosing(e: WindowEvent) = Unit
     override fun windowClosed(e: WindowEvent) = Unit
     override fun windowIconified(e: WindowEvent) {
-        isMinimized = true
+        windowContext.isWindowMinimized = true
         updateLifecycleState()
     }
     override fun windowDeiconified(e: WindowEvent) {
-        isMinimized = false
+        windowContext.isWindowMinimized = false
         updateLifecycleState()
     }
     override fun windowActivated(e: WindowEvent) = Unit
     override fun windowDeactivated(e: WindowEvent) = Unit
 
     private fun onChangeWindowFocus() {
-        isFocused = window?.isFocused ?: false
+        val isFocused = window?.isFocused ?: false
         windowContext.setWindowFocused(isFocused)
         mediator.onChangeWindowFocus()
         layers.fastForEach(DesktopComposeSceneLayer::onChangeWindowFocus)
@@ -257,12 +253,12 @@ internal class ComposeContainer(
         onChangeWindowSize()
         onChangeWindowPosition()
 
-        isDetached = false
+        windowContext.isComposeContainerAttached = true
         updateLifecycleState()
     }
 
     fun removeNotify() {
-        isDetached = true
+        windowContext.isComposeContainerAttached = false
         updateLifecycleState()
 
         setWindow(null)
@@ -428,9 +424,8 @@ internal class ComposeContainer(
 
     private fun updateLifecycleState() {
         lifecycle.currentState = when {
-            isDisposed -> State.DESTROYED
-            isDetached || isMinimized -> State.CREATED
-            !isDetached && !isMinimized && isFocused -> State.RESUMED
+            !windowContext.isComposeContainerAttached || windowContext.isWindowMinimized -> State.CREATED
+            windowContext.isComposeContainerAttached && !windowContext.isWindowMinimized && windowContext.windowInfo.isWindowFocused -> State.RESUMED
             else -> State.STARTED
         }
     }
