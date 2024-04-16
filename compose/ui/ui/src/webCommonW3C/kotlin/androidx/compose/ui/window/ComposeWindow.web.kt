@@ -301,7 +301,7 @@ internal class ComposeWindow(
             )
         }
 
-        lifecycleOwner.handleLifecycleEvent(if (document.hasFocus()) Lifecycle.Event.ON_RESUME else Lifecycle.Event.ON_START)
+        lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
     }
 
     fun resize(boxSize: IntSize) {
