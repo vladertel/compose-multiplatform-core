@@ -270,11 +270,11 @@ internal class ComposeWindow(
             if (processed) event.preventDefault()
         }
 
-        state.globalEvents.addDisposableEvent("focus") {
+        canvasEvents.addDisposableEvent("focus") {
             lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         }
 
-        state.globalEvents.addDisposableEvent("blur") {
+        canvasEvents.addDisposableEvent("blur") {
             lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         }
     }

@@ -23,7 +23,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.browser.document
 import org.w3c.dom.HTMLCanvasElement
-import org.w3c.dom.events.FocusEvent
 
 
 class ComposeWindowLifecycleTest {
@@ -48,12 +47,16 @@ class ComposeWindowLifecycleTest {
             state = DefaultWindowState(document.documentElement!!)
         )
 
-        assertEquals(Lifecycle.State.RESUMED, lifecycleOwner.lifecycle.currentState)
-
-        document.dispatchEvent(FocusEvent("blur"))
+        // the ComposeWindow is not focused when created
         assertEquals(Lifecycle.State.STARTED, lifecycleOwner.lifecycle.currentState)
 
-        document.dispatchEvent(FocusEvent("focus"))
+        canvas.focus()
+        assertEquals(Lifecycle.State.RESUMED, lifecycleOwner.lifecycle.currentState)
+
+        canvas.blur()
+        assertEquals(Lifecycle.State.STARTED, lifecycleOwner.lifecycle.currentState)
+
+        canvas.focus()
         assertEquals(Lifecycle.State.RESUMED, lifecycleOwner.lifecycle.currentState)
     }
 }
