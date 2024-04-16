@@ -19,11 +19,20 @@ package androidx.compose.mpp.demo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.Button
+import androidx.compose.material3.Scaffold
 import androidx.compose.material.Text
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,36 +44,56 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun InteropOrder() {
-    var red by remember { mutableStateOf(true) }
-    var green by remember { mutableStateOf(true) }
-    var blue by remember { mutableStateOf(true) }
-    Column(
-        modifier = Modifier.padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Button(onClick = { red = !red }) {
-            Text("Red")
-        }
-        Button(onClick = { green = !green }) {
-            Text("Green")
-        }
-        Button(onClick = { blue = !blue }) {
-            Text("Blue")
-        }
-
-        Box {
-            if (red) {
-                TestInteropView(Modifier.size(150.dp).offset(0.dp, 0.dp), Color.Red)
-            }
-            if (green) {
-                TestInteropView(Modifier.size(150.dp).offset(75.dp, 75.dp), Color.Green)
-            }
-            if (blue) {
-                TestInteropView(Modifier.size(150.dp).offset(150.dp, 150.dp), Color.Blue)
-            }
-        }
-    }
+    Scaffold(
+        topBar = { MyTopAppBar() },
+        content = { TestInteropView(Modifier.fillMaxSize(), Color.Red) }
+    )
+//    var red by remember { mutableStateOf(true) }
+//    var green by remember { mutableStateOf(true) }
+//    var blue by remember { mutableStateOf(true) }
+//    Column(
+//        modifier = Modifier.padding(10.dp),
+//        verticalArrangement = Arrangement.spacedBy(10.dp)
+//    ) {
+//        Button(onClick = { red = !red }) {
+//            Text("Red")
+//        }
+//        Button(onClick = { green = !green }) {
+//            Text("Green")
+//        }
+//        Button(onClick = { blue = !blue }) {
+//            Text("Blue")
+//        }
+//
+//        Box {
+//            if (red) {
+//                TestInteropView(Modifier.size(150.dp).offset(0.dp, 0.dp), Color.Red)
+//            }
+//            if (green) {
+//                TestInteropView(Modifier.size(150.dp).offset(75.dp, 75.dp), Color.Green)
+//            }
+//            if (blue) {
+//                TestInteropView(Modifier.size(150.dp).offset(150.dp, 150.dp), Color.Blue)
+//            }
+//        }
+//    }
 }
 
 @Composable
 internal expect fun TestInteropView(modifier: Modifier, color: Color)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MyTopAppBar() {
+    TopAppBar(
+        title = { Text("TopAppBar") },
+        actions = {
+            TestInteropView(Modifier.size(50.dp), Color.Blue)
+        },
+        windowInsets = WindowInsets.systemBars
+            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.Black.copy(alpha = 0.5f)
+        )
+    )
+}
