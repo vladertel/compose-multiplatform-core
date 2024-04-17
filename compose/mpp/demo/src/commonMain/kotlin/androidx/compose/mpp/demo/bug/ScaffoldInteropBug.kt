@@ -18,6 +18,7 @@ package androidx.compose.mpp.demo.bug
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,17 +43,17 @@ val ScaffoldInteropBug = Screen.Fullscreen("Scaffol interop bug") {
         androidx.compose.material3.Scaffold(
             modifier = Modifier.fillMaxWidth(0.5f).fillMaxHeight(),
             topBar = {
-                ScaffoldInteropBugTopBar(Modifier.size(40.dp))
+                Box(Modifier.size(40.dp).background(Color.Red))
             },
             content = {
-                ScaffoldInteropBugContent(Modifier.fillMaxSize())
+                Box(Modifier.fillMaxSize().background(Color.Blue))
             }
         )
 
         Divider(Modifier.fillMaxHeight().width(1.dp).background(Color.Black))
 
-        androidx.compose.material.Scaffold(
-            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+        androidx.compose.material3.Scaffold(
+            modifier = Modifier.fillMaxWidth(0.5f).fillMaxHeight(),
             topBar = {
                 ScaffoldInteropBugTopBar(Modifier.size(40.dp))
             },
