@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Android Open Source Project
+ * Copyright 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,14 @@
 
 package androidx.compose.mpp.demo.bug
 
-import androidx.compose.mpp.demo.Screen
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 
-val BugReproducers = Screen.Selection(
-    "Bug Reproducers",
-    NoRecompositionInLazyGrid,
-    RoundedCornerCrashOnJS,
-    CodeViewerReproducer,
-    IOSSelectionContainerCrash,
-    IOSDynamicKeyboardType,
-    NoPressInteractionInOutlinedTextField,
-    WebBaselineAlways0,
-    ResizePopupCrashOnJS,
-    ScaffoldInteropBug
-)
+@Composable
+actual fun ScaffoldInteropBugTopBar(modifier: Modifier) {
+
+}
+
+@Composable
+actual fun ScaffoldInteropBugContent(modifier: Modifier) {
+}
