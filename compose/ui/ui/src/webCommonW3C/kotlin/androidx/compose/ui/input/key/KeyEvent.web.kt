@@ -50,7 +50,7 @@ internal fun KeyboardEvent.toComposeEvent(): KeyEvent {
                 "keyup" -> KeyEventType.KeyUp
                 else -> KeyEventType.Unknown
             },
-            codePoint = key.codePointAt(0),
+            codePoint = if (key.firstOrNull()?.toString() == key) key.codePointAt(0) else 0,
             modifiers = toInputModifiers(),
             nativeEvent = this
         )
