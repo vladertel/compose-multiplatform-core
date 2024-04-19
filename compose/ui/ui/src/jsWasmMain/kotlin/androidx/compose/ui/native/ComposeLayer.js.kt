@@ -140,10 +140,6 @@ internal class ComposeLayer(
         button: PointerButton? = null,
     ) {
         if (isDisposed) return
-        val inputModeManager = scene.platformContext.inputModeManager
-        if (inputModeManager.inputMode != InputMode.Touch) {
-            inputModeManager.requestInputMode(InputMode.Touch)
-        }
         scene.sendPointerEvent(
             eventType = eventType,
             pointers = pointers,

@@ -19,12 +19,16 @@ package androidx.compose.ui.window
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.InternalComposeApi
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.events.EventTargetListener
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.toComposeEvent
 import androidx.compose.ui.input.pointer.BrowserCursor
@@ -36,7 +40,6 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.composeButton
 import androidx.compose.ui.input.pointer.composeButtons
 import androidx.compose.ui.native.ComposeLayer
-import androidx.compose.ui.platform.DefaultInputModeManager
 import androidx.compose.ui.platform.WebTextInputService
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.PlatformContext
@@ -163,7 +166,7 @@ internal class ComposeWindow(
     private val platformContext: PlatformContext = object : PlatformContext {
         override val windowInfo get() = _windowInfo
 
-        override val inputModeManager: InputModeManager = DefaultInputModeManager()
+        override val inputModeManager: InputModeManager = WebInputModeManager()
 
         override val textInputService = object : WebTextInputService() {
             override fun resolveInputMode() = inputModeManager.inputMode
@@ -340,6 +343,7 @@ internal class ComposeWindow(
         event: TouchEvent,
         offset: Offset,
     ) {
+        platformContext.inputModeManager.requestInputMode(WebInputModeManager.TouchMode)
         val eventType = when (event.type) {
             "touchstart" -> PointerEventType.Press
             "touchmove" -> PointerEventType.Move
@@ -371,6 +375,7 @@ internal class ComposeWindow(
     private fun ComposeLayer.onMouseEvent(
         event: MouseEvent,
     ) {
+        platformContext.inputModeManager.requestInputMode(WebInputModeManager.MouseMode)
         val eventType = when (event.type) {
             "mousedown" -> PointerEventType.Press
             "mousemove" -> PointerEventType.Move
@@ -397,6 +402,7 @@ internal class ComposeWindow(
     private fun ComposeLayer.onWheelEvent(
         event: WheelEvent,
     ) {
+        platformContext.inputModeManager.requestInputMode(WebInputModeManager.MouseMode)
         onMouseEvent(
             eventType = PointerEventType.Scroll,
             position = event.offset,
@@ -508,4 +514,26 @@ fun ComposeViewport(
         content = content,
         state = DefaultWindowState(viewportContainer)
     )
+}
+
+
+private class WebInputModeManager(
+    initialInputMode: InputMode = InputMode.Keyboard
+) : InputModeManager {
+    override var inputMode: InputMode by mutableStateOf(initialInputMode)
+
+    companion object {
+        val TouchMode = InputMode.Touch
+        // TODO: One potential danger would be if such value will defined elsewhere since InputMode is value class
+        val MouseMode = InputMode(3)
+    }
+
+    @ExperimentalComposeUiApi
+    override fun requestInputMode(inputMode: InputMode) =
+        if (inputMode == TouchMode || inputMode == MouseMode) {
+            this.inputMode = inputMode
+            true
+        } else {
+            false
+        }
 }
