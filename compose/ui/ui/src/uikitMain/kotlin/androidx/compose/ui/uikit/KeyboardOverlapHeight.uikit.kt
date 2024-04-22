@@ -18,6 +18,7 @@ package androidx.compose.ui.uikit
 
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 
@@ -26,3 +27,15 @@ import androidx.compose.ui.unit.dp
  */
 @InternalComposeApi
 val LocalKeyboardOverlapHeight = compositionLocalOf { 0.dp }
+
+
+@InternalComposeApi
+class WindowInsetsHolder(
+    var bottomInset: Dp = 0.dp
+)
+
+/**
+ * Composition local for window ime insets holder.
+ */
+@InternalComposeApi
+val LocalWindowImeInsetsHolder = compositionLocalOf { WindowInsetsHolder() }

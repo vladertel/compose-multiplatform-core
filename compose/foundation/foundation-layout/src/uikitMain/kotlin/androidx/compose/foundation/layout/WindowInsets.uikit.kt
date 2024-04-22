@@ -24,7 +24,10 @@ import androidx.compose.ui.platform.LocalSafeArea
 import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.uikit.InterfaceOrientation
 import androidx.compose.ui.uikit.LocalInterfaceOrientation
-import androidx.compose.ui.uikit.LocalKeyboardOverlapHeight
+import androidx.compose.ui.uikit.LocalWindowImeInsetsHolder
+import androidx.compose.ui.uikit.WindowInsetsHolder
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 
 private val ZeroInsets = WindowInsets(0, 0, 0, 0)
 
@@ -79,7 +82,7 @@ actual val WindowInsets.Companion.displayCutout: WindowInsets
 actual val WindowInsets.Companion.ime: WindowInsets
     @Composable
     @OptIn(InternalComposeApi::class)
-    get() = WindowInsets(bottom = LocalKeyboardOverlapHeight.current)
+    get() = ImeWindowInsets(LocalWindowImeInsetsHolder.current)
 
 /**
  * These insets represent the space where system gestures have priority over application gestures.
@@ -161,3 +164,18 @@ actual val WindowInsets.Companion.safeContent: WindowInsets
     @Composable
     get() = safeDrawing.union(safeGestures)
 
+
+@OptIn(InternalComposeApi::class)
+private class ImeWindowInsets(
+    val holder: WindowInsetsHolder
+): WindowInsets {
+    override fun getLeft(density: Density, layoutDirection: LayoutDirection): Int = 0
+    override fun getTop(density: Density): Int = 0
+    override fun getRight(density: Density, layoutDirection: LayoutDirection): Int = 0
+    @OptIn(InternalComposeApi::class)
+    override fun getBottom(density: Density): Int {
+        return with(density) {
+            holder.bottomInset.roundToPx()
+        }
+    }
+}

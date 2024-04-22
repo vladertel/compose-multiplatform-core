@@ -17,7 +17,6 @@
 package androidx.compose.ui.window
 
 import androidx.compose.runtime.ExperimentalComposeApi
-import androidx.compose.runtime.MutableState
 import androidx.compose.ui.scene.ComposeSceneMediator
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.OnFocusBehavior
@@ -52,9 +51,9 @@ import platform.darwin.sel_registerName
 
 internal class ComposeSceneKeyboardOffsetManager(
     private val configuration: ComposeUIViewControllerConfiguration,
-    private val keyboardOverlapHeightState: MutableState<Dp>,
     private val viewProvider: () -> UIView,
     private val composeSceneMediatorProvider: () -> ComposeSceneMediator?,
+    private val onKeyboardOverlapHeightChanged: (Dp) -> Unit,
     private val onComposeSceneOffsetChanged: (Double) -> Unit,
 ) : KeyboardVisibilityObserver {
 
@@ -171,7 +170,7 @@ internal class ComposeSceneKeyboardOffsetManager(
             val targetBottomOffset = calcFocusedBottomOffsetY(currentOverlapHeight)
             viewBottomOffset += (targetBottomOffset - viewBottomOffset) * progress
 
-            keyboardOverlapHeightState.value = currentOverlapHeight.dp
+            onKeyboardOverlapHeightChanged(currentOverlapHeight.dp)
         }
 
         //attach to root view if needed

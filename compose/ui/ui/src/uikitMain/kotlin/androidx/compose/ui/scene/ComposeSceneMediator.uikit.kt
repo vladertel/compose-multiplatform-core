@@ -22,7 +22,6 @@ import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.InternalComposeApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.input.key.NativeKeyEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asComposeCanvas
@@ -54,6 +53,8 @@ import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.uikit.ComposeUIViewControllerConfiguration
 import androidx.compose.ui.uikit.LocalKeyboardOverlapHeight
+import androidx.compose.ui.uikit.LocalWindowImeInsetsHolder
+import androidx.compose.ui.uikit.WindowInsetsHolder
 import androidx.compose.ui.uikit.systemDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -216,6 +217,8 @@ internal class ComposeSceneMediator(
     ) -> ComposeScene
 ) {
     private val keyboardOverlapHeightState: MutableState<Dp> = mutableStateOf(0.dp)
+    @OptIn(InternalComposeApi::class)
+    private val windowInsetsManager = WindowInsetsHolder()
     private var _layout: SceneLayout = SceneLayout.Undefined
     private var constraints: List<NSLayoutConstraint> = emptyList()
         set(value) {
@@ -323,12 +326,16 @@ internal class ComposeSceneMediator(
         )
     }
 
+    @OptIn(InternalComposeApi::class)
     private val keyboardManager by lazy {
         ComposeSceneKeyboardOffsetManager(
             configuration = configuration,
-            keyboardOverlapHeightState = keyboardOverlapHeightState,
             viewProvider = { viewForKeyboardOffsetTransform },
             composeSceneMediatorProvider = { this },
+            onKeyboardOverlapHeightChanged = {
+                windowInsetsManager.bottomInset = it
+                keyboardOverlapHeightState.value = it
+            },
             onComposeSceneOffsetChanged = { offset ->
                 viewForKeyboardOffsetTransform.layer.setAffineTransform(CGAffineTransformMakeTranslation(0.0, -offset))
                 scene.invalidatePositionInWindow()
@@ -493,6 +500,7 @@ internal class ComposeSceneMediator(
             LocalUIKitInteropContext provides interopContext,
             LocalUIKitInteropContainer provides interopViewContainer,
             LocalKeyboardOverlapHeight provides keyboardOverlapHeightState.value,
+            LocalWindowImeInsetsHolder provides windowInsetsManager,
             LocalSafeArea provides safeAreaState.value,
             LocalLayoutMargins provides layoutMarginsState.value,
             content = content
