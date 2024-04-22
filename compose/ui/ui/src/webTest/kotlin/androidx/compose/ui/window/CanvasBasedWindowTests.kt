@@ -221,4 +221,4 @@ internal fun createEventShouldNotBePrevented(): KeyboardEvent =
 
 
 // Unreliable heuristic, but it works for now
-internal fun isHeadlessBrowser(): Boolean = window.navigator.userAgent.contains("Headless")
+internal fun isHeadlessBrowser(): Boolean = false //window.navigator.userAgent.contains("Headless")
