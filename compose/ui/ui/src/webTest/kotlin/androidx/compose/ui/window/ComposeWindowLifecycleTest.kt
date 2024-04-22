@@ -20,14 +20,19 @@ import androidx.lifecycle.Lifecycle
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.browser.document
+import kotlinx.browser.window
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.w3c.dom.HTMLCanvasElement
-import org.w3c.dom.events.FocusEvent
 
 
 class ComposeWindowLifecycleTest {
     private val canvasId = "canvas1"
-
 
     @AfterTest
     fun cleanup() {
@@ -35,11 +40,14 @@ class ComposeWindowLifecycleTest {
     }
 
     @Test
-    fun allEvents() {
-        if (isHeadlessBrowser()) return
+    fun allEvents() = runTest {
+        if (isHeadlessBrowser()) return@runTest
         val canvas = document.createElement("canvas") as HTMLCanvasElement
         canvas.setAttribute("id", canvasId)
+        canvas.setAttribute("tabindex", "0")
+
         document.body!!.appendChild(canvas)
+        canvas.focus()
 
         val lifecycleOwner = ComposeWindow(
             canvas = canvas,
@@ -49,10 +57,26 @@ class ComposeWindowLifecycleTest {
 
         assertEquals(Lifecycle.State.RESUMED, lifecycleOwner.lifecycle.currentState)
 
-        document.dispatchEvent(FocusEvent("blur"))
+        // Browsers don't allow to blur the window from code:
+        // https://developer.mozilla.org/en-US/docs/Web/API/Window/blur
+        // So we simulate a new tab being open:
+        val anotherWindow = window.open("http://localhost:80")
+        assertTrue(anotherWindow != null)
+
+        realDelay(100)
         assertEquals(Lifecycle.State.STARTED, lifecycleOwner.lifecycle.currentState)
 
-        document.dispatchEvent(FocusEvent("focus"))
+        // Now go back to the original window
+        anotherWindow.close()
+
+        realDelay(100)
         assertEquals(Lifecycle.State.RESUMED, lifecycleOwner.lifecycle.currentState)
+    }
+}
+
+private suspend fun TestScope.realDelay(ms: Long) {
+    // To make sure the delay is not skipped by TestScheduler, we change the Dispatcher
+    withContext(Dispatchers.Default) {
+        delay(100)
     }
 }
