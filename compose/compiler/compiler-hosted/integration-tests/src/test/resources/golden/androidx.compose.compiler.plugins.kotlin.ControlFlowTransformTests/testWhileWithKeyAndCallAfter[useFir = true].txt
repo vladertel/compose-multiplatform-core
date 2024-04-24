@@ -1,3 +1,7 @@
+//
+// Source
+// ------------------------------------------
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.key
@@ -14,18 +18,19 @@ fun Example(x: Int) {
     }
 }
 
-/********
- * TRANSFORMED
- ********/
+//
+// Transformed IR
+// ------------------------------------------
 
 @NonRestartableComposable
 @Composable
 fun Example(x: Int, %composer: Composer?, %changed: Int) {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "C(Example)*<A(b)>:Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "C(Example):Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
   }
+  %composer.startReplaceGroup(<>)
+  sourceInformation(%composer, "*<A(b)>")
   while (x > 0) {
     %composer.startMovableGroup(<>, x)
     sourceInformation(%composer, "<A(a)>")
@@ -33,8 +38,9 @@ fun Example(x: Int, %composer: Composer?, %changed: Int) {
     %composer.endMovableGroup()
     A(b, %composer, 0)
   }
+  %composer.endReplaceGroup()
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  sourceInformationMarkerEnd(%composer)
 }

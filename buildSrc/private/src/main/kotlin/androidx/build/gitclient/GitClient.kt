@@ -38,17 +38,19 @@ import org.gradle.process.ExecOperations
  * @param baseCommitOverride optional value to use to override last merge commit
  */
 fun Project.getChangedFilesProvider(
-    baseCommitOverride: String?,
+    baseCommitOverride: Provider<String>,
 ): Provider<List<String>> {
     val changeInfoPath = System.getenv("CHANGE_INFO")
     val manifestPath = System.getenv("MANIFEST")
     return if (changeInfoPath != null && manifestPath != null) {
-        if (baseCommitOverride != null) throw GradleException(
+        if (baseCommitOverride.isPresent()) throw GradleException(
             "Overriding base commit is not supported when using CHANGE_INFO and MANIFEST"
         )
         getChangedFilesFromChangeInfoProvider(manifestPath, changeInfoPath)
-    } else if (changeInfoPath != null || manifestPath != null) {
+    } else if (changeInfoPath != null) {
         throw GradleException("Setting CHANGE_INFO requires also setting MANIFEST")
+    } else if (manifestPath != null) {
+        throw GradleException("Setting MANIFEST requires also setting CHANGE_INFO")
     } else {
         providers.of(GitChangedFilesSource::class.java) {
             it.parameters.workingDir.set(rootProject.layout.projectDirectory)

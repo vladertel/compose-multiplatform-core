@@ -74,7 +74,7 @@ class ProjectSetupRule(parentFolder: File? = null) : ExternalResource() {
     val androidProject: String
         get() = """
             android {
-                compileSdkVersion ${props.compileSdkVersion}
+                compileSdk ${props.compileSdk}
                 buildToolsVersion "${props.buildToolsVersion}"
 
                 defaultConfig {
@@ -107,6 +107,30 @@ class ProjectSetupRule(parentFolder: File? = null) : ExternalResource() {
         copyLocalProperties()
         copyLibsVersionsToml()
         writeGradleProperties()
+    }
+
+    fun getSdkDirectory(): String {
+        val localProperties = File(props.rootProjectPath, "local.properties")
+        when {
+            localProperties.exists() -> {
+                val stream = localProperties.inputStream()
+                val properties = Properties()
+                properties.load(stream)
+                return properties.getProperty("sdk.dir")
+            }
+            System.getenv("ANDROID_HOME") != null -> {
+                return System.getenv("ANDROID_HOME")
+            }
+            System.getenv("ANDROID_SDK_ROOT") != null -> {
+                return System.getenv("ANDROID_SDK_ROOT")
+            }
+            else -> {
+                throw IllegalStateException(
+                    "ProjectSetupRule did find local.properties at: $localProperties and " +
+                        "neither ANDROID_HOME or ANDROID_SDK_ROOT was set."
+                )
+            }
+        }
     }
 
     /**
@@ -185,12 +209,8 @@ class ProjectSetupRule(parentFolder: File? = null) : ExternalResource() {
 }
 
 // TODO(b/233600239): document the rest of the parameters
-/**
- * @param buildSrcOutPath: absolute path to folder where outputs from buildSrc builds can be found
- *                         (perhaps something like $HOME/src/androidx-main/out/buildSrc)
- */
 data class ProjectProps(
-    val compileSdkVersion: String,
+    val compileSdk: String,
     val buildToolsVersion: String,
     val minSdkVersion: String,
     val debugKeystore: String,
@@ -203,12 +223,22 @@ data class ProjectProps(
     val tipOfTreeMavenRepoPath: String,
     val agpDependency: String,
     val repositoryUrls: List<String>,
-    val buildSrcOutPath: String
+    // Not available in playground projects.
+    val prebuiltsPath: String?,
 ) {
     companion object {
         private fun Properties.getCanonicalPath(key: String): String {
             return File(getProperty(key)).canonicalPath
         }
+
+        private fun Properties.getOptionalCanonicalPath(key: String): String? {
+            return if (containsKey(key)) {
+                getCanonicalPath(key)
+            } else {
+                null
+            }
+        }
+
         fun load(): ProjectProps {
             val stream = ProjectSetupRule::class.java.classLoader.getResourceAsStream("sdk.prop")
                 ?: throw IllegalStateException("No sdk.prop file found. " +
@@ -230,11 +260,7 @@ data class ProjectProps(
                         File(it).canonicalPath
                     }
                 },
-                compileSdkVersion = properties.getProperty("compileSdkVersion").let {
-                    // Add quotes around preview SDK string so that we call
-                    // compileSdkVersion(String) instead of compileSdkVersion(int)
-                    return@let if (it.startsWith("android-")) "\"$it\"" else it
-                },
+                compileSdk = properties.getProperty("compileSdk"),
                 buildToolsVersion = properties.getProperty("buildToolsVersion"),
                 minSdkVersion = properties.getProperty("minSdkVersion"),
                 navigationRuntime = properties.getProperty("navigationRuntime"),
@@ -244,7 +270,7 @@ data class ProjectProps(
                     properties.getProperty("kgpVersion"),
                 kspVersion = properties.getProperty("kspVersion"),
                 agpDependency = properties.getProperty("agpDependency"),
-                buildSrcOutPath = properties.getCanonicalPath("buildSrcOutRelativePath")
+                prebuiltsPath = properties.getOptionalCanonicalPath("prebuiltsRelativePath"),
             )
         }
     }

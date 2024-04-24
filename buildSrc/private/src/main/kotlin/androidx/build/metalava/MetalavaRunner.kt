@@ -34,6 +34,7 @@ import org.gradle.process.ExecOperations
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
 import org.gradle.workers.WorkerExecutor
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 // MetalavaRunner stores common configuration for executing Metalava
 
@@ -41,19 +42,20 @@ fun runMetalavaWithArgs(
     metalavaClasspath: FileCollection,
     args: List<String>,
     k2UastEnabled: Boolean,
+    kotlinSourceLevel: KotlinVersion,
     workerExecutor: WorkerExecutor,
 ) {
     val allArgs =
         args +
             listOf(
                 "--hide",
-                "HiddenSuperclass", // We allow having a hidden parent class
-                "--hide",
                 // Removing final from a method does not cause compatibility issues for AndroidX.
                 "RemovedFinalStrict",
                 "--error",
                 "UnresolvedImport",
-                "--delete-empty-removed-signatures",
+
+                "--kotlin-source",
+                kotlinSourceLevel.version,
 
                 // Metalava arguments to suppress compatibility checks for experimental API
                 // surfaces.
@@ -61,6 +63,20 @@ fun runMetalavaWithArgs(
                 "androidx.annotation.RequiresOptIn",
                 "--suppress-compatibility-meta-annotation",
                 "kotlin.RequiresOptIn",
+
+                // Skip reading comments in Metalava for two reasons:
+                // - We prefer for developers to specify api information via annotations instead
+                //   of just javadoc comments (like @hide)
+                // - This allows us to improve cacheability of Metalava tasks
+                "--ignore-comments",
+                "--hide",
+                "DeprecationMismatch",
+                "--hide",
+                "DocumentExceptions",
+
+                // Don't track annotations that aren't needed for review or checking compat.
+                "--exclude-annotation",
+                "androidx.annotation.ReplaceWith",
             )
     val workQueue = workerExecutor.processIsolation()
     workQueue.submit(MetalavaWorkAction::class.java) { parameters ->
@@ -109,11 +125,9 @@ abstract class MetalavaWorkAction @Inject constructor(private val execOperations
 
 fun Project.getMetalavaClasspath(): FileCollection {
     val configuration =
-        configurations.findByName("metalava")
-            ?: configurations.create("metalava") {
-                it.dependencies.add(dependencies.create(getLibraryByName("metalava")))
-                it.isCanBeConsumed = false
-            }
+        configurations.detachedConfiguration(
+                dependencies.create(getLibraryByName("metalava"))
+        )
     return project.files(configuration)
 }
 
@@ -167,7 +181,6 @@ fun getApiLintArgs(targetsJavaConsumers: Boolean): List<String> {
                     "MethodNameTense",
                     "UseIcu",
                     "NoByteOrShort",
-                    "CommonArgsFirst",
                     "GetterOnBuilder",
                     "CallbackMethodName",
                     "StaticFinalBuilder",
@@ -234,6 +247,7 @@ fun generateApi(
     includeRestrictToLibraryGroupApis: Boolean,
     apiLevelsArgs: List<String>,
     k2UastEnabled: Boolean,
+    kotlinSourceLevel: KotlinVersion,
     workerExecutor: WorkerExecutor,
     pathToManifest: String? = null,
 ) {
@@ -250,14 +264,13 @@ fun generateApi(
     generateApiConfigs.forEach { (generateApiMode, apiLintMode) ->
         generateApi(
             metalavaClasspath,
-            files.bootClasspath,
-            files.dependencyClasspath,
-            files.sourcePaths.files,
+            files,
             apiLocation,
             generateApiMode,
             apiLintMode,
             apiLevelsArgs,
             k2UastEnabled,
+            kotlinSourceLevel,
             workerExecutor,
             pathToManifest
         )
@@ -270,29 +283,29 @@ fun generateApi(
  */
 private fun generateApi(
     metalavaClasspath: FileCollection,
-    bootClasspath: FileCollection,
-    dependencyClasspath: FileCollection,
-    sourcePaths: Collection<File>,
+    files: JavaCompileInputs,
     outputLocation: ApiLocation,
     generateApiMode: GenerateApiMode,
     apiLintMode: ApiLintMode,
     apiLevelsArgs: List<String>,
     k2UastEnabled: Boolean,
+    kotlinSourceLevel: KotlinVersion,
     workerExecutor: WorkerExecutor,
     pathToManifest: String? = null
 ) {
     val args =
         getGenerateApiArgs(
-            bootClasspath,
-            dependencyClasspath,
-            sourcePaths,
+            files.bootClasspath,
+            files.dependencyClasspath,
+            files.sourcePaths.files,
+            files.commonModuleSourcePaths.files,
             outputLocation,
             generateApiMode,
             apiLintMode,
             apiLevelsArgs,
             pathToManifest
         )
-    runMetalavaWithArgs(metalavaClasspath, args, k2UastEnabled, workerExecutor)
+    runMetalavaWithArgs(metalavaClasspath, args, k2UastEnabled, kotlinSourceLevel, workerExecutor)
 }
 
 /**
@@ -303,6 +316,7 @@ fun getGenerateApiArgs(
     bootClasspath: FileCollection,
     dependencyClasspath: FileCollection,
     sourcePaths: Collection<File>,
+    commonModuleSourcePaths: Collection<File>,
     outputLocation: ApiLocation?,
     generateApiMode: GenerateApiMode,
     apiLintMode: ApiLintMode,
@@ -316,9 +330,16 @@ fun getGenerateApiArgs(
             (bootClasspath.files + dependencyClasspath.files).joinToString(File.pathSeparator),
             "--source-path",
             sourcePaths.filter { it.exists() }.joinToString(File.pathSeparator),
-            "--format=v4",
-            "--warnings-as-errors"
         )
+
+    val existentCommonModuleSourcePaths = commonModuleSourcePaths.filter { it.exists() }
+    if (existentCommonModuleSourcePaths.isNotEmpty()) {
+        args += listOf("--common-source-path", existentCommonModuleSourcePaths.joinToString(":"))
+    }
+    args += listOf(
+        "--format=v4",
+        "--warnings-as-errors"
+    )
 
     pathToManifest?.let { args += listOf("--manifest", pathToManifest) }
 
@@ -326,7 +347,6 @@ fun getGenerateApiArgs(
         when (generateApiMode) {
             is GenerateApiMode.PublicApi -> {
                 args += listOf("--api", outputLocation.publicApiFile.toString())
-                args += listOf("--removed-api", outputLocation.removedApiFile.toString())
                 // Generate API levels just for the public API
                 args += apiLevelsArgs
             }
@@ -388,8 +408,6 @@ fun getGenerateApiArgs(
             args.addAll(
                 listOf(
                     "--error",
-                    "DeprecationMismatch", // Enforce deprecation mismatch
-                    "--error",
                     "ReferencesDeprecated",
                     "--error-message:api-lint",
                     """
@@ -407,8 +425,6 @@ fun getGenerateApiArgs(
         is ApiLintMode.Skip -> {
             args.addAll(
                 listOf(
-                    "--hide",
-                    "DeprecationMismatch",
                     "--hide",
                     "UnhiddenSystemApi",
                     "--hide",

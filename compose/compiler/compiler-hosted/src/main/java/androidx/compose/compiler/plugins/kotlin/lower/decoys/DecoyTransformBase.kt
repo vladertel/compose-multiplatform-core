@@ -32,7 +32,6 @@ import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrVararg
 import org.jetbrains.kotlin.ir.expressions.impl.IrVarargImpl
-import org.jetbrains.kotlin.ir.interpreter.toIrConst
 import org.jetbrains.kotlin.ir.linkage.IrDeserializer
 import org.jetbrains.kotlin.ir.linkage.IrDeserializer.TopLevelSymbolKind.FUNCTION_SYMBOL
 import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
@@ -41,6 +40,7 @@ import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.IrTypeArgument
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
+import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.DeepCopyTypeRemapper
 import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.SymbolRenamer
@@ -50,6 +50,7 @@ import org.jetbrains.kotlin.ir.util.getAnnotation
 import org.jetbrains.kotlin.ir.util.isTopLevel
 import org.jetbrains.kotlin.ir.util.module
 import org.jetbrains.kotlin.ir.util.remapTypeParameters
+import org.jetbrains.kotlin.ir.util.toIrConst
 
 @JvmDefaultWithCompatibility
 internal interface DecoyTransformBase {
@@ -89,7 +90,9 @@ internal interface DecoyTransformBase {
             UNDEFINED_OFFSET,
             type = stringArrayType,
             varargElementType = context.irBuiltIns.stringType,
-            elements = valueArguments.map { it.toIrConst(context.irBuiltIns.stringType) }
+            elements = valueArguments.map {
+                it.toIrConst(context.irBuiltIns.stringType)
+            }
         )
     }
 
@@ -117,7 +120,8 @@ internal interface DecoyTransformBase {
             packageFqName = signature[0],
             declarationFqName = signature[1],
             id = signature[2].toLongOrNull(),
-            mask = signature[3].toLong()
+            mask = signature[3].toLong(),
+            description = "Composable decoy signature"
         )
 
         val linker = (context as IrPluginContextImpl).linker
@@ -203,7 +207,17 @@ internal inline fun <reified T : IrElement> T.copyWithNewTypeParams(
     source: IrFunction,
     target: IrFunction
 ): T {
-    return deepCopyWithSymbols(target) { symbolRemapper, typeRemapper ->
+    val typeParamsAwareSymbolRemapper = object : DeepCopySymbolRemapper() {
+        init {
+            for ((orig, new) in source.typeParameters.zip(target.typeParameters)) {
+                typeParameters[orig.symbol] = new.symbol
+            }
+        }
+    }
+    return deepCopyWithSymbols(
+        target,
+        typeParamsAwareSymbolRemapper
+    ) { symbolRemapper, typeRemapper ->
         val typeParamRemapper = object : TypeRemapper by typeRemapper {
             override fun remapType(type: IrType): IrType {
                 return typeRemapper.remapType(type.remapTypeParameters(source, target))

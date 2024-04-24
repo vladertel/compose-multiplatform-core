@@ -1,3 +1,7 @@
+//
+// Source
+// ------------------------------------------
+
 @file:OptIn(
   InternalComposeApi::class,
 )
@@ -21,23 +25,23 @@ class FooImpl : BaseFoo() {
     override fun bar() {}
 }
 
-/********
- * TRANSFORMED
- ********/
+//
+// Transformed IR
+// ------------------------------------------
 
-@StabilityInferred(parameters = 0)
+@StabilityInferred(parameters = 1)
 abstract class BaseFoo {
   @NonRestartableComposable
   @Composable
   abstract fun bar(%composer: Composer?, %changed: Int)
   static val %stable: Int = 0
 }
-@StabilityInferred(parameters = 0)
+@StabilityInferred(parameters = 1)
 class FooImpl : BaseFoo {
   @NonRestartableComposable
   @Composable
   override fun bar(%composer: Composer?, %changed: Int) {
-    %composer.startReplaceableGroup(<>)
+    %composer.startReplaceGroup(<>)
     sourceInformation(%composer, "C(bar):Test.kt#2487m")
     if (isTraceInProgress()) {
       traceEventStart(<>, %changed, -1, <>)
@@ -45,7 +49,7 @@ class FooImpl : BaseFoo {
     if (isTraceInProgress()) {
       traceEventEnd()
     }
-    %composer.endReplaceableGroup()
+    %composer.endReplaceGroup()
   }
   static val %stable: Int = 0
 }

@@ -17,20 +17,18 @@
 package androidx.compose.foundation.lazy.staggeredgrid
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clipScrollableContainer
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollableDefaults
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.layout.LazyLayout
-import androidx.compose.foundation.lazy.layout.LazyLayoutItemProvider
 import androidx.compose.foundation.lazy.layout.lazyLayoutBeyondBoundsModifier
 import androidx.compose.foundation.lazy.layout.lazyLayoutSemantics
-import androidx.compose.foundation.overscroll
+import androidx.compose.foundation.scrollingContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -61,10 +59,9 @@ internal fun LazyStaggeredGrid(
     /** The content of the grid */
     content: LazyStaggeredGridScope.() -> Unit
 ) {
-    val overscrollEffect = ScrollableDefaults.overscrollEffect()
-
     val itemProviderLambda = rememberStaggeredGridItemProviderLambda(state, content)
     val coroutineScope = rememberCoroutineScope()
+    val graphicsContext = LocalGraphicsContext.current
     val measurePolicy = rememberStaggeredGridMeasurePolicy(
         state,
         itemProviderLambda,
@@ -75,10 +72,9 @@ internal fun LazyStaggeredGrid(
         crossAxisSpacing,
         coroutineScope,
         slots,
+        graphicsContext
     )
     val semanticState = rememberLazyStaggeredGridSemanticState(state, reverseLayout)
-
-    ScrollPositionUpdater(itemProviderLambda, state)
 
     LazyLayout(
         modifier = modifier
@@ -89,9 +85,8 @@ internal fun LazyStaggeredGrid(
                 state = semanticState,
                 orientation = orientation,
                 userScrollEnabled = userScrollEnabled,
-                reverseScrolling = reverseLayout
+                reverseScrolling = reverseLayout,
             )
-            .clipScrollableContainer(orientation)
             .lazyLayoutBeyondBoundsModifier(
                 state = rememberLazyStaggeredGridBeyondBoundsState(state = state),
                 beyondBoundsInfo = state.beyondBoundsInfo,
@@ -100,37 +95,19 @@ internal fun LazyStaggeredGrid(
                 orientation = orientation,
                 enabled = userScrollEnabled
             )
-            .overscroll(overscrollEffect)
-            .scrollable(
-                orientation = orientation,
-                reverseDirection = ScrollableDefaults.reverseDirection(
-                    LocalLayoutDirection.current,
-                    orientation,
-                    reverseLayout
-                ),
-                interactionSource = state.mutableInteractionSource,
-                flingBehavior = flingBehavior,
+            .then(state.itemAnimator.modifier)
+            .scrollingContainer(
                 state = state,
-                overscrollEffect = overscrollEffect,
-                enabled = userScrollEnabled
+                orientation = orientation,
+                enabled = userScrollEnabled,
+                reverseScrolling = reverseLayout,
+                flingBehavior = flingBehavior,
+                interactionSource = state.mutableInteractionSource
             ),
         prefetchState = state.prefetchState,
         itemProvider = itemProviderLambda,
         measurePolicy = measurePolicy
     )
-}
-
-/** Extracted to minimize the recomposition scope */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ScrollPositionUpdater(
-    itemProviderLambda: () -> LazyLayoutItemProvider,
-    state: LazyStaggeredGridState
-) {
-    val itemProvider = itemProviderLambda()
-    if (itemProvider.itemCount > 0) {
-        state.updateScrollPositionIfTheFirstItemWasMoved(itemProvider)
-    }
 }
 
 /** Slot configuration of staggered grid */

@@ -16,8 +16,10 @@
 
 package androidx.compose.foundation.demos
 
+import androidx.compose.foundation.demos.contextmenu.ContextMenuDemos
 import androidx.compose.foundation.demos.draganddrop.DragAndDropMultiAppDemo
 import androidx.compose.foundation.demos.draganddrop.DragAndDropNestedDemo
+import androidx.compose.foundation.demos.focus.FocusGroupDemo
 import androidx.compose.foundation.demos.pager.PagerDemos
 import androidx.compose.foundation.demos.relocation.BringIntoViewAndroidInteropDemo
 import androidx.compose.foundation.demos.relocation.BringIntoViewDemo
@@ -67,7 +69,7 @@ private val DragAndDropDemos = listOf(
 val FoundationDemos = DemoCategory(
     "Foundation",
     listOf(
-        DemoCategory("High-level Gesures", GestureDemos),
+        DemoCategory("High-level Gestures", GestureDemos),
         DemoCategory("Drag and drop", DragAndDropDemos),
         ComposableDemo("Overscroll") { OverscrollDemo() },
         ComposableDemo("Can scroll forward / backward") { CanScrollSample() },
@@ -90,6 +92,8 @@ val FoundationDemos = DemoCategory(
         ComposableDemo("Scrollable with focused child") { ScrollableFocusedChildDemo() },
         ComposableDemo("Window insets") { WindowInsetsDemo() },
         ComposableDemo("Marquee") { BasicMarqueeDemo() },
-        DemoCategory("Pointer Icon", PointerIconDemos)
+        DemoCategory("Pointer Icon", PointerIconDemos),
+        DemoCategory("Long screenshots", LongScreenshotsDemos),
+        DemoCategory("Context Menu", ContextMenuDemos),
     )
 )

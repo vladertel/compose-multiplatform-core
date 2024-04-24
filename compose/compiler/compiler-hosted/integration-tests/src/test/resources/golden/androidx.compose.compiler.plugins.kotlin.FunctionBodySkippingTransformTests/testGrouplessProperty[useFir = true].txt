@@ -1,3 +1,7 @@
+//
+// Source
+// ------------------------------------------
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.ReadOnlyComposable
@@ -19,11 +23,11 @@ open class Foo {
 @Composable
 fun getHashCode(): Int = currentComposer.hashCode()
 
-/********
- * TRANSFORMED
- ********/
+//
+// Transformed IR
+// ------------------------------------------
 
-@StabilityInferred(parameters = 0)
+@StabilityInferred(parameters = 1)
 open class Foo {
   val current: Int
     @Composable @ReadOnlyComposable @JvmName(name = "getCurrent")

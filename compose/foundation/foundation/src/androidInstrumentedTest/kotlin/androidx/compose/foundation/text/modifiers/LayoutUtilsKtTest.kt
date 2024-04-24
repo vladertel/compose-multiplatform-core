@@ -18,15 +18,42 @@ package androidx.compose.foundation.text.modifiers
 
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Constraints.Companion.fitPrioritizingWidth
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/**
+ * Constraints are packed see [Constraints] implementation.
+ *
+ * These constants are the largest values that each slot can hold. The following pairings are the
+ * only ones allowed:
+ *
+ * (Big, Tiny), (Tiny, Big)
+ * (Medium, Small), (Small, Medium)
+ *
+ * For more information see [Constraints] implementation
+ */
+internal const val BigConstraintValue = (1 shl 18) - 1
+
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class LayoutUtilsKtTest {
+
+    @Test
+    fun finalConstraints_doesntThrowWhenLarge() {
+        // this used to throw, ensure it doesn't
+        val subject = finalConstraints(
+            /* minWidth != maxWidth */
+            Constraints(0, 500, 0, BigConstraintValue - 1),
+            true /* width matters */,
+            TextOverflow.Ellipsis,
+            (BigConstraintValue - 1).toFloat()
+        )
+        assertThat(subject).isNotNull()
+    }
 
     @Test
     fun finalConstraints_returnsTightWidth() {
@@ -88,5 +115,28 @@ class LayoutUtilsKtTest {
     fun finalMaxLines_overrideOn_TextOverflowEllipsis_andSoftwrapFalse() {
         val subject = finalMaxLines(false, TextOverflow.Ellipsis, 4)
         assertThat(subject).isEqualTo(1)
+    }
+
+    @Test
+    fun fixedCoercedNeverCrashes() {
+        var a = 0
+        var b = 0
+        while (1 shl a > 0) {
+            val width = 1 shl a
+            while (1 shl b > 0) {
+                val height = 1 shl b
+                /* shouldn't crash */
+                val constraints = fitPrioritizingWidth(
+                    minWidth = width,
+                    maxWidth = width,
+                    minHeight = height,
+                    maxHeight = height
+                )
+                println("$width $height => $constraints")
+                b++
+            }
+            b = 0
+            a++
+        }
     }
 }

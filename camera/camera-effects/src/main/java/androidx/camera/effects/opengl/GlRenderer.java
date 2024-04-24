@@ -25,7 +25,6 @@ import static androidx.core.util.Preconditions.checkState;
 import android.graphics.Bitmap;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
-import android.opengl.GLUtils;
 import android.os.Build;
 import android.util.Size;
 import android.view.Surface;
@@ -44,7 +43,7 @@ import androidx.annotation.RestrictTo;
  * <li>Rendering a texture in the queue to the output Surface.
  * </ul>
  *
- * <p>It also allows the caller to upload a bitmap and overlay it when rendering to Surface.
+ * <p>It also allows the caller to overlay a texture when rendering to Surface.
  */
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 @RestrictTo(RestrictTo.Scope.LIBRARY)
@@ -91,7 +90,7 @@ public final class GlRenderer {
             mInputTextureId = createTextureId();
             configureExternalTexture(mInputTextureId);
             mOverlayTextureId = createTextureId();
-            configureTexture2D(mOverlayTextureId);
+            configureExternalTexture(mOverlayTextureId);
         } catch (IllegalStateException | IllegalArgumentException e) {
             release();
             throw e;
@@ -141,6 +140,14 @@ public final class GlRenderer {
     }
 
     /**
+     * Gets the external overlay texture ID created during initialization.
+     */
+    public int getOverlayTextureId() {
+        checkGlThreadAndInitialized();
+        return mOverlayTextureId;
+    }
+
+    /**
      * Creates an array of textures and return.
      *
      * <p>This method creates an array of {@link GLES20#GL_TEXTURE_2D} textures with the
@@ -180,20 +187,6 @@ public final class GlRenderer {
             );
         }
         return mQueueTextureIds;
-    }
-
-    /**
-     * Uploads the {@link Bitmap} to the overlay texture.
-     */
-    public void uploadOverlay(@NonNull Bitmap overlay) {
-        checkGlThreadAndInitialized();
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mOverlayTextureId);
-        checkGlErrorOrThrow("glBindTexture");
-
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, overlay, 0);
-        checkGlErrorOrThrow("texImage2D");
     }
 
     /**

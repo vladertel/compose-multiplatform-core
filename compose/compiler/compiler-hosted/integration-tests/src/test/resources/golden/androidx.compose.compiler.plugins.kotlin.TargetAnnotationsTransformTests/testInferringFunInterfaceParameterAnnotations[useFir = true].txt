@@ -1,35 +1,38 @@
+//
+// Source
+// ------------------------------------------
 
-        import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Composable
 
-        fun interface CustomComposable {
-            @Composable
-            fun call()
-        }
+fun interface CustomComposable {
+    @Composable
+    fun call()
+}
 
-        @Composable
-        fun OpenCustom(content: CustomComposable) {
-            content.call()
-        }
+@Composable
+fun OpenCustom(content: CustomComposable) {
+    content.call()
+}
 
-        @Composable
-        fun ClosedCustom(content: CustomComposable) {
-            Text("Test")
-            content.call()
-        }
+@Composable
+fun ClosedCustom(content: CustomComposable) {
+    Text("Test")
+    content.call()
+}
 
-        @Composable
-        fun Test() {
-            OpenCustom {
-                Text("Test")
-            }
-            ClosedCustom  {
-                Text("Test")
-            }
-        }
-        
-/********
- * TRANSFORMED
- ********/
+@Composable
+fun Test() {
+    OpenCustom {
+        Text("Test")
+    }
+    ClosedCustom  {
+        Text("Test")
+    }
+}
+
+//
+// Transformed IR
+// ------------------------------------------
 
 interface CustomComposable {
   @Composable
@@ -41,10 +44,15 @@ fun OpenCustom(content: CustomComposable, %composer: Composer?, %changed: Int) {
   %composer = %composer.startRestartGroup(<>)
   sourceInformation(%composer, "C(OpenCustom)<call()>:Test.kt")
   val %dirty = %changed
-  if (%changed and 0b1110 == 0) {
-    %dirty = %dirty or if (%composer.changed(content)) 0b0100 else 0b0010
+  if (%changed and 0b0110 == 0) {
+    %dirty = %dirty or if (if (%changed and 0b1000 == 0) {
+      %composer.changed(content)
+    } else {
+      %composer.changedInstance(content)
+    }
+    ) 0b0100 else 0b0010
   }
-  if (%dirty and 0b1011 != 0b0010 || !%composer.skipping) {
+  if (%dirty and 0b0011 != 0b0010 || !%composer.skipping) {
     if (isTraceInProgress()) {
       traceEventStart(<>, %dirty, -1, <>)
     }
@@ -65,10 +73,15 @@ fun ClosedCustom(content: CustomComposable, %composer: Composer?, %changed: Int)
   %composer = %composer.startRestartGroup(<>)
   sourceInformation(%composer, "C(ClosedCustom)<Text("...>,<call()>:Test.kt")
   val %dirty = %changed
-  if (%changed and 0b1110 == 0) {
-    %dirty = %dirty or if (%composer.changed(content)) 0b0100 else 0b0010
+  if (%changed and 0b0110 == 0) {
+    %dirty = %dirty or if (if (%changed and 0b1000 == 0) {
+      %composer.changed(content)
+    } else {
+      %composer.changedInstance(content)
+    }
+    ) 0b0100 else 0b0010
   }
-  if (%dirty and 0b1011 != 0b0010 || !%composer.skipping) {
+  if (%dirty and 0b0011 != 0b0010 || !%composer.skipping) {
     if (isTraceInProgress()) {
       traceEventStart(<>, %dirty, -1, <>)
     }
@@ -100,9 +113,13 @@ fun Test(%composer: Composer?, %changed: Int) {
         override fun call(%composer: Composer?, %changed: Int) {
           %composer = %composer.startRestartGroup(<>)
           sourceInformation(%composer, "C(call)<Text("...>:Test.kt")
-          if (%changed and 0b0001 != 0 || !%composer.skipping) {
+          val %dirty = %changed
+          if (%changed and 0b0110 == 0) {
+            %dirty = %dirty or if (%composer.changed(<this>)) 0b0100 else 0b0010
+          }
+          if (%dirty and 0b0011 != 0b0010 || !%composer.skipping) {
             if (isTraceInProgress()) {
-              traceEventStart(<>, %changed, -1, <>)
+              traceEventStart(<>, %dirty, -1, <>)
             }
             Text("Test", %composer, 0b0110)
             if (isTraceInProgress()) {
@@ -126,9 +143,13 @@ fun Test(%composer: Composer?, %changed: Int) {
         override fun call(%composer: Composer?, %changed: Int) {
           %composer = %composer.startRestartGroup(<>)
           sourceInformation(%composer, "C(call)<Text("...>:Test.kt")
-          if (%changed and 0b0001 != 0 || !%composer.skipping) {
+          val %dirty = %changed
+          if (%changed and 0b0110 == 0) {
+            %dirty = %dirty or if (%composer.changed(<this>)) 0b0100 else 0b0010
+          }
+          if (%dirty and 0b0011 != 0b0010 || !%composer.skipping) {
             if (isTraceInProgress()) {
-              traceEventStart(<>, %changed, -1, <>)
+              traceEventStart(<>, %dirty, -1, <>)
             }
             Text("Test", %composer, 0b0110)
             if (isTraceInProgress()) {

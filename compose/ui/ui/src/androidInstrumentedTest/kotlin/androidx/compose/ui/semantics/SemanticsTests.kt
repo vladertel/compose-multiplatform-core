@@ -33,6 +33,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentDataType
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.Layout
@@ -113,7 +115,33 @@ class SemanticsTests {
     }
 
     @Test
-    fun isTraversalGroupProperty() {
+    fun paneTitleProperty_unmergedConfig() {
+        val paneTitleString = "test PaneTitle string"
+
+        rule.setContent {
+            Surface {
+                Box(
+                    Modifier
+                        .testTag(TestTag)
+                        .semantics { paneTitle = paneTitleString }
+                ) {}
+            }
+        }
+
+        rule.onNodeWithTag(TestTag)
+            .assert(
+                SemanticsMatcher("unmerged paneTitle property") {
+                    it.unmergedConfig.getOrNull(SemanticsProperties.PaneTitle) == paneTitleString
+                }
+            )
+
+        rule.onNodeWithTag(TestTag)
+            .assert(SemanticsMatcher.expectValue(
+                SemanticsProperties.PaneTitle, paneTitleString))
+    }
+
+    @Test
+    fun isTraversalGroupProperty_unmergedConfig() {
         rule.setContent {
             Surface(
                 Modifier.testTag(TestTag)
@@ -123,23 +151,35 @@ class SemanticsTests {
         }
 
         rule.onNodeWithTag(TestTag)
+            .assert(
+                SemanticsMatcher("unmerged traversalGroup property") {
+                    it.unmergedConfig.getOrNull(SemanticsProperties.IsTraversalGroup) == true
+                }
+            )
+
+        rule.onNodeWithTag(TestTag)
             .assert(SemanticsMatcher.expectValue(
                 SemanticsProperties.IsTraversalGroup, true))
     }
 
     @Test
-    fun traversalIndexProperty() {
+    fun traversalIndexProperty_unmergedConfig() {
         rule.setContent {
-            Surface {
-                Box(Modifier
-                    .semantics { traversalIndex = 0f }
-                    .testTag(TestTag)
-                ) {
-                    Text("Hello World", modifier = Modifier.padding(8.dp))
-                }
+            Box(Modifier
+                .semantics { traversalIndex = 0f }
+                .testTag(TestTag)
+            ) {
+                Text("Hello World", modifier = Modifier.padding(8.dp))
             }
         }
 
+        rule.onNodeWithTag(TestTag)
+            .assert(
+                SemanticsMatcher("unmerged traversalIndex property") {
+                    // Using unmerged config here since `traversalIndex` doesn't depend on `config`
+                    it.unmergedConfig.getOrNull(SemanticsProperties.TraversalIndex) == 0f
+                }
+            )
         rule.onNodeWithTag(TestTag)
             .assert(SemanticsMatcher.expectValue(
                 SemanticsProperties.TraversalIndex, 0f))
@@ -148,12 +188,10 @@ class SemanticsTests {
     @Test
     fun traversalIndexPropertyNull() {
         rule.setContent {
-            Surface {
-                Box(Modifier
-                    .testTag(TestTag)
-                ) {
-                    Text("Hello World", modifier = Modifier.padding(8.dp))
-                }
+            Box(Modifier
+                .testTag(TestTag)
+            ) {
+                Text("Hello World", modifier = Modifier.padding(8.dp))
             }
         }
 
@@ -167,13 +205,11 @@ class SemanticsTests {
     @Suppress("DEPRECATION")
     fun isContainerPropertyDeprecated() {
         rule.setContent {
-            Surface {
-                Box(Modifier
-                    .testTag(TestTag)
-                    .semantics { isContainer = true }
-                ) {
-                    Text("Hello World", modifier = Modifier.padding(8.dp))
-                }
+            Box(Modifier
+                .testTag(TestTag)
+                .semantics { isContainer = true }
+            ) {
+                Text("Hello World", modifier = Modifier.padding(8.dp))
             }
         }
 
@@ -182,12 +218,46 @@ class SemanticsTests {
         rule.onNodeWithTag(TestTag)
             .assert(
                 SemanticsMatcher("container property") {
-                    it.config.getOrNull(SemanticsProperties.IsContainer) == true
+                    it.unmergedConfig.getOrNull(SemanticsProperties.IsContainer) == true
                 }
             )
         rule.onNodeWithTag(TestTag)
             .assert(SemanticsMatcher.expectValue(
                 SemanticsProperties.IsTraversalGroup, true))
+    }
+
+    @Test
+    fun contentTypeProperty() {
+        rule.setContent {
+            Box(Modifier
+                .testTag(TestTag)
+                .semantics { testProperty = ContentType.Username.toString() }
+            )
+        }
+
+        rule.onNodeWithTag(TestTag)
+            .assertUnmergedTestPropertyEquals(ContentType.Username.toString())
+
+        rule.onNodeWithTag(TestTag)
+            .assertTestPropertyEquals(ContentType.Username.toString())
+    }
+
+    @Test
+    fun contentDataTypeProperty() {
+        rule.setContent {
+            Surface {
+                Box(Modifier
+                    .testTag(TestTag)
+                    .semantics { testProperty = ContentDataType.Text.toString() }
+                )
+            }
+        }
+
+        rule.onNodeWithTag(TestTag)
+            .assertUnmergedTestPropertyEquals(ContentDataType.Text.toString())
+
+        rule.onNodeWithTag(TestTag)
+            .assertTestPropertyEquals(ContentDataType.Text.toString())
     }
 
     @Test
@@ -1083,6 +1153,9 @@ class SemanticsTests {
         }
 
         val config = rule.onNodeWithTag(TestTag, true).fetchSemanticsNode().config
+        assertEquals(null,
+            config.getOrNull(SemanticsProperties.IsShowingTextSubstitution))
+
         rule.runOnUiThread {
             config.getOrNull(SemanticsActions.SetTextSubstitution)?.action?.invoke(
                 AnnotatedString("bonjour"))
@@ -1094,6 +1167,10 @@ class SemanticsTests {
         // SetTextSubstitution doesn't trigger text update
         assertThat(newConfig.getOrNull(SemanticsProperties.Text))
             .containsExactly(AnnotatedString("hello"))
+        assertEquals(AnnotatedString("bonjour"),
+            newConfig.getOrNull(SemanticsProperties.TextSubstitution))
+        assertEquals(false,
+            newConfig.getOrNull(SemanticsProperties.IsShowingTextSubstitution))
 
         rule.runOnUiThread {
             config.getOrNull(SemanticsActions.ShowTextSubstitution)?.action?.invoke(true)
@@ -1104,9 +1181,11 @@ class SemanticsTests {
         newConfig = rule.onNodeWithTag(TestTag, true).fetchSemanticsNode().config
         // ShowTextSubstitution triggers text update
         assertThat(newConfig.getOrNull(SemanticsProperties.Text))
-            .containsExactly(AnnotatedString("bonjour"))
-        assertEquals(
-            AnnotatedString("hello"), newConfig.getOrNull(SemanticsProperties.OriginalText))
+            .containsExactly(AnnotatedString("hello"))
+        assertEquals(AnnotatedString("bonjour"),
+            newConfig.getOrNull(SemanticsProperties.TextSubstitution))
+        assertEquals(true,
+            newConfig.getOrNull(SemanticsProperties.IsShowingTextSubstitution))
     }
 
     @Test
@@ -1122,6 +1201,9 @@ class SemanticsTests {
         }
 
         val config = rule.onNodeWithTag(TestTag, true).fetchSemanticsNode().config
+        assertEquals(null,
+            config.getOrNull(SemanticsProperties.IsShowingTextSubstitution))
+
         rule.runOnUiThread {
             config.getOrNull(SemanticsActions.SetTextSubstitution)?.action?.invoke(
                 AnnotatedString("bonjour"))
@@ -1133,6 +1215,10 @@ class SemanticsTests {
         // SetTextSubstitution doesn't trigger text update
         assertThat(newConfig.getOrNull(SemanticsProperties.Text))
             .containsExactly(AnnotatedString("hello"))
+        assertEquals(AnnotatedString("bonjour"),
+            newConfig.getOrNull(SemanticsProperties.TextSubstitution))
+        assertEquals(false,
+            newConfig.getOrNull(SemanticsProperties.IsShowingTextSubstitution))
 
         rule.runOnUiThread {
             config.getOrNull(SemanticsActions.ShowTextSubstitution)?.action?.invoke(true)
@@ -1143,9 +1229,11 @@ class SemanticsTests {
         newConfig = rule.onNodeWithTag(TestTag, true).fetchSemanticsNode().config
         // ShowTextSubstitution triggers text update
         assertThat(newConfig.getOrNull(SemanticsProperties.Text))
-            .containsExactly(AnnotatedString("bonjour"))
-        assertEquals(
-            AnnotatedString("hello"), newConfig.getOrNull(SemanticsProperties.OriginalText))
+            .containsExactly(AnnotatedString("hello"))
+        assertEquals(AnnotatedString("bonjour"),
+            newConfig.getOrNull(SemanticsProperties.TextSubstitution))
+        assertEquals(true,
+            newConfig.getOrNull(SemanticsProperties.IsShowingTextSubstitution))
     }
 
     @Test
@@ -1189,7 +1277,14 @@ private fun SemanticsNodeInteraction.assertDoesNotHaveProperty(property: Semanti
 private val TestProperty = SemanticsPropertyKey<String>("TestProperty") { parent, child ->
     if (parent == null) child else "$parent, $child"
 }
+
 internal var SemanticsPropertyReceiver.testProperty by TestProperty
+
+private fun SemanticsNodeInteraction.assertUnmergedTestPropertyEquals(value: String) = assert(
+    SemanticsMatcher(value) {
+        it.unmergedConfig.getOrNull(TestProperty) == value
+    }
+)
 
 internal fun SemanticsNodeInteraction.assertTestPropertyEquals(value: String) = assert(
     SemanticsMatcher.expectValue(TestProperty, value)

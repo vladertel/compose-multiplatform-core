@@ -1,18 +1,21 @@
+//
+// Source
+// ------------------------------------------
 
-            import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Composable
 
-            class A {
-              @Composable fun B(x: Int) { }
-            }
+class A {
+  @Composable fun B(x: Int) { }
+}
 
-            @Composable
-            fun C() { A().B(1337) }
-        
-/********
- * TRANSFORMED
- ********/
+@Composable
+fun C() { A().B(1337) }
 
-@StabilityInferred(parameters = 0)
+//
+// Transformed IR
+// ------------------------------------------
+
+@StabilityInferred(parameters = 1)
 class A {
   @Composable
   fun B(x: Int, %composer: Composer?, %changed: Int) {

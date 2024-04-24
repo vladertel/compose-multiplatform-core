@@ -1,12 +1,15 @@
+//
+// Source
+// ------------------------------------------
 
-            class Stable(val bar: Int)
-            class Unstable(var bar: Int)
-        
-/********
- * TRANSFORMED
- ********/
+class Stable(val bar: Int)
+class Unstable(var bar: Int)
 
-@StabilityInferred(parameters = 0)
+//
+// Transformed IR
+// ------------------------------------------
+
+@StabilityInferred(parameters = 1)
 class Stable(val bar: Int) {
   static val %stable: Int = 0
 }

@@ -22,7 +22,9 @@ import com.android.build.gradle.LibraryExtension
 import com.android.build.gradle.TestedExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.UnknownTaskException
 import org.gradle.api.tasks.StopExecutionException
+import org.gradle.api.tasks.TaskContainer
 
 private const val ADDITIONAL_TEST_OUTPUT_KEY = "android.enableAdditionalTestOutput"
 
@@ -103,13 +105,16 @@ class BenchmarkPlugin : Plugin<Project> {
 
         val adbPathProvider = componentsExtension.sdkComponents.adb.map { it.asFile.absolutePath }
 
-        if (project.rootProject.tasks.findByName("lockClocks") == null) {
+        if (!project.rootProject.tasks.exists("lockClocks")) {
             project.rootProject.tasks.register("lockClocks", LockClocksTask::class.java).configure {
                 it.adbPath.set(adbPathProvider)
+                it.coresArg.set(
+                    project.findProperty("androidx.benchmark.lockClocks.cores")?.toString() ?: ""
+                )
             }
         }
 
-        if (project.rootProject.tasks.findByName("unlockClocks") == null) {
+        if (!project.rootProject.tasks.exists("unlockClocks")) {
             project.rootProject.tasks.register("unlockClocks", UnlockClocksTask::class.java)
                 .configure {
                     it.adbPath.set(adbPathProvider)
@@ -130,10 +135,10 @@ class BenchmarkPlugin : Plugin<Project> {
             )
         }
 
-        // NOTE: .all here is a Gradle API, which will run the callback passed to it after the
-        // extension variants have been resolved.
+        // NOTE: .configureEach here is a Gradle API, which will run the callback passed to it after
+        // the extension variants have been resolved.
         var applied = false
-        extensionVariants.all {
+        extensionVariants.configureEach {
             if (!applied) {
                 applied = true
 
@@ -183,5 +188,12 @@ class BenchmarkPlugin : Plugin<Project> {
                 }
             }
         }
+    }
+
+    private fun TaskContainer.exists(taskName: String) = try {
+        named(taskName)
+        true
+    } catch (e: UnknownTaskException) {
+        false
     }
 }

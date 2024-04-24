@@ -33,6 +33,7 @@ import android.hardware.camera2.params.MultiResolutionStreamInfo
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.media.ImageReader
+import android.media.ImageWriter
 import android.os.Build
 import android.os.Handler
 import android.util.Size
@@ -314,6 +315,16 @@ internal object Api29Compat {
     ): ImageReader {
         return ImageReader.newInstance(width, height, format, capacity, usage)
     }
+
+    @JvmStatic
+    @DoNotInline
+    fun imageWriterNewInstance(
+        surface: Surface,
+        maxImages: Int,
+        format: Int
+    ): ImageWriter {
+        return ImageWriter.newInstance(surface, maxImages, format)
+    }
 }
 
 @RequiresApi(Build.VERSION_CODES.R)
@@ -322,6 +333,18 @@ internal object Api30Compat {
     @DoNotInline
     fun getConcurrentCameraIds(cameraManager: CameraManager): Set<Set<String>> {
         return cameraManager.concurrentCameraIds
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getCameraAudioRestriction(cameraDevice: CameraDevice): Int {
+        return cameraDevice.cameraAudioRestriction
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun setCameraAudioRestriction(cameraDevice: CameraDevice, mode: Int) {
+        cameraDevice.cameraAudioRestriction = mode
     }
 }
 
@@ -333,10 +356,49 @@ internal object Api31Compat {
         inputConfigData: List<InputConfigData>,
         cameraId: String
     ): InputConfiguration {
+        check(inputConfigData.isNotEmpty()) {
+            "Call to create InputConfiguration but list of InputConfigData is empty."
+        }
+
+        if (inputConfigData.size == 1) {
+            val inputData = inputConfigData.first();
+            return InputConfiguration(inputData.width, inputData.height, inputData.format)
+        }
         val multiResolutionInput = inputConfigData.map { input ->
             MultiResolutionStreamInfo(input.width, input.height, cameraId)
         }
         return InputConfiguration(multiResolutionInput, inputConfigData.first().format)
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun newMultiResolutionStreamInfo(
+        streamWidth: Int,
+        streamHeight: Int,
+        physicalCameraId: String
+    ): MultiResolutionStreamInfo {
+        return MultiResolutionStreamInfo(
+            streamWidth,
+            streamHeight,
+            physicalCameraId
+        )
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun getPhysicalCameraTotalResults(
+        totalCaptureResult: TotalCaptureResult
+    ): Map<String, CaptureResult>? {
+        return totalCaptureResult.physicalCameraTotalResults
+    }
+
+    @JvmStatic
+    @DoNotInline
+    fun addSensorPixelModeUsed(
+        outputConfiguration: OutputConfiguration,
+        sensorPixelMode: Int,
+    ) {
+        outputConfiguration.addSensorPixelModeUsed(sensorPixelMode)
     }
 
     @JvmStatic
@@ -461,6 +523,28 @@ internal object Api33Compat {
         extension: Int
     ): Set<CaptureResult.Key<Any>> =
         extensionCharacteristics.getAvailableCaptureResultKeys(extension)
+
+    @JvmStatic
+    @DoNotInline
+    fun newImageReaderFromImageReaderBuilder(
+        width: Int,
+        height: Int,
+        imageFormat: Int? = null,
+        maxImages: Int? = null,
+        usage: Long? = null,
+        defaultDataSpace: Int? = null,
+        defaultHardwareBufferFormat: Int? = null
+    ): ImageReader {
+        return ImageReader.Builder(width, height).apply {
+            if (imageFormat != null) setImageFormat(imageFormat)
+            if (maxImages != null) setMaxImages(maxImages)
+            if (usage != null) setUsage(usage)
+            if (defaultDataSpace != null) setDefaultDataSpace(defaultDataSpace)
+            if (defaultHardwareBufferFormat != null) setDefaultHardwareBufferFormat(
+                defaultHardwareBufferFormat
+            )
+        }.build()
+    }
 }
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -471,4 +555,23 @@ internal object Api34Compat {
         extensionCharacteristics: CameraExtensionCharacteristics,
         extension: Int
     ): Boolean = extensionCharacteristics.isPostviewAvailable(extension)
+
+    @JvmStatic
+    @DoNotInline
+    fun getPostviewSupportedSizes(
+        extensionCharacteristics: CameraExtensionCharacteristics,
+        extension: Int,
+        captureSize: Size,
+        format: Int
+    ): List<Size> =
+        extensionCharacteristics.getPostviewSupportedSizes(extension, captureSize, format)
+
+    @JvmStatic
+    @DoNotInline
+    fun setPostviewOutputConfiguration(
+        extensionSessionConfiguration: ExtensionSessionConfiguration,
+        postviewOutputConfiguration: OutputConfiguration
+    ) {
+        extensionSessionConfiguration.postviewOutputConfiguration = postviewOutputConfiguration
+    }
 }
