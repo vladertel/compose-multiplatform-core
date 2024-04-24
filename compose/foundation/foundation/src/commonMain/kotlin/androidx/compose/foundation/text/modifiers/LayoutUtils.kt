@@ -29,7 +29,9 @@ internal fun finalConstraints(
     overflow: TextOverflow,
     maxIntrinsicWidth: Float
 ): Constraints = Constraints(
+        minWidth = 0,
         maxWidth = finalMaxWidth(constraints, softWrap, overflow, maxIntrinsicWidth),
+        minHeight = 0,
         maxHeight = constraints.maxHeight
     )
 

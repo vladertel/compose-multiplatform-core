@@ -1,3 +1,7 @@
+//
+// Source
+// ------------------------------------------
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.key
@@ -28,14 +32,14 @@ fun Example(a: Iterator<Int>, b: Iterator<Int>) {
     }
 }
 
-/********
- * TRANSFORMED
- ********/
+//
+// Transformed IR
+// ------------------------------------------
 
 @NonRestartableComposable
 @Composable
 fun Example(a: Iterator<Int>, b: Iterator<Int>, %composer: Composer?, %changed: Int) {
-  %composer.startReplaceableGroup(<>)
+  %composer.startReplaceGroup(<>)
   sourceInformation(%composer, "C(Example)*<A()>:Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
@@ -45,7 +49,7 @@ fun Example(a: Iterator<Int>, b: Iterator<Int>, %composer: Composer?, %changed: 
     if (x == 0) {
       break
     }
-    %composer.startReplaceableGroup(<>)
+    %composer.startReplaceGroup(<>)
     sourceInformation(%composer, "*<A()>")
     b@while (b.hasNext()) {
       val y = b.next()
@@ -53,24 +57,24 @@ fun Example(a: Iterator<Int>, b: Iterator<Int>, %composer: Composer?, %changed: 
         break
       }
       if (y == x) {
-        %composer.endReplaceableGroup()
+        %composer.endReplaceGroup()
         break@a
       }
       if (y > 100) {
-        %composer.endReplaceableGroup()
+        %composer.endReplaceGroup()
         if (isTraceInProgress()) {
           traceEventEnd()
         }
-        %composer.endReplaceableGroup()
+        %composer.endReplaceGroup()
         return
       }
       A(%composer, 0)
     }
-    %composer.endReplaceableGroup()
+    %composer.endReplaceGroup()
     A(%composer, 0)
   }
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  %composer.endReplaceGroup()
 }

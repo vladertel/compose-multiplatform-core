@@ -22,9 +22,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.PlatformTextInputModifierNode
 import androidx.compose.ui.platform.PlatformTextInputSession
-import androidx.compose.ui.platform.runTextInputSession
+import androidx.compose.ui.platform.establishTextInputSession
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.PlatformTextInputMethodTestOverride
@@ -32,17 +33,13 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
-import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.truth.Truth.assertThat
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.test.runTest
@@ -50,6 +47,7 @@ import kotlinx.coroutines.withContext
 import org.junit.Rule
 import org.junit.runner.RunWith
 
+@Suppress("DEPRECATION")
 @OptIn(ExperimentalTestApi::class)
 @SmallTest
 @RunWith(AndroidJUnit4::class)
@@ -60,33 +58,6 @@ class PlatformTextInputMethodTestOverrideTest {
 
     private lateinit var testNode: TestNode
     private lateinit var hostView: View
-
-    @Test
-    fun overridesView() = runTest {
-        val testHandler = object : PlatformTextInputSession {
-            override val view: View =
-                View(InstrumentationRegistry.getInstrumentation().targetContext)
-
-            override suspend fun startInputMethod(
-                request: PlatformTextInputMethodRequest
-            ): Nothing = cancelSelf()
-        }
-        setContent(testHandler)
-
-        var inputView: View? = null
-        rule.runOnIdle {
-            launch {
-                testNode.runTextInputSession {
-                    inputView = view
-                    cancelSelf()
-                }
-            }
-        }
-        // Let the session start.
-        testScheduler.advanceUntilIdle()
-
-        assertThat(inputView).isSameInstanceAs(testHandler.view)
-    }
 
     @Test
     fun overrideHandlesInputMethod() = runTest {
@@ -112,7 +83,7 @@ class PlatformTextInputMethodTestOverrideTest {
 
         val testJob = rule.runOnIdle {
             launch {
-                testNode.runTextInputSession {
+                testNode.establishTextInputSession {
                     // This context should be propagated to startInputMethod.
                     withContext(CoroutineName(coroutineName)) {
                         startInputMethod(testRequest)
@@ -144,7 +115,7 @@ class PlatformTextInputMethodTestOverrideTest {
 
         val testJob = rule.runOnIdle {
             launch {
-                testNode.runTextInputSession {
+                testNode.establishTextInputSession {
                     startInputMethod(testRequest)
                 }
             }
@@ -170,12 +141,6 @@ class PlatformTextInputMethodTestOverrideTest {
                 )
             }
         }
-    }
-
-    private fun CoroutineScope.cancelSelf(): Nothing {
-        cancel()
-        ensureActive()
-        error("Not cancelled")
     }
 
     private data class TestElement(

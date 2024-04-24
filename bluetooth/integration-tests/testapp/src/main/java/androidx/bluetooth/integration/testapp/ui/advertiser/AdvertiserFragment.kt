@@ -21,15 +21,14 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
-import androidx.bluetooth.BluetoothLe
 import androidx.bluetooth.integration.testapp.R
 import androidx.bluetooth.integration.testapp.databinding.FragmentAdvertiserBinding
 import androidx.bluetooth.integration.testapp.ui.common.getColor
@@ -37,45 +36,23 @@ import androidx.bluetooth.integration.testapp.ui.common.setViewEditText
 import androidx.bluetooth.integration.testapp.ui.common.toast
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.flowWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import dagger.hilt.android.AndroidEntryPoint
 import java.util.UUID
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class AdvertiserFragment : Fragment() {
 
     private companion object {
         private const val TAG = "AdvertiserFragment"
     }
 
-    private lateinit var bluetoothLe: BluetoothLe
-
     private var advertiseDataAdapter: AdvertiseDataAdapter? = null
-
-    private val advertiseScope = CoroutineScope(Dispatchers.Main + Job())
-    private var advertiseJob: Job? = null
-
-    private var isAdvertising: Boolean = false
-        set(value) {
-            field = value
-            if (value) {
-                _binding?.buttonAdvertise?.text = getString(R.string.stop_advertising)
-                _binding?.buttonAdvertise?.backgroundTintList = getColor(R.color.red_500)
-            } else {
-                _binding?.buttonAdvertise?.text = getString(R.string.start_advertising)
-                _binding?.buttonAdvertise?.backgroundTintList = getColor(R.color.indigo_500)
-                advertiseJob?.cancel()
-                advertiseJob = null
-            }
-            _binding?.checkBoxIncludeDeviceName?.isEnabled = !value
-            _binding?.checkBoxConnectable?.isEnabled = !value
-            _binding?.checkBoxDiscoverable?.isEnabled = !value
-            _binding?.buttonAddData?.isEnabled = !value
-            _binding?.viewRecyclerViewOverlay?.isVisible = value
-        }
 
     private val viewModel: AdvertiserViewModel by viewModels()
 
@@ -87,9 +64,12 @@ class AdvertiserFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        bluetoothLe = BluetoothLe(requireContext())
-
         _binding = FragmentAdvertiserBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         binding.checkBoxIncludeDeviceName.setOnCheckedChangeListener { _, isChecked ->
             viewModel.includeDeviceName = isChecked
@@ -103,11 +83,22 @@ class AdvertiserFragment : Fragment() {
             viewModel.discoverable = isChecked
         }
 
+        binding.textInputEditTextDuration.doAfterTextChanged {
+            val maxDuration: Long = 180_000
+            var duration = (it.toString()).toLongOrNull() ?: 0
+            if (duration > maxDuration) {
+                binding.textInputEditTextDuration.setText(maxDuration.toString())
+                duration = maxDuration
+            }
+            viewModel.durationMillis = duration
+        }
+
         binding.buttonAddData.setOnClickListener {
             with(PopupMenu(requireContext(), binding.buttonAddData)) {
                 menu.add(getString(R.string.service_uuid))
                 menu.add(getString(R.string.service_data))
                 menu.add(getString(R.string.manufacturer_data))
+                menu.add(getString(R.string.service_solicitation_uuid))
 
                 setOnMenuItemClickListener { menuItem ->
                     showDialogFor(menuItem.title.toString())
@@ -124,39 +115,65 @@ class AdvertiserFragment : Fragment() {
         binding.recyclerViewAdvertiseData.adapter = advertiseDataAdapter
 
         binding.buttonAdvertise.setOnClickListener {
-            if (advertiseJob?.isActive == true) {
-                isAdvertising = false
+            if (viewModel.advertiseJob?.isActive == true) {
+                viewModel.advertiseJob?.cancel()
             } else {
-                startAdvertise()
+                viewModel.startAdvertise()
             }
         }
 
-        initData()
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.uiState
+                .flowWithLifecycle(viewLifecycleOwner.lifecycle)
+                .collect(::updateUi)
+        }
 
-        return binding.root
+        initData()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-        isAdvertising = false
+    }
+
+    private fun updateUi(advertiserUiState: AdvertiserUiState) {
+        advertiserUiState.isAdvertising.let { isAdvertising ->
+            if (isAdvertising) {
+                binding.buttonAdvertise.text = getString(R.string.stop_advertising)
+                binding.buttonAdvertise.backgroundTintList = getColor(R.color.red_500)
+            } else {
+                binding.buttonAdvertise.text = getString(R.string.start_advertising)
+                binding.buttonAdvertise.backgroundTintList = getColor(R.color.indigo_500)
+            }
+            binding.checkBoxIncludeDeviceName.isEnabled = !isAdvertising
+            binding.checkBoxConnectable.isEnabled = !isAdvertising
+            binding.checkBoxDiscoverable.isEnabled = !isAdvertising
+            binding.buttonAddData.isEnabled = !isAdvertising
+            binding.viewRecyclerViewOverlay.isVisible = isAdvertising
+        }
+
+        advertiserUiState.resultMessage?.let {
+            toast(it).show()
+            viewModel.clearResultMessage()
+        }
     }
 
     private fun initData() {
-        if (ContextCompat.checkSelfPermission(
+        if (Build.VERSION.SDK_INT < 31 || (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.BLUETOOTH_CONNECT
-            )
-            == PackageManager.PERMISSION_GRANTED
+            ) == PackageManager.PERMISSION_GRANTED)
         ) {
-            binding.textInputEditTextDisplayName.setText(
-                (requireContext().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager)
-                    .adapter.name
-            )
+            (requireContext().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager?)
+                ?.adapter?.name?.let {
+                    binding.textInputEditTextDisplayName.setText(it)
+                }
         }
+
         binding.checkBoxIncludeDeviceName.isChecked = viewModel.includeDeviceName
         binding.checkBoxConnectable.isChecked = viewModel.connectable
         binding.checkBoxDiscoverable.isChecked = viewModel.discoverable
+        binding.textInputEditTextDuration.setText(viewModel.durationMillis.toString())
     }
 
     private fun showDialogFor(title: String) {
@@ -164,6 +181,7 @@ class AdvertiserFragment : Fragment() {
             getString(R.string.service_uuid) -> showDialogForServiceUuid()
             getString(R.string.service_data) -> showDialogForServiceData()
             getString(R.string.manufacturer_data) -> showDialogForManufacturerData()
+            getString(R.string.service_solicitation_uuid) -> showDialogForServiceSolicitationUuid()
         }
     }
 
@@ -234,6 +252,24 @@ class AdvertiserFragment : Fragment() {
             .show()
     }
 
+    private fun showDialogForServiceSolicitationUuid() {
+        val editText = EditText(requireActivity())
+        editText.hint = getString(R.string.service_solicitation_uuid)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.service_solicitation_uuid))
+            .setViewEditText(editText)
+            .setPositiveButton(getString(R.string.add)) { _, _ ->
+                val editTextInput = editText.text.toString()
+
+                viewModel.serviceSolicitationUuids.add(UUID.fromString(editTextInput))
+                refreshAdvertiseData()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .create()
+            .show()
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     private fun refreshAdvertiseData() {
         advertiseDataAdapter?.advertiseData = viewModel.advertiseData
@@ -244,44 +280,5 @@ class AdvertiserFragment : Fragment() {
         viewModel.removeAdvertiseDataAtIndex(index)
         advertiseDataAdapter?.advertiseData = viewModel.advertiseData
         advertiseDataAdapter?.notifyItemRemoved(index)
-    }
-
-    // Permissions are handled by MainActivity requestBluetoothPermissions
-    @SuppressLint("MissingPermission")
-    private fun startAdvertise() {
-        Log.d(TAG, "startAdvertise() called")
-
-        advertiseJob = advertiseScope.launch {
-            Log.d(
-                TAG, "bluetoothLe.advertise() called with: " +
-                    "viewModel.advertiseParams = ${viewModel.advertiseParams}"
-            )
-
-            isAdvertising = true
-
-            bluetoothLe.advertise(viewModel.advertiseParams) {
-                Log.d(TAG, "bluetoothLe.advertise result: AdvertiseResult = $it")
-
-                when (it) {
-                    BluetoothLe.ADVERTISE_STARTED ->
-                        toast("ADVERTISE_STARTED").show()
-
-                    BluetoothLe.ADVERTISE_FAILED_DATA_TOO_LARGE ->
-                        toast("ADVERTISE_FAILED_DATA_TOO_LARGE").show()
-
-                    BluetoothLe.ADVERTISE_FAILED_FEATURE_UNSUPPORTED ->
-                        toast("ADVERTISE_FAILED_FEATURE_UNSUPPORTED").show()
-
-                    BluetoothLe.ADVERTISE_FAILED_INTERNAL_ERROR ->
-                        toast("ADVERTISE_FAILED_INTERNAL_ERROR").show()
-
-                    BluetoothLe.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS ->
-                        toast("ADVERTISE_FAILED_TOO_MANY_ADVERTISERS").show()
-                }
-            }
-
-            Log.d(TAG, "bluetoothLe.advertise completed")
-            isAdvertising = false
-        }
     }
 }

@@ -18,6 +18,7 @@ package androidx.compose.compiler.plugins.kotlin
 
 import androidx.compose.compiler.plugins.kotlin.analysis.FqNameMatcher
 import androidx.compose.compiler.plugins.kotlin.analysis.StabilityInferencer
+import androidx.compose.compiler.plugins.kotlin.k1.ComposeDescriptorSerializerContext
 import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.ComposableFunInterfaceLowering
 import androidx.compose.compiler.plugins.kotlin.lower.ComposableFunctionBodyTransformer
@@ -36,6 +37,7 @@ import androidx.compose.compiler.plugins.kotlin.lower.WrapJsComposableLambdaLowe
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.CreateDecoysTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.RecordDecoySignaturesTransformer
 import androidx.compose.compiler.plugins.kotlin.lower.decoys.SubstituteDecoyCallsTransformer
+import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.AddHiddenFromObjCLowering
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.serialization.DeclarationTable
@@ -46,23 +48,30 @@ import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerIr
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.platform.isJs
+import org.jetbrains.kotlin.platform.isWasm
 import org.jetbrains.kotlin.platform.jvm.isJvm
+import org.jetbrains.kotlin.platform.konan.isNative
 
 class ComposeIrGenerationExtension(
     @Suppress("unused") private val liveLiteralsEnabled: Boolean = false,
     @Suppress("unused") private val liveLiteralsV2Enabled: Boolean = false,
     private val generateFunctionKeyMetaClasses: Boolean = false,
     private val sourceInformationEnabled: Boolean = true,
+    private val traceMarkersEnabled: Boolean = true,
     private val intrinsicRememberEnabled: Boolean = false,
+    private val nonSkippingGroupOptimizationEnabled: Boolean = false,
     private val decoysEnabled: Boolean = false,
     private val metricsDestination: String? = null,
     private val reportsDestination: String? = null,
     private val validateIr: Boolean = false,
     private val useK2: Boolean = false,
     private val strongSkippingEnabled: Boolean = false,
-    private val stableTypeMatchers: Set<FqNameMatcher> = emptySet()
+    private val stableTypeMatchers: Set<FqNameMatcher> = emptySet(),
+    private val moduleMetricsFactory: ((StabilityInferencer) -> ModuleMetrics)? = null,
+    private val descriptorSerializerContext: ComposeDescriptorSerializerContext? = null,
 ) : IrGenerationExtension {
     var metrics: ModuleMetrics = EmptyModuleMetrics
+        private set
 
     override fun generate(
         moduleFragment: IrModuleFragment,
@@ -71,7 +80,10 @@ class ComposeIrGenerationExtension(
         val isKlibTarget = !pluginContext.platform.isJvm()
         VersionChecker(pluginContext).check()
 
-        val stabilityInferencer = StabilityInferencer(stableTypeMatchers)
+        val stabilityInferencer = StabilityInferencer(
+            pluginContext.moduleDescriptor,
+            stableTypeMatchers,
+        )
 
         // Input check.  This should always pass, else something is horribly wrong upstream.
         // Necessary because oftentimes the issue is upstream (compiler bug, prior plugin, etc)
@@ -85,17 +97,34 @@ class ComposeIrGenerationExtension(
             moduleFragment.acceptVoid(ComposableLambdaAnnotator(pluginContext))
         }
 
-        if (metricsDestination != null || reportsDestination != null) {
+        if (moduleMetricsFactory != null) {
+            metrics = moduleMetricsFactory.invoke(stabilityInferencer)
+        } else if (metricsDestination != null || reportsDestination != null) {
             metrics = ModuleMetricsImpl(moduleFragment.name.asString()) {
                 stabilityInferencer.stabilityOf(it)
             }
         }
 
+        if (pluginContext.platform.isNative()) {
+            AddHiddenFromObjCLowering(
+                pluginContext,
+                symbolRemapper,
+                metrics,
+                descriptorSerializerContext?.hideFromObjCDeclarationsSet,
+                stabilityInferencer
+            ).lower(moduleFragment)
+        }
+
         ClassStabilityTransformer(
+            useK2,
             pluginContext,
             symbolRemapper,
             metrics,
-            stabilityInferencer
+            stabilityInferencer,
+            classStabilityInferredCollection = descriptorSerializerContext
+                ?.classStabilityInferredCollection?.takeIf {
+                    !pluginContext.platform.isJvm()
+                }
         ).lower(moduleFragment)
 
         LiveLiteralTransformer(
@@ -125,7 +154,9 @@ class ComposeIrGenerationExtension(
             symbolRemapper,
             metrics,
             stabilityInferencer,
-            strongSkippingEnabled
+            strongSkippingEnabled,
+            intrinsicRememberEnabled,
+            nonSkippingGroupOptimizationEnabled,
         ).lower(moduleFragment)
 
         if (!useK2) {
@@ -194,7 +225,9 @@ class ComposeIrGenerationExtension(
             metrics,
             stabilityInferencer,
             sourceInformationEnabled,
+            traceMarkersEnabled,
             intrinsicRememberEnabled,
+            nonSkippingGroupOptimizationEnabled,
             strongSkippingEnabled
         ).lower(moduleFragment)
 
@@ -222,12 +255,12 @@ class ComposeIrGenerationExtension(
             ).lower(moduleFragment)
         }
 
-        if (pluginContext.platform.isJs()) {
+        if (pluginContext.platform.isJs() || pluginContext.platform.isWasm()) {
             WrapJsComposableLambdaLowering(
                 pluginContext,
                 symbolRemapper,
                 metrics,
-                idSignatureBuilder!!,
+                idSignatureBuilder,
                 stabilityInferencer,
                 decoysEnabled
             ).lower(moduleFragment)

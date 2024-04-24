@@ -77,7 +77,6 @@ protobuf {
 android {
     namespace "androidx.appactions.interaction.proto"
     defaultConfig {
-        minSdkVersion 19
     }
     libraryVariants.all { variant ->
         // Replace the default jar with the shadow jar in the AAR.
@@ -100,4 +99,5 @@ androidx {
     inceptionYear = "2022"
     description = "Protos for use with App Action interaction libraries."
     metalavaK2UastEnabled = true
+    doNotDocumentReason = "No public API"
 }

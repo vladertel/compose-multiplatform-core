@@ -16,6 +16,8 @@
 
 package androidx.compose.foundation.text.selection
 
+import androidx.collection.LongObjectMap
+import androidx.collection.emptyLongObjectMap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -52,7 +54,7 @@ internal fun getSingleSelectionLayoutFake(
     isStartHandle: Boolean = false,
     previousSelection: Selection? = null,
     shouldRecomputeSelection: Boolean = true,
-    subSelections: Map<Long, Selection> = emptyMap(),
+    subSelections: LongObjectMap<Selection> = emptyLongObjectMap(),
 ): SelectionLayout {
     return getSelectionLayoutFake(
         infos = listOf(
@@ -113,6 +115,8 @@ internal fun getTextLayoutResultMock(
     }
 
     val multiParagraph = mock<MultiParagraph> {
+        on { lineCount }.thenAnswer { _ -> lineBreaks.size + 1 }
+
         on { getBidiRunDirection(any()) }.thenAnswer { invocation ->
             val offset = invocation.arguments[0] as Int
             if (rtlCharRanges.any { offset in it })
@@ -197,7 +201,7 @@ internal fun getSelectionLayoutFake(
     isStartHandle: Boolean = false,
     previousSelection: Selection? = null,
     shouldRecomputeSelection: Boolean = true,
-    subSelections: Map<Long, Selection> = emptyMap(),
+    subSelections: LongObjectMap<Selection> = emptyLongObjectMap(),
 ): SelectionLayout = FakeSelectionLayout(
     size = infos.size,
     crossStatus = crossStatus,
@@ -229,9 +233,9 @@ internal class FakeSelectionLayout(
     override val previousSelection: Selection?,
     private val middleInfos: List<SelectableInfo>,
     private val shouldRecomputeSelection: Boolean,
-    private val subSelections: Map<Long, Selection>,
+    private val subSelections: LongObjectMap<Selection>,
 ) : SelectionLayout {
-    override fun createSubSelections(selection: Selection): Map<Long, Selection> = subSelections
+    override fun createSubSelections(selection: Selection): LongObjectMap<Selection> = subSelections
     override fun forEachMiddleInfo(block: (SelectableInfo) -> Unit) {
         middleInfos.forEach(block)
     }
@@ -275,9 +279,10 @@ internal class FakeSelectable : Selectable {
     var endYHandleDirection = Direction.ON
     var rawPreviousHandleOffset = -1 // -1 = no previous offset
     var layoutCoordinatesToReturn: LayoutCoordinates? = null
+    var boundingBoxes: Map<Int, Rect> = emptyMap()
 
     private val selectableKey = 1L
-    private val fakeSelectAllSelection: Selection = Selection(
+    var fakeSelectAllSelection: Selection? = Selection(
         start = Selection.AnchorInfo(
             direction = ResolvedTextDirection.Ltr,
             offset = 0,
@@ -304,7 +309,7 @@ internal class FakeSelectable : Selectable {
         )
     }
 
-    override fun getSelectAllSelection(): Selection {
+    override fun getSelectAllSelection(): Selection? {
         return fakeSelectAllSelection
     }
 
@@ -322,7 +327,7 @@ internal class FakeSelectable : Selectable {
     }
 
     override fun getBoundingBox(offset: Int): Rect {
-        return Rect.Zero
+        return boundingBoxes[offset] ?: Rect.Zero
     }
 
     override fun getLineLeft(offset: Int): Float {

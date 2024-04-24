@@ -22,31 +22,39 @@ import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.ScrollableState
+import androidx.compose.foundation.gestures.snapping.offsetOnMainAxis
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.layout.AwaitFirstLayoutModifier
 import androidx.compose.foundation.lazy.layout.LazyLayoutBeyondBoundsInfo
+import androidx.compose.foundation.lazy.layout.LazyLayoutItemAnimator
 import androidx.compose.foundation.lazy.layout.LazyLayoutPinnedItemList
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState
+import androidx.compose.foundation.lazy.layout.ObservableScopeInvalidator
+import androidx.compose.foundation.lazy.layout.PrefetchScheduler
 import androidx.compose.foundation.lazy.layout.animateScrollToItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collection.mutableVectorOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.neverEqualPolicy
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.Remeasurement
 import androidx.compose.ui.layout.RemeasurementModifier
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastForEach
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Creates a [LazyGridState] that is remembered across compositions.
@@ -75,17 +83,24 @@ fun rememberLazyGridState(
  * A state object that can be hoisted to control and observe scrolling.
  *
  * In most cases, this will be created via [rememberLazyGridState].
- *
- * @param firstVisibleItemIndex the initial value for [LazyGridState.firstVisibleItemIndex]
- * @param firstVisibleItemScrollOffset the initial value for
- * [LazyGridState.firstVisibleItemScrollOffset]
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Stable
-class LazyGridState constructor(
+class LazyGridState internal constructor(
     firstVisibleItemIndex: Int = 0,
-    firstVisibleItemScrollOffset: Int = 0
+    firstVisibleItemScrollOffset: Int = 0,
+    prefetchScheduler: PrefetchScheduler?,
 ) : ScrollableState {
+
+    /**
+     * @param firstVisibleItemIndex the initial value for [LazyGridState.firstVisibleItemIndex]
+     * @param firstVisibleItemScrollOffset the initial value for
+     * [LazyGridState.firstVisibleItemScrollOffset]
+     */
+    constructor(
+        firstVisibleItemIndex: Int = 0,
+        firstVisibleItemScrollOffset: Int = 0
+    ) : this(firstVisibleItemIndex, firstVisibleItemScrollOffset, null)
 
     /**
      * The holder class for the current scroll position.
@@ -116,7 +131,10 @@ class LazyGridState constructor(
     val firstVisibleItemScrollOffset: Int get() = scrollPosition.scrollOffset
 
     /** Backing state for [layoutInfo] */
-    private val layoutInfoState = mutableStateOf<LazyGridLayoutInfo>(EmptyLazyGridLayoutInfo)
+    private val layoutInfoState = mutableStateOf(
+        EmptyLazyGridLayoutInfo,
+        neverEqualPolicy()
+    )
 
     /**
      * The object of [LazyGridLayoutInfo] calculated during the last layout pass. For example,
@@ -149,20 +167,9 @@ class LazyGridState constructor(
     internal var scrollToBeConsumed = 0f
         private set
 
-    /**
-     * Needed for [animateScrollToItem]. Updated on every measure.
-     */
-    internal var slotsPerLine: Int by mutableIntStateOf(0)
+    internal val slotsPerLine: Int get() = layoutInfoState.value.slotsPerLine
 
-    /**
-     * Needed for [animateScrollToItem]. Updated on every measure.
-     */
-    internal var density: Density = Density(1f, 1f)
-
-    /**
-     * Needed for [notifyPrefetch].
-     */
-    internal var isVertical: Boolean = true
+    internal val density: Density get() = layoutInfoState.value.density
 
     /**
      * The ScrollableController instance. We keep it as we need to call stopAnimation on it once
@@ -205,6 +212,7 @@ class LazyGridState constructor(
      * synchronously during scroll.
      */
     internal var remeasurement: Remeasurement? = null
+        private set
 
     /**
      * The modifier which provides [remeasurement].
@@ -221,13 +229,7 @@ class LazyGridState constructor(
      */
     internal val awaitLayoutModifier = AwaitFirstLayoutModifier()
 
-    /**
-     * Finds items on a line and their measurement constraints. Used for prefetching.
-     */
-    internal var prefetchInfoRetriever: (line: Int) -> List<Pair<Int, Constraints>> by
-        mutableStateOf({ emptyList() })
-
-    internal val placementAnimator = LazyGridItemPlacementAnimator()
+    internal val itemAnimator = LazyLayoutItemAnimator<LazyGridMeasuredItem>()
 
     internal val beyondBoundsInfo = LazyLayoutBeyondBoundsInfo()
 
@@ -239,6 +241,8 @@ class LazyGridState constructor(
     internal val pinnedItems = LazyLayoutPinnedItemList()
 
     internal val nearestRange: IntRange by scrollPosition.nearestRangeState
+
+    internal val placementScopeInvalidator = ObservableScopeInvalidator()
 
     /**
      * Instantly brings the item at [index] to the top of the viewport, offset by [scrollOffset]
@@ -255,17 +259,63 @@ class LazyGridState constructor(
         scrollOffset: Int = 0
     ) {
         scroll {
-            snapToItemIndexInternal(index, scrollOffset)
+            snapToItemIndexInternal(index, scrollOffset, forceRemeasure = true)
         }
     }
 
-    internal fun snapToItemIndexInternal(index: Int, scrollOffset: Int) {
-        scrollPosition.requestPosition(index, scrollOffset)
-        // placement animation is not needed because we snap into a new position.
-        placementAnimator.reset()
-        remeasurement?.forceRemeasure()
+    internal val measurementScopeInvalidator = ObservableScopeInvalidator()
+
+    /**
+     * Requests the item at [index] to be at the start of the viewport during the next
+     * remeasure, offset by [scrollOffset], and schedules a remeasure.
+     *
+     * The scroll position will be updated to the requested position rather than maintain
+     * the index based on the first visible item key (when a data set change will also be
+     * applied during the next remeasure), but *only* for the next remeasure.
+     *
+     * Any scroll in progress will be cancelled.
+     *
+     * @param index the index to which to scroll. Must be non-negative.
+     * @param scrollOffset the offset that the item should end up after the scroll. Note that
+     * positive offset refers to forward scroll, so in a top-to-bottom list, positive offset will
+     * scroll the item further upward (taking it partly offscreen).
+     */
+    fun requestScrollToItem(
+        @AndroidXIntRange(from = 0)
+        index: Int,
+        scrollOffset: Int = 0
+    ) {
+        // Cancel any scroll in progress.
+        if (isScrollInProgress) {
+            layoutInfoState.value.coroutineScope.launch {
+                stopScroll()
+            }
+        }
+
+        snapToItemIndexInternal(index, scrollOffset, forceRemeasure = false)
     }
 
+    internal fun snapToItemIndexInternal(index: Int, scrollOffset: Int, forceRemeasure: Boolean) {
+        val positionChanged = scrollPosition.index != index ||
+            scrollPosition.scrollOffset != scrollOffset
+        // sometimes this method is called not to scroll, but to stay on the same index when
+        // the data changes, as by default we maintain the scroll position by key, not index.
+        // when this happens we don't need to reset the animations as from the user perspective
+        // we didn't scroll anywhere and if there is an offset change for an item, this change
+        // should be animated.
+        // however, when the request is to really scroll to a different position, we have to
+        // reset previously known item positions as we don't want offset changes to be animated.
+        // this offset should be considered as a scroll, not the placement change.
+        if (positionChanged) {
+            itemAnimator.reset()
+        }
+        scrollPosition.requestPositionAndForgetLastKnownKey(index, scrollOffset)
+        if (forceRemeasure) {
+            remeasurement?.forceRemeasure()
+        } else {
+            measurementScopeInvalidator.invalidateScope()
+        }
+    }
     /**
      * Call this function to take control of scrolling and gain the ability to send scroll events
      * via [ScrollScope.scrollBy]. All actions that change the logical scroll position must be
@@ -293,6 +343,13 @@ class LazyGridState constructor(
     override var canScrollBackward: Boolean by mutableStateOf(false)
         private set
 
+    @get:Suppress("GetterSetterNames")
+    override val lastScrolledForward: Boolean
+        get() = scrollableState.lastScrolledForward
+    @get:Suppress("GetterSetterNames")
+    override val lastScrolledBackward: Boolean
+        get() = scrollableState.lastScrolledBackward
+
     // TODO: Coroutine scrolling APIs will allow this to be private again once we have more
     //  fine-grained control over scrolling
     /*@VisibleForTesting*/
@@ -309,9 +366,21 @@ class LazyGridState constructor(
         // inside measuring we do scrollToBeConsumed.roundToInt() so there will be no scroll if
         // we have less than 0.5 pixels
         if (abs(scrollToBeConsumed) > 0.5f) {
+            val layoutInfo = layoutInfoState.value
             val preScrollToBeConsumed = scrollToBeConsumed
-            remeasurement?.forceRemeasure()
-            if (prefetchingEnabled) {
+            val intDelta = scrollToBeConsumed.roundToInt()
+            if (layoutInfo.tryToApplyScrollWithoutRemeasure(intDelta)) {
+                applyMeasureResult(
+                    result = layoutInfo,
+                    visibleItemsStayedTheSame = true
+                )
+                // we don't need to remeasure, so we only trigger re-placement:
+                placementScopeInvalidator.invalidateScope()
+
+                notifyPrefetch(preScrollToBeConsumed - scrollToBeConsumed, layoutInfo)
+            } else {
+                remeasurement?.forceRemeasure()
+
                 notifyPrefetch(preScrollToBeConsumed - scrollToBeConsumed)
             }
         }
@@ -330,44 +399,63 @@ class LazyGridState constructor(
         }
     }
 
-    private fun notifyPrefetch(delta: Float) {
+    private fun notifyPrefetch(
+        delta: Float,
+        info: LazyGridMeasureResult = layoutInfoState.value
+    ) {
         val prefetchState = prefetchState
         if (!prefetchingEnabled) {
             return
         }
-        val info = layoutInfo
         if (info.visibleItemsInfo.isNotEmpty()) {
             val scrollingForward = delta < 0
             val lineToPrefetch: Int
             val closestNextItemToPrefetch: Int
             if (scrollingForward) {
                 lineToPrefetch = 1 + info.visibleItemsInfo.last().let {
-                    if (isVertical) it.row else it.column
+                    if (info.orientation == Orientation.Vertical) it.row else it.column
                 }
                 closestNextItemToPrefetch = info.visibleItemsInfo.last().index + 1
             } else {
                 lineToPrefetch = -1 + info.visibleItemsInfo.first().let {
-                    if (isVertical) it.row else it.column
+                    if (info.orientation == Orientation.Vertical) it.row else it.column
                 }
                 closestNextItemToPrefetch = info.visibleItemsInfo.first().index - 1
             }
-            if (lineToPrefetch != this.lineToPrefetch &&
-                closestNextItemToPrefetch in 0 until info.totalItemsCount
-            ) {
-                if (wasScrollingForward != scrollingForward) {
-                    // the scrolling direction has been changed which means the last prefetched
-                    // is not going to be reached anytime soon so it is safer to dispose it.
-                    // if this line is already visible it is safe to call the method anyway
-                    // as it will be no-op
-                    currentLinePrefetchHandles.forEach { it.cancel() }
+            if (closestNextItemToPrefetch in 0 until info.totalItemsCount) {
+                if (lineToPrefetch != this.lineToPrefetch) {
+                    if (wasScrollingForward != scrollingForward) {
+                        // the scrolling direction has been changed which means the last prefetched
+                        // is not going to be reached anytime soon so it is safer to dispose it.
+                        // if this line is already visible it is safe to call the method anyway
+                        // as it will be no-op
+                        currentLinePrefetchHandles.forEach { it.cancel() }
+                    }
+                    this.wasScrollingForward = scrollingForward
+                    this.lineToPrefetch = lineToPrefetch
+                    currentLinePrefetchHandles.clear()
+                    info.prefetchInfoRetriever(lineToPrefetch).fastForEach {
+                        currentLinePrefetchHandles.add(
+                            prefetchState.schedulePrefetch(it.first, it.second)
+                        )
+                    }
                 }
-                this.wasScrollingForward = scrollingForward
-                this.lineToPrefetch = lineToPrefetch
-                currentLinePrefetchHandles.clear()
-                prefetchInfoRetriever(lineToPrefetch).fastForEach {
-                    currentLinePrefetchHandles.add(
-                        prefetchState.schedulePrefetch(it.first, it.second)
-                    )
+                if (scrollingForward) {
+                    val lastItem = info.visibleItemsInfo.last()
+                    val distanceToPrefetchItem = lastItem.offsetOnMainAxis(info.orientation) +
+                        lastItem.mainAxisSizeWithSpacings - info.viewportEndOffset
+                    // if in the next frame we will get the same delta will we reach the item?
+                    if (distanceToPrefetchItem < -delta) {
+                        currentLinePrefetchHandles.forEach { it.markAsUrgent() }
+                    }
+                } else {
+                    val firstItem = info.visibleItemsInfo.first()
+                    val distanceToPrefetchItem = info.viewportStartOffset -
+                        firstItem.offsetOnMainAxis(info.orientation)
+                    // if in the next frame we will get the same delta will we reach the item?
+                    if (distanceToPrefetchItem < delta) {
+                        currentLinePrefetchHandles.forEach { it.markAsUrgent() }
+                    }
                 }
             }
         }
@@ -377,11 +465,11 @@ class LazyGridState constructor(
         if (lineToPrefetch != -1 && info.visibleItemsInfo.isNotEmpty()) {
             val expectedLineToPrefetch = if (wasScrollingForward) {
                 info.visibleItemsInfo.last().let {
-                    if (isVertical) it.row else it.column
+                    if (info.orientation == Orientation.Vertical) it.row else it.column
                 } + 1
             } else {
                 info.visibleItemsInfo.first().let {
-                    if (isVertical) it.row else it.column
+                    if (info.orientation == Orientation.Vertical) it.row else it.column
                 } - 1
             }
             if (lineToPrefetch != expectedLineToPrefetch) {
@@ -392,7 +480,7 @@ class LazyGridState constructor(
         }
     }
 
-    internal val prefetchState = LazyLayoutPrefetchState()
+    internal val prefetchState = LazyLayoutPrefetchState(prefetchScheduler)
 
     private val numOfItemsToTeleport: Int get() = 100 * slotsPerLine
 
@@ -415,18 +503,23 @@ class LazyGridState constructor(
     /**
      *  Updates the state with the new calculated scroll position and consumed scroll.
      */
-    internal fun applyMeasureResult(result: LazyGridMeasureResult) {
-        scrollPosition.updateFromMeasureResult(result)
+    internal fun applyMeasureResult(
+        result: LazyGridMeasureResult,
+        visibleItemsStayedTheSame: Boolean = false
+    ) {
         scrollToBeConsumed -= result.consumedScroll
         layoutInfoState.value = result
 
+        if (visibleItemsStayedTheSame) {
+            scrollPosition.updateScrollOffset(result.firstVisibleLineScrollOffset)
+        } else {
+            scrollPosition.updateFromMeasureResult(result)
+            cancelPrefetchIfVisibleItemsChanged(result)
+        }
+        canScrollBackward = result.canScrollBackward
         canScrollForward = result.canScrollForward
-        canScrollBackward = (result.firstVisibleLine?.index ?: 0) != 0 ||
-            result.firstVisibleLineScrollOffset != 0
 
         numMeasurePasses++
-
-        cancelPrefetchIfVisibleItemsChanged(result)
     }
 
     /**
@@ -436,7 +529,7 @@ class LazyGridState constructor(
      */
     internal fun updateScrollPositionIfTheFirstItemWasMoved(
         itemProvider: LazyGridItemProvider,
-        firstItemIndex: Int = Snapshot.withoutReadObservation { scrollPosition.index }
+        firstItemIndex: Int
     ): Int = scrollPosition.updateScrollPositionIfTheFirstItemWasMoved(itemProvider, firstItemIndex)
 
     companion object {
@@ -455,16 +548,30 @@ class LazyGridState constructor(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-private object EmptyLazyGridLayoutInfo : LazyGridLayoutInfo {
-    override val visibleItemsInfo = emptyList<LazyGridItemInfo>()
-    override val viewportStartOffset = 0
-    override val viewportEndOffset = 0
-    override val totalItemsCount = 0
-    override val viewportSize = IntSize.Zero
-    override val orientation = Orientation.Vertical
-    override val reverseLayout = false
-    override val beforeContentPadding: Int = 0
-    override val afterContentPadding: Int = 0
-    override val mainAxisItemSpacing = 0
-}
+private val EmptyLazyGridLayoutInfo = LazyGridMeasureResult(
+    firstVisibleLine = null,
+    firstVisibleLineScrollOffset = 0,
+    canScrollForward = false,
+    consumedScroll = 0f,
+    measureResult = object : MeasureResult {
+        override val width: Int = 0
+        override val height: Int = 0
+
+        @Suppress("PrimitiveInCollection")
+        override val alignmentLines: Map<AlignmentLine, Int> = emptyMap()
+        override fun placeChildren() {}
+    },
+    visibleItemsInfo = emptyList(),
+    viewportStartOffset = 0,
+    viewportEndOffset = 0,
+    totalItemsCount = 0,
+    reverseLayout = false,
+    orientation = Orientation.Vertical,
+    afterContentPadding = 0,
+    mainAxisItemSpacing = 0,
+    remeasureNeeded = false,
+    density = Density(1f),
+    slotsPerLine = 0,
+    coroutineScope = CoroutineScope(EmptyCoroutineContext),
+    prefetchInfoRetriever = { emptyList() }
+)

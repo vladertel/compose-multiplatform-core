@@ -57,6 +57,50 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
     )
 
     @Test
+    fun testValTypeParam33Types() = assertStability(
+        """
+            class Foo<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31, T32, T33>(
+                val t1: T1,
+                val t2: T2,
+                val t3: T3,
+                val t4: T4,
+                val t5: T5,
+                val t6: T6,
+                val t7: T7,
+                val t8: T8,
+                val t9: T9,
+                val t10: T10,
+                val t11: T11,
+                val t12: T12,
+                val t13: T13,
+                val t14: T14,
+                val t15: T15,
+                val t16: T16,
+                val t17: T17,
+                val t18: T18,
+                val t19: T19,
+                val t20: T20,
+                val t21: T21,
+                val t22: T22,
+                val t23: T23,
+                val t24: T24,
+                val t25: T25,
+                val t26: T26,
+                val t27: T27,
+                val t28: T28,
+                val t29: T29,
+                val t30: T30,
+                val t31: T31,
+                val t32: T32,
+                val t33: T33,
+            )
+        """,
+        """
+            Parameter(T1),Parameter(T2),Parameter(T3),Parameter(T4),Parameter(T5),Parameter(T6),Parameter(T7),Parameter(T8),Parameter(T9),Parameter(T10),Parameter(T11),Parameter(T12),Parameter(T13),Parameter(T14),Parameter(T15),Parameter(T16),Parameter(T17),Parameter(T18),Parameter(T19),Parameter(T20),Parameter(T21),Parameter(T22),Parameter(T23),Parameter(T24),Parameter(T25),Parameter(T26),Parameter(T27),Parameter(T28),Parameter(T29),Parameter(T30),Parameter(T31),Parameter(T32),Parameter(T33)
+        """.trimIndent()
+    )
+
+    @Test
     fun testSingleVarTypeParamIsUnstable() = assertStability(
         "class Foo<T>(var value: T)",
         "Unstable"
@@ -1044,6 +1088,40 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
         "Runtime(A)"
     )
 
+    // b/327643787
+    @Test
+    fun testNestedExternalTypesAreStable() = assertStability(
+        externalSrc = "",
+        localSrc = """
+            data class B(val list: List<Int>)
+            data class A(val list: List<B>)
+        """.trimIndent(),
+        expression = "A(listOf())",
+        externalTypes = setOf("kotlin.collections.List"),
+        stability = "Stable"
+    )
+
+    @Test
+    fun testNestedGenericsAreRuntimeStable() = assertStability(
+        externalSrc = "",
+        localSrc = """
+            class A(val child: List<A>?)
+        """.trimIndent(),
+        expression = "A(null)",
+        externalTypes = setOf("kotlin.collections.List"),
+        stability = "Unstable"
+    )
+
+    @Test
+    fun testNestedEqualTypesAreUnstable() = assertStability(
+        externalSrc = "",
+        localSrc = """
+            class A(val child: A?)
+        """.trimIndent(),
+        expression = "A(A(null))",
+        stability = "Unstable"
+    )
+
     @Test
     fun testEmptyClass() = assertTransform(
         """
@@ -1181,6 +1259,184 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
     )
 
     @Test
+    fun testStabilityPropagationTooManyTypeParams() = verifyGoldenCrossModuleComposeIrTransform(
+        """
+            package a
+
+            class Foo<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31, T32, T33>(
+                val t1: T1,
+                val t2: T2,
+                val t3: T3,
+                val t4: T4,
+                val t5: T5,
+                val t6: T6,
+                val t7: T7,
+                val t8: T8,
+                val t9: T9,
+                val t10: T10,
+                val t11: T11,
+                val t12: T12,
+                val t13: T13,
+                val t14: T14,
+                val t15: T15,
+                val t16: T16,
+                val t17: T17,
+                val t18: T18,
+                val t19: T19,
+                val t20: T20,
+                val t21: T21,
+                val t22: T22,
+                val t23: T23,
+                val t24: T24,
+                val t25: T25,
+                val t26: T26,
+                val t27: T27,
+                val t28: T28,
+                val t29: T29,
+                val t30: T30,
+                val t31: T31,
+                val t32: T32,
+                val t33: T33,
+            )
+            fun used(any: Any? = null) {}
+        """,
+        """
+            import a.*
+            import androidx.compose.runtime.Composable
+
+            @Composable fun A(y: Any? = null) {
+                used(y)
+
+                A(
+                    Foo(
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                    )
+                )
+            }
+        """
+    )
+
+    @Test
+    fun testStabilityPropagationTooManyTypeParamsSameModule() = verifyGoldenComposeIrTransform(
+        """
+            package a
+
+            import androidx.compose.runtime.Composable
+
+            class Foo<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, T31, T32, T33>(
+                val t1: T1,
+                val t2: T2,
+                val t3: T3,
+                val t4: T4,
+                val t5: T5,
+                val t6: T6,
+                val t7: T7,
+                val t8: T8,
+                val t9: T9,
+                val t10: T10,
+                val t11: T11,
+                val t12: T12,
+                val t13: T13,
+                val t14: T14,
+                val t15: T15,
+                val t16: T16,
+                val t17: T17,
+                val t18: T18,
+                val t19: T19,
+                val t20: T20,
+                val t21: T21,
+                val t22: T22,
+                val t23: T23,
+                val t24: T24,
+                val t25: T25,
+                val t26: T26,
+                val t27: T27,
+                val t28: T28,
+                val t29: T29,
+                val t30: T30,
+                val t31: T31,
+                val t32: T32,
+                val t33: T33,
+            )
+            fun used(any: Any? = null) {}
+
+            @Composable fun A(y: Any? = null) {
+                used(y)
+
+                A(
+                    Foo(
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                    )
+                )
+            }
+        """
+    )
+
+    @Test
     fun testStabilityPropagationOfVariousTypesInSameModule() =
         verifyGoldenCrossModuleComposeIrTransform(
             """
@@ -1243,6 +1499,9 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
                 A(X(listOf(StableClass())))
                 A(StableDelegateProp())
                 A(UnstableDelegateProp())
+                A(SingleParamProp(0))
+                A(SingleParamNonProp(0))
+                A(SingleParamProp(Any()))
             }
         """
         )
@@ -1336,6 +1595,17 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
         """
     )
 
+    @Test
+    fun testTransformInternalClasses() {
+        assertTransform(
+            """
+                internal class SomeFoo(val value: Int)
+                internal class ParameterizedFoo<K>(val value: K)
+                internal class MultipleFoo<K, T>(val value: K, val param: T)
+            """
+        )
+    }
+
     private fun assertStability(
         @Language("kotlin")
         classDefSrc: String,
@@ -1357,10 +1627,12 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
         """.trimIndent()
 
         val files = listOf(SourceFile("Test.kt", source))
-        val irModule = compileToIr(files)
+        val irModule = compileToIr(files, registerExtensions = {
+            it.put(ComposeConfiguration.TEST_STABILITY_CONFIG_KEY, externalTypes)
+        })
         val irClass = irModule.files.last().declarations.first() as IrClass
         val externalTypeMatchers = externalTypes.map { FqNameMatcher(it) }.toSet()
-        val stabilityInferencer = StabilityInferencer(externalTypeMatchers)
+        val stabilityInferencer = StabilityInferencer(irModule.descriptor, externalTypeMatchers)
         val classStability = stabilityInferencer.stabilityOf(irClass.defaultType as IrType)
 
         assertEquals(
@@ -1379,11 +1651,18 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
         externalTypes: Set<String> = emptySet(),
         packageName: String = "dependency"
     ) {
-        val irModule = buildModule(externalSrc, classDefSrc, dumpClasses, packageName)
+        val irModule = buildModule(
+            externalSrc,
+            classDefSrc,
+            dumpClasses,
+            packageName,
+            externalTypes = externalTypes
+        )
         val irClass = irModule.files.last().declarations.first() as IrClass
         val externalTypeMatchers = externalTypes.map { FqNameMatcher(it) }.toSet()
         val classStability =
-            StabilityInferencer(externalTypeMatchers).stabilityOf(irClass.defaultType as IrType)
+            StabilityInferencer(irModule.descriptor, externalTypeMatchers)
+                .stabilityOf(irClass.defaultType as IrType)
 
         assertEquals(
             stability,
@@ -1404,7 +1683,7 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
             expectedTransformed = """
                 @StabilityInferred(parameters = 1)
                 class CombinedUnstable<T> (val first: T, val second: ParametrizedFoo<SomeFoo>) {
-                  static val %stable: Int = ParametrizedFoo.%stable or 0
+                  static val %stable: Int = ParametrizedFoo.%stable
                 }
             """
         )
@@ -1423,7 +1702,7 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
             expectedTransformed = """
             @StabilityInferred(parameters = 1)
             class CombinedStable<T> (val first: T, val second: ParametrizedFoo<SomeFoo>) {
-              static val %stable: Int = SomeFoo.%stable or ParametrizedFoo.%stable or 0
+              static val %stable: Int = SomeFoo.%stable or ParametrizedFoo.%stable
             }
         """
         )
@@ -1442,7 +1721,7 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
             expectedTransformed = """
             @StabilityInferred(parameters = 3)
             class CombinedStable<T, K> (val first: T, val second: ParametrizedFoo<K>) {
-              static val %stable: Int = 0 or ParametrizedFoo.%stable or 0
+              static val %stable: Int = ParametrizedFoo.%stable
             }
         """
         )
@@ -1463,7 +1742,8 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
 
                 fun TestFunction() = $expression
             """.trimIndent(),
-            dumpClasses
+            dumpClasses,
+            externalTypes = externalTypes
         )
         val irTestFn = irModule
             .files
@@ -1479,7 +1759,8 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
             else -> error("unexpected statement: $lastStatement")
         }
         val externalTypeMatchers = externalTypes.map { FqNameMatcher(it) }.toSet()
-        val exprStability = StabilityInferencer(externalTypeMatchers).stabilityOf(irExpr)
+        val exprStability =
+            StabilityInferencer(irModule.descriptor, externalTypeMatchers).stabilityOf(irExpr)
 
         assertEquals(
             stability,
@@ -1493,7 +1774,8 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
         @Language("kotlin")
         localSrc: String,
         dumpClasses: Boolean = false,
-        packageName: String = "dependency"
+        packageName: String = "dependency",
+        externalTypes: Set<String>
     ): IrModuleFragment {
         val dependencyFileName = "Test_REPLACEME_${uniqueNumber++}"
         val dependencySrc = """
@@ -1533,7 +1815,10 @@ class ClassStabilityTransformTests(useFir: Boolean) : AbstractIrTransformTest(us
         """.trimIndent()
 
         val files = listOf(SourceFile("Test.kt", source))
-        return compileToIr(files, listOf(classesDirectory.root))
+        return compileToIr(files, listOf(classesDirectory.root), registerExtensions = {
+            it.put(ComposeConfiguration.TEST_STABILITY_CONFIG_KEY, externalTypes)
+            it.updateConfiguration()
+        })
     }
 
     private fun assertTransform(

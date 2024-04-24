@@ -16,6 +16,16 @@
 
 package androidx.compose.foundation.text.selection
 
+import androidx.collection.LongIntMap
+import androidx.collection.LongObjectMap
+import androidx.collection.MutableLongIntMap
+import androidx.collection.MutableLongObjectMap
+import androidx.collection.longObjectMapOf
+import androidx.collection.mutableLongIntMapOf
+import androidx.collection.mutableLongObjectMapOf
+import androidx.compose.foundation.text.selection.Direction.AFTER
+import androidx.compose.foundation.text.selection.Direction.BEFORE
+import androidx.compose.foundation.text.selection.Direction.ON
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.text.TextLayoutResult
@@ -122,11 +132,11 @@ internal interface SelectionLayout {
      *
      * @param selection The selection to turn into subSelections
      */
-    fun createSubSelections(selection: Selection): Map<Long, Selection>
+    fun createSubSelections(selection: Selection): LongObjectMap<Selection>
 }
 
 private class MultiSelectionLayout(
-    val selectableIdToInfoListIndex: Map<Long, Int>,
+    val selectableIdToInfoListIndex: LongIntMap,
     val infoList: List<SelectableInfo>,
     override val startSlot: Int,
     override val endSlot: Int,
@@ -203,7 +213,7 @@ private class MultiSelectionLayout(
         return false
     }
 
-    override fun createSubSelections(selection: Selection): Map<Long, Selection> =
+    override fun createSubSelections(selection: Selection): LongObjectMap<Selection> =
         // Selection is within one selectable, we can return a singleton map of this selection.
         if (selection.start.selectableId == selection.end.selectableId) {
             // this check, if not passed, leads to exceptions when selection
@@ -214,8 +224,8 @@ private class MultiSelectionLayout(
             ) {
                 "unexpectedly miss-crossed selection: $selection"
             }
-            mapOf(selection.start.selectableId to selection)
-        } else buildMap {
+            longObjectMapOf(selection.start.selectableId, selection)
+        } else mutableLongObjectMapOf<Selection>().apply {
             val minAnchor = with(selection) { if (handlesCrossed) end else start }
             createAndPutSubSelection(selection, firstInfo, minAnchor.offset, firstInfo.textLength)
 
@@ -227,7 +237,7 @@ private class MultiSelectionLayout(
             createAndPutSubSelection(selection, lastInfo, minOffset = 0, maxAnchor.offset)
         }
 
-    private fun MutableMap<Long, Selection>.createAndPutSubSelection(
+    private fun MutableLongObjectMap<Selection>.createAndPutSubSelection(
         selection: Selection,
         info: SelectableInfo,
         minOffset: Int,
@@ -285,10 +295,11 @@ private class MultiSelectionLayout(
         return (slot - slotAdjustment) / 2
     }
 
-    private fun getInfoListIndexBySelectableId(id: Long): Int =
-        requireNotNull(selectableIdToInfoListIndex[id]) {
-            "Invalid selectableId: $id"
-        }
+    private fun getInfoListIndexBySelectableId(id: Long): Int = try {
+        selectableIdToInfoListIndex[id]
+    } catch (e: NoSuchElementException) {
+        throw IllegalStateException("Invalid selectableId: $id", e)
+    }
 }
 
 /**
@@ -300,6 +311,8 @@ private class MultiSelectionLayout(
  */
 private class SingleSelectionLayout(
     override val isStartHandle: Boolean,
+    override val startSlot: Int,
+    override val endSlot: Int,
     override val previousSelection: Selection?,
     private val info: SelectableInfo,
 ) : SelectionLayout {
@@ -309,8 +322,6 @@ private class SingleSelectionLayout(
     }
 
     override val size get() = 1
-    override val startSlot get() = info.slot
-    override val endSlot get() = info.slot
     override val crossStatus: CrossStatus get() = info.rawCrossStatus
     override val startInfo: SelectableInfo get() = info
     override val endInfo: SelectableInfo get() = info
@@ -329,14 +340,14 @@ private class SingleSelectionLayout(
             isStartHandle != other.isStartHandle ||
             info.shouldRecomputeSelection(other.info)
 
-    override fun createSubSelections(selection: Selection): Map<Long, Selection> {
+    override fun createSubSelections(selection: Selection): LongObjectMap<Selection> {
         check(
             (selection.handlesCrossed && selection.start.offset >= selection.end.offset) ||
                 (!selection.handlesCrossed && selection.start.offset <= selection.end.offset)
         ) {
             "unexpectedly miss-crossed selection: $selection"
         }
-        return mapOf(info.selectableId to selection)
+        return longObjectMapOf(info.selectableId, selection)
     }
 
     override fun toString(): String =
@@ -367,6 +378,8 @@ internal fun getTextFieldSelectionLayout(
     isStartHandle: Boolean,
 ): SelectionLayout = SingleSelectionLayout(
     isStartHandle = isStartHandle,
+    startSlot = SingleSelectionLayout.DEFAULT_SLOT,
+    endSlot = SingleSelectionLayout.DEFAULT_SLOT,
     previousSelection = if (isStartOfSelection) null else Selection(
         start = Selection.AnchorInfo(
             layoutResult.getTextDirectionForOffset(previousSelectionRange.start),
@@ -419,15 +432,14 @@ internal const val UNASSIGNED_SLOT = -1
  * @param selectableIdOrderingComparator determines the ordering of selectables by their IDs
  */
 internal class SelectionLayoutBuilder(
-    val startHandlePosition: Offset,
-    val endHandlePosition: Offset,
+    val currentPosition: Offset,
     val previousHandlePosition: Offset,
     val containerCoordinates: LayoutCoordinates,
     val isStartHandle: Boolean,
     val previousSelection: Selection?,
     val selectableIdOrderingComparator: Comparator<Long>
 ) {
-    private val selectableIdToInfoListIndex: MutableMap<Long, Int> = mutableMapOf()
+    private val selectableIdToInfoListIndex: MutableLongIntMap = mutableLongIntMapOf()
     private val infoList: MutableList<SelectableInfo> = mutableListOf()
     private var startSlot: Int = UNASSIGNED_SLOT
     private var endSlot: Int = UNASSIGNED_SLOT
@@ -439,19 +451,23 @@ internal class SelectionLayoutBuilder(
      * @return the [SelectionLayout] or null if no [SelectableInfo]s were added.
      */
     fun build(): SelectionLayout {
+        val lastSlot = currentSlot + 1
         return when (infoList.size) {
-            0 -> throw IllegalStateException(
-                "SelectionLayout must have at least one SelectableInfo."
-            )
+            0 -> {
+                throw IllegalStateException("SelectionLayout must not be empty.")
+            }
 
-            1 -> SingleSelectionLayout(
-                info = infoList.single(),
-                previousSelection = previousSelection,
-                isStartHandle = isStartHandle,
-            )
+            1 -> {
+                SingleSelectionLayout(
+                    info = infoList.single(),
+                    startSlot = if (startSlot == UNASSIGNED_SLOT) lastSlot else startSlot,
+                    endSlot = if (endSlot == UNASSIGNED_SLOT) lastSlot else endSlot,
+                    previousSelection = previousSelection,
+                    isStartHandle = isStartHandle,
+                )
+            }
 
             else -> {
-                val lastSlot = currentSlot + 1
                 MultiSelectionLayout(
                     selectableIdToInfoListIndex = selectableIdToInfoListIndex,
                     infoList = infoList,
@@ -524,29 +540,17 @@ internal class SelectionLayoutBuilder(
 
         // slot has not been determined yet,
         // see if we are on or past the selectable we are looking for
-        return when (yPositionDirection) {
-            // If we get here, that means we never found a selectable that intersects our gesture
-            // position on the y-axis. This is the first selectable that is after the position,
+        return when (resolve2dDirection(xPositionDirection, yPositionDirection)) {
+            // If we get here, that means we never found a selectable that contains our gesture
+            // position. This is the first selectable that is after the position,
             // so our slot must be between the previous and current selectables.
-            Direction.BEFORE -> currentSlot - 1
+            BEFORE -> currentSlot - 1
 
-            // The gesture position intersects the bounds of the selectable in the y-axis.
-            // Now, search along the x-axis.
-            Direction.ON -> {
-                when (xPositionDirection) {
-                    // Same logic as BEFORE above, but along the x-axis.
-                    Direction.BEFORE -> currentSlot - 1
-
-                    // The gesture position is directly on this selectable, so use this one.
-                    Direction.ON -> currentSlot
-
-                    // keep looking
-                    Direction.AFTER -> slot
-                }
-            }
+            // The gesture position is directly on this selectable, so use this one.
+            ON -> currentSlot
 
             // keep looking
-            Direction.AFTER -> slot
+            AFTER -> slot
         }
     }
 }
@@ -564,6 +568,24 @@ internal enum class Direction {
     /** The cursor/press is after the selectable */
     AFTER
 }
+
+/**
+ * Determine direction based on an x/y direction.
+ *
+ * This will use the [y] direction unless it is [ON],
+ * in which case it will use the [x] direction.
+ */
+internal fun resolve2dDirection(x: Direction, y: Direction): Direction =
+    when (y) {
+        BEFORE -> BEFORE
+        ON -> when (x) {
+            BEFORE -> BEFORE
+            ON -> ON
+            AFTER -> AFTER
+        }
+
+        AFTER -> AFTER
+    }
 
 /**
  * Data about a specific selectable within a [SelectionLayout].

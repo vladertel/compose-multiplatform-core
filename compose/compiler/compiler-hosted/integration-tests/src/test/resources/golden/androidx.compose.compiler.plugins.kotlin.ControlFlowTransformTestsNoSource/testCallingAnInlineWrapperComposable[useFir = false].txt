@@ -1,3 +1,7 @@
+//
+// Source
+// ------------------------------------------
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.key
@@ -11,24 +15,17 @@ fun Test() {
   }
 }
 
-/********
- * TRANSFORMED
- ********/
+//
+// Transformed IR
+// ------------------------------------------
 
 @Composable
 fun Test(%composer: Composer?, %changed: Int) {
   %composer = %composer.startRestartGroup(<>)
-  sourceInformation(%composer, "C(Test)")
   if (%changed != 0 || !%composer.skipping) {
-    if (isTraceInProgress()) {
-      traceEventStart(<>, %changed, -1, <>)
-    }
     IW({ %composer: Composer?, %changed: Int ->
       A(%composer, 0)
     }, %composer, 0)
-    if (isTraceInProgress()) {
-      traceEventEnd()
-    }
   } else {
     %composer.skipToGroupEnd()
   }

@@ -1,21 +1,24 @@
+//
+// Source
+// ------------------------------------------
 
-            import androidx.compose.runtime.*
+import androidx.compose.runtime.*
 
-            @Composable
-            fun Test() {
-                Bug(listOf(1, 2, 3)) {
-                    Text(it.toString())
-                }
-            }
+@Composable
+fun Test() {
+    Bug(listOf(1, 2, 3)) {
+        Text(it.toString())
+    }
+}
 
-            @Composable
-            inline fun <T> Bug(items: List<T>, content: @Composable (item: T) -> Unit) {
-                for (item in items) content(item)
-            }
-        
-/********
- * TRANSFORMED
- ********/
+@Composable
+inline fun <T> Bug(items: List<T>, content: @Composable (item: T) -> Unit) {
+    for (item in items) content(item)
+}
+
+//
+// Transformed IR
+// ------------------------------------------
 
 @Composable
 fun Test(%composer: Composer?, %changed: Int) {
@@ -43,12 +46,14 @@ fun Test(%composer: Composer?, %changed: Int) {
 @Composable
 @ComposableInferredTarget(scheme = "[0[0]]")
 fun <T> Bug(items: List<T>, content: Function3<@[ParameterName(name = 'item')] T, Composer, Int, Unit>, %composer: Composer?, %changed: Int) {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "CC(Bug)P(1)*<conten...>:Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "CC(Bug)P(1):Test.kt")
+  %composer.startReplaceGroup(<>)
+  sourceInformation(%composer, "*<conten...>")
   val <iterator> = items.iterator()
   while (<iterator>.hasNext()) {
     val item = <iterator>.next()
     content(item, %composer, 0b01110000 and %changed)
   }
-  %composer.endReplaceableGroup()
+  %composer.endReplaceGroup()
+  sourceInformationMarkerEnd(%composer)
 }

@@ -18,7 +18,7 @@ package androidx.compose.runtime
 
 import androidx.collection.MutableObjectIntMap
 import androidx.collection.MutableScatterMap
-import androidx.compose.runtime.collection.IdentityArraySet
+import androidx.collection.ScatterSet
 import androidx.compose.runtime.snapshots.fastAny
 import androidx.compose.runtime.snapshots.fastForEach
 import androidx.compose.runtime.tooling.CompositionObserverHandle
@@ -60,6 +60,7 @@ private const val DefaultsInvalidFlag = 0x04
 private const val RequiresRecomposeFlag = 0x08
 private const val SkippedFlag = 0x10
 private const val RereadingFlag = 0x20
+private const val ForcedRecomposeFlag = 0x40
 
 internal interface RecomposeScopeOwner {
     fun invalidate(scope: RecomposeScopeImpl, instance: Any?): InvalidationResult
@@ -177,7 +178,6 @@ internal class RecomposeScopeImpl(
      */
     @OptIn(ExperimentalComposeRuntimeApi::class)
     fun compose(composer: Composer) {
-        @Suppress("PrimitiveInLambda")
         val block = block
         val observer = observer
         if (observer != null && block != null) {
@@ -266,6 +266,21 @@ internal class RecomposeScopeImpl(
         }
 
     /**
+     * Used to explicitly force recomposition. This is used during live edit to force a
+     * recompose scope that doesn't have a restart callback to recompose as its parent (or
+     * some parent above it) was invalidated and the path to this scope has also been forced.
+     */
+    var forcedRecompose: Boolean
+        get() = flags and ForcedRecomposeFlag != 0
+        set(value) {
+            if (value) {
+                flags = flags or ForcedRecomposeFlag
+            } else {
+                flags = flags and ForcedRecomposeFlag.inv()
+            }
+        }
+
+    /**
      * Indicates whether the scope was skipped (e.g. [scopeSkipped] was called.
      */
     internal var skipped: Boolean
@@ -299,21 +314,22 @@ internal class RecomposeScopeImpl(
     fun recordRead(instance: Any): Boolean {
         if (rereading) return false // Re-reading should force composition to update its tracking
 
-        val token = (trackedInstances ?: MutableObjectIntMap<Any>().also { trackedInstances = it })
-            .put(instance, currentToken, default = -1)
+        val trackedInstances = trackedInstances
+            ?: MutableObjectIntMap<Any>().also { trackedInstances = it }
 
+        val token = trackedInstances.put(instance, currentToken, default = -1)
         if (token == currentToken) {
             return true
         }
 
-        if (instance is DerivedState<*>) {
-            val tracked = trackedDependencies ?: MutableScatterMap<DerivedState<*>, Any?>().also {
-                trackedDependencies = it
-            }
-            tracked[instance] = instance.currentRecord.currentValue
-        }
-
         return false
+    }
+
+    fun recordDerivedStateValue(instance: DerivedState<*>, value: Any?) {
+        val trackedDependencies = trackedDependencies
+            ?: MutableScatterMap<DerivedState<*>, Any?>().also { trackedDependencies = it }
+
+        trackedDependencies[instance] = value
     }
 
     /**
@@ -327,25 +343,34 @@ internal class RecomposeScopeImpl(
      *
      * @param instances The set of objects reported as invalidating this scope.
      */
-    fun isInvalidFor(instances: IdentityArraySet<Any>?): Boolean {
+    fun isInvalidFor(instances: Any? /* State | ScatterSet<State> | null */): Boolean {
         // If a non-empty instances exists and contains only derived state objects with their
         // default values, then the scope should not be considered invalid. Otherwise the scope
         // should if it was invalidated by any other kind of instance.
         if (instances == null) return true
         val trackedDependencies = trackedDependencies ?: return true
-        if (
-            instances.isNotEmpty() &&
-            instances.all { instance ->
-                instance is DerivedState<*> && instance.let {
-                    @Suppress("UNCHECKED_CAST")
-                    it as DerivedState<Any?>
-                    val policy = it.policy ?: structuralEqualityPolicy()
-                    policy.equivalent(it.currentRecord.currentValue, trackedDependencies[it])
-                }
+
+        return when (instances) {
+            is DerivedState<*> -> {
+                instances.checkDerivedStateChanged(trackedDependencies)
             }
-        )
-            return false
-        return true
+            is ScatterSet<*> -> {
+                instances.isNotEmpty() &&
+                    instances.any {
+                        it !is DerivedState<*> || it.checkDerivedStateChanged(trackedDependencies)
+                    }
+            }
+            else -> true
+        }
+    }
+
+    private fun DerivedState<*>.checkDerivedStateChanged(
+        dependencies: MutableScatterMap<DerivedState<*>, Any?>
+    ): Boolean {
+        @Suppress("UNCHECKED_CAST")
+        this as DerivedState<Any?>
+        val policy = policy ?: structuralEqualityPolicy()
+        return !policy.equivalent(currentRecord.currentValue, dependencies[this])
     }
 
     fun rereadTrackedInstances() {
@@ -379,26 +404,21 @@ internal class RecomposeScopeImpl(
                 !skipped && instances.any { _, instanceToken -> instanceToken != token }
             ) { composition ->
                 if (
-                    currentToken == token && instances == trackedInstances &&
+                    currentToken == token &&
+                    instances == trackedInstances &&
                     composition is CompositionImpl
                 ) {
                     instances.removeIf { instance, instanceToken ->
-                        (instanceToken != token).also { remove ->
-                            if (remove) {
-                                composition.removeObservation(instance, this)
-                                (instance as? DerivedState<*>)?.let {
-                                    composition.removeDerivedStateObservation(it)
-                                    trackedDependencies?.let { dependencies ->
-                                        dependencies.remove(it)
-                                        if (dependencies.size == 0) {
-                                            trackedDependencies = null
-                                        }
-                                    }
-                                }
+                        val shouldRemove = instanceToken != token
+                        if (shouldRemove) {
+                            composition.removeObservation(instance, this)
+                            if (instance is DerivedState<*>) {
+                                composition.removeDerivedStateObservation(instance)
+                                trackedDependencies?.remove(instance)
                             }
                         }
+                        shouldRemove
                     }
-                    if (instances.size == 0) trackedInstances = null
                 }
             } else null
         }

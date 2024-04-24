@@ -28,10 +28,14 @@ import com.android.tools.lint.detector.api.Scope
 import com.android.tools.lint.detector.api.Severity
 import com.android.tools.lint.detector.api.SourceCodeScanner
 import com.intellij.lang.jvm.types.JvmType
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiParameter
 import com.intellij.psi.PsiPrimitiveType
 import com.intellij.psi.PsiWildcardType
 import com.intellij.psi.impl.source.PsiClassReferenceType
 import java.util.EnumSet
+import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
+import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.uast.UElement
 import org.jetbrains.uast.UField
 import org.jetbrains.uast.UMethod
@@ -76,6 +80,22 @@ class PrimitiveInCollectionDetector : Detector(), SourceCodeScanner {
         }
 
         override fun visitVariable(node: UVariable) {
+            // Kotlin destructuring expression is desugared. E.g.,
+            //
+            //   val (x, y) = pair
+            //
+            // is mapped to
+            //
+            //   val varHash = pair // temp variable
+            //   val x = varHash.component1()
+            //   val y = varHash.component2()
+            //
+            // and thus we don't need to analyze the temporary variable.
+            // Their `sourcePsi`s are different:
+            //   KtDestructuringDeclaration (for overall expression) v.s.
+            //   KtDestructuringDeclarationEntry (for individual local variables)
+            if (node.sourcePsi is KtDestructuringDeclaration) return
+
             val primitiveCollection = node.type.primitiveCollectionReplacement(context) ?: return
             if (node.isLambdaParameter()) {
                 // Don't notify for lambda parameters. We'll be notifying for the method
@@ -247,4 +267,26 @@ private fun PsiClassReferenceType.toPrimitiveName(): String? {
         }
     }
     return BoxedTypeToSuggestedPrimitive[resolvedType.qualifiedName]
+}
+
+private val JvmInlineAnnotation = JvmInline::class.qualifiedName!!
+
+private fun UMethod.isDataClassGeneratedMethod(context: JavaContext): Boolean =
+    context.evaluator.isData(containingClass) &&
+        (name.startsWith("copy") || name.startsWith("component"))
+
+private fun UVariable.isLambdaParameter(): Boolean {
+    val sourcePsi = sourcePsi
+    return ((sourcePsi == null && (javaPsi as? PsiParameter)?.name == "it") ||
+        (sourcePsi as? KtParameter)?.isLambdaParameter == true
+        )
+}
+
+private fun hasJvmInline(type: PsiClass): Boolean {
+    for (annotation in type.annotations) {
+        if (annotation.qualifiedName == JvmInlineAnnotation) {
+            return true
+        }
+    }
+    return false
 }

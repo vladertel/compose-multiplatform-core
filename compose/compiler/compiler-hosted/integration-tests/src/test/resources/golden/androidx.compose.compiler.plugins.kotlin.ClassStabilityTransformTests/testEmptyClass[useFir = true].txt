@@ -1,11 +1,14 @@
+//
+// Source
+// ------------------------------------------
 
-            class Foo
-        
-/********
- * TRANSFORMED
- ********/
+class Foo
 
-@StabilityInferred(parameters = 0)
+//
+// Transformed IR
+// ------------------------------------------
+
+@StabilityInferred(parameters = 1)
 class Foo {
   static val %stable: Int = 0
 }

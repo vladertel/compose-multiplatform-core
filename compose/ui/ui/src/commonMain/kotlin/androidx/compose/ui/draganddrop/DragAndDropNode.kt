@@ -18,13 +18,19 @@ package androidx.compose.ui.draganddrop
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.internal.checkPrecondition
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.TraversableNode
+import androidx.compose.ui.node.TraversableNode.Companion.TraverseDescendantsAction
+import androidx.compose.ui.node.TraversableNode.Companion.TraverseDescendantsAction.CancelTraversal
+import androidx.compose.ui.node.TraversableNode.Companion.TraverseDescendantsAction.ContinueTraversal
+import androidx.compose.ui.node.TraversableNode.Companion.TraverseDescendantsAction.SkipSubtreeAndContinueTraversal
 import androidx.compose.ui.node.requireLayoutNode
 import androidx.compose.ui.node.requireOwner
-import androidx.compose.ui.node.traverseChildren
-import androidx.compose.ui.node.traverseSubtreeWithKey
+import androidx.compose.ui.node.traverseDescendants
 
 /**
  * A [Modifier.Node] providing low level access to platform drag and drop operations.
@@ -33,53 +39,83 @@ import androidx.compose.ui.node.traverseSubtreeWithKey
  */
 interface DragAndDropModifierNode : DelegatableNode, DragAndDropTarget {
     /**
-     * Begins a drag and drop operation with the contents of [dragAndDropInfo]
+     * Begins a drag and drop session for transferring data.
+     *
+     * @param transferData the data to be transferred after successful completion of the
+     * drag and drop gesture.
+     *
+     * @param decorationSize the size of the drag decoration to be drawn.
+     *
+     * @param drawDragDecoration provides the visual representation of the item dragged during the
+     * drag and drop gesture.
      */
-    fun drag(dragAndDropInfo: DragAndDropInfo)
+    fun drag(
+        transferData: DragAndDropTransferData,
+        decorationSize: Size,
+        drawDragDecoration: DrawScope.() -> Unit,
+    )
+
+    /**
+     * The entry point to register interest in a drag and drop session for receiving data.
+     *
+     * @return true to indicate interest in the contents of a drag and drop session, false
+     * indicates no interest. If false is returned, this [Modifier] will not receive any
+     * [DragAndDropTarget] events.
+     *
+     * All [DragAndDropModifierNode] instances in the hierarchy will be given an opportunity
+     * to participate in a drag and drop session via this method.
+     */
+    fun acceptDragAndDropTransfer(
+        startEvent: DragAndDropEvent
+    ): Boolean
 }
 
 /**
- * Creates a [Modifier.Node] for integrating with platform level drag and drop events. All
- * [DragAndDropModifierNode] instances provided by this function may start drag and drop events
- * by calling [DragAndDropModifierNode.drag].
- * @param onDragAndDropEvent a provider of a [DragAndDropTarget] that allows this [Modifier.Node]
- * receive platform drag and drop events. If one is not provided, platform drag and drop events
- * will always be rejected.
+ * Creates a [Modifier.Node] for starting platform drag and drop sessions with the intention of
+ * transferring data. A drag and stop session is started by calling [DragAndDropModifierNode.drag].
+ */
+fun DragAndDropModifierNode(): DragAndDropModifierNode = DragAndDropNode { null }
+
+/**
+ * Creates a [Modifier.Node] for receiving transfer data from platform drag and drop sessions. All
+ * [DragAndDropModifierNode] instances provided by this function may also start drag and drop
+ * sessions by calling [DragAndDropModifierNode.drag].
+ *
+ * @param shouldStartDragAndDrop allows for inspecting the start [DragAndDropEvent] for a given
+ * session to decide whether or not the provided [DragAndDropTarget] would like to receive from it.
+ *
+ * @param target allows for receiving events and transfer data from a given drag and drop session.
+ *
  */
 fun DragAndDropModifierNode(
-    onDragAndDropEvent: (event: DragAndDropEvent) -> DragAndDropTarget? = { null }
-): DragAndDropModifierNode = DragAndDropNode(onDragAndDropEvent)
+    shouldStartDragAndDrop: (event: DragAndDropEvent) -> Boolean,
+    target: DragAndDropTarget
+): DragAndDropModifierNode = DragAndDropNode { startEvent ->
+    if (shouldStartDragAndDrop(startEvent)) target
+    else null
+}
 
 /**
  * Core implementation of drag and drop. This [Modifier.Node] implements tree traversal for
  * drag and drop, as well as hit testing and propagation of events for drag or drop gestures.
  *
  * It uses the [DragAndDropEvent] as a representation of a single mutable drag and drop session.
+ *
+ * The implementation implicitly maintains a sorted tree of nodes where the order of traversal
+ * is determined by the proximity to the last event. That is, after finding a receiving node,
+ * the next event will follow the same path the previous event did unless a fork is found and
+ * another node should receive the event.
+ *
+ * This optimizes traversal for the common case of move events where the event remains within
+ * a single node, or moves to a sibling of the node.
  */
 internal class DragAndDropNode(
-    private val onDragAndDropEvent: (event: DragAndDropEvent) -> DragAndDropTarget?
+    private val onDragAndDropStart: (event: DragAndDropEvent) -> DragAndDropTarget?
 ) : Modifier.Node(),
     TraversableNode,
     DragAndDropModifierNode {
     companion object {
         private object DragAndDropTraversableKey
-
-        private inline fun DragAndDropModifierNode.firstChildOrNull(
-            crossinline predicate: (DragAndDropModifierNode) -> Boolean
-        ): DragAndDropModifierNode? {
-            // TODO: b/303904810 unattached nodes should not be found from an attached
-            //  root drag and drop node
-            if (!node.isAttached) return null
-            var match: DragAndDropModifierNode? = null
-            traverseSubtreeWithKey(DragAndDropTraversableKey) { child ->
-                if (child is DragAndDropModifierNode && predicate(child)) {
-                    match = child
-                    return@traverseSubtreeWithKey false
-                }
-                true
-            }
-            return match
-        }
     }
 
     override val traverseKey: Any = DragAndDropTraversableKey
@@ -96,78 +132,75 @@ internal class DragAndDropNode(
         thisDragAndDropTarget = null
         lastChildDragAndDropModifierNode = null
     }
+
     // end Node
 
-    // start DragSource
+    // start DragAndDropModifierNode
 
-    override fun drag(dragAndDropInfo: DragAndDropInfo) {
-        requireOwner().dragAndDropManager.drag(dragAndDropInfo)
+    override fun drag(
+        transferData: DragAndDropTransferData,
+        decorationSize: Size,
+        drawDragDecoration: DrawScope.() -> Unit,
+    ) {
+        requireOwner().dragAndDropManager.drag(
+            transferData = transferData,
+            decorationSize = decorationSize,
+            drawDragDecoration = drawDragDecoration
+        )
     }
 
-    // end DragSource
+    override fun acceptDragAndDropTransfer(startEvent: DragAndDropEvent): Boolean {
+        var handled = false
+        traverseSelfAndDescendants { currentNode ->
+            // TODO: b/303904810 unattached nodes should not be found from an attached
+            //  root drag and drop node
+            if (!currentNode.isAttached) {
+                return@traverseSelfAndDescendants SkipSubtreeAndContinueTraversal
+            }
+
+            checkPrecondition(currentNode.thisDragAndDropTarget == null) {
+                "DragAndDropTarget self reference must be null" +
+                    " at the start of a drag and drop session"
+            }
+
+            // Start receiving events
+            currentNode.thisDragAndDropTarget = currentNode.onDragAndDropStart(startEvent)
+
+            val accepted = currentNode.thisDragAndDropTarget != null
+            if (accepted) {
+                requireOwner().dragAndDropManager.registerNodeInterest(currentNode)
+            }
+            handled = handled || accepted
+            ContinueTraversal
+        }
+        return handled
+    }
+
+    // end DragAndDropModifierNode
 
     // start DropTarget
-    override fun onDragAndDropEvent(event: DragAndDropEvent, type: DragAndDropEventType): Boolean {
-        when (type) {
-            DragAndDropEventType.Started -> return onStarted(event)
-            DragAndDropEventType.Dropped -> return onDropped(event)
-            DragAndDropEventType.Entered -> onEntered(event)
-            DragAndDropEventType.Moved -> onMoved(event)
-            DragAndDropEventType.Exited -> onExited(event)
-            DragAndDropEventType.Changed -> onChanged(event)
-            DragAndDropEventType.Ended -> onEnded(event)
-        }
-        return false
-    }
 
-    private fun onStarted(event: DragAndDropEvent): Boolean {
-        // TODO: b/303904810 unattached nodes should not be found from an attached
-        //  root drag and drop node
-        if (!isAttached) return false
-
-        check(thisDragAndDropTarget == null) {
-            "DragAndDropTarget self reference must be null at the start of a drag and drop session"
-        }
-
-        // Start receiving events
-        thisDragAndDropTarget = onDragAndDropEvent(event)
-
-        var handledByChild = false
-
-        traverseChildren { child ->
-            handledByChild = handledByChild or child.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Started
-            ).also { accepted ->
-                if (accepted) requireOwner().dragAndDropManager.registerNodeInterest(child)
-            }
-            true
-        }
-
-        return handledByChild || thisDragAndDropTarget != null
-    }
-
-    private fun onEntered(event: DragAndDropEvent) {
+    override fun onStarted(event: DragAndDropEvent) {
         when (val self = thisDragAndDropTarget) {
-            null -> lastChildDragAndDropModifierNode?.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Entered
-            )
-
-            else -> self.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Entered
-            )
+            null -> lastChildDragAndDropModifierNode?.onStarted(event = event)
+            else -> self.onStarted(event = event)
         }
     }
 
-    private fun onMoved(event: DragAndDropEvent) {
+    override fun onEntered(event: DragAndDropEvent) {
+        when (val self = thisDragAndDropTarget) {
+            null -> lastChildDragAndDropModifierNode?.onEntered(event = event)
+            else -> self.onEntered(event = event)
+        }
+    }
+
+    override fun onMoved(event: DragAndDropEvent) {
         val currentChildNode: DragAndDropModifierNode? = lastChildDragAndDropModifierNode
         val newChildNode: DragAndDropModifierNode? = when {
             // Moved within child.
             currentChildNode?.contains(event.positionInRoot) == true -> currentChildNode
             // Position is now outside active child, maybe it entered a different one.
-            else -> firstChildOrNull { child ->
+            else -> firstDescendantOrNull { child ->
                 // Only dispatch to children who previously accepted the onStart gesture
                 requireOwner().dragAndDropManager.isInterestedNode(child) &&
                     child.contains(event.positionInRoot)
@@ -177,109 +210,69 @@ internal class DragAndDropNode(
         when {
             // Left us and went to a child.
             newChildNode != null && currentChildNode == null -> {
-                thisDragAndDropTarget?.onDragAndDropEvent(
-                    event = event,
-                    type = DragAndDropEventType.Exited
-                )
                 newChildNode.dispatchEntered(event)
+                thisDragAndDropTarget?.onExited(event = event)
             }
             // Left the child and returned to us.
             newChildNode == null && currentChildNode != null -> {
-                currentChildNode.onDragAndDropEvent(
-                    event = event,
-                    type = DragAndDropEventType.Exited
-                )
                 thisDragAndDropTarget?.dispatchEntered(event)
+                currentChildNode.onExited(event = event)
             }
             // Left one child and entered another.
             newChildNode != currentChildNode -> {
-                currentChildNode?.onDragAndDropEvent(
-                    event = event,
-                    type = DragAndDropEventType.Exited
-                )
                 newChildNode?.dispatchEntered(event)
+                currentChildNode?.onExited(event = event)
             }
             // Stayed in the same child.
-            newChildNode != null -> newChildNode.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Moved
-            )
+            newChildNode != null -> newChildNode.onMoved(event = event)
             // Stayed in us.
-            else -> thisDragAndDropTarget?.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Moved
-            )
+            else -> thisDragAndDropTarget?.onMoved(event = event)
         }
 
         this@DragAndDropNode.lastChildDragAndDropModifierNode = newChildNode
     }
 
-    private fun onChanged(event: DragAndDropEvent) {
+    override fun onChanged(event: DragAndDropEvent) {
         when (val self = thisDragAndDropTarget) {
-            null -> lastChildDragAndDropModifierNode?.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Changed
-            )
+            null -> lastChildDragAndDropModifierNode?.onChanged(event = event)
 
-            else -> self.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Changed
-            )
+            else -> self.onChanged(event = event)
         }
     }
 
-    private fun onExited(event: DragAndDropEvent) {
-        thisDragAndDropTarget?.onDragAndDropEvent(
-            event = event,
-            type = DragAndDropEventType.Exited
-        )
-        lastChildDragAndDropModifierNode?.onDragAndDropEvent(
-            event = event,
-            type = DragAndDropEventType.Exited
-        )
+    override fun onExited(event: DragAndDropEvent) {
+        thisDragAndDropTarget?.onExited(event = event)
+        lastChildDragAndDropModifierNode?.onExited(event = event)
         lastChildDragAndDropModifierNode = null
     }
 
-    private fun onDropped(event: DragAndDropEvent): Boolean {
+    override fun onDrop(event: DragAndDropEvent): Boolean {
         return when (val currentChildDropTarget = lastChildDragAndDropModifierNode) {
-            null -> thisDragAndDropTarget?.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Dropped
-            ) ?: false
+            null -> thisDragAndDropTarget?.onDrop(event = event) ?: false
 
-            else -> currentChildDropTarget.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Dropped
-            )
+            else -> currentChildDropTarget.onDrop(event = event)
         }
     }
 
-    private fun onEnded(event: DragAndDropEvent) {
+    override fun onEnded(event: DragAndDropEvent) = traverseSelfAndDescendants { currentNode ->
         // TODO: b/303904810 unattached nodes should not be found from an attached
         //  root drag and drop node
-        if (!node.isAttached) return
-        traverseChildren { child ->
-            child.onDragAndDropEvent(
-                event = event,
-                type = DragAndDropEventType.Ended
-            )
-            true
+        if (!currentNode.node.isAttached) {
+            return@traverseSelfAndDescendants SkipSubtreeAndContinueTraversal
         }
-        thisDragAndDropTarget?.onDragAndDropEvent(
-            event = event,
-            type = DragAndDropEventType.Ended
-        )
-        thisDragAndDropTarget = null
-        lastChildDragAndDropModifierNode = null
+        currentNode.thisDragAndDropTarget?.onEnded(event = event)
+        currentNode.thisDragAndDropTarget = null
+        currentNode.lastChildDragAndDropModifierNode = null
+        ContinueTraversal
     }
     // end DropTarget
 }
 
 private fun DragAndDropTarget.dispatchEntered(event: DragAndDropEvent) = run {
     // Notify of entry
-    onDragAndDropEvent(event, DragAndDropEventType.Entered)
+    onEntered(event = event)
     // Start move
-    onDragAndDropEvent(event, DragAndDropEventType.Moved)
+    onMoved(event = event)
 }
 
 /**
@@ -296,4 +289,28 @@ private fun DragAndDropModifierNode.contains(position: Offset): Boolean {
     val y2 = y1 + height
 
     return position.x in x1..x2 && position.y in y1..y2
+}
+
+private fun <T : TraversableNode> T.traverseSelfAndDescendants(
+    block: (T) -> TraverseDescendantsAction
+) {
+    if (block(this) != ContinueTraversal) return
+    traverseDescendants(block)
+}
+
+private inline fun <T : TraversableNode> T.firstDescendantOrNull(
+    crossinline predicate: (T) -> Boolean
+): T? {
+    // TODO: b/303904810 unattached nodes should not be found from an attached
+    //  root drag and drop node
+    if (!node.isAttached) return null
+    var match: T? = null
+    traverseDescendants { child ->
+        if (predicate(child)) {
+            match = child
+            return@traverseDescendants CancelTraversal
+        }
+        ContinueTraversal
+    }
+    return match
 }

@@ -29,12 +29,15 @@ import androidx.camera.camera2.pipe.CameraError.Companion.ERROR_CAMERA_SERVICE
 import androidx.camera.camera2.pipe.CameraError.Companion.ERROR_DO_NOT_DISTURB_ENABLED
 import androidx.camera.camera2.pipe.CameraError.Companion.ERROR_ILLEGAL_ARGUMENT_EXCEPTION
 import androidx.camera.camera2.pipe.CameraError.Companion.ERROR_SECURITY_EXCEPTION
+import androidx.camera.camera2.pipe.CameraError.Companion.ERROR_UNDETERMINED
+import androidx.camera.camera2.pipe.CameraError.Companion.ERROR_UNKNOWN_EXCEPTION
 import androidx.camera.camera2.pipe.CameraExtensionMetadata
 import androidx.camera.camera2.pipe.CameraId
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.core.DurationNs
 import androidx.camera.camera2.pipe.core.Timestamps
 import androidx.camera.camera2.pipe.internal.CameraErrorListener
+import androidx.camera.camera2.pipe.testing.FakeAudioRestrictionController
 import androidx.camera.camera2.pipe.testing.FakeCamera2DeviceCloser
 import androidx.camera.camera2.pipe.testing.FakeCameraMetadata
 import androidx.camera.camera2.pipe.testing.FakeThreads
@@ -141,6 +144,7 @@ class RetryingCameraStateOpenerTest {
         }
 
     private val fakeDevicePolicyManager: DevicePolicyManagerWrapper = mock()
+    private val audioRestrictionController = FakeAudioRestrictionController()
 
     private val retryingCameraStateOpener =
         RetryingCameraStateOpener(
@@ -149,6 +153,7 @@ class RetryingCameraStateOpenerTest {
             cameraAvailabilityMonitor,
             fakeTimeSource,
             fakeDevicePolicyManager,
+            audioRestrictionController,
             cameraInteropConfig = null
         )
 
@@ -179,16 +184,27 @@ class RetryingCameraStateOpenerTest {
     }
 
     @Test
-    fun testShouldRetryShouldFailUndetermined() {
+    fun testShouldRetryUndetermined() {
         assertThat(
             RetryingCameraStateOpener.shouldRetry(
-                CameraError.ERROR_UNDETERMINED,
+                ERROR_UNDETERMINED,
                 1,
                 DurationNs(1_000_000_000L), // 1 second
                 camerasDisabledByDevicePolicy = false,
                 isForeground = false,
             )
-        ).isFalse()
+        ).isTrue()
+
+        // The second retry attempt should fail.
+        val secondRetry =
+            RetryingCameraStateOpener.shouldRetry(
+                ERROR_UNDETERMINED,
+                2,
+                DurationNs(1_000_000_001L),
+                camerasDisabledByDevicePolicy = false,
+                isForeground = false,
+            )
+        assertThat(secondRetry).isFalse()
     }
 
     @Test
@@ -567,9 +583,23 @@ class RetryingCameraStateOpenerTest {
             cameraId0,
             1,
             Timestamps.now(fakeTimeSource),
+            audioRestrictionController
         )
 
         assertThat(result.errorCode).isEqualTo(ERROR_CAMERA_IN_USE)
+    }
+
+    @Test
+    fun cameraStateOpenerHandlesUnknownException() = runTest {
+        cameraOpener.toThrow = IllegalStateException()
+        val result = cameraStateOpener.tryOpenCamera(
+            cameraId0,
+            1,
+            Timestamps.now(fakeTimeSource),
+            audioRestrictionController
+        )
+
+        assertThat(result.errorCode).isEqualTo(ERROR_UNKNOWN_EXCEPTION)
     }
 
     @Test
@@ -596,6 +626,7 @@ class RetryingCameraStateOpenerTest {
                 cameraId0,
                 1,
                 Timestamps.now(fakeTimeSource),
+                audioRestrictionController
             )
             assertThat(result.errorCode).isEqualTo(ERROR_DO_NOT_DISTURB_ENABLED)
         } catch (throwable: Throwable) {

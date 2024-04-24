@@ -20,8 +20,11 @@ import androidx.compose.compiler.plugins.kotlin.ComposeFqNames
 import androidx.compose.compiler.plugins.kotlin.lower.annotationClass
 import androidx.compose.compiler.plugins.kotlin.lower.isSyntheticComposableFunction
 import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
+import org.jetbrains.kotlin.descriptors.ModuleDescriptor
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.IrAnnotationContainer
 import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrField
 import org.jetbrains.kotlin.ir.declarations.IrProperty
@@ -66,6 +69,7 @@ import org.jetbrains.kotlin.ir.util.isFunctionOrKFunction
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.util.isTypeParameter
 import org.jetbrains.kotlin.ir.util.kotlinFqName
+import org.jetbrains.kotlin.ir.util.module
 
 sealed class Stability {
     // class Foo(val bar: Int)
@@ -223,7 +227,13 @@ private fun IrAnnotationContainer.stabilityParamBitmask(): Int? =
         ?.getValueArgument(0) as? IrConst<*>
         )?.value as? Int
 
+private data class SymbolForAnalysis(
+    val symbol: IrClassifierSymbol,
+    val typeParameters: List<IrTypeArgument?>
+)
+
 class StabilityInferencer(
+    private val currentModule: ModuleDescriptor,
     externalStableTypeMatchers: Set<FqNameMatcher>
 ) {
     private val externalTypeMatcherCollection = FqNameMatcherCollection(externalStableTypeMatchers)
@@ -234,10 +244,13 @@ class StabilityInferencer(
     private fun stabilityOf(
         declaration: IrClass,
         substitutions: Map<IrTypeParameterSymbol, IrTypeArgument>,
-        currentlyAnalyzing: Set<IrClassifierSymbol>
+        currentlyAnalyzing: Set<SymbolForAnalysis>
     ): Stability {
         val symbol = declaration.symbol
-        if (currentlyAnalyzing.contains(symbol)) return Stability.Unstable
+        val typeArguments = declaration.typeParameters.map { substitutions[it.symbol] }
+        val fullSymbol = SymbolForAnalysis(symbol, typeArguments)
+
+        if (currentlyAnalyzing.contains(fullSymbol)) return Stability.Unstable
         if (declaration.hasStableMarkedDescendant()) return Stability.Stable
         if (declaration.isEnumClass || declaration.isEnumEntry) return Stability.Stable
         if (declaration.defaultType.isPrimitiveType()) return Stability.Stable
@@ -247,7 +260,7 @@ class StabilityInferencer(
             error("Builtins Stub: ${declaration.name}")
         }
 
-        val analyzing = currentlyAnalyzing + symbol
+        val analyzing = currentlyAnalyzing + fullSymbol
 
         if (canInferStability(declaration) || declaration.isExternalStableType()) {
             val fqName = declaration.fqNameWhenAvailable?.toString() ?: ""
@@ -262,13 +275,26 @@ class StabilityInferencer(
                     .maskForName(declaration.fqNameWhenAvailable) ?: 0
                 stability = Stability.Stable
             } else {
-                mask = declaration.stabilityParamBitmask() ?: return Stability.Unstable
-                stability = Stability.Runtime(declaration)
+                val bitmask = declaration.stabilityParamBitmask() ?: return Stability.Unstable
+
+                val knownStableMask =
+                    if (typeParameters.size < 32) 0b1 shl typeParameters.size else 0
+                val isKnownStable = bitmask and knownStableMask != 0
+                mask = bitmask and knownStableMask.inv()
+
+                // supporting incremental compilation, where declaration stubs can be
+                // in the same module, so we need to use already inferred values
+                stability = if (isKnownStable && declaration.isInCurrentModule()) {
+                    Stability.Stable
+                } else {
+                    Stability.Runtime(declaration)
+                }
             }
             return when {
                 mask == 0 || typeParameters.isEmpty() -> stability
                 else -> stability + Stability.Combined(
                     typeParameters.mapIndexedNotNull { index, irTypeParameter ->
+                        if (index >= 32) return@mapIndexedNotNull null
                         if (mask and (0b1 shl index) != 0) {
                             val sub = substitutions[irTypeParameter.symbol]
                             if (sub != null)
@@ -307,6 +333,10 @@ class StabilityInferencer(
         return stability
     }
 
+    @OptIn(ObsoleteDescriptorBasedAPI::class)
+    private fun IrDeclaration.isInCurrentModule() =
+        module == currentModule
+
     private fun IrClass.isProtobufType(): Boolean {
         // Quick exit as all protos are final
         if (!isFinalClass) return false
@@ -330,7 +360,7 @@ class StabilityInferencer(
     private fun stabilityOf(
         classifier: IrClassifierSymbol,
         substitutions: Map<IrTypeParameterSymbol, IrTypeArgument>,
-        currentlyAnalyzing: Set<IrClassifierSymbol>
+        currentlyAnalyzing: Set<SymbolForAnalysis>
     ): Stability {
         // if isEnum, return true
         // class hasStableAnnotation()
@@ -344,7 +374,7 @@ class StabilityInferencer(
     private fun stabilityOf(
         argument: IrTypeArgument,
         substitutions: Map<IrTypeParameterSymbol, IrTypeArgument>,
-        currentlyAnalyzing: Set<IrClassifierSymbol>
+        currentlyAnalyzing: Set<SymbolForAnalysis>
     ): Stability {
         return when (argument) {
             is IrStarProjection -> Stability.Unstable
@@ -356,7 +386,7 @@ class StabilityInferencer(
     private fun stabilityOf(
         type: IrType,
         substitutions: Map<IrTypeParameterSymbol, IrTypeArgument>,
-        currentlyAnalyzing: Set<IrClassifierSymbol>
+        currentlyAnalyzing: Set<SymbolForAnalysis>
     ): Stability {
         return when {
             type is IrErrorType -> Stability.Unstable

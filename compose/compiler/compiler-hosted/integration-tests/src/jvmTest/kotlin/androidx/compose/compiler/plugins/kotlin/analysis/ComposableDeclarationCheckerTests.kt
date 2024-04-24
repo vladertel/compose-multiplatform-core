@@ -58,13 +58,13 @@ class ComposableDeclarationCheckerTests(useFir: Boolean) : AbstractComposeDiagno
             import androidx.compose.runtime.Composable
 
             @Composable fun A() {}
-            val aCallable: () -> Unit = ::<!UNRESOLVED_REFERENCE!>A<!>
+            val aCallable: () -> Unit = <!INITIALIZER_TYPE_MISMATCH,COMPOSABLE_FUNCTION_REFERENCE!>::A<!>
             val bCallable: @Composable () -> Unit = <!COMPOSABLE_FUNCTION_REFERENCE!>::A<!>
             val cCallable = <!COMPOSABLE_FUNCTION_REFERENCE!>::A<!>
             fun doSomething(fn: () -> Unit) { print(fn) }
             @Composable fun B(content: @Composable () -> Unit) {
                 content()
-                <!INAPPLICABLE_CANDIDATE!>doSomething<!>(::<!UNRESOLVED_REFERENCE!>A<!>)
+                doSomething(::<!UNRESOLVED_REFERENCE!>A<!>)
                 B(<!COMPOSABLE_FUNCTION_REFERENCE!>::A<!>)
             }
         """
@@ -175,7 +175,7 @@ class ComposableDeclarationCheckerTests(useFir: Boolean) : AbstractComposeDiagno
                 acceptSuspend @Composable <!ARGUMENT_TYPE_MISMATCH!>{}<!>
                 acceptComposableSuspend @Composable <!ARGUMENT_TYPE_MISMATCH!>{}<!>
                 acceptComposableSuspend(<!ARGUMENT_TYPE_MISMATCH!>composableLambda<!>)
-                acceptSuspend(<!COMPOSABLE_SUSPEND_FUN!>@Composable suspend fun()<!> { })
+                acceptSuspend(<!COMPOSABLE_SUSPEND_FUN!><!ARGUMENT_TYPE_MISMATCH!>@Composable suspend fun()<!> { }<!>)
             }
         """
         })
@@ -285,12 +285,36 @@ class ComposableDeclarationCheckerTests(useFir: Boolean) : AbstractComposeDiagno
     }
 
     @Test
+    fun testDefaultInterfaceComposablesWithDefaultParameters() {
+        check(
+            """
+            import androidx.compose.runtime.Composable
+            interface A {
+                @Composable fun foo(x: Int = <!ABSTRACT_COMPOSABLE_DEFAULT_PARAMETER_VALUE!>0<!>) {}
+            }
+        """
+        )
+    }
+
+    @Test
     fun testAbstractComposablesWithDefaultParameters() {
         check(
             """
             import androidx.compose.runtime.Composable
             abstract class A {
                 @Composable abstract fun foo(x: Int = <!ABSTRACT_COMPOSABLE_DEFAULT_PARAMETER_VALUE!>0<!>)
+            }
+        """
+        )
+    }
+
+    @Test
+    fun testOpenComposablesWithDefaultParameters() {
+        check(
+            """
+            import androidx.compose.runtime.Composable
+            open class A {
+                @Composable open fun foo(x: Int = <!ABSTRACT_COMPOSABLE_DEFAULT_PARAMETER_VALUE!>0<!>) {}
             }
         """
         )

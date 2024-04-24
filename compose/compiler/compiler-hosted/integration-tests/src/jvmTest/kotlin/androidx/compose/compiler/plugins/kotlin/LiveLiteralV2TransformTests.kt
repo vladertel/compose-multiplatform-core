@@ -51,14 +51,8 @@ class LiveLiteralV2TransformTests(useFir: Boolean) : AbstractLiveLiteralTransfor
 
     @Test
     fun testDispatchReceiver() {
-        // K2 constant folds `1.toString`.
-        val printOneToStringKey = if (useFir) {
-            "String%arg-0%call-print%fun-Test"
-        } else {
-            "Int%%this%call-toString%arg-0%call-print%fun-Test"
-        }
         assertKeys(
-            printOneToStringKey,
+            "Int%%this%call-toString%arg-0%call-print%fun-Test",
             "Int%arg-0%call-print-1%fun-Test"
         ) {
             """
@@ -440,7 +434,6 @@ class LiveLiteralV2TransformTests(useFir: Boolean) : AbstractLiveLiteralTransfor
             import androidx.compose.runtime.*
             import androidx.compose.foundation.layout.*
             import androidx.compose.foundation.text.KeyboardActions
-            import androidx.compose.material.*
 
             object Ui {}
 
@@ -456,6 +449,35 @@ class LiveLiteralV2TransformTests(useFir: Boolean) : AbstractLiveLiteralTransfor
                     Text("${'$'}keyboardActions2")
                 }
             }
+        """.trimIndent(),
+        extra = """
+            import androidx.compose.runtime.Composable
+
+            @Composable
+            public fun Text(
+                text: String,
+                softWrap: Boolean = true,
+                maxLines: Int = Int.MAX_VALUE,
+                minLines: Int = 1,
+            ) {}
         """.trimIndent()
     )
+
+    @Test
+    fun verifyInitInClass() {
+        assertTransform(
+            """
+            """,
+            """
+                class ViewModel {
+                    init {
+                        1
+                    }
+                    init {
+                        2
+                    }
+                }
+            """
+        )
+    }
 }

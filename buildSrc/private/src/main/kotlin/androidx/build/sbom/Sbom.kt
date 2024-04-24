@@ -83,7 +83,10 @@ private val excludeTaskNames =
         "bundleDebugLocalLintAar",
         "bundleReleaseLocalLintAar",
         "bundleDebugAar",
-        "bundleReleaseAar"
+        "bundleReleaseAar",
+        "bundleAndroidMainAar",
+        "bundleAndroidMainLocalLintAar",
+        "repackageAndroidMainAar",
     )
 
 /**
@@ -140,7 +143,7 @@ fun Project.listSbomConfigurationNamesForArchive(task: AbstractArchiveTask): Lis
     // its configurations.
     // If a project has multiple shadowJar tasks, we ask the developer to provide
     // this metadata somehow by failing below
-    if (taskName == "shadowJar") {
+    if (taskName == "shadowJar" || taskName == "shadowLibraryJar") {
         // If the task is a ShadowJar task, we can just ask it which configurations it intends to
         // embed
         // We separately validate that this list is correct in
@@ -152,10 +155,14 @@ fun Project.listSbomConfigurationNamesForArchive(task: AbstractArchiveTask): Lis
         }
     }
 
+    if (taskName == "stubAar") {
+        return listOf()
+    }
+
     throw GradleException(
         "Not sure which external dependencies are included in $projectPath:$taskName of type " +
             "${task::class.java} (this is used for publishing sboms). Please update " +
-            "AndroidXImplPlugin's listSbomConfigurationNamesForArchive and " +
+            "Sbom.kt's listSbomConfigurationNamesForArchive and " +
             "shouldSbomIncludeConfigurationName"
     )
 }

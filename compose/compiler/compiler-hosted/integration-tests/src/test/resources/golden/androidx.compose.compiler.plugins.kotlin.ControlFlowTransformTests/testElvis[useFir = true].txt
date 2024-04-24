@@ -1,3 +1,7 @@
+//
+// Source
+// ------------------------------------------
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.key
@@ -12,20 +16,21 @@ fun Example(x: Int?) {
     val y = x ?: R()
 }
 
-/********
- * TRANSFORMED
- ********/
+//
+// Transformed IR
+// ------------------------------------------
 
 @NonRestartableComposable
 @Composable
 fun Example(x: Int?, %composer: Composer?, %changed: Int) {
-  %composer.startReplaceableGroup(<>)
-  sourceInformation(%composer, "C(Example)<R()>:Test.kt")
+  sourceInformationMarkerStart(%composer, <>, "C(Example):Test.kt")
   if (isTraceInProgress()) {
     traceEventStart(<>, %changed, -1, <>)
   }
   val y = <block>{
     val <elvis> = x
+    %composer.startReplaceGroup(<>)
+    sourceInformation(%composer, "<R()>")
     val tmp0_group = when {
       <elvis> == null -> {
         R(%composer, 0)
@@ -34,10 +39,11 @@ fun Example(x: Int?, %composer: Composer?, %changed: Int) {
         <elvis>
       }
     }
+    %composer.endReplaceGroup()
     tmp0_group
   }
   if (isTraceInProgress()) {
     traceEventEnd()
   }
-  %composer.endReplaceableGroup()
+  sourceInformationMarkerEnd(%composer)
 }
