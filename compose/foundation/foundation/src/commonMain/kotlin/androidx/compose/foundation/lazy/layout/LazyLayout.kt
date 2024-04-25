@@ -87,7 +87,7 @@ fun LazyLayout(
             SubcomposeLayoutState(LazyLayoutItemReusePolicy(itemContentFactory))
         }
         if (prefetchState != null) {
-            val executor = prefetchState.prefetchExecutor ?: rememberDefaultPrefetchExecutor()
+            val executor = prefetchState.prefetchScheduler ?: rememberDefaultPrefetchScheduler()
             DisposableEffect(
                 prefetchState,
                 itemContentFactory,
@@ -107,7 +107,7 @@ fun LazyLayout(
 
         SubcomposeLayout(
             subcomposeLayoutState,
-            modifier,
+            modifier.traversablePrefetchState(prefetchState),
             remember(itemContentFactory, measurePolicy) {
                 { constraints ->
                     with(

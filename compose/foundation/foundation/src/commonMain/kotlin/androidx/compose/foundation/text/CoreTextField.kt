@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.handwriting.isStylusHandwritingSupported
 import androidx.compose.foundation.text.input.internal.createLegacyPlatformTextInputServiceAdapter
 import androidx.compose.foundation.text.input.internal.legacyTextInputAdapter
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.OffsetProvider
 import androidx.compose.foundation.text.selection.SelectionHandleAnchor
 import androidx.compose.foundation.text.selection.SelectionHandleInfo
 import androidx.compose.foundation.text.selection.SelectionHandleInfoKey
@@ -62,7 +63,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -119,6 +119,7 @@ import androidx.compose.ui.text.input.EditProcessor
 import androidx.compose.ui.text.input.FinishComposingTextCommand
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
@@ -199,7 +200,7 @@ import kotlinx.coroutines.launch
  * innerTextField exactly once.
  */
 @Composable
-@OptIn(InternalFoundationTextApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 internal fun CoreTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
@@ -299,6 +300,7 @@ internal fun CoreTextField(
     manager.hapticFeedBack = LocalHapticFeedback.current
     manager.focusRequester = focusRequester
     manager.editable = !readOnly
+    manager.enabled = enabled
 
     val coroutineScope = rememberCoroutineScope()
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
@@ -349,7 +351,7 @@ internal fun CoreTextField(
     }
 
     // Hide the keyboard if made disabled or read-only while focused (b/237308379).
-    val writeable by rememberUpdatedState(enabled && !readOnly)
+    val writeable by rememberUpdatedState(enabled && !readOnly && windowInfo.isWindowFocused)
     LaunchedEffect(Unit) {
         try {
             snapshotFlow { writeable }.collect { writeable ->
@@ -404,13 +406,18 @@ internal fun CoreTextField(
         )
         .pointerHoverIcon(textPointerIcon)
         .then(
-            if (isStylusHandwritingSupported) {
-                Modifier.pointerInput(enabled, readOnly) {
-                    if (enabled && !readOnly) {
-                        detectStylusHandwriting {
-                            if (!state.hasFocus) {
-                                focusRequester.requestFocus()
-                            }
+            if (isStylusHandwritingSupported && writeable) {
+                Modifier.pointerInput(Unit) {
+                    detectStylusHandwriting {
+                        if (!state.hasFocus) {
+                            focusRequester.requestFocus()
+                        }
+                        // If this is a password field, we can't trigger handwriting.
+                        // The expected behavior is 1) request focus 2) show software keyboard.
+                        // Note: TextField will show software keyboard automatically when it
+                        // gain focus. 3) show a toast message telling that handwriting is not
+                        // supported for password fields. TODO(b/335294152)
+                        if (imeOptions.keyboardType != KeyboardType.Password) {
                             // TextInputService is calling LegacyTextInputServiceAdapter under the
                             // hood.  And because it's a public API, startStylusHandwriting is added
                             // to legacyTextInputServiceAdapter instead.
@@ -418,8 +425,8 @@ internal fun CoreTextField(
                             // session starts when the editor is not focused, this is handled
                             // internally by the LegacyTextInputServiceAdapter.
                             legacyTextInputServiceAdapter.startStylusHandwriting()
-                            true
                         }
+                        true
                     }
                 }
             } else {
@@ -433,9 +440,12 @@ internal fun CoreTextField(
                 TextFieldDelegate.draw(
                     canvas,
                     value,
+                    state.selectionPreviewHighlightRange,
+                    state.deletionPreviewHighlightRange,
                     offsetMapping,
                     layoutResult.value,
-                    state.selectionPaint
+                    state.highlightPaint,
+                    state.selectionBackgroundColor
                 )
             }
         }
@@ -613,7 +623,7 @@ internal fun CoreTextField(
         }
     }
 
-    val showCursor = enabled && !readOnly && windowInfo.isWindowFocused
+    val showCursor = enabled && !readOnly && windowInfo.isWindowFocused && !state.hasHighlight()
     val cursorModifier = Modifier.cursor(state, value, offsetMapping, cursorBrush, showCursor)
 
     DisposableEffect(manager) {
@@ -841,7 +851,6 @@ private fun Modifier.previewKeyEventToDeselectOnBack(
     }
 }
 
-@OptIn(InternalFoundationTextApi::class)
 internal class LegacyTextFieldState(
     var textDelegate: TextDelegate,
     val recomposeScope: RecomposeScope,
@@ -976,6 +985,8 @@ internal class LegacyTextFieldState(
             // Text has been changed, enter the HandleState.None and hide the cursor handle.
             handleState = HandleState.None
         }
+        selectionPreviewHighlightRange = TextRange.Zero
+        deletionPreviewHighlightRange = TextRange.Zero
         onValueChangeOriginal(it)
         recomposeScope.invalidate()
     }
@@ -984,8 +995,16 @@ internal class LegacyTextFieldState(
         keyboardActionRunner.runAction(imeAction)
     }
 
-    /** The paint used to draw highlight background for selected text. */
-    val selectionPaint: Paint = Paint()
+    /** The paint used to draw highlight backgrounds. */
+    val highlightPaint: Paint = Paint()
+    var selectionBackgroundColor = Color.Unspecified
+
+    /** Range of text to be highlighted to display handwriting gesture previews from the IME. */
+    var selectionPreviewHighlightRange: TextRange by mutableStateOf(TextRange.Zero)
+    var deletionPreviewHighlightRange: TextRange by mutableStateOf(TextRange.Zero)
+
+    fun hasHighlight() =
+        !selectionPreviewHighlightRange.collapsed || !deletionPreviewHighlightRange.collapsed
 
     fun update(
         untransformedText: AnnotatedString,
@@ -1000,7 +1019,7 @@ internal class LegacyTextFieldState(
         selectionBackgroundColor: Color
     ) {
         this.onValueChangeOriginal = onValueChange
-        this.selectionPaint.color = selectionBackgroundColor
+        this.selectionBackgroundColor = selectionBackgroundColor
         this.keyboardActionRunner.apply {
             this.keyboardActions = keyboardActions
             this.focusManager = focusManager
@@ -1083,7 +1102,7 @@ private fun endInputSession(state: LegacyTextFieldState) {
  * This function is used to handle 2, 3, and 4, and the others are automatically handled by the
  * focus system.
  */
-@OptIn(ExperimentalFoundationApi::class, InternalFoundationTextApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 internal suspend fun BringIntoViewRequester.bringSelectionEndIntoView(
     value: TextFieldValue,
     textDelegate: TextDelegate,
@@ -1161,7 +1180,7 @@ internal fun TextFieldCursorHandle(manager: TextFieldSelectionManager) {
         val observer = remember(manager) { manager.cursorDragObserver() }
         val position = manager.getCursorPosition(LocalDensity.current)
         CursorHandle(
-            handlePosition = position,
+            offsetProvider = { position },
             modifier = Modifier
                 .pointerInput(observer) {
                     coroutineScope {
@@ -1189,13 +1208,12 @@ internal fun TextFieldCursorHandle(manager: TextFieldSelectionManager) {
 
 @Composable
 internal expect fun CursorHandle(
-    handlePosition: Offset,
+    offsetProvider: OffsetProvider,
     modifier: Modifier,
     minTouchTargetSize: DpSize = DpSize.Unspecified
 )
 
 // TODO(b/262648050) Try to find a better API.
-@OptIn(InternalFoundationTextApi::class)
 private fun notifyFocusedRect(
     state: LegacyTextFieldState,
     value: TextFieldValue,

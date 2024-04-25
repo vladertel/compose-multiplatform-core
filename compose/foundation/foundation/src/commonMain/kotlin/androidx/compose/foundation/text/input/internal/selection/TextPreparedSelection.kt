@@ -17,7 +17,6 @@
 package androidx.compose.foundation.text.input.internal.selection
 
 import androidx.annotation.VisibleForTesting
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.findFollowingBreak
 import androidx.compose.foundation.text.findParagraphEnd
 import androidx.compose.foundation.text.findParagraphStart
@@ -83,10 +82,9 @@ internal class TextFieldPreparedSelectionState {
  * between successive [TextFieldPreparedSelection]s, e.g. original X position of the cursor while
  * moving the cursor up/down.
  */
-@OptIn(ExperimentalFoundationApi::class)
 internal class TextFieldPreparedSelection(
     private val state: TransformedTextFieldState,
-    private val textLayoutResult: TextLayoutResult,
+    private val textLayoutResult: TextLayoutResult?,
     private val isFromSoftKeyboard: Boolean,
     private val visibleTextLayoutHeight: Float,
     private val textPreparedSelectionState: TextFieldPreparedSelectionState
@@ -153,6 +151,7 @@ internal class TextFieldPreparedSelection(
      */
     private fun jumpByPagesOffset(pagesAmount: Int): Int {
         val currentOffset = initialValue.selection.end
+        if (textLayoutResult == null || visibleTextLayoutHeight.isNaN()) return currentOffset
         val currentPos = textLayoutResult.getCursorRect(currentOffset)
         val newPos = currentPos.translate(
             translateX = 0f,
@@ -300,13 +299,14 @@ internal class TextFieldPreparedSelection(
         }
     }
 
-    fun getNextWordOffset(): Int = textLayoutResult.getNextWordOffsetForLayout()
+    fun getNextWordOffset(): Int =
+        textLayoutResult?.getNextWordOffsetForLayout() ?: text.length
 
     private fun moveCursorNextByWord() = applyIfNotEmpty {
         setCursor(getNextWordOffset())
     }
 
-    fun getPreviousWordOffset(): Int = textLayoutResult.getPrevWordOffsetForLayout()
+    fun getPreviousWordOffset(): Int = textLayoutResult?.getPrevWordOffsetForLayout() ?: 0
 
     private fun moveCursorPrevByWord() = applyIfNotEmpty {
         setCursor(getPreviousWordOffset())
@@ -328,21 +328,28 @@ internal class TextFieldPreparedSelection(
         setCursor(paragraphEnd)
     }
 
-    fun moveCursorUpByLine() = applyIfNotEmpty(false) {
-        setCursor(textLayoutResult.jumpByLinesOffset(-1))
+    fun moveCursorUpByLine(): TextFieldPreparedSelection {
+        textLayoutResult ?: return this
+        return applyIfNotEmpty(false) {
+            setCursor(textLayoutResult!!.jumpByLinesOffset(-1))
+        }
     }
 
-    fun moveCursorDownByLine() = applyIfNotEmpty(false) {
-        setCursor(textLayoutResult.jumpByLinesOffset(1))
+    fun moveCursorDownByLine(): TextFieldPreparedSelection {
+        textLayoutResult ?: return this
+        return applyIfNotEmpty(false) {
+            setCursor(textLayoutResult!!.jumpByLinesOffset(1))
+        }
     }
 
-    fun getLineStartByOffset(): Int = textLayoutResult.getLineStartByOffsetForLayout()
+    fun getLineStartByOffset(): Int = textLayoutResult?.getLineStartByOffsetForLayout() ?: 0
 
     fun moveCursorToLineStart() = applyIfNotEmpty {
         setCursor(getLineStartByOffset())
     }
 
-    fun getLineEndByOffset(): Int = textLayoutResult.getLineEndByOffsetForLayout()
+    fun getLineEndByOffset(): Int =
+        textLayoutResult?.getLineEndByOffsetForLayout() ?: text.length
 
     fun moveCursorToLineEnd() = applyIfNotEmpty {
         setCursor(getLineEndByOffset())
@@ -370,7 +377,7 @@ internal class TextFieldPreparedSelection(
     }
 
     private fun isLtr(): Boolean {
-        val direction = textLayoutResult.getParagraphDirection(selection.end)
+        val direction = textLayoutResult?.getParagraphDirection(selection.end) ?: return true
         return direction == ResolvedTextDirection.Ltr
     }
 

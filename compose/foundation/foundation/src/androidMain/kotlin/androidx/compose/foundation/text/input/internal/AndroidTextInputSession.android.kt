@@ -19,17 +19,21 @@
 package androidx.compose.foundation.text.input.internal
 
 import android.os.Build
+import android.os.CancellationSignal
 import android.util.Log
 import android.view.KeyEvent
 import android.view.inputmethod.HandwritingGesture
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.PreviewableHandwritingGesture
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.content.TransferableContent
 import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
 import androidx.compose.foundation.text.input.TextFieldCharSequence
 import androidx.compose.foundation.text.input.internal.HandwritingGestureApi34.performHandwritingGesture
+import androidx.compose.foundation.text.input.internal.HandwritingGestureApi34.previewHandwritingGesture
 import androidx.compose.ui.platform.PlatformTextInputSession
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,7 +53,8 @@ internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSe
     imeOptions: ImeOptions,
     receiveContentConfiguration: ReceiveContentConfiguration?,
     onImeAction: ((ImeAction) -> Unit)?,
-    stylusHandwritingTrigger: MutableSharedFlow<Unit>?
+    stylusHandwritingTrigger: MutableSharedFlow<Unit>?,
+    viewConfiguration: ViewConfiguration?
 ): Nothing {
     platformSpecificTextInputSession(
         state = state,
@@ -59,6 +64,7 @@ internal actual suspend fun PlatformTextInputSession.platformSpecificTextInputSe
         onImeAction = onImeAction,
         composeImm = ComposeInputMethodManager(view),
         stylusHandwritingTrigger = stylusHandwritingTrigger,
+        viewConfiguration = viewConfiguration
     )
 }
 
@@ -70,7 +76,8 @@ internal suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
     receiveContentConfiguration: ReceiveContentConfiguration?,
     onImeAction: ((ImeAction) -> Unit)?,
     composeImm: ComposeInputMethodManager,
-    stylusHandwritingTrigger: MutableSharedFlow<Unit>?
+    stylusHandwritingTrigger: MutableSharedFlow<Unit>?,
+    viewConfiguration: ViewConfiguration?
 ): Nothing {
     coroutineScope {
         launch(start = CoroutineStart.UNDISPATCHED) {
@@ -146,9 +153,27 @@ internal suspend fun PlatformTextInputSession.platformSpecificTextInputSession(
 
                 override fun performHandwritingGesture(gesture: HandwritingGesture): Int {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                        return state.performHandwritingGesture(gesture, layoutState)
+                        return state.performHandwritingGesture(
+                            gesture,
+                            layoutState,
+                            viewConfiguration
+                        )
                     }
                     return InputConnection.HANDWRITING_GESTURE_RESULT_UNSUPPORTED
+                }
+
+                override fun previewHandwritingGesture(
+                    gesture: PreviewableHandwritingGesture,
+                    cancellationSignal: CancellationSignal?
+                ): Boolean {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        return state.previewHandwritingGesture(
+                            gesture,
+                            layoutState,
+                            cancellationSignal
+                        )
+                    }
+                    return false
                 }
             }
 

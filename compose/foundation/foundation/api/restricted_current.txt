@@ -849,10 +849,15 @@ package androidx.compose.foundation.lazy {
   }
 
   @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public interface LazyListPrefetchStrategy {
-    method public default androidx.compose.foundation.lazy.layout.PrefetchExecutor? getPrefetchExecutor();
+    method public default androidx.compose.foundation.lazy.layout.PrefetchScheduler? getPrefetchScheduler();
+    method public void onNestedPrefetch(androidx.compose.foundation.lazy.layout.NestedPrefetchScope, int firstVisibleItemIndex);
     method public void onScroll(androidx.compose.foundation.lazy.LazyListPrefetchScope, float delta, androidx.compose.foundation.lazy.LazyListLayoutInfo layoutInfo);
     method public void onVisibleItemsUpdated(androidx.compose.foundation.lazy.LazyListPrefetchScope, androidx.compose.foundation.lazy.LazyListLayoutInfo layoutInfo);
-    property public default androidx.compose.foundation.lazy.layout.PrefetchExecutor? prefetchExecutor;
+    property public default androidx.compose.foundation.lazy.layout.PrefetchScheduler? prefetchScheduler;
+  }
+
+  public final class LazyListPrefetchStrategyKt {
+    method @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public static androidx.compose.foundation.lazy.LazyListPrefetchStrategy LazyListPrefetchStrategy(optional int nestedPrefetchItemCount);
   }
 
   @androidx.compose.foundation.lazy.LazyScopeMarker @kotlin.jvm.JvmDefaultWithCompatibility public interface LazyListScope {
@@ -1123,12 +1128,13 @@ package androidx.compose.foundation.lazy.layout {
   }
 
   @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi @androidx.compose.runtime.Stable public final class LazyLayoutPrefetchState {
-    ctor public LazyLayoutPrefetchState(optional androidx.compose.foundation.lazy.layout.PrefetchExecutor? prefetchExecutor);
-    method public androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState.PrefetchHandle schedulePrefetch(int index, long constraints);
+    ctor public LazyLayoutPrefetchState(optional androidx.compose.foundation.lazy.layout.PrefetchScheduler? prefetchScheduler, optional kotlin.jvm.functions.Function1<? super androidx.compose.foundation.lazy.layout.NestedPrefetchScope,kotlin.Unit>? onNestedPrefetch);
+    method public androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState.PrefetchHandle schedulePrefetch(int index, optional androidx.compose.ui.unit.Constraints? constraints);
   }
 
   public static sealed interface LazyLayoutPrefetchState.PrefetchHandle {
     method public void cancel();
+    method public void markAsUrgent();
   }
 
   public final class Lazy_androidKt {
@@ -1144,8 +1150,8 @@ package androidx.compose.foundation.lazy.layout {
     property public int size;
   }
 
-  @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public interface PrefetchExecutor {
-    method public void requestPrefetch(androidx.compose.foundation.lazy.layout.PrefetchRequest prefetchRequest);
+  @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public sealed interface NestedPrefetchScope {
+    method public void schedulePrefetch(int index, optional androidx.compose.ui.unit.Constraints? constraints);
   }
 
   @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public sealed interface PrefetchRequest {
@@ -1153,8 +1159,11 @@ package androidx.compose.foundation.lazy.layout {
   }
 
   @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public interface PrefetchRequestScope {
-    method public long getAvailableTimeNanos();
-    property public abstract long availableTimeNanos;
+    method public long availableTimeNanos();
+  }
+
+  @SuppressCompatibility @androidx.compose.foundation.ExperimentalFoundationApi public interface PrefetchScheduler {
+    method public void schedulePrefetch(androidx.compose.foundation.lazy.layout.PrefetchRequest prefetchRequest);
   }
 
 }
@@ -1655,12 +1664,12 @@ package androidx.compose.foundation.text {
 
 package androidx.compose.foundation.text.handwriting {
 
-  public final class HandwritingDelegate_androidKt {
-    method public static androidx.compose.ui.Modifier handwritingDelegate(androidx.compose.ui.Modifier);
+  public final class HandwritingDetector_androidKt {
+    method public static androidx.compose.ui.Modifier handwritingDetector(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function0<kotlin.Unit> callback);
   }
 
-  public final class HandwritingDelegator_androidKt {
-    method public static androidx.compose.ui.Modifier handwritingDelegator(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function0<kotlin.Unit> callback);
+  public final class HandwritingHandler_androidKt {
+    method public static androidx.compose.ui.Modifier handwritingHandler(androidx.compose.ui.Modifier);
   }
 
 }

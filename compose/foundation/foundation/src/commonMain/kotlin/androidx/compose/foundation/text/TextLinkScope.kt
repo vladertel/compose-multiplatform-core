@@ -22,6 +22,7 @@ import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -167,13 +168,16 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
 
             val isHovered by interactionSource.collectIsHoveredAsState()
             val isFocused by interactionSource.collectIsFocusedAsState()
+            val isPressed by interactionSource.collectIsPressedAsState()
 
             StyleAnnotation(
                 isHovered,
                 isFocused,
+                isPressed,
                 range.item.style,
                 range.item.focusedStyle,
-                range.item.hoveredStyle
+                range.item.hoveredStyle,
+                range.item.pressedStyle
             ) {
                 // we calculate the latest style based on the link state and apply it to the
                 // initialText's style. This allows us to merge the style with the original instead
@@ -182,6 +186,8 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
                     if (isFocused) range.item.focusedStyle else null
                 )?.merge(
                     if (isHovered) range.item.hoveredStyle else null
+                )?.merge(
+                    if (isPressed) range.item.pressedStyle else null
                 )
                 mergedStyle?.let {
                     replaceStyle(it, range.start, range.end)
@@ -195,7 +201,7 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
         uriHandler: UriHandler
     ) {
         when (link) {
-            is LinkAnnotation.Url -> link.linkInteractionListener?.onClicked(link) ?: try {
+            is LinkAnnotation.Url -> link.linkInteractionListener?.onClick(link) ?: try {
                 uriHandler.openUri(link.url)
             } catch (_: IllegalArgumentException) {
                 // we choose to silently fail when the uri can't be opened to avoid crashes
@@ -203,7 +209,7 @@ internal class TextLinkScope(internal val initialText: AnnotatedString) {
                 // handlers themselves and therefore I suspect are less likely to test them
                 // manually.
             }
-            is LinkAnnotation.Clickable -> link.linkInteractionListener?.onClicked(link)
+            is LinkAnnotation.Clickable -> link.linkInteractionListener?.onClick(link)
         }
     }
 

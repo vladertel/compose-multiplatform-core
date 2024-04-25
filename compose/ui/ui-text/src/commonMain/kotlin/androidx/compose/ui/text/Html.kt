@@ -16,6 +16,8 @@
 
 package androidx.compose.ui.text
 
+import androidx.compose.ui.text.style.TextDecoration
+
 /**
  * Converts a string with HTML tags into [AnnotatedString].
  *
@@ -30,6 +32,7 @@ package androidx.compose.ui.text
  * @param linkStyle style to be applied to links present in the string
  * @param linkFocusedStyle style to be applied to links present in the string when they are focused
  * @param linkHoveredStyle style to be applied to links present in the string when they are hovered
+ * @param linkPressedStyle style to be applied to links present in the string when they are pressed
  * @param linkInteractionListener a listener that will be attached to links that are present in
  * the string and triggered when user clicks on those links. When set to null, which is a default,
  * the system will try to open the corresponding links with the
@@ -49,8 +52,9 @@ package androidx.compose.ui.text
  */
 expect fun AnnotatedString.Companion.fromHtml(
     htmlString: String,
-    linkStyle: SpanStyle? = null,
+    linkStyle: SpanStyle? = SpanStyle(textDecoration = TextDecoration.Underline),
     linkFocusedStyle: SpanStyle? = null,
     linkHoveredStyle: SpanStyle? = null,
+    linkPressedStyle: SpanStyle? = null,
     linkInteractionListener: LinkInteractionListener? = null
 ): AnnotatedString

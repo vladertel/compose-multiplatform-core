@@ -40,7 +40,7 @@ androidXMultiplatform {
         commonMain {
             dependencies {
                 api(projectOrArtifact(":lifecycle:lifecycle-runtime"))
-                api(project(":annotation:annotation"))
+                api("androidx.annotation:annotation:1.8.0-rc01")
                 api("androidx.compose.runtime:runtime:1.6.5")
             }
         }
@@ -72,7 +72,7 @@ androidXMultiplatform {
 
 androidx {
     name = "Lifecycle Runtime Compose"
-    type = LibraryType.PUBLISHED_KOTLIN_ONLY_LIBRARY
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2021"
     description = "Compose integration with Lifecycle"
     samples(project(":lifecycle:lifecycle-runtime-compose:lifecycle-runtime-compose-samples"))
