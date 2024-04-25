@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Android Open Source Project
+ * Copyright 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package androidx.navigation
+
+package androidx.navigation.testing
+
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
 
 /**
- * A [Navigator] that only supports creating destinations.
+ * Subclass of [NavHostController] that offers additional APIs for testing Navigation.
  */
-public expect class NoOpNavigator() : Navigator<NavDestination> {
+public expect class TestNavHostController : NavHostController {
+
+    /**
+     * Gets an immutable copy of the [elements][NavBackStackEntry] currently on the back stack.
+     */
+    public val backStack: List<NavBackStackEntry>
 }

@@ -13,10 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package androidx.navigation
 
-/**
- * A [Navigator] that only supports creating destinations.
- */
-public expect class NoOpNavigator() : Navigator<NavDestination> {
+package androidx.testutils
+
+import androidx.navigation.NavDestinationBuilder
+import androidx.navigation.NavDestinationDsl
+
+@NavDestinationDsl
+actual class TestNavigatorDestinationBuilder : NavDestinationBuilder<TestNavigator.Destination> {
+    @Suppress("ConvertSecondaryConstructorToPrimary")
+    actual constructor(navigator: TestNavigator, route: String) : super(navigator, route)
 }
