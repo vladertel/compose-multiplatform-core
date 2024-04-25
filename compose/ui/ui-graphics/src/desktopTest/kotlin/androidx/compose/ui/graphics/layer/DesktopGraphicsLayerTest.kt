@@ -39,6 +39,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.center
+import androidx.compose.ui.unit.toIntSize
+import androidx.compose.ui.unit.toOffset
+import androidx.compose.ui.unit.toSize
+import kotlin.math.roundToInt
 import kotlin.test.Test
 import org.jetbrains.skia.IRect
 import org.jetbrains.skia.Surface
@@ -479,7 +483,7 @@ class DesktopGraphicsLayerTest {
                     record(halfSize) {
                         drawRect(targetColor)
                     }
-                    setRoundRectOutline(IntOffset.Zero, halfSize, radius)
+                    setRoundRectOutline(Offset.Zero, halfSize.toSize(), radius)
                     shadowElevation = 20f
                 }
 
@@ -749,7 +753,7 @@ class DesktopGraphicsLayerTest {
                     record {
                         drawRect(targetColor)
                     }
-                    setRectOutline(this.size.center, this.size / 2)
+                    setRectOutline(this.size.center.toOffset(), (this.size / 2).toSize())
                     clip = true
                 }
                 drawRect(bgColor)
@@ -850,8 +854,8 @@ class DesktopGraphicsLayerTest {
                         drawRect(targetColor)
                     }
                     setRoundRectOutline(
-                        this.size.center,
-                        this.size / 2,
+                        this.size.center.toOffset(),
+                        (this.size / 2).toSize(),
                         radius.toFloat()
                     )
                     clip = true
@@ -885,6 +889,48 @@ class DesktopGraphicsLayerTest {
                     Assert.assertEquals(bgColor, this[width - offset, offset])
                     Assert.assertEquals(bgColor, this[offset, height - offset])
                     Assert.assertEquals(bgColor, this[width - offset, height - offset])
+                }
+            }
+        )
+    }
+
+    @org.junit.Test
+    fun testSwitchingFromClipToBoundsToClipToOutline() {
+        val targetColor = Color.Red
+        val inset = 50f
+        graphicsLayerTest(
+            block = { graphicsContext ->
+                val fullSize = size
+                val layerSize = Size(
+                    fullSize.width.roundToInt() - inset * 2,
+                    fullSize.height.roundToInt() - inset * 2
+                ).toIntSize()
+
+                val layer = graphicsContext.createGraphicsLayer().apply {
+                    record(size = layerSize) {
+                        inset(-inset) {
+                            drawRect(targetColor)
+                        }
+                    }
+                    // as no outline is provided yet, this command will enable clipToBounds
+                    clip = true
+                    // then with providing an outline we should disable clipToBounds and start
+                    // using clipToOutline instead
+                    setRectOutline(Offset(-inset, -inset), fullSize)
+                }
+
+                drawRect(Color.Black)
+                inset(inset) {
+                    drawLayer(layer)
+                }
+            },
+            verify = { pixmap ->
+                with(pixmap) {
+                    for (x in 0 until width) {
+                        for (y in 0 until height) {
+                            Assert.assertEquals(this[x, y], targetColor)
+                        }
+                    }
                 }
             }
         )

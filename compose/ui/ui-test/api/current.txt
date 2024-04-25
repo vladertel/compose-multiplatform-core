@@ -389,13 +389,18 @@ package androidx.compose.ui.test {
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void animateAlong(androidx.compose.ui.test.MouseInjectionScope, kotlin.jvm.functions.Function1<? super java.lang.Long,androidx.compose.ui.geometry.Offset> curve, optional long durationMillis);
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void animateBy(androidx.compose.ui.test.MouseInjectionScope, long delta, optional long durationMillis);
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void animateTo(androidx.compose.ui.test.MouseInjectionScope, long position, optional long durationMillis);
-    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void click(androidx.compose.ui.test.MouseInjectionScope, optional long position);
-    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void doubleClick(androidx.compose.ui.test.MouseInjectionScope, optional long position);
-    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void dragAndDrop(androidx.compose.ui.test.MouseInjectionScope, long start, long end, optional long durationMillis);
-    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void longClick(androidx.compose.ui.test.MouseInjectionScope, optional long position);
+    method @Deprecated @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void click(androidx.compose.ui.test.MouseInjectionScope, optional long position);
+    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void click(androidx.compose.ui.test.MouseInjectionScope, optional long position, optional int button);
+    method @Deprecated @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void doubleClick(androidx.compose.ui.test.MouseInjectionScope, optional long position);
+    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void doubleClick(androidx.compose.ui.test.MouseInjectionScope, optional long position, optional int button);
+    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void dragAndDrop(androidx.compose.ui.test.MouseInjectionScope, long start, long end, optional int button, optional long durationMillis);
+    method @Deprecated @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void dragAndDrop(androidx.compose.ui.test.MouseInjectionScope, long start, long end, optional long durationMillis);
+    method @Deprecated @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void longClick(androidx.compose.ui.test.MouseInjectionScope, optional long position);
+    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void longClick(androidx.compose.ui.test.MouseInjectionScope, optional long position, optional int button);
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void rightClick(androidx.compose.ui.test.MouseInjectionScope, optional long position);
     method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void smoothScroll(androidx.compose.ui.test.MouseInjectionScope, float scrollAmount, optional long durationMillis, optional int scrollWheel);
-    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void tripleClick(androidx.compose.ui.test.MouseInjectionScope, optional long position);
+    method @Deprecated @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void tripleClick(androidx.compose.ui.test.MouseInjectionScope, optional long position);
+    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void tripleClick(androidx.compose.ui.test.MouseInjectionScope, optional long position, optional int button);
   }
 
   public sealed interface MultiModalInjectionScope extends androidx.compose.ui.test.InjectionScope {
@@ -566,9 +571,9 @@ package androidx.compose.ui.test {
     method public static void click(androidx.compose.ui.test.TouchInjectionScope, optional long position);
     method public static void doubleClick(androidx.compose.ui.test.TouchInjectionScope, optional long position, optional long delayMillis);
     method public static void longClick(androidx.compose.ui.test.TouchInjectionScope, optional long position, optional long durationMillis);
-    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void multiTouchSwipe(androidx.compose.ui.test.TouchInjectionScope, java.util.List<? extends kotlin.jvm.functions.Function1<? super java.lang.Long,androidx.compose.ui.geometry.Offset>> curves, long durationMillis, optional java.util.List<java.lang.Long> keyTimes);
+    method @SuppressCompatibility @androidx.compose.ui.test.ExperimentalTestApi public static void multiTouchSwipe(androidx.compose.ui.test.TouchInjectionScope, java.util.List<? extends kotlin.jvm.functions.Function1<? super java.lang.Long,androidx.compose.ui.geometry.Offset>> curves, optional long durationMillis, optional java.util.List<java.lang.Long> keyTimes);
     method public static void pinch(androidx.compose.ui.test.TouchInjectionScope, long start0, long end0, long start1, long end1, optional long durationMillis);
-    method public static void swipe(androidx.compose.ui.test.TouchInjectionScope, kotlin.jvm.functions.Function1<? super java.lang.Long,androidx.compose.ui.geometry.Offset> curve, long durationMillis, optional java.util.List<java.lang.Long> keyTimes);
+    method public static void swipe(androidx.compose.ui.test.TouchInjectionScope, kotlin.jvm.functions.Function1<? super java.lang.Long,androidx.compose.ui.geometry.Offset> curve, optional long durationMillis, optional java.util.List<java.lang.Long> keyTimes);
     method public static void swipe(androidx.compose.ui.test.TouchInjectionScope, long start, long end, optional long durationMillis);
     method public static void swipeDown(androidx.compose.ui.test.TouchInjectionScope, optional float startY, optional float endY, optional long durationMillis);
     method public static void swipeLeft(androidx.compose.ui.test.TouchInjectionScope, optional float startX, optional float endX, optional long durationMillis);

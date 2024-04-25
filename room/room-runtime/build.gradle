@@ -146,7 +146,7 @@ androidXMultiplatform {
                 compileOnly("androidx.collection:collection:1.2.0")
                 compileOnly("androidx.lifecycle:lifecycle-livedata-core:2.0.0")
                 compileOnly("androidx.paging:paging-common:2.0.0")
-                implementation(projectOrArtifact(":annotation:annotation-experimental"))
+                implementation("androidx.annotation:annotation-experimental:1.4.1")
             }
         }
         androidUnitTest {
@@ -187,6 +187,7 @@ androidXMultiplatform {
             dependsOn(commonTest)
             dependencies {
                 implementation(project(":sqlite:sqlite-bundled"))
+                implementation(libs.okio)
             }
         }
         targets.all { target ->
@@ -216,11 +217,7 @@ androidXMultiplatform {
 dependencies {
     lintChecks(project(":room:room-runtime-lint"))
     sqliteSharedArchive(project(":sqlite:sqlite-bundled"))
-    add("kspAndroidAndroidTest", project(path: ":room:room-compiler", configuration: "shadowAndImplementation"))
-}
-
-ksp {
-    arg("room.generateKotlin", "true")
+    add("kspAndroidAndroidTest", project(":room:room-compiler"))
 }
 
 androidx {

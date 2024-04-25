@@ -78,6 +78,7 @@ import androidx.compose.ui.node.Owner
 import androidx.compose.ui.node.OwnerSnapshotObserver
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.semantics.EmptySemanticsElement
+import androidx.compose.ui.semantics.EmptySemanticsModifier
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.input.TextInputService
@@ -125,7 +126,8 @@ internal class SkiaBasedOwner(
 
     override val sharedDrawScope = LayoutNodeDrawScope()
 
-    private val semanticsModifier = EmptySemanticsElement
+    private val rootSemanticsNode = EmptySemanticsModifier()
+    private val semanticsModifier = EmptySemanticsElement(rootSemanticsNode)
 
     override val focusOwner: FocusOwner = FocusOwnerImpl(
         onRequestApplyChangesListener = ::registerOnEndApplyChangesListener,
@@ -237,7 +239,7 @@ internal class SkiaBasedOwner(
 
     override val textToolbar = DefaultTextToolbar()
 
-    override val semanticsOwner: SemanticsOwner = SemanticsOwner(root)
+    override val semanticsOwner: SemanticsOwner = SemanticsOwner(root, rootSemanticsNode)
 
     override val dragAndDropManager: DragAndDropManager get() = TODO("Not yet implemented")
 
@@ -250,7 +252,7 @@ internal class SkiaBasedOwner(
     override fun sendKeyEvent(keyEvent: KeyEvent): Boolean =
         sendKeyEvent(platformInputService, focusOwner, keyEvent)
 
-    override fun forceAccessibilityForTesting() = TODO("Not yet implemented")
+    override fun forceAccessibilityForTesting(enable: Boolean) = TODO("Not yet implemented")
 
     override fun setAccessibilityEventBatchIntervalMillis(accessibilityInterval: Long) =
         TODO("Not yet implemented")
@@ -376,7 +378,7 @@ internal class SkiaBasedOwner(
     }
 
     override fun createLayer(
-        drawBlock: (Canvas) -> Unit,
+        drawBlock: (Canvas, GraphicsLayer?) -> Unit,
         invalidateParentLayer: () -> Unit,
         explicitLayer: GraphicsLayer?
     ) = SkiaLayer(

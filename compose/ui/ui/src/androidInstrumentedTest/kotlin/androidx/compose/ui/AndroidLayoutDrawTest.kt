@@ -391,12 +391,14 @@ class AndroidLayoutDrawTest {
                 Executors.newFixedThreadPool(3).asCoroutineDispatcher()
             ),
             ViewLayerContainer(activity),
-            {},
+            { _, _ -> },
             {}).apply {
             val scope = ReusableGraphicsLayerScope()
             scope.cameraDistance = cameraDistance
             scope.compositingStrategy = compositingStrategy
-            updateLayerProperties(scope, LayoutDirection.Ltr, Density(1f))
+            scope.layoutDirection = LayoutDirection.Ltr
+            scope.graphicsDensity = Density(1f)
+            updateLayerProperties(scope)
         }
         return expectedLayerType == view.layerType &&
             expectedOverlappingRendering == view.hasOverlappingRendering()
@@ -431,12 +433,14 @@ class AndroidLayoutDrawTest {
                 Executors.newFixedThreadPool(3).asCoroutineDispatcher()
             ),
             ViewLayerContainer(activity),
-            {},
+            { _, _ -> },
             {}
         ).apply {
             val scope = ReusableGraphicsLayerScope()
             scope.cameraDistance = cameraDistance
-            updateLayerProperties(scope, LayoutDirection.Ltr, Density(1f))
+            scope.layoutDirection = LayoutDirection.Ltr
+            scope.graphicsDensity = Density(1f)
+            updateLayerProperties(scope)
         }
         // Verify that the camera distance is applied properly even after accounting for
         // the internal dp conversion within View

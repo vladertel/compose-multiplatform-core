@@ -27,13 +27,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.internal.CalendarDate
-import androidx.compose.material3.internal.CalendarLocale
 import androidx.compose.material3.internal.CalendarModel
 import androidx.compose.material3.internal.CalendarMonth
 import androidx.compose.material3.internal.DaysInWeek
 import androidx.compose.material3.internal.Strings
 import androidx.compose.material3.internal.createCalendarModel
-import androidx.compose.material3.internal.defaultLocale
 import androidx.compose.material3.internal.getString
 import androidx.compose.material3.tokens.DatePickerModalTokens
 import androidx.compose.runtime.Composable
@@ -129,9 +127,7 @@ fun DateRangePicker(
         } else {
             null
         },
-        headlineTextStyle = MaterialTheme.typography.fromToken(
-            DatePickerModalTokens.RangeSelectionHeaderHeadlineFont
-        ),
+        headlineTextStyle = DatePickerModalTokens.RangeSelectionHeaderHeadlineFont.value,
         headerMinHeight = DatePickerModalTokens.RangeSelectionHeaderContainerHeight -
             HeaderHeightOffset,
         colors = colors,
@@ -784,7 +780,7 @@ private fun VerticalMonthsList(
         )
     }
     ProvideTextStyle(
-        MaterialTheme.typography.fromToken(DatePickerModalTokens.DateLabelTextFont)
+        DatePickerModalTokens.DateLabelTextFont.value
     ) {
         val coroutineScope = rememberCoroutineScope()
         val scrollToPreviousMonthLabel = getString(Strings.DateRangePickerScrollToShowPreviousMonth)
@@ -827,9 +823,7 @@ private fun VerticalMonthsList(
                     modifier = Modifier.fillParentMaxWidth()
                 ) {
                     ProvideTextStyle(
-                        MaterialTheme.typography.fromToken(
-                            DatePickerModalTokens.RangeSelectionMonthSubheadFont
-                        )
+                        DatePickerModalTokens.RangeSelectionMonthSubheadFont.value
                     ) {
                         Text(
                             text = dateFormatter.formatMonthYear(

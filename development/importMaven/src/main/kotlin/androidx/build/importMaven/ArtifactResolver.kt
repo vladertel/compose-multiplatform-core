@@ -29,7 +29,6 @@ import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.attributes.AttributeContainer
-import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
 import org.gradle.api.attributes.LibraryElements
 import org.gradle.api.attributes.Usage
@@ -308,15 +307,19 @@ ${verificationException.message?.prependIndent("    ")}
             vararg dependencies: Dependency
         ): List<Configuration> {
             return listOf(
-                LibraryElements.JAR,
-                "aar"
-            ).map { libraryElement ->
+                LibraryElements.JAR to TargetJvmEnvironment.STANDARD_JVM,
+                LibraryElements.JAR to TargetJvmEnvironment.ANDROID,
+                "aar" to TargetJvmEnvironment.ANDROID,
+            ).map { (libraryElement, jvmEnvironment) ->
                 createConfiguration(*dependencies) {
                     attributes.apply {
                         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, libraryElement)
                         attribute(Usage.USAGE_ATTRIBUTE, Usage.JAVA_RUNTIME)
                         attribute(Category.CATEGORY_ATTRIBUTE, Category.LIBRARY)
-                        attribute(Bundling.BUNDLING_ATTRIBUTE, Bundling.EXTERNAL)
+                        attribute(
+                            TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
+                            jvmEnvironment
+                        )
                     }
                 }
             }
@@ -334,7 +337,6 @@ ${verificationException.message?.prependIndent("    ")}
                 createConfiguration(*dependencies) {
                     attributes.apply {
                         attribute(Category.CATEGORY_ATTRIBUTE, Category.LIBRARY)
-                        attribute(Bundling.BUNDLING_ATTRIBUTE, Bundling.EXTERNAL)
                         attribute(
                             TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
                             TargetJvmEnvironment.STANDARD_JVM
@@ -369,7 +371,6 @@ ${verificationException.message?.prependIndent("    ")}
                         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, libraryElement)
                         attribute(Usage.USAGE_ATTRIBUTE, Usage.JAVA_API)
                         attribute(Category.CATEGORY_ATTRIBUTE, Category.LIBRARY)
-                        attribute(Bundling.BUNDLING_ATTRIBUTE, Bundling.EXTERNAL)
                     }
                 }
             }

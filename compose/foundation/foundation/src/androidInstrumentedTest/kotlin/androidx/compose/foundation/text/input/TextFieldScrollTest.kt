@@ -17,13 +17,16 @@
 package androidx.compose.foundation.text.input
 
 import android.os.Build
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
@@ -31,8 +34,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.FocusedWindowTest
+import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.input.TextFieldLineLimits.MultiLine
 import androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine
+import androidx.compose.foundation.text.selection.isSelectionHandle
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -53,6 +58,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -86,7 +92,6 @@ import org.junit.runner.RunWith
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
-@OptIn(ExperimentalFoundationApi::class)
 class TextFieldScrollTest : FocusedWindowTest {
 
     private val TextfieldTag = "textField"
@@ -545,6 +550,150 @@ class TextFieldScrollTest : FocusedWindowTest {
         assertThat(columnScrollState.value).isGreaterThan(0)
     }
 
+    @Test
+    fun textField_verticallyScroll_inScrollableContainer_overflowContent_dragCursorHandle() {
+        val containerSize = 200.dp
+        val topItemSize = 50.dp
+        val text = "hello\n".repeat(100)
+
+        val textFieldScrollState = ScrollState(0)
+        val columnScrollState = ScrollState(0)
+
+        rule.setContent {
+            Column(
+                Modifier
+                    .size(containerSize)
+                    .padding(8.dp)
+                    .verticalScroll(columnScrollState)
+            ) {
+                Box(Modifier.size(topItemSize))
+                ScrollableContent(
+                    modifier = Modifier.fillMaxWidth(),
+                    state = TextFieldState(text, initialSelection = TextRange.Zero),
+                    scrollState = textFieldScrollState,
+                    lineLimits = MultiLine()
+                )
+            }
+        }
+
+        assertThat(textFieldScrollState.value).isEqualTo(0)
+        assertThat(textFieldScrollState.maxValue).isEqualTo(0)
+        assertThat(columnScrollState.value).isEqualTo(0)
+
+        rule.onNodeWithTag(TextfieldTag).performTouchInput {
+            click(Offset(1f, 1f))
+        }
+
+        rule.waitForIdle()
+
+        // bringIntoView may scroll just a bit to bring TextField into view.
+        val initialColumnScrollValue = columnScrollState.value
+
+        var scrollAmount = 0
+        rule.onNode(isSelectionHandle(Handle.Cursor)).performTouchInput {
+            scrollAmount = (containerSize * 2).roundToPx()
+            down(center)
+            moveBy(
+                Offset(0f, scrollAmount.toFloat()),
+                viewConfiguration.longPressTimeoutMillis + 100
+            )
+        }
+
+        var intermediateColumnScrollValue = 0
+        rule.runOnIdle {
+            intermediateColumnScrollValue = columnScrollState.value
+            assertThat(textFieldScrollState.value).isEqualTo(0)
+            assertThat(columnScrollState.value).isGreaterThan(initialColumnScrollValue)
+        }
+
+        rule.onNode(isSelectionHandle(Handle.Cursor)).performTouchInput {
+            moveBy(
+                Offset(0f, -scrollAmount.toFloat()),
+                viewConfiguration.longPressTimeoutMillis + 100
+            )
+        }
+
+        // The scroll should remain in its last position since we are essentially moving cursor
+        // handle back to the same place in TextField's view port. This action should not scroll
+        // the TextField back up.
+        rule.runOnIdle {
+            assertThat(textFieldScrollState.value).isEqualTo(0)
+            assertThat(columnScrollState.value).isEqualTo(intermediateColumnScrollValue)
+        }
+    }
+
+    @Test
+    fun textField_horizontallyScroll_inScrollableContainer_overflowContent_dragCursorHandle() {
+        val containerSize = 200.dp
+        val startItemSize = 50.dp
+        val text = "hello ".repeat(100)
+
+        val textFieldScrollState = ScrollState(0)
+        val rowScrollState = ScrollState(0)
+
+        rule.setContent {
+            Row(
+                Modifier
+                    .size(containerSize)
+                    .padding(8.dp)
+                    .horizontalScroll(rowScrollState)
+            ) {
+                Box(Modifier.size(startItemSize))
+                ScrollableContent(
+                    modifier = Modifier.fillMaxHeight(),
+                    state = TextFieldState(text, initialSelection = TextRange.Zero),
+                    scrollState = textFieldScrollState,
+                    lineLimits = SingleLine
+                )
+            }
+        }
+
+        assertThat(textFieldScrollState.value).isEqualTo(0)
+        assertThat(textFieldScrollState.maxValue).isEqualTo(0)
+        assertThat(rowScrollState.value).isEqualTo(0)
+
+        rule.onNodeWithTag(TextfieldTag).performTouchInput {
+            click(Offset(1f, 1f))
+        }
+
+        rule.waitForIdle()
+
+        // bringIntoView may scroll just a bit to bring TextField into view.
+        val initialRowScrollValue = rowScrollState.value
+
+        var scrollAmount = 0
+        rule.onNode(isSelectionHandle(Handle.Cursor)).performTouchInput {
+            scrollAmount = (containerSize * 2).roundToPx()
+            down(center)
+            moveBy(
+                Offset(scrollAmount.toFloat(), 0f),
+                viewConfiguration.longPressTimeoutMillis + 100
+            )
+        }
+
+        var intermediateRowScrollValue = 0
+        rule.runOnIdle {
+            intermediateRowScrollValue = rowScrollState.value
+            assertThat(textFieldScrollState.value).isEqualTo(0)
+            assertThat(rowScrollState.value).isGreaterThan(initialRowScrollValue)
+        }
+
+        rule.onNode(isSelectionHandle(Handle.Cursor)).performTouchInput {
+            moveBy(
+                Offset(-scrollAmount.toFloat(), 0f),
+                viewConfiguration.longPressTimeoutMillis + 100
+            )
+        }
+
+        // The scroll should remain in its last position since we are essentially moving cursor
+        // handle back to the same place in TextField's view port. This action should not scroll
+        // the TextField back to start.
+        rule.runOnIdle {
+            assertThat(textFieldScrollState.value).isEqualTo(0)
+            assertThat(rowScrollState.value).isEqualTo(intermediateRowScrollValue)
+        }
+    }
+
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun cursorScrolledIntoViewWhenTyping_inHorizontallyScrollableField_whenAtStart() {
@@ -743,6 +892,47 @@ class TextFieldScrollTest : FocusedWindowTest {
         // Enter a newline, which will move the cursor to line 2 and grow the field to be 2 lines
         // tall. The second line will initially be hidden by the container, but should be scrolled
         // back into view.
+        rule.onNodeWithTag("field").performTextInput("\n")
+
+        rule.waitUntil(
+            "maxValue (${scrollState.maxValue} > 0 && " +
+                "scrollState.value (${scrollState.value}) == maxValue",
+            timeoutMillis = 10_000
+        ) {
+            val maxValue = scrollState.maxValue
+            maxValue > 0 && scrollState.value == maxValue
+        }
+    }
+
+    @Test
+    fun cursorScrolledIntoViewWhenTyping_inDecoration_withMaxLineLimit_whenFieldExpands() {
+        val state = TextFieldState()
+        val scrollState = ScrollState(0)
+        rule.setContent {
+            BasicTextField(
+                state,
+                lineLimits = MultiLine(maxHeightInLines = 3),
+                modifier = Modifier
+                    .testTag("field")
+                    .border(1.dp, Color.Blue),
+                scrollState = scrollState,
+                decorator = {
+                    Box(modifier = Modifier.padding(16.dp)) {
+                        it()
+                    }
+                }
+            )
+        }
+        // Enter 3 lines which will grow the TextField to its maximum allowed height in lines.
+        // Then we will enter a new line character and expect the field to auto-scroll its maximum
+        // value.
+        rule.onNodeWithTag("field").performTextInput("a\na\na")
+
+        rule.runOnIdle {
+            assertThat(scrollState.value).isEqualTo(0)
+            assertThat(scrollState.maxValue).isEqualTo(0)
+        }
+
         rule.onNodeWithTag("field").performTextInput("\n")
 
         rule.waitUntil(

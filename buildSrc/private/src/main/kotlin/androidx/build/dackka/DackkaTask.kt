@@ -34,11 +34,13 @@ import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.options.Option
 import org.gradle.process.ExecOperations
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -67,9 +69,18 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
     @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
     abstract val frameworkSamplesDir: DirectoryProperty
 
-    // Directory containing the code samples
+    // Directory containing the code samples derived via the old method. This will be removed
+    // as soon as all libraries have been published with samples. b/329424152
     @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
-    abstract val samplesDir: DirectoryProperty
+    abstract val samplesDeprecatedDir: DirectoryProperty
+
+    // Directory containing the code samples for non-KMP libraries
+    @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
+    abstract val samplesJvmDir: DirectoryProperty
+
+    // Directory containing the code samples for KMP libraries
+    @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
+    abstract val samplesKmpDir: DirectoryProperty
 
     // Directory containing the JVM source code for Dackka to process
     @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
@@ -105,8 +116,19 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
 
     @get:Input abstract val nullabilityAnnotations: ListProperty<String>
 
-    @get:[InputFiles PathSensitive(PathSensitivity.NONE)]
+    // Version metadata for apiSince, only marked as @InputFiles if includeVersionMetadata is true
+    @get:Internal
     abstract val versionMetadataFiles: ConfigurableFileCollection
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    fun getOptionalVersionMetadataFiles(): ConfigurableFileCollection {
+        return if (includeVersionMetadata) {
+            versionMetadataFiles
+        } else {
+            objects.fileCollection()
+        }
+    }
 
     // Maps to the system variable LIBRARY_METADATA_FILE containing artifactID and other metadata
     @get:[InputFile PathSensitive(PathSensitivity.NONE)]
@@ -118,6 +140,17 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
     @get:Input abstract val baseSourceLink: Property<String>
     @get:Input abstract val baseFunctionSourceLink: Property<String>
     @get:Input abstract val basePropertySourceLink: Property<String>
+
+    /**
+     * Option for whether to include apiSince metadata in the docs. Defaults to including metadata.
+     * Run with `--no-version-metadata` to avoid running `generateApi` before `docs`.
+     */
+    @get:Input
+    @set:Option(
+        option = "version-metadata",
+        description = "Include added-in/deprecated-in API version metadata"
+    )
+    var includeVersionMetadata: Boolean = true
 
     private fun sourceSets(): List<DokkaInputModels.SourceSet> {
         val externalDocs =
@@ -153,7 +186,9 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
                             // samples are in common
                             samples = if (analysisPlatform == DokkaAnalysisPlatform.COMMON) {
                                 objects.fileCollection().from(
-                                    samplesDir,
+                                    samplesDeprecatedDir,
+                                    samplesJvmDir,
+                                    samplesKmpDir,
                                     frameworkSamplesDir.get().asFile
                                 )
                             } else {
@@ -179,7 +214,9 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
                 analysisPlatform = "jvm",
                 sourceRoots = objects.fileCollection().from(jvmSourcesDir),
                 samples = objects.fileCollection().from(
-                    samplesDir,
+                    samplesDeprecatedDir,
+                    samplesJvmDir,
+                    samplesKmpDir,
                     frameworkSamplesDir.get().asFile
                 ),
                 includes = objects.fileCollection().from(includesFiles(jvmSourcesDir.get().asFile)),
@@ -236,7 +273,7 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
                                         "annotationsNotToDisplayKotlin" to
                                             annotationsNotToDisplayKotlin.get(),
                                         "hidingAnnotations" to hidingAnnotations.get(),
-                                        "versionMetadataFilenames" to checkVersionMetadataFiles(),
+                                        "versionMetadataFilenames" to getVersionMetadataFiles(),
                                         "validNullabilityAnnotations" to
                                             nullabilityAnnotations.get(),
                                     )
@@ -252,12 +289,14 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
     }
 
     /**
-     * Return the list of version metadata files after checking if they're all JSON. If version
-     * metadata does not exist for a project, it's possible that a configuration which isn't an
-     * exact match of the version metadata attributes to be selected as version metadata.
+     * If version metadata shouldn't be included in the docs, returns an empty list.
+     * Otherwise, returns the list of version metadata files after checking if they're all JSON. If
+     * version metadata does not exist for a project, it's possible that a configuration which isn't
+     * an exact match of the version metadata attributes to be selected as version metadata.
      */
-    private fun checkVersionMetadataFiles(): List<File> {
-        val (json, nonJson) = versionMetadataFiles.files.partition { it.extension == "json" }
+    private fun getVersionMetadataFiles(): List<File> {
+        val (json, nonJson) = getOptionalVersionMetadataFiles().files
+            .partition { it.extension == "json" }
         if (nonJson.isNotEmpty()) {
             logger.error(
                 "The following were resolved as version metadata files but are not JSON files. " +

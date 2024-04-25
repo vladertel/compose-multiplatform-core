@@ -514,7 +514,7 @@ private class ClickableElement(
         if (enabled != other.enabled) return false
         if (onClickLabel != other.onClickLabel) return false
         if (role != other.role) return false
-        if (onClick != other.onClick) return false
+        if (onClick !== other.onClick) return false
 
         return true
     }
@@ -592,10 +592,10 @@ private class CombinedClickableElement(
         if (enabled != other.enabled) return false
         if (onClickLabel != other.onClickLabel) return false
         if (role != other.role) return false
-        if (onClick != other.onClick) return false
+        if (onClick !== other.onClick) return false
         if (onLongClickLabel != other.onLongClickLabel) return false
-        if (onLongClick != other.onLongClick) return false
-        if (onDoubleClick != other.onDoubleClick) return false
+        if (onLongClick !== other.onLongClick) return false
+        if (onDoubleClick !== other.onDoubleClick) return false
 
         return true
     }
@@ -823,13 +823,12 @@ private class CombinedClickableNodeImpl(
         if ((this.onLongClick == null) != (onLongClick == null)) {
             // Adding or removing longClick should cancel any existing press interactions
             disposeInteractions()
+            // Adding or removing longClick should add / remove the corresponding property
+            invalidateSemantics()
             resetPointerInputHandling = true
         }
 
-        if (this.onLongClick != onLongClick) {
-            this.onLongClick = onLongClick
-            invalidateSemantics()
-        }
+        this.onLongClick = onLongClick
 
         if ((this.onDoubleClick == null) != (onDoubleClick == null)) {
             resetPointerInputHandling = true
@@ -1225,9 +1224,9 @@ private class ClickableSemanticsElement(
         if (enabled != other.enabled) return false
         if (role != other.role) return false
         if (onLongClickLabel != other.onLongClickLabel) return false
-        if (onLongClick != other.onLongClick) return false
+        if (onLongClick !== other.onLongClick) return false
         if (onClickLabel != other.onClickLabel) return false
-        if (onClick != other.onClick) return false
+        if (onClick !== other.onClick) return false
 
         return true
     }

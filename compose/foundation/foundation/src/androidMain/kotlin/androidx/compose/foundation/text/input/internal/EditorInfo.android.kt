@@ -21,6 +21,9 @@ import android.text.InputType
 import android.view.inputmethod.DeleteGesture
 import android.view.inputmethod.DeleteRangeGesture
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InsertGesture
+import android.view.inputmethod.JoinOrSplitGesture
+import android.view.inputmethod.RemoveSpaceGesture
 import android.view.inputmethod.SelectGesture
 import android.view.inputmethod.SelectRangeGesture
 import androidx.annotation.DoNotInline
@@ -192,6 +195,15 @@ private object EditorInfoApi34 {
     @DoNotInline
     fun setHandwritingGestures(editorInfo: EditorInfo) {
         editorInfo.supportedHandwritingGestures = listOf(
+            SelectGesture::class.java,
+            DeleteGesture::class.java,
+            SelectRangeGesture::class.java,
+            DeleteRangeGesture::class.java,
+            JoinOrSplitGesture::class.java,
+            InsertGesture::class.java,
+            RemoveSpaceGesture::class.java
+        )
+        editorInfo.supportedHandwritingGesturePreviews = setOf(
             SelectGesture::class.java,
             DeleteGesture::class.java,
             SelectRangeGesture::class.java,

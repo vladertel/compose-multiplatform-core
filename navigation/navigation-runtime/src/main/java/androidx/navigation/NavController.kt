@@ -544,11 +544,17 @@ public open class NavController(
      */
     @MainThread
     @JvmOverloads
-    @ExperimentalSafeArgsApi
     public inline fun <reified T : Any> popBackStack(
         inclusive: Boolean,
         saveState: Boolean = false
-    ): Boolean = popBackStack(serializer<T>().hashCode(), inclusive, saveState)
+    ): Boolean {
+        val id = serializer<T>().hashCode()
+        requireNotNull(findDestinationFromRoot(id)) {
+            "Destination with route ${T::class.simpleName} cannot be found in navigation " +
+                "graph $graph"
+        }
+        return popBackStack(id, inclusive, saveState)
+    }
 
     /**
      * Attempts to pop the controller's back stack back to a specific destination.
@@ -567,7 +573,6 @@ public open class NavController(
      */
     @MainThread
     @JvmOverloads
-    @ExperimentalSafeArgsApi
     public fun <T : Any> popBackStack(
         route: T,
         inclusive: Boolean,
@@ -642,11 +647,7 @@ public open class NavController(
     ): Boolean {
         // route contains arguments so we need to generate and pop with the populated route
         // rather than popping based on route pattern
-        val finalRoute = generateRouteFilled(route, fromBackStack = true)
-        requireNotNull(finalRoute) {
-            "PopBackStack failed: route $route cannot be found from" +
-                "the current backstack. The current destination is $currentDestination"
-        }
+        val finalRoute = generateRouteFilled(route)
         return popBackStackInternal(finalRoute, inclusive, saveState)
     }
 
@@ -888,7 +889,6 @@ public open class NavController(
      * @return true if the saved state of the stack associated with [T] was cleared.
      */
     @MainThread
-    @ExperimentalSafeArgsApi
     public inline fun <reified T : Any> clearBackStack(): Boolean =
         clearBackStack(serializer<T>().hashCode())
 
@@ -904,11 +904,10 @@ public open class NavController(
      */
     @OptIn(InternalSerializationApi::class)
     @MainThread
-    @ExperimentalSafeArgsApi
     public fun <T : Any> clearBackStack(route: T): Boolean {
         // route contains arguments so we need to generate and clear with the populated route
         // rather than clearing based on route pattern
-        val finalRoute = generateRouteFilled(route) ?: return false
+        val finalRoute = generateRouteFilled(route)
         val cleared = clearBackStackInternal(finalRoute)
         // Only return true if the clear succeeded and we've dispatched
         // the change to a new destination
@@ -1644,6 +1643,17 @@ public open class NavController(
         return currentNode.findDestination(destinationId)
     }
 
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    public fun findDestinationFromRoot(@IdRes destinationId: Int): NavDestination? {
+        if (_graph == null) {
+            return null
+        }
+        if (_graph!!.id == destinationId) {
+            return _graph
+        }
+        return _graph!!.findChildNode(destinationId)
+    }
+
     private fun NavDestination.findDestination(@IdRes destinationId: Int): NavDestination? {
         if (id == destinationId) {
             return this
@@ -1666,21 +1676,18 @@ public open class NavController(
         return currentGraph.findNode(route)
     }
 
-    // Finds destination and generates a route filled with args based on the serializable object.
-    // `fromBackStack` is for efficiency - if left false, the worst case scenario is searching
-    // from entire graph when we only care about backstack.
+    // Finds destination within _graph including its children and
+    // generates a route filled with args based on the serializable object.
+    // Throws if destination with `route` is not found
     @OptIn(InternalSerializationApi::class)
-    private fun <T : Any> generateRouteFilled(route: T, fromBackStack: Boolean = false): String? {
-        val destination = if (fromBackStack) {
-            // limit search within backstack
-            backQueue.lastOrNull {
-                it.destination.id == route::class.serializer().hashCode()
-            }?.destination
-        } else {
-            // search from within root graph
-            findDestination(route::class.serializer().hashCode())
+    private fun <T : Any> generateRouteFilled(route: T): String {
+        val id = route::class.serializer().hashCode()
+        val destination = findDestinationFromRoot(id)
+        // throw immediately if destination is not found within the graph
+        requireNotNull(destination) {
+            "Destination with route ${route::class.simpleName} cannot be found " +
+                "in navigation graph $_graph"
         }
-        if (destination == null) return null
         return route.generateRouteWithArgs(
             // get argument typeMap
             destination.arguments.mapValues { it.value.type }
@@ -1758,7 +1765,7 @@ public open class NavController(
      * @throws IllegalArgumentException if the desired destination cannot be found from the
      *                                  current destination
      */
-    @OptIn(InternalSerializationApi::class, ExperimentalSafeArgsApi::class)
+    @OptIn(InternalSerializationApi::class)
     @MainThread
     public open fun navigate(
         @IdRes resId: Int,
@@ -1965,7 +1972,7 @@ public open class NavController(
         }
     }
 
-    @OptIn(InternalSerializationApi::class, ExperimentalSafeArgsApi::class)
+    @OptIn(InternalSerializationApi::class)
     @MainThread
     private fun navigate(
         node: NavDestination,
@@ -2404,7 +2411,6 @@ public open class NavController(
      * @throws IllegalArgumentException if the given route is invalid
      */
     @MainThread
-    @ExperimentalSafeArgsApi
     public fun <T : Any> navigate(route: T, builder: NavOptionsBuilder.() -> Unit) {
         navigate(route, navOptions(builder))
     }
@@ -2426,7 +2432,6 @@ public open class NavController(
      */
     @MainThread
     @JvmOverloads
-    @ExperimentalSafeArgsApi
     public fun <T : Any> navigate(
         route: T,
         navOptions: NavOptions? = null,
@@ -2694,9 +2699,21 @@ public open class NavController(
      * target NavBackStackEntry's [NavDestination] must have been created with route from [KClass].
      * @throws IllegalArgumentException if the destination is not on the back stack
      */
-    @ExperimentalSafeArgsApi
-    public inline fun <reified T : Any> getBackStackEntry(): NavBackStackEntry =
-        getBackStackEntry(serializer<T>().hashCode())
+    public inline fun <reified T : Any> getBackStackEntry(): NavBackStackEntry {
+        val id = serializer<T>().hashCode()
+        requireNotNull(findDestinationFromRoot(id)) {
+            "Destination with route ${T::class.simpleName} cannot be found in navigation " +
+                "graph $graph"
+        }
+        val lastFromBackStack = currentBackStack.value.lastOrNull { entry ->
+            entry.destination.id == id
+        }
+        requireNotNull(lastFromBackStack) {
+            "No destination with route ${T::class.simpleName} is on the NavController's " +
+                "back stack. The current destination is $currentDestination"
+        }
+        return lastFromBackStack
+    }
 
     /**
      * Gets the topmost [NavBackStackEntry] for a route from an Object.
@@ -2709,15 +2726,10 @@ public open class NavController(
      * target NavBackStackEntry's [NavDestination] must have been created with route from [KClass].
      * @throws IllegalArgumentException if the destination is not on the back stack
      */
-    @ExperimentalSafeArgsApi
     public fun <T : Any> getBackStackEntry(route: T): NavBackStackEntry {
         // route contains arguments so we need to generate the populated route
         // rather than getting entry based on route pattern
-        val finalRoute = generateRouteFilled(route, fromBackStack = true)
-        requireNotNull(finalRoute) {
-            "No destination with route $finalRoute is on the NavController's back stack. The " +
-                "current destination is $currentDestination"
-        }
+        val finalRoute = generateRouteFilled(route)
         return getBackStackEntry(finalRoute)
     }
 
@@ -2853,7 +2865,6 @@ public inline fun NavController.createGraph(
  * does not use custom NavTypes.
  * @param builder the builder used to construct the graph
  */
-@ExperimentalSafeArgsApi
 public inline fun NavController.createGraph(
     startDestination: KClass<*>,
     route: KClass<*>? = null,
@@ -2871,7 +2882,6 @@ public inline fun NavController.createGraph(
  * does not use custom NavTypes.
  * @param builder the builder used to construct the graph
  */
-@ExperimentalSafeArgsApi
 public inline fun NavController.createGraph(
     startDestination: Any,
     route: KClass<*>? = null,

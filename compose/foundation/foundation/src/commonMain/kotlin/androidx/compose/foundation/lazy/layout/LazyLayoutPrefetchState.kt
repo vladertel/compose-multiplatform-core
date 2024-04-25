@@ -19,7 +19,12 @@ package androidx.compose.foundation.lazy.layout
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.layout.LazyLayoutPrefetchState.PrefetchHandle
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.SubcomposeLayoutState
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.TraversableNode
+import androidx.compose.ui.node.TraversableNode.Companion.TraverseDescendantsAction
+import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.util.trace
 import kotlin.system.measureNanoTime
@@ -31,12 +36,18 @@ import kotlin.system.measureNanoTime
  * layouts. LazyLayout and all corresponding APIs are still under development and are subject to
  * change.
  *
- * @param prefetchExecutor the PrefetchExecutor implementation to use to execute prefetch requests.
- * If null is provided, the default PrefetchExecutor for the platform will be used.
+ * @param prefetchScheduler the [PrefetchScheduler] implementation to use to execute prefetch
+ * requests. If null is provided, the default [PrefetchScheduler] for the platform will be used.
+ * @param onNestedPrefetch a callback which will be invoked when this LazyLayout is prefetched in
+ * context of a parent LazyLayout, giving a chance to recursively prefetch its own children. See
+ * [NestedPrefetchScope].
  */
 @ExperimentalFoundationApi
 @Stable
-class LazyLayoutPrefetchState(internal val prefetchExecutor: PrefetchExecutor? = null) {
+class LazyLayoutPrefetchState(
+    internal val prefetchScheduler: PrefetchScheduler? = null,
+    private val onNestedPrefetch: (NestedPrefetchScope.() -> Unit)? = null
+) {
 
     private val prefetchMetrics: PrefetchMetrics = PrefetchMetrics()
     internal var prefetchHandleProvider: PrefetchHandleProvider? = null
@@ -45,11 +56,21 @@ class LazyLayoutPrefetchState(internal val prefetchExecutor: PrefetchExecutor? =
      * Schedules precomposition and premeasure for the new item.
      *
      * @param index item index to prefetch.
-     * @param constraints [Constraints] to use for premeasuring.
+     * @param constraints [Constraints] to use for premeasuring. If null, the child will not
+     * be premeasured.
      */
-    fun schedulePrefetch(index: Int, constraints: Constraints): PrefetchHandle {
+    fun schedulePrefetch(index: Int, constraints: Constraints? = null): PrefetchHandle {
         return prefetchHandleProvider?.schedulePrefetch(index, constraints, prefetchMetrics)
             ?: DummyHandle
+    }
+
+    internal fun collectNestedPrefetchRequests(): List<PrefetchRequest> {
+        val onNestedPrefetch = onNestedPrefetch ?: return listOf()
+
+        return NestedPrefetchScopeImpl().run {
+            onNestedPrefetch()
+            requests
+        }
     }
 
     sealed interface PrefetchHandle {
@@ -58,7 +79,49 @@ class LazyLayoutPrefetchState(internal val prefetchExecutor: PrefetchExecutor? =
          * was precomposed already it will be disposed.
          */
         fun cancel()
+
+        /**
+         * Marks this prefetch request as urgent, which is a way to communicate that the requested
+         * item is expected to be needed during the next frame.
+         *
+         * For urgent requests we can proceed with doing the prefetch even if the available time
+         * in the frame is less than we spend on similar prefetch requests on average.
+         */
+        fun markAsUrgent()
     }
+
+    private inner class NestedPrefetchScopeImpl : NestedPrefetchScope {
+
+        val requests: List<PrefetchRequest>
+            get() = _requests
+        private val _requests: MutableList<PrefetchRequest> = mutableListOf()
+
+        override fun schedulePrefetch(index: Int, constraints: Constraints?) {
+            val prefetchHandleProvider = prefetchHandleProvider ?: return
+            _requests.add(
+                prefetchHandleProvider.createNestedPrefetchRequest(
+                    index,
+                    constraints,
+                    prefetchMetrics
+                )
+            )
+        }
+    }
+}
+
+/**
+ * A scope which allows nested prefetches to be requested for the precomposition of a LazyLayout.
+ */
+@ExperimentalFoundationApi
+sealed interface NestedPrefetchScope {
+
+    /**
+     * Requests a child index to be prefetched as part of the prefetch of a parent LazyLayout.
+     * @param index the index of the child to prefetch.
+     * @param constraints [Constraints] to use for premeasuring. If null, the child will not
+     * be premeasured.
+     */
+    fun schedulePrefetch(index: Int, constraints: Constraints? = null)
 }
 
 /**
@@ -115,33 +178,41 @@ internal class PrefetchMetrics {
 @ExperimentalFoundationApi
 private object DummyHandle : PrefetchHandle {
     override fun cancel() {}
+    override fun markAsUrgent() {}
 }
 
 /**
  * PrefetchHandleProvider is used to connect the [LazyLayoutPrefetchState], which provides the API
  * to schedule prefetches, to a [LazyLayoutItemContentFactory] which resolves key and content from
  * an index, [SubcomposeLayoutState] which knows how to precompose/premeasure,
- * and a specific [PrefetchExecutor] used to execute a request.
+ * and a specific [PrefetchScheduler] used to execute a request.
  */
 @ExperimentalFoundationApi
 internal class PrefetchHandleProvider(
     private val itemContentFactory: LazyLayoutItemContentFactory,
     private val subcomposeLayoutState: SubcomposeLayoutState,
-    private val executor: PrefetchExecutor
+    private val executor: PrefetchScheduler
 ) {
     fun schedulePrefetch(
         index: Int,
-        constraints: Constraints,
+        constraints: Constraints?,
         prefetchMetrics: PrefetchMetrics
     ): PrefetchHandle =
         HandleAndRequestImpl(index, constraints, prefetchMetrics).also {
-            executor.requestPrefetch(it)
+            executor.schedulePrefetch(it)
         }
+
+    fun createNestedPrefetchRequest(
+        index: Int,
+        constraints: Constraints?,
+        prefetchMetrics: PrefetchMetrics,
+    ): PrefetchRequest =
+        HandleAndRequestImpl(index, constraints = constraints, prefetchMetrics)
 
     @ExperimentalFoundationApi
     private inner class HandleAndRequestImpl(
         private val index: Int,
-        private val constraints: Constraints,
+        private val constraints: Constraints?,
         private val prefetchMetrics: PrefetchMetrics,
     ) : PrefetchHandle, PrefetchRequest {
 
@@ -149,6 +220,10 @@ internal class PrefetchHandleProvider(
         private var isMeasured = false
         private var isCanceled = false
         private val isComposed get() = precomposeHandle != null
+        private var hasResolvedNestedPrefetches = false
+        private var nestedPrefetchController: NestedPrefetchController? = null
+        private var isUrgent = false
+
         private val isValid
             get() = !isCanceled &&
                 index in 0 until itemContentFactory.itemProvider().itemCount
@@ -161,13 +236,24 @@ internal class PrefetchHandleProvider(
             }
         }
 
+        override fun markAsUrgent() {
+            isUrgent = true
+        }
+
+        private fun PrefetchRequestScope.shouldExecute(average: Long): Boolean {
+            val available = availableTimeNanos()
+            // even for urgent request we only do the work if we have time available, as otherwise
+            // it is better to just return early to allow the next frame to start and do the work.
+            return (isUrgent && available > 0) || average < available
+        }
+
         override fun PrefetchRequestScope.execute(): Boolean {
             if (!isValid) {
                 return false
             }
 
             if (!isComposed) {
-                if (prefetchMetrics.averageCompositionTimeNanos < availableTimeNanos) {
+                if (shouldExecute(prefetchMetrics.averageCompositionTimeNanos)) {
                     prefetchMetrics.recordCompositionTiming {
                         trace("compose:lazy:prefetch:compose") {
                             performComposition()
@@ -178,11 +264,38 @@ internal class PrefetchHandleProvider(
                 }
             }
 
-            if (!isMeasured) {
-                if (prefetchMetrics.averageMeasureTimeNanos < availableTimeNanos) {
+            // if the request is urgent we better proceed with the measuring straight away instead
+            // of spending time trying to split the work more via nested prefetch. nested prefetch
+            // is always an estimation and it could potentially do work we will not need in the end,
+            // but the measuring will only do exactly the needed work (including composing nested
+            // lazy layouts)
+            if (!isUrgent) {
+                // Nested prefetch logic is best-effort: if nested LazyLayout children are
+                // added/removed/updated after we've resolved nested prefetch states here or resolved
+                // nestedPrefetchRequests below, those changes won't be taken into account.
+                if (!hasResolvedNestedPrefetches) {
+                    if (availableTimeNanos() > 0) {
+                        trace("compose:lazy:prefetch:resolve-nested") {
+                            nestedPrefetchController = resolveNestedPrefetchStates()
+                            hasResolvedNestedPrefetches = true
+                        }
+                    } else {
+                        return true
+                    }
+                }
+
+                val hasMoreWork =
+                    nestedPrefetchController?.run { executeNestedPrefetches() } ?: false
+                if (hasMoreWork) {
+                    return true
+                }
+            }
+
+            if (!isMeasured && constraints != null) {
+                if (shouldExecute(prefetchMetrics.averageMeasureTimeNanos)) {
                     prefetchMetrics.recordMeasureTiming {
                         trace("compose:lazy:prefetch:measure") {
-                            performMeasure()
+                            performMeasure(constraints)
                         }
                     }
                 } else {
@@ -207,7 +320,7 @@ internal class PrefetchHandleProvider(
             precomposeHandle = subcomposeLayoutState.precompose(key, content)
         }
 
-        private fun performMeasure() {
+        private fun performMeasure(constraints: Constraints) {
             require(!isCanceled) {
                 "Callers should check whether the request is still valid before calling " +
                     "performMeasure()"
@@ -222,8 +335,117 @@ internal class PrefetchHandleProvider(
             }
         }
 
+        private fun resolveNestedPrefetchStates(): NestedPrefetchController? {
+            val precomposedSlotHandle = requireNotNull(precomposeHandle) {
+                "Should precompose before resolving nested prefetch states"
+            }
+
+            var nestedStates: MutableList<LazyLayoutPrefetchState>? = null
+            precomposedSlotHandle.traverseDescendants(TraversablePrefetchStateNodeKey) {
+                val prefetchState = (it as TraversablePrefetchStateNode).prefetchState
+                nestedStates =
+                    nestedStates?.apply { add(prefetchState) } ?: mutableListOf(prefetchState)
+                TraverseDescendantsAction.SkipSubtreeAndContinueTraversal
+            }
+            return nestedStates?.let { NestedPrefetchController(it) }
+        }
+
         override fun toString(): String =
             "HandleAndRequestImpl { index = $index, constraints = $constraints, " +
                 "isComposed = $isComposed, isMeasured = $isMeasured, isCanceled = $isCanceled }"
+
+        private inner class NestedPrefetchController(
+            private val states: List<LazyLayoutPrefetchState>
+        ) {
+
+            // This array is parallel to nestedPrefetchStates, so index 0 in nestedPrefetchStates
+            // corresponds to index 0 in this array, etc.
+            private val requestsByState: Array<List<PrefetchRequest>?> = arrayOfNulls(states.size)
+            private var stateIndex: Int = 0
+            private var requestIndex: Int = 0
+
+            init {
+                require(states.isNotEmpty()) {
+                    "NestedPrefetchController shouldn't be created with no states"
+                }
+            }
+
+            fun PrefetchRequestScope.executeNestedPrefetches(): Boolean {
+                if (stateIndex >= states.size) {
+                    return false
+                }
+                check(!isCanceled) { "Should not execute nested prefetch on canceled request" }
+
+                trace("compose:lazy:prefetch:nested") {
+                    while (stateIndex < states.size) {
+                        if (requestsByState[stateIndex] == null) {
+                            if (availableTimeNanos() <= 0) {
+                                // When we have time again, we'll resolve nested requests for this
+                                // state
+                                return true
+                            }
+
+                            requestsByState[stateIndex] =
+                                states[stateIndex].collectNestedPrefetchRequests()
+                        }
+
+                        val nestedRequests = requestsByState[stateIndex]!!
+                        while (requestIndex < nestedRequests.size) {
+                            val hasMoreWork = with(nestedRequests[requestIndex]) { execute() }
+                            if (hasMoreWork) {
+                                return true
+                            } else {
+                                requestIndex++
+                            }
+                        }
+
+                        requestIndex = 0
+                        stateIndex++
+                    }
+                }
+
+                return false
+            }
+        }
+    }
+}
+
+private const val TraversablePrefetchStateNodeKey =
+    "androidx.compose.foundation.lazy.layout.TraversablePrefetchStateNode"
+
+/**
+ * A modifier which lets the [LazyLayoutPrefetchState] for a [LazyLayout] to be discoverable via
+ * [TraversableNode] traversal.
+ */
+@ExperimentalFoundationApi
+internal fun Modifier.traversablePrefetchState(
+    lazyLayoutPrefetchState: LazyLayoutPrefetchState?
+): Modifier {
+    return lazyLayoutPrefetchState?.let {
+        this then TraversablePrefetchStateModifierElement(it)
+    } ?: this
+}
+
+@ExperimentalFoundationApi
+private class TraversablePrefetchStateNode(
+    var prefetchState: LazyLayoutPrefetchState,
+) : Modifier.Node(), TraversableNode {
+
+    override val traverseKey: String = TraversablePrefetchStateNodeKey
+}
+
+@ExperimentalFoundationApi
+private data class TraversablePrefetchStateModifierElement(
+    private val prefetchState: LazyLayoutPrefetchState,
+) : ModifierNodeElement<TraversablePrefetchStateNode>() {
+    override fun create() = TraversablePrefetchStateNode(prefetchState)
+
+    override fun update(node: TraversablePrefetchStateNode) {
+        node.prefetchState = prefetchState
+    }
+
+    override fun InspectorInfo.inspectableProperties() {
+        name = "traversablePrefetchState"
+        value = prefetchState
     }
 }

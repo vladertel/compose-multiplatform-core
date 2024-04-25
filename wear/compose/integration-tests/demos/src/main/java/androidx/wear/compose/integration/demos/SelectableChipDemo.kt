@@ -32,9 +32,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.integration.demos.common.ScalingLazyColumnWithRSB
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.RadioButton
@@ -60,7 +60,7 @@ fun SelectableChips(
     var radioIconWithSecondarySelected by remember { mutableStateOf(true) }
     var splitWithRadioIconSelected by remember { mutableStateOf(true) }
 
-    ScalingLazyColumnWithRSB(
+    ScalingLazyColumn(
         state = scrollState,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
@@ -138,9 +138,9 @@ fun SelectableChips(
                 // Call the selectionControl variation, with default selectionControl = RadioButton
                 SplitSelectableChip(
                     selected = splitWithRadioIconSelected,
-                    onClick = { splitWithRadioIconSelected = it },
+                    onSelectionClick = { splitWithRadioIconSelected = it },
                     label = { Text("Split with Radio") },
-                    onBodyClick = {
+                    onContainerClick = {
                         Toast.makeText(
                             applicationContext, "Body was clicked",
                             Toast.LENGTH_SHORT

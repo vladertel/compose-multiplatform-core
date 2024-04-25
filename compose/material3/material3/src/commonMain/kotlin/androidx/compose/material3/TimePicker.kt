@@ -50,8 +50,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.internal.Strings
 import androidx.compose.material3.internal.getString
-import androidx.compose.material3.internal.toLocalString
-import androidx.compose.material3.internal.touchExplorationState
+import androidx.compose.material3.internal.rememberAccessibilityServiceState
 import androidx.compose.material3.tokens.MotionTokens
 import androidx.compose.material3.tokens.TimeInputTokens
 import androidx.compose.material3.tokens.TimeInputTokens.PeriodSelectorContainerHeight
@@ -212,21 +211,21 @@ fun TimePicker(
     colors: TimePickerColors = TimePickerDefaults.colors(),
     layoutType: TimePickerLayoutType = TimePickerDefaults.layoutType(),
 ) {
-    val touchExplorationServicesEnabled by touchExplorationState()
+    val a11yServicesEnabled by rememberAccessibilityServiceState()
 
     if (layoutType == TimePickerLayoutType.Vertical) {
         VerticalTimePicker(
             state = state,
             modifier = modifier,
             colors = colors,
-            autoSwitchToMinute = !touchExplorationServicesEnabled
+            autoSwitchToMinute = !a11yServicesEnabled
         )
     } else {
         HorizontalTimePicker(
             state = state,
             modifier = modifier,
             colors = colors,
-            autoSwitchToMinute = !touchExplorationServicesEnabled
+            autoSwitchToMinute = !a11yServicesEnabled
         )
     }
 }
@@ -831,7 +830,7 @@ private fun TimeInputImpl(
         modifier = modifier.padding(bottom = TimeInputBottomPadding),
         verticalAlignment = Alignment.Top
     ) {
-        val textStyle = MaterialTheme.typography.fromToken(TimeInputTokens.TimeFieldLabelTextFont)
+        val textStyle = TimeInputTokens.TimeFieldLabelTextFont.value
             .copy(
                 textAlign = TextAlign.Center,
                 color = colors.timeSelectorContentColor(true)
@@ -980,7 +979,7 @@ private fun ClockDisplayNumbers(
     colors: TimePickerColors
 ) {
     CompositionLocalProvider(
-        LocalTextStyle provides MaterialTheme.typography.fromToken(TimeSelectorLabelTextFont),
+        LocalTextStyle provides TimeSelectorLabelTextFont.value,
         // Always display the TimeSelectors from left to right.
         LocalLayoutDirection provides LayoutDirection.Ltr
     ) {
@@ -1486,7 +1485,7 @@ private fun ClockText(
     value: Int,
     autoSwitchToMinute: Boolean
 ) {
-    val style = MaterialTheme.typography.fromToken(ClockDialLabelTextFont)
+    val style = ClockDialLabelTextFont.value
     val maxDist = with(LocalDensity.current) { MaxDistance.toPx() }
     var center by remember { mutableStateOf(Offset.Zero) }
     val scope = rememberCoroutineScope()
@@ -1678,9 +1677,7 @@ private fun TimePickerTextField(
                 }
             ),
             color = TimeInputTokens.TimeFieldSupportingTextColor.value,
-            style = MaterialTheme
-                .typography
-                .fromToken(TimeInputTokens.TimeFieldSupportingTextFont)
+            style = TimeInputTokens.TimeFieldSupportingTextFont.value
         )
     }
 

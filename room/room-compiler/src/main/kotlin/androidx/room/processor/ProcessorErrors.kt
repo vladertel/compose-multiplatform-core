@@ -89,7 +89,7 @@ object ProcessorErrors {
     }
 
     fun primaryKeyColumnDoesNotExist(columnName: String, allColumns: List<String>): String {
-        return "$columnName referenced in the primary key does not exists in the Entity." +
+        return "$columnName referenced in the primary key does not exist in the Entity." +
             " Available column names:${allColumns.joinToString(", ")}"
     }
 
@@ -389,7 +389,7 @@ object ProcessorErrors {
     val INDEX_COLUMNS_CANNOT_BE_EMPTY = "List of columns in an index cannot be empty"
 
     fun indexColumnDoesNotExist(columnName: String, allColumns: List<String>): String {
-        return "$columnName referenced in the index does not exists in the Entity." +
+        return "$columnName referenced in the index does not exist in the Entity." +
             " Available column names:${allColumns.joinToString(", ")}"
     }
 
@@ -554,7 +554,7 @@ object ProcessorErrors {
     val FOREIGN_KEY_CANNOT_FIND_PARENT = "Cannot find parent entity class."
 
     fun foreignKeyChildColumnDoesNotExist(columnName: String, allColumns: List<String>): String {
-        return "($columnName) referenced in the foreign key does not exists in the Entity." +
+        return "($columnName) referenced in the foreign key does not exist in the Entity." +
             " Available column names:${allColumns.joinToString(", ")}"
     }
 
@@ -781,6 +781,10 @@ object ProcessorErrors {
         "or @Delete must be annotated with @Entity."
 
     val INVALID_RELATION_IN_PARTIAL_ENTITY = "Partial entities cannot have relations."
+
+    fun invalidQueryForSingleColumnArray(returnType: String) = "If a DAO function has a " +
+        "primitive array or an array of String return type, a single column must be returned. " +
+        "Please check the query of the DAO function with the `$returnType` return type."
 
     val EXPAND_PROJECTION_ALONG_WITH_REMOVE_UNUSED = """
         Using @${RewriteQueriesToDropUnusedColumns::class.simpleName} annotation when
@@ -1158,4 +1162,11 @@ object ProcessorErrors {
 
     val INVALID_BLOCKING_DAO_FUNCTION_NON_ANDROID = "Only suspend functions are allowed in DAOs" +
         " declared in source sets targeting non-Android platforms."
+
+    val INVALID_KOTLIN_CODE_GEN_IN_JAVAC =
+        "${Context.BooleanProcessorOptions.GENERATE_KOTLIN.argName} can only be enabled in KSP."
+
+    val RAW_QUERY_NOT_SUPPORTED_ON_NON_ANDROID =
+        "@RawQuery annotated DAO functions are currently not supported in source sets targeting " +
+            "non-Android platforms."
 }

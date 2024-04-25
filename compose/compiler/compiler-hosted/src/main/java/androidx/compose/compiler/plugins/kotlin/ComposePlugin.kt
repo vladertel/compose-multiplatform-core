@@ -22,12 +22,12 @@ import androidx.compose.compiler.plugins.kotlin.analysis.StabilityInferencer
 import androidx.compose.compiler.plugins.kotlin.k1.ComposableCallChecker
 import androidx.compose.compiler.plugins.kotlin.k1.ComposableDeclarationChecker
 import androidx.compose.compiler.plugins.kotlin.k1.ComposableTargetChecker
+import androidx.compose.compiler.plugins.kotlin.k1.ComposeDescriptorSerializerContext
 import androidx.compose.compiler.plugins.kotlin.k1.ComposeDiagnosticSuppressor
 import androidx.compose.compiler.plugins.kotlin.k1.ComposeTypeResolutionInterceptorExtension
 import androidx.compose.compiler.plugins.kotlin.k2.ComposeFirExtensionRegistrar
 import androidx.compose.compiler.plugins.kotlin.lower.ClassStabilityFieldSerializationPlugin
 import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.AddHiddenFromObjCSerializationPlugin
-import androidx.compose.compiler.plugins.kotlin.lower.hiddenfromobjc.HideFromObjCDeclarationsSet
 import com.intellij.mock.MockProject
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -88,9 +88,6 @@ object ComposeConfiguration {
         )
     val TRACE_MARKERS_ENABLED_KEY =
         CompilerConfigurationKey<Boolean>("Include composition trace markers in generated code")
-    val HIDE_FROM_OBJC_ENABLED_KEY =
-        CompilerConfigurationKey<Boolean>(
-            "Add HiddenFromObjC annotation to @Composable declarations")
 }
 
 @OptIn(ExperimentalCompilerApi::class)
@@ -169,9 +166,16 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
             allowMultipleOccurrences = false
         )
         val STRONG_SKIPPING_OPTION = CliOption(
+            "strongSkipping",
+            "<true|false>",
+            "Enable strong skipping mode",
+            required = false,
+            allowMultipleOccurrences = false
+        )
+        val EXPERIMENTAL_STRONG_SKIPPING_OPTION = CliOption(
             "experimentalStrongSkipping",
             "<true|false>",
-            "Enable experimental strong skipping mode",
+            "Deprecated - Use strongSkipping instead",
             required = false,
             allowMultipleOccurrences = false
         )
@@ -203,6 +207,7 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
         NON_SKIPPING_GROUP_OPTIMIZATION_ENABLED_OPTION,
         SUPPRESS_KOTLIN_VERSION_CHECK_ENABLED_OPTION,
         DECOYS_ENABLED_OPTION,
+        EXPERIMENTAL_STRONG_SKIPPING_OPTION,
         STRONG_SKIPPING_OPTION,
         STABLE_CONFIG_PATH_OPTION,
         TRACE_MARKERS_OPTION,
@@ -253,6 +258,18 @@ class ComposeCommandLineProcessor : CommandLineProcessor {
             ComposeConfiguration.DECOYS_ENABLED_KEY,
             value == "true"
         )
+        EXPERIMENTAL_STRONG_SKIPPING_OPTION -> {
+            val msgCollector = configuration.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY)
+            msgCollector?.report(
+                CompilerMessageSeverity.WARNING,
+                "${EXPERIMENTAL_STRONG_SKIPPING_OPTION.optionName} is deprecated." +
+                    " Use ${STRONG_SKIPPING_OPTION.optionName} instead."
+            )
+            configuration.put(
+                ComposeConfiguration.STRONG_SKIPPING_ENABLED_KEY,
+                value == "true"
+            )
+        }
         STRONG_SKIPPING_OPTION -> configuration.put(
             ComposeConfiguration.STRONG_SKIPPING_ENABLED_KEY,
             value == "true"
@@ -281,19 +298,24 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
         configuration: CompilerConfiguration
     ) {
         if (checkCompilerVersion(configuration)) {
-            val hideFromObjCDeclarationsSet = HideFromObjCDeclarationsSet()
+            val usesK2 = configuration.languageVersionSettings.languageVersion.usesK2
+            val descriptorSerializerContext =
+                if (usesK2) null
+                else ComposeDescriptorSerializerContext()
 
-            registerCommonExtensions(project)
+            registerCommonExtensions(project, descriptorSerializerContext)
 
             IrGenerationExtension.registerExtension(
                 project,
                 createComposeIrExtension(
                     configuration,
-                    hideFromObjCDeclarationsSet
+                    descriptorSerializerContext
                 )
             )
 
-            registerNativeExtensions(project, hideFromObjCDeclarationsSet)
+            if (!usesK2) {
+                registerNativeExtensions(project, descriptorSerializerContext!!)
+            }
         }
     }
 
@@ -306,6 +328,18 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
                     val suppressKotlinVersionCheck = configuration.get(
                         ComposeConfiguration.SUPPRESS_KOTLIN_VERSION_COMPATIBILITY_CHECK
                     )
+
+                    val decoysEnabled =
+                        configuration.get(ComposeConfiguration.DECOYS_ENABLED_KEY, false)
+                    if (decoysEnabled) {
+                        msgCollector?.report(
+                            CompilerMessageSeverity.ERROR,
+                            "decoys generation should be disabled" +
+                                " for Compose Multiplatform projects"
+                        )
+                        return false
+                    }
+
                     if (
                         suppressKotlinVersionCheck != null &&
                         suppressKotlinVersionCheck != version
@@ -375,7 +409,10 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
             }
         }
 
-        fun registerCommonExtensions(project: Project) {
+        fun registerCommonExtensions(
+            project: Project,
+            composeDescriptorSerializerContext: ComposeDescriptorSerializerContext? = null
+        ) {
             StorageComponentContainerContributor.registerExtension(
                 project,
                 ComposableCallChecker()
@@ -396,24 +433,28 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
             )
             DescriptorSerializerPlugin.registerExtension(
                 project,
-                ClassStabilityFieldSerializationPlugin()
+                ClassStabilityFieldSerializationPlugin(
+                    composeDescriptorSerializerContext?.classStabilityInferredCollection
+                )
             )
             FirExtensionRegistrarAdapter.registerExtension(project, ComposeFirExtensionRegistrar())
         }
 
         fun registerNativeExtensions(
             project: Project,
-            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet
+            composeDescriptorSerializerContext: ComposeDescriptorSerializerContext
         ) {
             DescriptorSerializerPlugin.registerExtension(
                 project,
-                AddHiddenFromObjCSerializationPlugin(hideFromObjCDeclarationsSet)
+                AddHiddenFromObjCSerializationPlugin(
+                    composeDescriptorSerializerContext.hideFromObjCDeclarationsSet
+                )
             )
         }
 
         fun createComposeIrExtension(
             configuration: CompilerConfiguration,
-            hideFromObjCDeclarationsSet: HideFromObjCDeclarationsSet? = null,
+            descriptorSerializerContext: ComposeDescriptorSerializerContext? = null,
             moduleMetricsFactory: ((StabilityInferencer) -> ModuleMetrics)? = null
         ): ComposeIrGenerationExtension {
             val liveLiteralsEnabled = configuration.getBoolean(
@@ -452,6 +493,7 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
             )
 
             val useK2 = configuration.languageVersionSettings.languageVersion.usesK2
+
             val strongSkippingEnabled = configuration.get(
                 ComposeConfiguration.STRONG_SKIPPING_ENABLED_KEY,
                 false
@@ -502,7 +544,7 @@ class ComposePluginRegistrar : org.jetbrains.kotlin.compiler.plugin.ComponentReg
                 strongSkippingEnabled = strongSkippingEnabled,
                 stableTypeMatchers = stableTypeMatchers,
                 moduleMetricsFactory = moduleMetricsFactory,
-                hideFromObjCDeclarationsSet = hideFromObjCDeclarationsSet,
+                descriptorSerializerContext = descriptorSerializerContext,
             )
         }
     }

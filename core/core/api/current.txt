@@ -2026,6 +2026,7 @@ package androidx.core.provider {
     method public static android.graphics.Typeface? buildTypeface(android.content.Context, android.os.CancellationSignal?, androidx.core.provider.FontsContractCompat.FontInfo![]);
     method public static androidx.core.provider.FontsContractCompat.FontFamilyResult fetchFonts(android.content.Context, android.os.CancellationSignal?, androidx.core.provider.FontRequest) throws android.content.pm.PackageManager.NameNotFoundException;
     method public static void requestFont(android.content.Context, androidx.core.provider.FontRequest, androidx.core.provider.FontsContractCompat.FontRequestCallback, android.os.Handler);
+    method public static void requestFont(android.content.Context, androidx.core.provider.FontRequest, int, androidx.core.provider.FontsContractCompat.FontRequestCallback, android.os.Handler);
   }
 
   public static final class FontsContractCompat.Columns implements android.provider.BaseColumns {
@@ -3665,10 +3666,10 @@ package androidx.core.view.accessibility {
     field public static final int ACTION_SELECT = 4; // 0x4
     field public static final int ACTION_SET_SELECTION = 131072; // 0x20000
     field public static final int ACTION_SET_TEXT = 2097152; // 0x200000
-    field public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH = "android.core.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH";
+    field public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH = "android.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH";
     field public static final int EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_MAX_LENGTH = 20000; // 0x4e20
-    field public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX = "android.core.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX";
-    field public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY = "android.core.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_KEY";
+    field public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX = "android.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX";
+    field public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY = "android.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_KEY";
     field public static final int FLAG_PREFETCH_ANCESTORS = 1; // 0x1
     field public static final int FLAG_PREFETCH_DESCENDANTS_BREADTH_FIRST = 16; // 0x10
     field public static final int FLAG_PREFETCH_DESCENDANTS_DEPTH_FIRST = 8; // 0x8
