@@ -37,6 +37,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(InternalComposeApi::class, ExperimentalCoroutinesApi::class)
 fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runTest {
+    println("---DebugLogForCfW*DebugLogForCfW*DebugLogForCfW*DebugLogForCfW---")
     withContext(TestMonotonicFrameClock(this)) {
         // Start the recomposer
         val recomposer = Recomposer(coroutineContext)
