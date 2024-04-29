@@ -37,3 +37,10 @@ jobs:
         uses: coactions/setup-xvfb@v1
         with:
           run: ./gradlew :mpp:testWeb --info
+      - name: Generate report (Test Reporter)
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: CfW tests results
+          path: out/androidx/compose/**/**/build/test-results/wasmJsBrowserTest/TEST*.xml
+          reporter: java-junit
