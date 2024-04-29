@@ -1,0 +1,37 @@
+name: CfW Tests
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - "jb-main"
+
+concurrency: 
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-22.04
+    name: CfW Runtime tests
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+      - name: install xvfb
+        run: apt-get install -y xvfb
+      - name: install Android SDK
+        run: ./jbdeps/android-sdk/downloadAndroidSdk
+      - name: Enable xvfb
+        run: Xvfb :1 -screen 0 1920x1080x24 -extension RANDR &export DISPLAY=:1.0
+      - name: Run runtime:runtime tests
+        run: ./gradlew :compose:runtime:runtime:wasmJsBrowserTest --info
