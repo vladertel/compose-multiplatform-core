@@ -6,9 +6,9 @@ on:
     branches:
       - "jb-main"
 
-concurrency: 
-  group: ${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
+#concurrency:
+#  group: ${{ github.head_ref || github.run_id }}
+#  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -31,7 +31,9 @@ jobs:
 #        run: apt-get install -y xvfb
       - name: install Android SDK
         run: ./jbdeps/android-sdk/downloadAndroidSdk
-      - name: Enable xvfb
-        run: Xvfb :1 -screen 0 1920x1080x24 -extension RANDR &export DISPLAY=:1.0
+#      - name: Enable xvfb
+#        run: Xvfb :1 -screen 0 1920x1080x24 -extension RANDR &export DISPLAY=:1.0
       - name: Run runtime:runtime tests
-        run: ./gradlew :compose:runtime:runtime:wasmJsBrowserTest --info
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: ./gradlew :compose:runtime:runtime:wasmJsBrowserTest --info
