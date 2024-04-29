@@ -252,7 +252,7 @@ class SkikoComposeUiTest @InternalTestApi constructor(
         val startTime = currentNanoTime()
         // TODO: consider adding a timeout to avoid an infinite loop?
         do {
-            if (currentNanoTime() - startTime > 2_000_000) {
+            if (currentNanoTime() - startTime > 1_000_000) {
                 throw Exception("waitForIdle timeout exceeded")
             }
             // always check even if we are idle
@@ -270,7 +270,7 @@ class SkikoComposeUiTest @InternalTestApi constructor(
         val startTime = currentNanoTime()
         uncaughtExceptionHandler.throwUncaught()
         while (!isIdle()) {
-            if (currentNanoTime() - startTime > 2_000_000) {
+            if (currentNanoTime() - startTime > 1_000_000) {
                 throw Exception("waitForIdle timeout exceeded")
             }
             renderNextFrame()
