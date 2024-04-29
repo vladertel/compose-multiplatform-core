@@ -16,6 +16,7 @@
 
 package androidx.compose.mpp.demo.bug
 
+import androidx.compose.foundation.border
 import androidx.compose.mpp.demo.Screen
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.foundation.layout.*
@@ -23,45 +24,25 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.jetbrains.skia.Color
 
 @OptIn(ExperimentalMaterialApi::class)
-internal val ResizePopupCrashOnJS = Screen.Example("Resize Popup") {
-    MaterialTheme {
-        var expanded by remember { mutableStateOf(false) }
-        val items = listOf("Resize", "The", "Window")
-        var selectedOptionText by remember { mutableStateOf(items[0]) }
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = {
-                expanded = it
-            },
-        ) {
-            OutlinedTextField(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                value = selectedOptionText,
-                onValueChange = {},
-                readOnly = true
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = {
-                    expanded = false
-                },
-            ) {
-                items.forEach { selectionOption ->
-                    DropdownMenuItem(
-                        onClick = {
-                            selectedOptionText = selectionOption
-                            expanded = false
-                        },
-                    ) {
-                        Text(selectionOption)
-
-                    }
-                }
-            }
-        }
-    }
-}
+internal val ResizePopupCrashOnJS = Screen.Example("Screen Orientation") {
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+        Box(
+            modifier = Modifier.weight(0.5f)
+                .fillMaxSize()
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colors.primaryVariant
+                )
+        )
+        Box(
+            modifier = Modifier.weight(0.5f)
+                .fillMaxSize()
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colors.primaryVariant
+                )
+        )
+    }}
