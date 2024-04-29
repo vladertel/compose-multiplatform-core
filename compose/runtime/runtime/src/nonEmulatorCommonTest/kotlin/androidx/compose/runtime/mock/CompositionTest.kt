@@ -37,7 +37,6 @@ import kotlinx.coroutines.withContext
 
 @OptIn(InternalComposeApi::class, ExperimentalCoroutinesApi::class)
 fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runTest {
-    println("---DebugLogForCfW*DebugLogForCfW*DebugLogForCfW*DebugLogForCfW---")
     withContext(TestMonotonicFrameClock(this)) {
         // Start the recomposer
         val recomposer = Recomposer(coroutineContext)
@@ -60,7 +59,10 @@ fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runTest {
                 root = View().apply { name = "root" }
                 val composition = Composition(ViewApplier(root), recomposer)
                 this.composition = composition
-                composition.setContent(block)
+                composition.setContent {
+                    println("----CfwDebugPrint*CfwDebugPrint*CfwDebugPrint----")
+                    block()
+                }
             }
 
             @OptIn(ExperimentalComposeRuntimeApi::class)
@@ -74,7 +76,10 @@ fun compositionTest(block: suspend CompositionTestScope.() -> Unit) = runTest {
                 val composition = Composition(ViewApplier(root), recomposer)
                 val result = composition.observe(observer)
                 this.composition = composition
-                composition.setContent(block)
+                composition.setContent {
+                    println("----CfwDebugPrint*CfwDebugPrint*CfwDebugPrint----")
+                    block()
+                }
                 return result
             }
 
