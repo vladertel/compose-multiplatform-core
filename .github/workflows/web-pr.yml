@@ -36,4 +36,4 @@ jobs:
       - name: Run runtime:runtime tests
         uses: coactions/setup-xvfb@v1
         with:
-          run: ./gradlew :compose:runtime:runtime:wasmJsBrowserTest --info
+          run: ./gradlew :mpp:testWeb --info
