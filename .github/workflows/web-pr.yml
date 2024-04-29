@@ -27,8 +27,8 @@ jobs:
         with:
           java-version: '17'
           distribution: 'zulu'
-      - name: install xvfb
-        run: apt-get install -y xvfb
+#      - name: install xvfb
+#        run: apt-get install -y xvfb
       - name: install Android SDK
         run: ./jbdeps/android-sdk/downloadAndroidSdk
       - name: Enable xvfb
