@@ -49,7 +49,7 @@ jobs:
         uses: coactions/setup-xvfb@v1
         with:
           run: ./gradlew :compose:ui:ui-text:wasmJsBrowserTest --info
-      - name: Run ui-text tests
+      - name: Run ui:ui tests
         uses: coactions/setup-xvfb@v1
         with:
           run: ./gradlew :compose:ui:ui:wasmJsBrowserTest --info
