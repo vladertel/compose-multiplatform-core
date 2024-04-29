@@ -36,7 +36,23 @@ jobs:
       - name: Run runtime:runtime tests
         uses: coactions/setup-xvfb@v1
         with:
-          run: ./gradlew :mpp:testWeb --info
+          run: ./gradlew :compose:runtime:runtime:wasmJsBrowserTest --info
+      - name: Run foundation:foundation tests
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: ./gradlew :compose:foundation:foundation:wasmJsBrowserTest --info
+      - name: Run material3 tests
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: ./gradlew :compose:material3:material3:wasmJsBrowserTest --info
+      - name: Run ui-text tests
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: ./gradlew :compose:ui:ui-text:wasmJsBrowserTest --info
+      - name: Run ui-text tests
+        uses: coactions/setup-xvfb@v1
+        with:
+          run: ./gradlew :compose:ui:ui:wasmJsBrowserTest --info
       - name: Generate report (Test Reporter)
         uses: dorny/test-reporter@v1
         if: always()
