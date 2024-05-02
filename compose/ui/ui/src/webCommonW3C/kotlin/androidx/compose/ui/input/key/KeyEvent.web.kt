@@ -32,11 +32,7 @@ private fun KeyboardEvent.toInputModifiers(): PointerKeyboardModifiers {
 internal fun KeyboardEvent.toComposeEvent(): KeyEvent {
     return KeyEvent(
         nativeKeyEvent = InternalKeyEvent(
-            key = toKey().also {
-                if (type == "keydown") {
-                    println("CONVERT ${key} / ${code} => ${keyCode} ${it.keyCode} ${keyCode == it.keyCode.toInt()}")
-                }
-            },
+            key = toKey(),
             type = when (type) {
                 "keydown" -> KeyEventType.KeyDown
                 "keyup" -> KeyEventType.KeyUp
