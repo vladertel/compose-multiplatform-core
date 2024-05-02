@@ -105,7 +105,23 @@ def configureCInterop(target, isDevice, architecture) {
             )
         }
 
+        def symsTaskName = "${compileTaskProvider.name}ObjCLib-TestSyms"
+        project.tasks.register(symsTaskName, Exec) {
+            commandLine("xcrun")
+            args(
+                    "simctl",
+                    "list",
+                    "--json",
+                    "devices",
+                    "available"
+            )
+        }
+
+
+        tasks[taskName].dependsOn(symsTaskName)
         tasks[compileTaskProvider.name].dependsOn(taskName)
+
+        // xcrun simctl list --json devices available
 
         cinterops {
             utils {
