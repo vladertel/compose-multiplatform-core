@@ -993,6 +993,12 @@ class ComposableFunctionBodyTransformer(
         val transformed = nonReturningBody.apply {
             transformChildrenVoid()
         }.let {
+            // Ensure that all group children of composable inline lambda are realized, since the inline
+            // lambda doesn't require a group on its own.
+            if (scope.isInlinedLambda && scope.isComposable) {
+                scope.realizeAllDirectChildren()
+            }
+
             if (isInlineLambda) {
                 it.asSourceOrEarlyExitGroup(scope)
             } else it
@@ -2493,12 +2499,6 @@ class ComposableFunctionBodyTransformer(
             )
         }
 
-        // Ensure that all group children of composable inline lambda are realized, since the inline
-        // lambda doesn't require a group on its own.
-        if (scope.isInlinedLambda && scope.isComposable) {
-            scope.realizeAllDirectChildren()
-        }
-
         scope.realizeGroup(makeEnd)
         return when {
             // if the scope ends with a return call, then it will get properly ended if we
@@ -3884,12 +3884,19 @@ class ComposableFunctionBodyTransformer(
         }
 
         forEachWith(transformed.branches, condScopes, resultScopes) { it, condScope, resultScope ->
-            // If the conditional block doesn't have a composable call in it, we don't need
-            // to generate a group around it because we will be generating one around the entire
-            // if statement
-            if (needsWrappingGroup && condScope.hasComposableCalls) {
-                it.condition = it.condition.asReplaceGroup(condScope)
+            if (condScope.hasComposableCalls) {
+                if (needsWrappingGroup) {
+                    // Generate a group around the conditional block when it has a composable call
+                    // in it and we are generating a group around when block.
+                    it.condition = it.condition.asReplaceGroup(condScope)
+                } else {
+                    // Ensure that the inner structure of condition is correct if the wrapping group
+                    // is not required by realizing groups in condition scope.
+                    condScope.realizeAllDirectChildren()
+                    condScope.realizeCoalescableGroup()
+                }
             }
+
             if (
                 // if no wrapping group but more than one result have calls, we have to have every
                 // result be a group so that we have a consistent number of groups during execution
