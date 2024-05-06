@@ -60,6 +60,8 @@ kotlin {
         commonMain {
             dependencies {
                 api(libs.kotlinStdlib)
+                api(project(":annotation:annotation"))
+                api(project(":lifecycle:lifecycle-common"))
                 api(project(":lifecycle:lifecycle-runtime"))
             }
         }
