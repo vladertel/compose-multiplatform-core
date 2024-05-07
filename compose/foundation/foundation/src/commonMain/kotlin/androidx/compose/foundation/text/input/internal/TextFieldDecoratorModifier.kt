@@ -29,7 +29,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.Handle
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.handwriting.detectStylusHandwriting
+import androidx.compose.foundation.text.handwriting.StylusHandwritingNode
 import androidx.compose.foundation.text.handwriting.isStylusHandwritingSupported
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.KeyboardActionHandler
@@ -89,6 +89,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -224,33 +225,34 @@ internal class TextFieldDecoratorModifierNode(
                     detectTextFieldLongPressAndAfterDrag(requestFocus)
                 }
             }
-            // Note: when editable changes (enabled or readOnly changes), this pointerInputModifier
-            // is reset. And we don't need to worry about cancel or launch the stylus handwriting
-            // detecting job.
-            if (isStylusHandwritingSupported && editable) {
-                 launch(start = CoroutineStart.UNDISPATCHED) {
-                    detectStylusHandwriting {
-                        if (!isFocused) {
-                            requestFocus()
-                        }
-
-                        // Send the handwriting start signal to platform.
-                        // The editor should send the signal when it is focused or is about
-                        // to gain focus, Here are more details:
-                        //   1) if the editor already has an active input session, the
-                        //   platform handwriting service should already listen to this flow
-                        //   and it'll start handwriting right away.
-                        //
-                        //   2) if the editor is not focused, but it'll be focused and
-                        //   create a new input session, one handwriting signal will be
-                        //   replayed when the platform collect this flow. And the platform
-                        //   should trigger handwriting accordingly.
-                        stylusHandwritingTrigger?.tryEmit(Unit)
-                        return@detectStylusHandwriting true
-                    }
-                }
-            }
         }
+    })
+
+    private val stylusHandwritingNode = delegate(StylusHandwritingNode {
+        if (!isFocused) {
+            requestFocus()
+        }
+
+        // If this is a password field, we can't trigger handwriting.
+        // The expected behavior is 1) request focus 2) show software keyboard.
+        // Note: TextField will show software keyboard automatically when it
+        // gain focus. 3) show a toast message telling that handwriting is not
+        // supported for password fields. TODO(b/335294152)
+        if (keyboardOptions.keyboardType != KeyboardType.Password) {
+            // Send the handwriting start signal to platform.
+            // The editor should send the signal when it is focused or is about
+            // to gain focus, Here are more details:
+            //   1) if the editor already has an active input session, the
+            //   platform handwriting service should already listen to this flow
+            //   and it'll start handwriting right away.
+            //
+            //   2) if the editor is not focused, but it'll be focused and
+            //   create a new input session, one handwriting signal will be
+            //   replayed when the platform collect this flow. And the platform
+            //   should trigger handwriting accordingly.
+            stylusHandwritingTrigger?.tryEmit(Unit)
+        }
+        return@StylusHandwritingNode true
     })
 
     /**
@@ -414,7 +416,6 @@ internal class TextFieldDecoratorModifierNode(
         val previousTextFieldState = this.textFieldState
         val previousKeyboardOptions = this.keyboardOptions
         val previousTextFieldSelectionState = this.textFieldSelectionState
-        val previousFilter = this.filter
         val previousInteractionSource = this.interactionSource
 
         // Apply the diff.
@@ -433,8 +434,8 @@ internal class TextFieldDecoratorModifierNode(
         // Something about the session changed, restart the session.
         if (writeable != previousWriteable ||
             textFieldState != previousTextFieldState ||
-            keyboardOptions != previousKeyboardOptions ||
-            filter != previousFilter
+            // compare with the new keyboardOptions that's merged
+            this.keyboardOptions != previousKeyboardOptions
         ) {
             if (writeable && isFocused) {
                 // The old session will be implicitly disposed.
@@ -451,6 +452,7 @@ internal class TextFieldDecoratorModifierNode(
 
         if (textFieldSelectionState != previousTextFieldSelectionState) {
             pointerInputNode.resetPointerInputHandler()
+            stylusHandwritingNode.resetPointerInputHandler()
             if (isAttached) {
                 textFieldSelectionState.receiveContentConfiguration =
                     receiveContentConfigurationProvider
@@ -459,6 +461,7 @@ internal class TextFieldDecoratorModifierNode(
 
         if (interactionSource != previousInteractionSource) {
             pointerInputNode.resetPointerInputHandler()
+            stylusHandwritingNode.resetPointerInputHandler()
         }
     }
 
@@ -597,6 +600,7 @@ internal class TextFieldDecoratorModifierNode(
             disposeInputSession()
             textFieldState.collapseSelectionToMax()
         }
+        stylusHandwritingNode.onFocusEvent(focusState)
     }
 
     override fun onAttach() {
@@ -618,10 +622,12 @@ internal class TextFieldDecoratorModifierNode(
         pass: PointerEventPass,
         bounds: IntSize
     ) {
+        stylusHandwritingNode.onPointerEvent(pointerEvent, pass, bounds)
         pointerInputNode.onPointerEvent(pointerEvent, pass, bounds)
     }
 
     override fun onCancelPointerInput() {
+        stylusHandwritingNode.onCancelPointerInput()
         pointerInputNode.onCancelPointerInput()
     }
 

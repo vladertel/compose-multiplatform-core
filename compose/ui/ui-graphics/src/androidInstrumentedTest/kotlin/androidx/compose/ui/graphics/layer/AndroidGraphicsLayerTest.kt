@@ -182,6 +182,28 @@ class AndroidGraphicsLayerTest {
     }
 
     @Test
+    fun testDrawAfterDiscard() {
+        var layer: GraphicsLayer? = null
+        graphicsLayerTest(
+            block = { graphicsContext ->
+                layer = graphicsContext.createGraphicsLayer().apply {
+                    assertEquals(IntSize.Zero, this.size)
+                    record {
+                        drawRect(Color.Red)
+                    }
+                    discardDisplayList()
+                }
+                drawLayer(layer!!)
+            },
+            verify = {
+                assertEquals(TEST_SIZE, layer!!.size)
+                assertEquals(IntOffset.Zero, layer!!.topLeft)
+                it.verifyQuadrants(Color.Red, Color.Red, Color.Red, Color.Red)
+            }
+        )
+    }
+
+    @Test
     fun testRecordLayerWithSize() {
         graphicsLayerTest(
             block = { graphicsContext ->
@@ -402,6 +424,26 @@ class AndroidGraphicsLayerTest {
                 assertEquals(topLeft, layer!!.topLeft)
                 assertEquals(size, layer!!.size)
                 it.verifyQuadrants(Color.Black, Color.Red, Color.Black, Color.Black)
+            }
+        )
+    }
+
+    @Test
+    fun testRecordOverwritesPreviousRecord() {
+        graphicsLayerTest(
+            block = { graphicsContext ->
+                val layer = graphicsContext.createGraphicsLayer().apply {
+                    record {
+                        drawRect(Color.Red)
+                    }
+                }
+                layer.record {
+                    drawRect(Color.Blue)
+                }
+                drawLayer(layer)
+            },
+            verify = {
+                it.verifyQuadrants(Color.Blue, Color.Blue, Color.Blue, Color.Blue)
             }
         )
     }

@@ -17,9 +17,12 @@
 package androidx.camera.viewfinder.compose
 
 import android.annotation.SuppressLint
+import android.graphics.RectF
 import android.util.Size
 import android.view.Surface
+import androidx.camera.viewfinder.compose.internal.RefCounted
 import androidx.camera.viewfinder.compose.internal.SurfaceTransformationUtil
+import androidx.camera.viewfinder.compose.internal.TransformUtil.surfaceRotationToRotationDegrees
 import androidx.camera.viewfinder.surface.ImplementationMode
 import androidx.camera.viewfinder.surface.TransformationInfo
 import androidx.camera.viewfinder.surface.ViewfinderSurfaceRequest
@@ -30,15 +33,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.setFrom
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Constraints
-import kotlin.coroutines.resume
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
 
 /**
  * Displays a media stream with the given transformations for crop and rotation while maintaining
@@ -48,13 +54,17 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  * [ViewfinderSurfaceRequest.getSurface].
  *
  * This has two underlying implementations either using an [AndroidEmbeddedExternalSurface] for
- * [ImplementationMode.COMPATIBLE] or an [AndroidExternalSurface] for
- * [ImplementationMode.PERFORMANCE].
+ * [ImplementationMode.EMBEDDED] or an [AndroidExternalSurface] for
+ * [ImplementationMode.EXTERNAL].
  *
  * @param surfaceRequest Details about the surface being requested
  * @param implementationMode Determines the underlying implementation of the [Surface].
  * @param transformationInfo Specifies the required transformations for the media being displayed.
  * @param modifier Modifier to be applied to the [Viewfinder]
+ * @param coordinateTransformer Coordinate transformer that can be used to convert Compose space
+ *      coordinates such as touch coordinates to surface space coordinates.
+ *      When the Viewfinder is displaying content from the camera, this transformer can be used to
+ *      translate touch events into camera sensor coordinates for focus and metering actions.
  *
  * TODO(b/322420487): Add a sample with `@sample`
  */
@@ -63,7 +73,8 @@ fun Viewfinder(
     surfaceRequest: ViewfinderSurfaceRequest,
     implementationMode: ImplementationMode,
     transformationInfo: TransformationInfo,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    coordinateTransformer: MutableCoordinateTransformer? = null,
 ) {
     val resolution = surfaceRequest.resolution
 
@@ -79,26 +90,30 @@ fun Viewfinder(
                 implementationMode = implementationMode,
                 onInit = {
                     onSurface { newSurface, _, _ ->
-                        // TODO(b/322420450): Properly release surface when no longer needed
-                        surfaceRequest.provideSurface(newSurface)
-                    }
+                        val refCountedSurface = RefCounted<Surface> {
+                            it.release()
+                        }
 
+                        refCountedSurface.initialize(newSurface)
+                        newSurface.onDestroyed {
+                            refCountedSurface.release()
+                        }
+
+                        refCountedSurface.acquire()?.let {
+                            surfaceRequest.provideSurface(it, Runnable::run) {
+                                refCountedSurface.release()
+                                this@onSurface.cancel()
+                            }
+                            awaitCancellation()
+                        } ?: run { this@onSurface.cancel() }
+                    }
                     // TODO(b/322420176): Properly handle onSurfaceChanged()
                 },
+                coordinateTransformer,
             )
         }
     }
 }
-
-// TODO(b/322420450): Properly release surface when this is cancelled
-private suspend fun ViewfinderSurfaceRequest.provideSurface(surface: Surface): Surface =
-    suspendCancellableCoroutine {
-        this.provideSurface(surface, Runnable::run) { result: ViewfinderSurfaceRequest.Result? ->
-            it.resume(requireNotNull(result) {
-                "Expected non-null result from ViewfinderSurfaceRequest, but received null."
-            }.surface)
-        }
-    }
 
 @SuppressLint("RestrictedApi")
 @Composable
@@ -107,18 +122,8 @@ private fun TransformedSurface(
     transformationInfo: TransformationInfo,
     implementationMode: ImplementationMode,
     onInit: AndroidExternalSurfaceScope.() -> Unit,
+    coordinateTransformer: MutableCoordinateTransformer?,
 ) {
-    // For TextureView, correct the orientation to match the target rotation.
-    val correctionMatrix = Matrix()
-    transformationInfo.let {
-        correctionMatrix.setFrom(
-            SurfaceTransformationUtil.getTextureViewCorrectionMatrix(
-                it,
-                resolution
-            )
-        )
-    }
-
     val surfaceModifier = Modifier.layout { measurable, constraints ->
             val placeable = measurable.measure(
                 Constraints.fixed(resolution.width, resolution.height)
@@ -134,12 +139,24 @@ private fun TransformedSurface(
             val heightOffset = 0.coerceAtLeast((placeable.height - constraints.maxHeight) / 2)
             layout(placeable.width, placeable.height) {
                 placeable.placeWithLayer(widthOffset, heightOffset) {
-                    val surfaceRectInViewfinder =
-                        SurfaceTransformationUtil.getTransformedSurfaceRect(
-                            resolution,
+                    val surfaceToViewFinderMatrix =
+                        SurfaceTransformationUtil.getTransformedSurfaceMatrix(
                             transformationInfo,
                             Size(constraints.maxWidth, constraints.maxHeight)
                         )
+
+                    coordinateTransformer?.transformMatrix = Matrix().apply {
+                        setFrom(surfaceToViewFinderMatrix)
+                        invert()
+                    }
+
+                    val surfaceRectInViewfinder = RectF(
+                        0f,
+                        0f,
+                        resolution.width.toFloat(),
+                        resolution.height.toFloat()
+                    )
+                    surfaceToViewFinderMatrix.mapRect(surfaceRectInViewfinder)
 
                     transformOrigin = TransformOrigin(0f, 0f)
                     scaleX = surfaceRectInViewfinder.width() / resolution.width
@@ -152,13 +169,29 @@ private fun TransformedSurface(
         }
 
     when (implementationMode) {
-        ImplementationMode.PERFORMANCE -> {
+        ImplementationMode.EXTERNAL -> {
             AndroidExternalSurface(
                 modifier = surfaceModifier,
                 onInit = onInit
             )
         }
-        ImplementationMode.COMPATIBLE -> {
+        ImplementationMode.EMBEDDED -> {
+            val displayRotationDegrees = key(LocalConfiguration.current) {
+                surfaceRotationToRotationDegrees(LocalView.current.display.rotation)
+            }
+
+            // For TextureView, correct the orientation to match the display rotation.
+            val correctionMatrix = remember { Matrix() }
+
+            transformationInfo.let {
+                correctionMatrix.setFrom(
+                    SurfaceTransformationUtil.getTextureViewCorrectionMatrix(
+                        displayRotationDegrees,
+                        resolution
+                    )
+                )
+            }
+
             AndroidEmbeddedExternalSurface(
                 modifier = surfaceModifier,
                 transform = correctionMatrix,

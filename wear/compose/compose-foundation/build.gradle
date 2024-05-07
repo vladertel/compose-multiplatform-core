@@ -58,6 +58,7 @@ dependencies {
     androidTestImplementation(libs.testRunner)
     androidTestImplementation(libs.kotlinTest)
     androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.mockitoAndroid5)
 
     // Includes the wear-sdk jar
     compileOnly files("../../wear_sdk/wear-sdk.jar")
@@ -81,7 +82,7 @@ android {
 
 androidx {
     name = "Android Wear Compose Foundation"
-    type = LibraryType.PUBLISHED_KOTLIN_ONLY_LIBRARY
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2021"
     description = "WearOS Compose Foundation Library. This library makes it easier for developers" +
             "to write Jetpack Compose applications for Wearable devices by providing " +
