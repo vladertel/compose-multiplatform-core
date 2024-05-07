@@ -23,9 +23,17 @@ import androidx.annotation.RequiresApi
 import androidx.camera.viewfinder.surface.ImplementationMode
 import androidx.camera.viewfinder.surface.TransformationInfo
 import androidx.camera.viewfinder.surface.ViewfinderSurfaceRequest
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -48,14 +56,146 @@ class ViewfinderTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.M)
     @Test
     fun canRetrievePerformanceSurface() = runBlocking {
-        assertCanRetrieveSurface(implementationMode = ImplementationMode.PERFORMANCE)
+        assertCanRetrieveSurface(implementationMode = ImplementationMode.EXTERNAL)
     }
 
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.M)
     @Test
     fun canRetrieveCompatibleSurface() = runBlocking {
-        assertCanRetrieveSurface(implementationMode = ImplementationMode.COMPATIBLE)
+        assertCanRetrieveSurface(implementationMode = ImplementationMode.EMBEDDED)
     }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.M)
+    @Test
+    fun coordinatesTransformationSameSizeNoRotation(): Unit = runBlocking {
+
+        val coordinateTransformer = MutableCoordinateTransformer()
+
+        val surfaceRequest = ViewfinderSurfaceRequest.Builder(TEST_RESOLUTION).build()
+        rule.setContent {
+            with(LocalDensity.current) {
+                Viewfinder(
+                    modifier = Modifier.size(540.toDp(), 960.toDp()),
+                    surfaceRequest = surfaceRequest,
+                    transformationInfo = TEST_TRANSFORMATION_INFO,
+                    implementationMode = ImplementationMode.EXTERNAL,
+                    coordinateTransformer = coordinateTransformer
+                )
+            }
+        }
+
+        val expectedMatrix = Matrix(
+            values = floatArrayOf(
+                1f, 0f, 0f, 0f,
+                0f, 1f, 0f, 0f,
+                0f, 0f, 1f, 0f,
+                0f, 0f, 0f, 1f
+            )
+        )
+
+        assertThat(coordinateTransformer.transformMatrix.values)
+            .isEqualTo(expectedMatrix.values)
+    }
+
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.M)
+    @Test
+    fun coordinatesTransformationSameSizeWithHalfCrop(): Unit = runBlocking {
+        // Viewfinder size: 1080x1920
+        // Surface size: 1080x1920
+        // Crop rect size: 540x960
+
+        val coordinateTransformer = MutableCoordinateTransformer()
+
+        val surfaceRequest = ViewfinderSurfaceRequest.Builder(TEST_RESOLUTION).build()
+        rule.setContent {
+            with(LocalDensity.current) {
+                Viewfinder(
+                    modifier = Modifier.size(540.toDp(), 960.toDp()),
+                    surfaceRequest = surfaceRequest,
+                    transformationInfo = TransformationInfo(
+                        sourceRotation = 0,
+                        cropRectLeft = 0,
+                        cropRectRight = 270,
+                        cropRectTop = 0,
+                        cropRectBottom = 480,
+                        shouldMirror = false
+                    ),
+                    implementationMode = ImplementationMode.EXTERNAL,
+                    coordinateTransformer = coordinateTransformer
+                )
+            }
+        }
+
+        val expectedMatrix = Matrix(
+            values = floatArrayOf(
+                0.5f, 0f, 0f, 0f,
+                0f, 0.5f, 0f, 0f,
+                0f, 0f, 1f, 0f,
+                0f, 0f, 0f, 1f
+            )
+        )
+
+        assertThat(coordinateTransformer.transformMatrix.values)
+            .isEqualTo(expectedMatrix.values)
+    }
+
+    @Test
+    fun verifySurfacesAreReleased_surfaceRequestReleased_thenComposableDestroyed(): Unit =
+        runBlocking {
+            val surfaceDeferred = CompletableDeferred<Surface>()
+            val surfaceRequest = ViewfinderSurfaceRequest.Builder(TEST_RESOLUTION).build()
+
+            val showViewfinder = mutableStateOf(true)
+
+            rule.setContent {
+                val showView by remember { showViewfinder }
+                TestComposable(surfaceRequest = surfaceRequest, showView)
+                LaunchedEffect(Unit) {
+                    surfaceDeferred.complete(surfaceRequest.getSurface())
+                }
+            }
+
+            val surface = surfaceDeferred.await()
+            assertThat(surface.isValid).isTrue()
+
+            surfaceRequest.markSurfaceSafeToRelease()
+            rule.awaitIdle()
+            assertThat(surface.isValid).isTrue()
+
+            showViewfinder.value = false
+            rule.awaitIdle()
+            assertThat(surface.isValid).isFalse()
+        }
+
+    @Test
+    fun verifySurfacesAreReleased_composableDestroyed_thenSurfaceRequestReleased(): Unit =
+        runBlocking {
+            val surfaceDeferred = CompletableDeferred<Surface>()
+            val surfaceRequest = ViewfinderSurfaceRequest.Builder(TEST_RESOLUTION).build()
+
+            val showViewFinder = mutableStateOf(true)
+
+            rule.setContent {
+                val showView by remember {
+                    showViewFinder
+                }
+                TestComposable(surfaceRequest = surfaceRequest, showView)
+                LaunchedEffect(Unit) {
+                    surfaceDeferred.complete(surfaceRequest.getSurface())
+                }
+            }
+
+            val surface = surfaceDeferred.await()
+            assertThat(surface.isValid).isTrue()
+
+            showViewFinder.value = false
+            assertThat(surface.isValid).isTrue()
+
+            rule.awaitIdle()
+            surfaceRequest.markSurfaceSafeToRelease()
+            rule.awaitIdle()
+            assertThat(surface.isValid).isFalse()
+        }
 
     @RequiresApi(Build.VERSION_CODES.M) // Needed for Surface.lockHardwareCanvas()
     private suspend fun assertCanRetrieveSurface(implementationMode: ImplementationMode) {
@@ -87,14 +227,30 @@ class ViewfinderTest {
 
     companion object {
         val TEST_VIEWFINDER_SIZE = DpSize(360.dp, 640.dp)
-        val TEST_RESOLUTION = Size(1080, 1920)
+        val TEST_RESOLUTION = Size(540, 960)
         val TEST_TRANSFORMATION_INFO = TransformationInfo(
             sourceRotation = 0,
             cropRectLeft = 0,
-            cropRectRight = TEST_RESOLUTION.width,
             cropRectTop = 0,
+            cropRectRight = TEST_RESOLUTION.width,
             cropRectBottom = TEST_RESOLUTION.height,
             shouldMirror = false
         )
+    }
+}
+
+@Composable
+fun TestComposable(surfaceRequest: ViewfinderSurfaceRequest, showView: Boolean) {
+    Column {
+        if (showView) {
+            Viewfinder(
+                modifier = Modifier
+                    .size(ViewfinderTest.TEST_VIEWFINDER_SIZE)
+                    .testTag("TEST_VIEWFINDER"),
+                surfaceRequest = surfaceRequest,
+                transformationInfo = ViewfinderTest.TEST_TRANSFORMATION_INFO,
+                implementationMode = ImplementationMode.EXTERNAL,
+            )
+        }
     }
 }

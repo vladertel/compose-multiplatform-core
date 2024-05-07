@@ -2,13 +2,13 @@
 # -----------------------------------------------------------------------------
 # All of the following should be updated in sync.
 # -----------------------------------------------------------------------------
-androidGradlePlugin = "8.4.0-alpha12"
+androidGradlePlugin = "8.5.0-alpha06"
 # NOTE: When updating the lint version we also need to update the `api` version
 # supported by `IssueRegistry`'s.' For e.g. r.android.com/1331903
-androidLint = "31.4.0-alpha12"
+androidLint = "31.5.0-alpha06"
 # Once you have a chosen version of AGP to upgrade to, go to
 # https://developer.android.com/studio/archive and find the matching version of Studio.
-androidStudio = "2023.3.1.12"
+androidStudio = "2024.1.1.4"
 # -----------------------------------------------------------------------------
 
 androidGradlePluginMin = "7.0.4"
@@ -244,7 +244,7 @@ playServicesAuth = {module = "com.google.android.gms:play-services-auth", versio
 playServicesBase = { module = "com.google.android.gms:play-services-base", version = "17.0.0" }
 playServicesBasement = { module = "com.google.android.gms:play-services-basement", version = "17.0.0" }
 playServicesDevicePerformance = { module = "com.google.android.gms:play-services-deviceperformance", version = "16.0.0" }
-playServicesFido = {module = "com.google.android.gms:play-services-fido", version = "20.1.0"}
+playServicesFido = {module = "com.google.android.gms:play-services-fido", version = "21.0.0"}
 playServicesWearable = { module = "com.google.android.gms:play-services-wearable", version = "17.1.0" }
 protobuf = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 protobufCompiler = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }

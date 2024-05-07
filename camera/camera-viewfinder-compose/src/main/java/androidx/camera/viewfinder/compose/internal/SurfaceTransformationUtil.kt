@@ -35,13 +35,12 @@ import androidx.camera.viewfinder.surface.TransformationInfo
 object SurfaceTransformationUtil {
 
     fun getTextureViewCorrectionMatrix(
-        transformationInfo: TransformationInfo,
+        displayRotationDegrees: Int,
         resolution: Size
     ): Matrix {
         val surfaceRect =
             RectF(0f, 0f, resolution.width.toFloat(), resolution.height.toFloat())
-        val rotationDegrees: Int = transformationInfo.sourceRotation
-        return TransformUtil.getRectToRect(surfaceRect, surfaceRect, rotationDegrees)
+        return TransformUtil.getRectToRect(surfaceRect, surfaceRect, -displayRotationDegrees)
     }
 
     private fun getRotatedViewportSize(
@@ -174,18 +173,16 @@ object SurfaceTransformationUtil {
         return matrix
     }
 
-    fun getTransformedSurfaceRect(
-        resolution: Size,
+    fun getTransformedSurfaceMatrix(
         transformationInfo: TransformationInfo,
         viewfinderSize: Size,
-    ): RectF {
+    ): Matrix {
         val surfaceToViewFinder: Matrix =
             getSurfaceToViewFinderMatrix(
                 viewfinderSize,
                 transformationInfo,
             )
-        val rect = RectF(0f, 0f, resolution.width.toFloat(), resolution.height.toFloat())
-        surfaceToViewFinder.mapRect(rect)
-        return rect
+
+        return surfaceToViewFinder
     }
 }
