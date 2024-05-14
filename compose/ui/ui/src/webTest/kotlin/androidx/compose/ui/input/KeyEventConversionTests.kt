@@ -34,6 +34,10 @@ class KeyEventConversionTests {
 
     @Test
     fun standardKeyboardConversionTest() {
+        keyDownEvent("CapsLock", code = "CapsLock").assertEquivalence(key = Key.CapsLock)
+        keyDownEvent("Tab", code = "Tab").assertEquivalence(key = Key.Tab)
+        keyDownEvent("Enter", code = "Enter").assertEquivalence(key = Key.Enter)
+
         keyDownEvent("a", code = "KeyA").assertEquivalence(key = Key.A, codePoint = 97)
         keyDownEvent("b", code = "KeyB").assertEquivalence(key = Key.B, codePoint = 98)
         keyDownEvent("c", code = "KeyC").assertEquivalence(key = Key.C, codePoint = 99)
@@ -61,6 +65,7 @@ class KeyEventConversionTests {
         keyDownEvent("y", code = "KeyY").assertEquivalence(key = Key.Y, codePoint = 121)
         keyDownEvent("z", code = "KeyZ").assertEquivalence(key = Key.Z, codePoint = 122)
 
+        keyDownEvent("`", code = "Backquote").assertEquivalence(key = Key.Grave, codePoint = 96)
         keyDownEvent("0", code = "Digit0").assertEquivalence(key = Key.Zero)
         keyDownEvent("1", code = "Digit1").assertEquivalence(key = Key.One)
         keyDownEvent("2", code = "Digit2").assertEquivalence(key = Key.Two)
@@ -94,6 +99,14 @@ class KeyEventConversionTests {
         keyDownEvent("8", code = "Numpad8").assertEquivalence(key = Key.NumPad8, codePoint = 56)
         keyDownEvent("9", code = "Numpad9").assertEquivalence(key = Key.NumPad9, codePoint = 57)
 
+        keyDownEvent("=", code = "NumpadEqual").assertEquivalence(key = Key.NumPadEquals, codePoint = 61)
+        keyDownEvent("/", code = "NumpadDivide").assertEquivalence(key = Key.NumPadDivide, codePoint = 47)
+        keyDownEvent("*", code = "NumpadMultiply").assertEquivalence(key = Key.NumPadMultiply, codePoint = 42)
+        keyDownEvent("-", code = "NumpadSubtract").assertEquivalence(key = Key.NumPadSubtract, codePoint = 45)
+        keyDownEvent("+", code = "NumpadAdd").assertEquivalence(key = Key.NumPadAdd, codePoint = 43)
+        //keyDownEvent("Enter", code = "NumpadEnter").assertEquivalence(key = Key.NumPadEnter, codePoint = 13)
+        keyDownEvent(".", code = "NumpadDecimal").assertEquivalence(key = Key.NumPadDot, codePoint = 46)
+
         keyDownEvent("Backspace", code = "Backspace").assertEquivalence(key = Key.Backspace)
         keyDownEvent("Delete", code = "Delete").assertEquivalence(key = Key.Delete)
 
@@ -105,6 +118,7 @@ class KeyEventConversionTests {
         keyDownEvent("End", code = "End").assertEquivalence(key = Key.MoveEnd)
         keyDownEvent("PageUp", code = "PageUp").assertEquivalence(key = Key.PageUp)
         keyDownEvent("PageDown", code = "PageDown").assertEquivalence(key = Key.PageDown)
+
 
         keyDownEvent("ShiftLeft", code = "ShiftLeft").assertEquivalence(key = Key.ShiftLeft)
         keyDownEvent("ShiftRight", code = "ShiftRight").assertEquivalence(key = Key.ShiftRight)
