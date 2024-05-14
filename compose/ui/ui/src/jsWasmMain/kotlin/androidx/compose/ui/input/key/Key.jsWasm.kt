@@ -95,10 +95,10 @@ actual value class Key(val keyCode: Long) {
         actual val Nine = Key(57)
 
         /** '-' key. */
-        actual val Minus = Key(173)
+        actual val Minus = Key(189)
 
         /** '=' key. */
-        actual val Equals = Key(61)
+        actual val Equals = Key(187)
 
         /** 'A' key. */
         actual val A = Key(65)
