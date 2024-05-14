@@ -34,6 +34,8 @@ class KeyEventConversionTests {
 
     @Test
     fun standardKeyboardLayout() {
+        keyDownEvent("Escape", code = "Escape").assertEquivalence(key = Key.Escape)
+
         keyDownEvent("CapsLock", code = "CapsLock").assertEquivalence(key = Key.CapsLock)
         keyDownEvent("Tab", code = "Tab").assertEquivalence(key = Key.Tab)
         keyDownEvent("Enter", code = "Enter").assertEquivalence(key = Key.Enter)
