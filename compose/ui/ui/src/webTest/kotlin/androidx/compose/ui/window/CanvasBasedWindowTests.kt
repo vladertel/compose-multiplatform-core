@@ -44,7 +44,6 @@ import kotlin.test.AfterTest
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.assertFalse
-import kotlinx.browser.window
 
 class CanvasBasedWindowTests {
 
@@ -99,7 +98,7 @@ class CanvasBasedWindowTests {
         assertFalse(stack.last())
 
         // copy shortcut should not be prevented (we let browser create a corresponding event)
-        canvasElement.dispatchEvent(keyDownEvent(c = 'c', metaKey = true, ctrlKey = true))
+        canvasElement.dispatchEvent(keyDownEvent(key = 'c', metaKey = true, ctrlKey = true))
         assertEquals(3, stack.size)
         assertFalse(stack.last())
     }
