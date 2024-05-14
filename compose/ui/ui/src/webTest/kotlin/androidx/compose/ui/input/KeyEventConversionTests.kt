@@ -33,7 +33,7 @@ private fun KeyboardEvent.assertEquivalence(key: Key, codePoint: Int = key.keyCo
 class KeyEventConversionTests {
 
     @Test
-    fun standardKeyboardConversionTest() {
+    fun standardKeyboardLayout() {
         keyDownEvent("CapsLock", code = "CapsLock").assertEquivalence(key = Key.CapsLock)
         keyDownEvent("Tab", code = "Tab").assertEquivalence(key = Key.Tab)
         keyDownEvent("Enter", code = "Enter").assertEquivalence(key = Key.Enter)
@@ -161,5 +161,51 @@ class KeyEventConversionTests {
         keyDownEvent("F11", code = "F11").assertEquivalence(key = Key.F11)
         keyDownEvent("F12", code = "F12").assertEquivalence(key = Key.F12)
     }
+
+    @Test
+    fun standardKeyboardLayoutUpper() {
+
+        keyDownEvent("A", code = "KeyA").assertEquivalence(key = Key.A)
+        keyDownEvent("B", code = "KeyB").assertEquivalence(key = Key.B)
+        keyDownEvent("C", code = "KeyC").assertEquivalence(key = Key.C)
+        keyDownEvent("D", code = "KeyD").assertEquivalence(key = Key.D)
+        keyDownEvent("E", code = "KeyE").assertEquivalence(key = Key.E)
+        keyDownEvent("F", code = "KeyF").assertEquivalence(key = Key.F)
+        keyDownEvent("G", code = "KeyG").assertEquivalence(key = Key.G)
+        keyDownEvent("H", code = "KeyH").assertEquivalence(key = Key.H)
+        keyDownEvent("I", code = "KeyI").assertEquivalence(key = Key.I)
+        keyDownEvent("J", code = "KeyJ").assertEquivalence(key = Key.J)
+        keyDownEvent("K", code = "KeyK").assertEquivalence(key = Key.K)
+        keyDownEvent("L", code = "KeyL").assertEquivalence(key = Key.L)
+        keyDownEvent("M", code = "KeyM").assertEquivalence(key = Key.M)
+        keyDownEvent("N", code = "KeyN").assertEquivalence(key = Key.N)
+        keyDownEvent("O", code = "KeyO").assertEquivalence(key = Key.O)
+        keyDownEvent("P", code = "KeyP").assertEquivalence(key = Key.P)
+        keyDownEvent("Q", code = "KeyQ").assertEquivalence(key = Key.Q)
+        keyDownEvent("R", code = "KeyR").assertEquivalence(key = Key.R)
+        keyDownEvent("S", code = "KeyS").assertEquivalence(key = Key.S)
+        keyDownEvent("T", code = "KeyT").assertEquivalence(key = Key.T)
+        keyDownEvent("U", code = "KeyU").assertEquivalence(key = Key.U)
+        keyDownEvent("V", code = "KeyV").assertEquivalence(key = Key.V)
+        keyDownEvent("W", code = "KeyW").assertEquivalence(key = Key.W)
+        keyDownEvent("X", code = "KeyX").assertEquivalence(key = Key.X)
+        keyDownEvent("Y", code = "KeyY").assertEquivalence(key = Key.Y)
+        keyDownEvent("Z", code = "KeyZ").assertEquivalence(key = Key.Z)
+
+        keyDownEvent("~", code = "Backquote").assertEquivalence(key = Key.Grave, codePoint = 126)
+        keyDownEvent(")", code = "Digit0").assertEquivalence(key = Key.Zero, codePoint = 41)
+        keyDownEvent("!", code = "Digit1").assertEquivalence(key = Key.One, codePoint = 33)
+        keyDownEvent("@", code = "Digit2").assertEquivalence(key = Key.Two, codePoint = 64)
+        keyDownEvent("#", code = "Digit3").assertEquivalence(key = Key.Three, codePoint = 35)
+        keyDownEvent("$", code = "Digit4").assertEquivalence(key = Key.Four, codePoint = 36)
+        keyDownEvent("%", code = "Digit5").assertEquivalence(key = Key.Five, codePoint = 37)
+        keyDownEvent("^", code = "Digit6").assertEquivalence(key = Key.Six, codePoint = 94)
+        keyDownEvent("&", code = "Digit7").assertEquivalence(key = Key.Seven, codePoint = 38)
+        keyDownEvent("*", code = "Digit8").assertEquivalence(key = Key.Eight, codePoint = 42)
+        keyDownEvent("(", code = "Digit9").assertEquivalence(key = Key.Nine, codePoint = 40)
+        keyDownEvent("_", code = "Minus").assertEquivalence(key = Key.Minus, codePoint = 95)
+        keyDownEvent("+", code = "Equal").assertEquivalence(key = Key.Equals, codePoint = 43)
+    }
+
 
 }
