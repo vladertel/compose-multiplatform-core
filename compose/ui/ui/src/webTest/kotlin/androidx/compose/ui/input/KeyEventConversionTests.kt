@@ -71,6 +71,28 @@ class KeyEventConversionTests {
         keyDownEvent("7", code = "Digit7").assertEquivalence(key = Key.Seven)
         keyDownEvent("8", code = "Digit8").assertEquivalence(key = Key.Eight)
         keyDownEvent("9", code = "Digit9").assertEquivalence(key = Key.Nine)
+
+        keyDownEvent("0", code = "Digit0").assertEquivalence(key = Key.Zero)
+        keyDownEvent("1", code = "Digit1").assertEquivalence(key = Key.One)
+        keyDownEvent("2", code = "Digit2").assertEquivalence(key = Key.Two)
+        keyDownEvent("3", code = "Digit3").assertEquivalence(key = Key.Three)
+        keyDownEvent("4", code = "Digit4").assertEquivalence(key = Key.Four)
+        keyDownEvent("5", code = "Digit5").assertEquivalence(key = Key.Five)
+        keyDownEvent("6", code = "Digit6").assertEquivalence(key = Key.Six)
+        keyDownEvent("7", code = "Digit7").assertEquivalence(key = Key.Seven)
+        keyDownEvent("8", code = "Digit8").assertEquivalence(key = Key.Eight)
+        keyDownEvent("9", code = "Digit9").assertEquivalence(key = Key.Nine)
+
+        keyDownEvent("0", code = "Numpad0").assertEquivalence(key = Key.NumPad0, codePoint = 48)
+        keyDownEvent("1", code = "Numpad1").assertEquivalence(key = Key.NumPad1, codePoint = 49)
+        keyDownEvent("2", code = "Numpad2").assertEquivalence(key = Key.NumPad2, codePoint = 50)
+        keyDownEvent("3", code = "Numpad3").assertEquivalence(key = Key.NumPad3, codePoint = 51)
+        keyDownEvent("4", code = "Numpad4").assertEquivalence(key = Key.NumPad4, codePoint = 52)
+        keyDownEvent("5", code = "Numpad5").assertEquivalence(key = Key.NumPad5, codePoint = 53)
+        keyDownEvent("6", code = "Numpad6").assertEquivalence(key = Key.NumPad6, codePoint = 54)
+        keyDownEvent("7", code = "Numpad7").assertEquivalence(key = Key.NumPad7, codePoint = 55)
+        keyDownEvent("8", code = "Numpad8").assertEquivalence(key = Key.NumPad8, codePoint = 56)
+        keyDownEvent("9", code = "Numpad9").assertEquivalence(key = Key.NumPad9, codePoint = 57)
     }
 
 }
