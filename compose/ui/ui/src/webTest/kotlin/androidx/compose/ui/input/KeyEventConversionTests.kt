@@ -97,12 +97,55 @@ class KeyEventConversionTests {
         keyDownEvent("Backspace", code = "Backspace").assertEquivalence(key = Key.Backspace)
         keyDownEvent("Delete", code = "Delete").assertEquivalence(key = Key.Delete)
 
+        keyDownEvent("[", code = "BracketLeft").assertEquivalence(key = Key.LeftBracket, codePoint = 91)
+        keyDownEvent("]", code = "BracketRight").assertEquivalence(key = Key.RightBracket, codePoint = 93)
+        keyDownEvent("\\", code = "Backslash").assertEquivalence(key = Key.Backslash, codePoint = 92)
+
+        keyDownEvent("Home", code = "Home").assertEquivalence(key = Key.MoveHome)
+        keyDownEvent("End", code = "End").assertEquivalence(key = Key.MoveEnd)
+        keyDownEvent("PageUp", code = "PageUp").assertEquivalence(key = Key.PageUp)
+        keyDownEvent("PageDown", code = "PageDown").assertEquivalence(key = Key.PageDown)
+
+        keyDownEvent("ShiftLeft", code = "ShiftLeft").assertEquivalence(key = Key.ShiftLeft)
+        keyDownEvent("ShiftRight", code = "ShiftRight").assertEquivalence(key = Key.ShiftRight)
+
         keyDownEvent("Control", code = "ControlLeft").assertEquivalence(key = Key.CtrlLeft)
         keyDownEvent("Control", code = "ControlRight").assertEquivalence(key = Key.CtrlRight)
+
         keyDownEvent("Meta", code = "MetaLeft").assertEquivalence(key = Key.MetaLeft)
         keyDownEvent("Meta", code = "MetaRight").assertEquivalence(key = Key.MetaRight)
+        keyDownEvent("-", code = "Minus").assertEquivalence(key = Key.Minus, codePoint = 45)
+        keyDownEvent("=", code = "Equal").assertEquivalence(key = Key.Equals, codePoint = 61)
+        keyDownEvent(";", code = "Semicolon").assertEquivalence(key = Key.Semicolon, codePoint = 59)
+
+        keyDownEvent(",", code = "Comma").assertEquivalence(key = Key.Comma, codePoint = 44)
+        keyDownEvent(".", code = "Period").assertEquivalence(key = Key.Period, codePoint = 46)
+        keyDownEvent("/", code = "Slash").assertEquivalence(key = Key.Slash, codePoint = 47)
+
+        keyDownEvent("/", code = "Slash").assertEquivalence(key = Key.Slash, codePoint = 47)
+
         keyDownEvent("Alt", code = "AltLeft").assertEquivalence(key = Key.AltLeft)
         keyDownEvent("Alt", code = "AltRight").assertEquivalence(key = Key.AltRight)
+
+        keyDownEvent("ArrowUp", code = "ArrowUp").assertEquivalence(key = Key.DirectionUp)
+        keyDownEvent("ArrowRight", code = "ArrowRight").assertEquivalence(key = Key.DirectionRight)
+        keyDownEvent("ArrowDown", code = "ArrowDown").assertEquivalence(key = Key.DirectionDown)
+        keyDownEvent("ArrowLeft", code = "ArrowLeft").assertEquivalence(key = Key.DirectionLeft)
+
+        keyDownEvent("CapsLock", code = "CapsLock").assertEquivalence(key = Key.CapsLock)
+
+        keyDownEvent("F1", code = "F1").assertEquivalence(key = Key.F1)
+        keyDownEvent("F2", code = "F2").assertEquivalence(key = Key.F2)
+        keyDownEvent("F3", code = "F3").assertEquivalence(key = Key.F3)
+        keyDownEvent("F4", code = "F4").assertEquivalence(key = Key.F4)
+        keyDownEvent("F5", code = "F5").assertEquivalence(key = Key.F5)
+        keyDownEvent("F6", code = "F6").assertEquivalence(key = Key.F6)
+        keyDownEvent("F7", code = "F7").assertEquivalence(key = Key.F7)
+        keyDownEvent("F8", code = "F8").assertEquivalence(key = Key.F8)
+        keyDownEvent("F9", code = "F9").assertEquivalence(key = Key.F9)
+        keyDownEvent("F10", code = "F10").assertEquivalence(key = Key.F10)
+        keyDownEvent("F11", code = "F11").assertEquivalence(key = Key.F11)
+        keyDownEvent("F12", code = "F12").assertEquivalence(key = Key.F12)
     }
 
 }
