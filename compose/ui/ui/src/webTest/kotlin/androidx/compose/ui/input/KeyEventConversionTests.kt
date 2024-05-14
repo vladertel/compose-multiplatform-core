@@ -93,6 +93,16 @@ class KeyEventConversionTests {
         keyDownEvent("7", code = "Numpad7").assertEquivalence(key = Key.NumPad7, codePoint = 55)
         keyDownEvent("8", code = "Numpad8").assertEquivalence(key = Key.NumPad8, codePoint = 56)
         keyDownEvent("9", code = "Numpad9").assertEquivalence(key = Key.NumPad9, codePoint = 57)
+
+        keyDownEvent("Backspace", code = "Backspace").assertEquivalence(key = Key.Backspace)
+        keyDownEvent("Delete", code = "Delete").assertEquivalence(key = Key.Delete)
+
+        keyDownEvent("Control", code = "ControlLeft").assertEquivalence(key = Key.CtrlLeft)
+        keyDownEvent("Control", code = "ControlRight").assertEquivalence(key = Key.CtrlRight)
+        keyDownEvent("Meta", code = "MetaLeft").assertEquivalence(key = Key.MetaLeft)
+        keyDownEvent("Meta", code = "MetaRight").assertEquivalence(key = Key.MetaRight)
+        keyDownEvent("Alt", code = "AltLeft").assertEquivalence(key = Key.AltLeft)
+        keyDownEvent("Alt", code = "AltRight").assertEquivalence(key = Key.AltRight)
     }
 
 }
