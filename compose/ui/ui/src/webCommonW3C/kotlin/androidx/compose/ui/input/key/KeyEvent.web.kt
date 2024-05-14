@@ -29,6 +29,10 @@ private fun KeyboardEvent.toInputModifiers(): PointerKeyboardModifiers {
     )
 }
 
+private fun KeyboardEvent.resolveCodePoint(): Int? {
+    return if (key == code) null else key.codePointAt(0)
+}
+
 internal fun KeyboardEvent.toComposeEvent(): KeyEvent {
     val composeKey = toKey()
     return KeyEvent(
@@ -39,7 +43,7 @@ internal fun KeyboardEvent.toComposeEvent(): KeyEvent {
                 "keyup" -> KeyEventType.KeyUp
                 else -> KeyEventType.Unknown
             },
-            codePoint = if (key.firstOrNull()?.toString() == key) key.codePointAt(0) else composeKey.keyCode.toInt(),
+            codePoint = resolveCodePoint() ?: composeKey.keyCode.toInt(),
             modifiers = toInputModifiers(),
             nativeEvent = this
         )
