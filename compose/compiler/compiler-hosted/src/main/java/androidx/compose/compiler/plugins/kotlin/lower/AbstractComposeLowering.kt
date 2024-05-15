@@ -929,21 +929,29 @@ abstract class AbstractComposeLowering(
             isFinal = true
             type = context.irBuiltIns.intType
             visibility = DescriptorVisibilities.PUBLIC
-        }.also { stabilityField ->
+        }.let { stabilityField ->
             stabilityField.parent = fieldParent
             makeStabilityProp(stabilityField, fieldParent)
-        }
+        }.backingField!!
     }
 
     private fun IrClass.makeStabilityProp(
         stabilityField: IrField,
         fieldParent: IrDeclarationContainer
     ): IrProperty {
+        val propName = this@makeStabilityProp.uniqueStabilityPropertyName()
+        val existingProp = fieldParent.declarations.firstOrNull {
+            it is IrProperty && it.name == propName
+        } as? IrProperty
+        if (existingProp != null) {
+            return existingProp
+        }
         return context.irFactory.buildProperty {
             startOffset = SYNTHETIC_OFFSET
             endOffset = SYNTHETIC_OFFSET
-            name = this@makeStabilityProp.uniqueStabilityPropertyName()
+            name = propName
             visibility = DescriptorVisibilities.PUBLIC
+            isConst = true
         }.also { property ->
             property.parent = fieldParent
             stabilityField.correspondingPropertySymbol = property.symbol
