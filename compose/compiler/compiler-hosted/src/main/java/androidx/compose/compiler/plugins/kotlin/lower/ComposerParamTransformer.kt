@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(UnsafeDuringIrConstructionAPI::class)
+
 package androidx.compose.compiler.plugins.kotlin.lower
 
 import androidx.compose.compiler.plugins.kotlin.KtxNameConventions
@@ -57,6 +59,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrLocalDelegatedPropertyReferenceImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrReturnImpl
+import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
@@ -89,6 +92,7 @@ import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.name.JvmStandardClassIds
+import org.jetbrains.kotlin.name.StandardClassIds
 import org.jetbrains.kotlin.platform.isJs
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.resolve.DescriptorUtils
@@ -767,8 +771,9 @@ class ComposerParamTransformer(
     }
 
     private val PublishedApiFqName = StandardClassIds.Annotations.PublishedApi.asSingleFqName()
-    object ComposeDefaultValueStubOrigin : IrDeclarationOriginImpl(
-        name = "ComposeDefaultValueStubOrigin",
-        isSynthetic = true
-    )
+
+    object ComposeDefaultValueStubOrigin : IrDeclarationOrigin {
+        override val name: String = "ComposeDefaultValueStubOrigin"
+        override val isSynthetic: Boolean = true
+    }
 }

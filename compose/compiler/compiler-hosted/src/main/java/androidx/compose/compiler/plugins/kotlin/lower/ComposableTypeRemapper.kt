@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(UnsafeDuringIrConstructionAPI::class)
+
 package androidx.compose.compiler.plugins.kotlin.lower
 
 import androidx.compose.compiler.plugins.kotlin.hasComposableAnnotation
@@ -25,7 +27,6 @@ import org.jetbrains.kotlin.backend.common.peek
 import org.jetbrains.kotlin.backend.common.pop
 import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
-import org.jetbrains.kotlin.ir.declarations.IrConstructor
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrFunction
@@ -44,6 +45,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrIfThenElseImpl
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
+import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.IrTypeAbbreviation
@@ -70,7 +72,6 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.types.Variance
 
 internal fun IrFunction.needsComposableRemapping(): Boolean {
-    if (this.isDecoy()) return false // to preserve the original signature for decoys
     if (
         dispatchReceiverParameter?.type.containsComposableAnnotation() ||
         extensionReceiverParameter?.type.containsComposableAnnotation() ||
@@ -97,7 +98,7 @@ internal class DeepCopyIrTreeWithRemappedComposableTypes(
     private val context: IrPluginContext,
     private val symbolRemapper: DeepCopySymbolRemapper,
     private val typeRemapper: TypeRemapper,
-    symbolRenamer: SymbolRenamer = SymbolRenamer.DEFAULT
+    @Suppress("DEPRECATION") symbolRenamer: SymbolRenamer = SymbolRenamer.DEFAULT
 ) : DeepCopyPreservingMetadata(symbolRemapper, typeRemapper, symbolRenamer) {
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction): IrSimpleFunction {
@@ -166,13 +167,12 @@ internal class DeepCopyIrTreeWithRemappedComposableTypes(
     override fun visitConstructorCall(expression: IrConstructorCall): IrConstructorCall {
         if (!expression.symbol.isBound)
             (context as IrPluginContextImpl).linker.getDeclaration(expression.symbol)
-        val ownerFn = expression.symbol.owner as? IrConstructor
+        val ownerFn = expression.symbol.owner
         // If we are calling an external constructor, we want to "remap" the types of its signature
         // as well, since if it they are @Composable it will have its unmodified signature. These
         // types won't be traversed by default by the DeepCopyIrTreeWithSymbols so we have to
         // do it ourself here.
         if (
-            ownerFn != null &&
             ownerFn.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB &&
             ownerFn.needsComposableRemapping()
         ) {
@@ -260,8 +260,8 @@ internal class DeepCopyIrTreeWithRemappedComposableTypes(
     }
 
     override fun visitCall(expression: IrCall): IrCall {
-        val ownerFn = expression.symbol.owner as? IrSimpleFunction
-        val containingClass = ownerFn?.parentClassOrNull
+        val ownerFn = expression.symbol.owner
+        val containingClass = ownerFn.parentClassOrNull
 
         // Any virtual calls on composable functions we want to make sure we update the call to
         // the right function base class (of n+1 arity). The most often virtual call to make on
@@ -320,10 +320,7 @@ internal class DeepCopyIrTreeWithRemappedComposableTypes(
         // also transform the corresponding property so that we maintain the relationship
         // `getterFun.correspondingPropertySymbol.owner.getter == getterFun`. If we do not
         // maintain this relationship inline class getters will be incorrectly compiled.
-        if (
-            ownerFn != null &&
-            ownerFn.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB
-        ) {
+        if (ownerFn.origin == IrDeclarationOrigin.IR_EXTERNAL_DECLARATION_STUB) {
             if (ownerFn.correspondingPropertySymbol != null) {
                 val property = ownerFn.correspondingPropertySymbol!!.owner
                 // avoid java properties since they go through a different lowering and it is
@@ -361,10 +358,7 @@ internal class DeepCopyIrTreeWithRemappedComposableTypes(
             }
         }
 
-        if (
-            ownerFn != null &&
-            ownerFn.needsComposableRemapping()
-        ) {
+        if (ownerFn.needsComposableRemapping()) {
             if (symbolRemapper.getReferencedSimpleFunction(ownerFn.symbol) == ownerFn.symbol) {
                 visitSimpleFunction(ownerFn).also {
                     it.overriddenSymbols = ownerFn.overriddenSymbols.map { override ->

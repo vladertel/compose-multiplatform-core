@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@file:OptIn(IrImplementationDetail::class, IDEAPluginsCompatibilityAPI::class)
+@file:OptIn(UnsafeDuringIrConstructionAPI::class)
 
 package androidx.compose.compiler.plugins.kotlin.lower
 
@@ -61,7 +61,6 @@ import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.declarations.IrVariable
-import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.expressions.IrBlock
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrBody
@@ -88,12 +87,12 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrBranchImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrElseBranchImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetObjectValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrStringConcatenationImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrVarargImpl
 import org.jetbrains.kotlin.ir.expressions.impl.copyWithOffsets
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
+import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.defaultType
@@ -113,7 +112,6 @@ import org.jetbrains.kotlin.ir.util.primaryConstructor
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.load.kotlin.PackagePartClassUtils
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.utils.IDEAPluginsCompatibilityAPI
 
 /**
  * This transformer transforms constant literal expressions into expressions which read a
@@ -246,6 +244,7 @@ open class LiveLiteralTransformer(
         putValueArgument(0, irConst(file))
     }
 
+    @OptIn(IrImplementationDetail::class)
     private fun irLiveLiteralGetter(
         key: String,
         literalValue: IrExpression,
@@ -267,7 +266,7 @@ open class LiveLiteralTransformer(
             }.also { f ->
                 f.correspondingPropertySymbol = p.symbol
                 f.parent = clazz
-                f.initializer = IrFactoryImpl.createExpressionBody(
+                f.initializer = context.irFactory.createExpressionBody(
                     SYNTHETIC_OFFSET,
                     SYNTHETIC_OFFSET,
                     literalValue
@@ -485,6 +484,7 @@ open class LiveLiteralTransformer(
         return mutableSetOf()
     }
 
+    @OptIn(IrImplementationDetail::class)
     override fun visitFile(declaration: IrFile): IrFile {
         includeFileNameInExceptionTrace(declaration) {
             if (declaration.hasNoLiveLiteralsAnnotation()) return declaration
@@ -536,7 +536,7 @@ open class LiveLiteralTransformer(
                             }.also { f ->
                                 f.correspondingPropertySymbol = p.symbol
                                 f.parent = it
-                                f.initializer = IrFactoryImpl.createExpressionBody(
+                                f.initializer = context.irFactory.createExpressionBody(
                                     SYNTHETIC_OFFSET,
                                     SYNTHETIC_OFFSET,
                                     irConst(false)

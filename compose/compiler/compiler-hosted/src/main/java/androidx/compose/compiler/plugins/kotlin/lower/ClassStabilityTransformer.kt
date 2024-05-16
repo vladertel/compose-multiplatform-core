@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-@file:OptIn(IrImplementationDetail::class, IDEAPluginsCompatibilityAPI::class)
-
 package androidx.compose.compiler.plugins.kotlin.lower
 
 import androidx.compose.compiler.plugins.kotlin.ComposeClassIds
@@ -36,9 +34,10 @@ import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
-import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
+import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.util.DeepCopySymbolRemapper
 import org.jetbrains.kotlin.ir.util.constructors
@@ -51,7 +50,6 @@ import org.jetbrains.kotlin.ir.util.isFileClass
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.platform.jvm.isJvm
-import org.jetbrains.kotlin.utils.IDEAPluginsCompatibilityAPI
 
 enum class StabilityBits(val bits: Int) {
     UNSTABLE(0b100),
@@ -89,6 +87,7 @@ class ClassStabilityTransformer(
         irFile.transformChildrenVoid(this)
     }
 
+    @OptIn(UnsafeDuringIrConstructionAPI::class)
     override fun visitClass(declaration: IrClass): IrStatement {
         val result = super.visitClass(declaration)
         val cls = result as? IrClass ?: return result
@@ -183,7 +182,10 @@ class ClassStabilityTransformer(
         }
 
         if (useK2) {
-            context.metadataDeclarationRegistrar.addMetadataVisibleAnnotationsToElement(cls, annotation)
+            context.metadataDeclarationRegistrar.addMetadataVisibleAnnotationsToElement(
+                cls,
+                annotation,
+            )
         } else {
             cls.annotations += annotation
             classStabilityInferredCollection?.addClass(cls, parameterMask)
@@ -193,9 +195,10 @@ class ClassStabilityTransformer(
         return result
     }
 
+    @OptIn(IrImplementationDetail::class, UnsafeDuringIrConstructionAPI::class)
     private fun IrClass.addStabilityMarkerField(stabilityExpression: IrExpression) {
         val stabilityField = this.makeStabilityField().apply {
-            initializer = IrFactoryImpl.createExpressionBody(
+            initializer = context.irFactory.createExpressionBody(
                 UNDEFINED_OFFSET,
                 UNDEFINED_OFFSET,
                 stabilityExpression

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@file:OptIn(IrImplementationDetail::class, IDEAPluginsCompatibilityAPI::class)
+@file:OptIn(UnsafeDuringIrConstructionAPI::class)
 
 package androidx.compose.compiler.plugins.kotlin.lower
 
@@ -34,17 +34,15 @@ import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
-import org.jetbrains.kotlin.ir.declarations.createBlockBody
-import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImpl
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
-import org.jetbrains.kotlin.ir.expressions.impl.IrBlockBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
+import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.symbols.impl.IrSimpleFunctionSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.typeWith
@@ -246,6 +244,7 @@ class WrapJsComposableLambdaLowering(
         }
     }
 
+    @OptIn(IrImplementationDetail::class, IDEAPluginsCompatibilityAPI::class)
     private fun createLambda0(
         returnType: IrType,
         functionSymbol: IrSimpleFunctionSymbol = IrSimpleFunctionSymbolImpl(),
@@ -256,7 +255,7 @@ class WrapJsComposableLambdaLowering(
             endOffset = SYNTHETIC_OFFSET,
             type = context.irBuiltIns.functionN(0).typeWith(returnType),
             origin = IrStatementOrigin.LAMBDA,
-            function = IrFactoryImpl.createSimpleFunction(
+            function = context.irFactory.createSimpleFunction(
                 startOffset = SYNTHETIC_OFFSET,
                 endOffset = SYNTHETIC_OFFSET,
                 origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA,
@@ -273,7 +272,9 @@ class WrapJsComposableLambdaLowering(
                 isInfix = false,
                 isExpect = false
             ).apply {
-                body = IrFactoryImpl.createBlockBody(SYNTHETIC_OFFSET, SYNTHETIC_OFFSET, statements)
+                body = context.irFactory.createBlockBody(SYNTHETIC_OFFSET, SYNTHETIC_OFFSET).apply {
+                    this.statements.addAll(statements)
+                }
             }
         )
     }

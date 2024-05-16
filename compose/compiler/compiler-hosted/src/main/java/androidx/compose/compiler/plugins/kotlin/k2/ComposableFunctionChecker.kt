@@ -23,7 +23,7 @@ import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirFunctionChecker
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
 import org.jetbrains.kotlin.fir.declarations.FirFunction
-import org.jetbrains.kotlin.fir.declarations.getSingleExpectForActualOrNull
+import org.jetbrains.kotlin.fir.declarations.getSingleMatchedExpectForActualOrNull
 import org.jetbrains.kotlin.fir.declarations.utils.isAbstract
 import org.jetbrains.kotlin.fir.declarations.utils.isOpen
 import org.jetbrains.kotlin.fir.declarations.utils.isOperator
@@ -54,7 +54,7 @@ object ComposableFunctionChecker : FirFunctionChecker(MppCheckerKind.Common) {
         }
 
         // Check that `actual` composable declarations have composable expects
-        declaration.symbol.getSingleExpectForActualOrNull()?.let { expectDeclaration ->
+        declaration.symbol.getSingleMatchedExpectForActualOrNull()?.let { expectDeclaration ->
             if (expectDeclaration.hasComposableAnnotation(context.session) != isComposable) {
                 reporter.reportOn(
                     declaration.source,

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(UnsafeDuringIrConstructionAPI::class)
+
 package androidx.compose.compiler.plugins.kotlin.lower
 
 import androidx.compose.compiler.plugins.kotlin.ComposeCallableIds
@@ -43,7 +45,6 @@ import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
 import org.jetbrains.kotlin.ir.builders.declarations.buildField
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.declarations.buildProperty
-import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.declarations.IrAnnotationContainer
 import org.jetbrains.kotlin.ir.declarations.IrAttributeContainer
 import org.jetbrains.kotlin.ir.declarations.IrClass
@@ -100,6 +101,7 @@ import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrReturnTargetSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrValueSymbol
+import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.symbols.impl.IrVariableSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
@@ -1013,15 +1015,32 @@ abstract class AbstractComposeLowering(
         return false
     }
 
+    private fun IrStatementOrigin?.isGetProperty() = this == IrStatementOrigin.GET_PROPERTY
+    private fun IrStatementOrigin?.isSpecialCaseMathOp() =
+        this in setOf(
+            IrStatementOrigin.PLUS,
+            IrStatementOrigin.MUL,
+            IrStatementOrigin.MINUS,
+            IrStatementOrigin.ANDAND,
+            IrStatementOrigin.OROR,
+            IrStatementOrigin.DIV,
+            IrStatementOrigin.EQ,
+            IrStatementOrigin.EQEQ,
+            IrStatementOrigin.EQEQEQ,
+            IrStatementOrigin.GT,
+            IrStatementOrigin.GTEQ,
+            IrStatementOrigin.LT,
+            IrStatementOrigin.LTEQ
+        )
+
     private fun IrCall.isStatic(): Boolean {
         val function = symbol.owner
         val fqName = function.kotlinFqName
-        return when (origin) {
-            IrStatementOrigin.GET_PROPERTY -> {
+        return when {
+            origin.isGetProperty() -> {
                 // If we are in a GET_PROPERTY call, then this should usually resolve to
                 // non-null, but in case it doesn't, just return false
-                val prop = (function as? IrSimpleFunction)
-                    ?.correspondingPropertySymbol?.owner ?: return false
+                val prop = function.correspondingPropertySymbol?.owner ?: return false
 
                 // if the property is a top level constant, then it is static.
                 if (prop.isConst) return true
@@ -1056,19 +1075,7 @@ abstract class AbstractComposeLowering(
                 false
             }
 
-            IrStatementOrigin.PLUS,
-            IrStatementOrigin.MUL,
-            IrStatementOrigin.MINUS,
-            IrStatementOrigin.ANDAND,
-            IrStatementOrigin.OROR,
-            IrStatementOrigin.DIV,
-            IrStatementOrigin.EQ,
-            IrStatementOrigin.EQEQ,
-            IrStatementOrigin.EQEQEQ,
-            IrStatementOrigin.GT,
-            IrStatementOrigin.GTEQ,
-            IrStatementOrigin.LT,
-            IrStatementOrigin.LTEQ -> {
+            origin.isSpecialCaseMathOp() -> {
                 // special case mathematical operators that are in the stdlib. These are
                 // immutable operations so the overall result is static if the operands are
                 // also static
@@ -1085,7 +1092,7 @@ abstract class AbstractComposeLowering(
                 getArgumentsWithIr().all { it.second.isStatic() }
             }
 
-            null -> {
+            origin == null -> {
                 if (fqName == ComposeFqNames.remember) {
                     // if it is a call to remember with 0 input arguments, then we can
                     // consider the value static if the result type of the lambda is stable
@@ -1186,6 +1193,7 @@ abstract class AbstractComposeLowering(
                 name = Name.special("<unsafe-coerce>")
                 origin = IrDeclarationOrigin.IR_BUILTINS_STUB
             }.apply {
+                @Suppress("DEPRECATION")
                 parent = IrExternalPackageFragmentImpl.createEmptyExternalPackageFragment(
                     context.moduleDescriptor,
                     FqName("kotlin.jvm.internal")
