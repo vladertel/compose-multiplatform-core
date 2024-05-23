@@ -66,6 +66,8 @@ import androidx.compose.ui.scene.ComposeSceneInputHandler
 import androidx.compose.ui.scene.ComposeScenePointer
 import androidx.compose.ui.semantics.EmptySemanticsElement
 import androidx.compose.ui.semantics.SemanticsOwner
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.unit.Constraints
@@ -117,6 +119,11 @@ internal class RootNodeOwner(
             platformContext.inputModeManager.requestInputMode(InputMode.Keyboard)
             // Consume the key event if we moved focus.
             focusOwner.moveFocus(focusDirection)
+        }
+        .semantics {
+            // This makes the reported role of the root node "PANEL", which is ignored by VoiceOver
+            // (which is what we want).
+            isTraversalGroup = true
         }
     val owner: Owner = OwnerImpl(layoutDirection, coroutineContext)
     val semanticsOwner = SemanticsOwner(owner.root)
@@ -338,12 +345,12 @@ internal class RootNodeOwner(
                 if (measureAndLayoutDelegate.requestLookaheadRemeasure(layoutNode, forceRequest) &&
                     scheduleMeasureAndLayout
                 ) {
-                    snapshotInvalidationTracker.requestLayout()
+                    snapshotInvalidationTracker.requestMeasureAndLayout()
                 }
             } else if (measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest) &&
                 scheduleMeasureAndLayout
             ) {
-                snapshotInvalidationTracker.requestLayout()
+                snapshotInvalidationTracker.requestMeasureAndLayout()
             }
         }
 
@@ -352,12 +359,20 @@ internal class RootNodeOwner(
             affectsLookahead: Boolean,
             forceRequest: Boolean
         ) {
-            this.onRequestMeasure(layoutNode, affectsLookahead, forceRequest, scheduleMeasureAndLayout = true)
+            if (affectsLookahead) {
+                if (measureAndLayoutDelegate.requestLookaheadRelayout(layoutNode, forceRequest)) {
+                    snapshotInvalidationTracker.requestMeasureAndLayout()
+                }
+            } else {
+                if (measureAndLayoutDelegate.requestRelayout(layoutNode, forceRequest)) {
+                    snapshotInvalidationTracker.requestMeasureAndLayout()
+                }
+            }
         }
 
         override fun requestOnPositionedCallback(layoutNode: LayoutNode) {
             measureAndLayoutDelegate.requestOnPositionedCallback(layoutNode)
-            snapshotInvalidationTracker.requestLayout()
+            snapshotInvalidationTracker.requestMeasureAndLayout()
         }
 
         override fun createLayer(
@@ -434,7 +449,7 @@ internal class RootNodeOwner(
 
         override fun registerOnLayoutCompletedListener(listener: Owner.OnLayoutCompletedListener) {
             measureAndLayoutDelegate.registerOnLayoutCompletedListener(listener)
-            snapshotInvalidationTracker.requestLayout()
+            snapshotInvalidationTracker.requestMeasureAndLayout()
         }
     }
 

@@ -80,11 +80,10 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
             override fun getDefaultComponent(aContainer: Container?) = null
         }
         isFocusCycleRoot = true
+        isFocusable = true
     }
 
     private val _focusListeners = mutableSetOf<FocusListener?>()
-    private var _isFocusable = true
-    private var _isRequestFocusEnabled = false
 
     private var _composeContainer: ComposeContainer? = null
     private var _composeContent: (@Composable () -> Unit)? = null
@@ -201,8 +200,8 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
         ).apply {
             focusManager.releaseFocus()
             setBounds(0, 0, width, height)
-            contentComponent.isFocusable = _isFocusable
-            contentComponent.isRequestFocusEnabled = _isRequestFocusEnabled
+            contentComponent.isFocusable = isFocusable
+            contentComponent.isRequestFocusEnabled = isRequestFocusEnabled
             exceptionHandler = this@ComposePanel.exceptionHandler
 
             _focusListeners.forEach(contentComponent::addFocusListener)
@@ -216,11 +215,12 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
                             FocusEvent.Cause.TRAVERSAL_FORWARD -> {
                                 focusManager.moveFocus(FocusDirection.Next)
                             }
-
                             FocusEvent.Cause.TRAVERSAL_BACKWARD -> {
                                 focusManager.moveFocus(FocusDirection.Previous)
                             }
-
+                            FocusEvent.Cause.UNKNOWN, FocusEvent.Cause.ACTIVATION -> {
+                                focusManager.moveFocus(FocusDirection.Enter)
+                            }
                             else -> Unit
                         }
                     }
@@ -242,13 +242,13 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
     override fun setComponentOrientation(o: ComponentOrientation?) {
         super.setComponentOrientation(o)
 
-        _composeContainer?.onChangeLayoutDirection(this)
+        _composeContainer?.onLayoutDirectionChanged(this)
     }
 
     override fun setLocale(l: Locale?) {
         super.setLocale(l)
 
-        _composeContainer?.onChangeLayoutDirection(this)
+        _composeContainer?.onLayoutDirectionChanged(this)
     }
 
     override fun addFocusListener(l: FocusListener?) {
@@ -261,17 +261,13 @@ class ComposePanel @ExperimentalComposeUiApi constructor(
         _focusListeners.remove(l)
     }
 
-    override fun isFocusable() = _isFocusable
-
     override fun setFocusable(focusable: Boolean) {
-        _isFocusable = focusable
+        super.setFocusable(focusable)
         _composeContainer?.contentComponent?.isFocusable = focusable
     }
 
-    override fun isRequestFocusEnabled(): Boolean = _isRequestFocusEnabled
-
     override fun setRequestFocusEnabled(requestFocusEnabled: Boolean) {
-        _isRequestFocusEnabled = requestFocusEnabled
+        super.setRequestFocusEnabled(requestFocusEnabled)
         _composeContainer?.contentComponent?.isRequestFocusEnabled = requestFocusEnabled
     }
 
