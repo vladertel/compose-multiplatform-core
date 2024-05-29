@@ -23,9 +23,56 @@ import platform.CoreGraphics.CGRectZero
 import platform.UIKit.UIEvent
 import platform.UIKit.UIPressesEvent
 import platform.UIKit.UIView
+import platform.darwin.NSObject
 
 internal enum class UITouchesEventPhase {
     BEGAN, MOVED, ENDED, CANCELLED
+}
+
+private class GestureRecognizerProxy(
+    private val updateTouchesCount: (count: Int) -> Unit,
+    private val touchesDelegate: InteractionUIView.Delegate,
+    private val view: UIView
+): NSObject(), CMPGestureRecognizerProxy {
+    /**
+     * When there at least one tracked touch, we need notify redrawer about it. It should schedule CADisplayLink which
+     * affects frequency of polling UITouch events on high frequency display and forces it to match display refresh rate.
+     */
+    private var touchesCount = 0
+        set(value) {
+            field = value
+            updateTouchesCount(value)
+        }
+
+    override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
+        touchesCount += touches.size
+
+        withEvent?.let { event ->
+            touchesDelegate.onTouchesEvent(view, event, UITouchesEventPhase.BEGAN)
+        }
+    }
+
+    override fun touchesMoved(touches: Set<*>, withEvent: UIEvent?) {
+        withEvent?.let { event ->
+            touchesDelegate.onTouchesEvent(view, event, UITouchesEventPhase.MOVED)
+        }
+    }
+
+    override fun touchesEnded(touches: Set<*>, withEvent: UIEvent?) {
+        touchesCount -= touches.size
+
+        withEvent?.let { event ->
+            touchesDelegate.onTouchesEvent(view, event, UITouchesEventPhase.ENDED)
+        }
+    }
+
+    override fun touchesCancelled(touches: Set<*>, withEvent: UIEvent?) {
+        touchesCount -= touches.size
+
+        withEvent?.let { event ->
+            touchesDelegate.onTouchesEvent(view, event, UITouchesEventPhase.CANCELLED)
+        }
+    }
 }
 
 internal class InteractionUIView(
@@ -34,25 +81,22 @@ internal class InteractionUIView(
     private var updateTouchesCount: (count: Int) -> Unit,
     private var inBounds: (CValue<CGPoint>) -> Boolean,
 ) : UIView(CGRectZero.readValue()) {
-
     interface Delegate {
         fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean
         fun onTouchesEvent(view: UIView, event: UIEvent, phase: UITouchesEventPhase)
     }
 
-    /**
-     * When there at least one tracked touch, we need notify redrawer about it. It should schedule CADisplayLink which
-     * affects frequency of polling UITouch events on high frequency display and forces it to match display refresh rate.
-     */
-    private var _touchesCount = 0
-        set(value) {
-            field = value
-            updateTouchesCount(value)
-        }
+    private var gestureRecognizerProxy: GestureRecognizerProxy? = null
 
     init {
         multipleTouchEnabled = true
         userInteractionEnabled = true
+
+        gestureRecognizerProxy = GestureRecognizerProxy(updateTouchesCount, touchesDelegate, this)
+
+        val gestureRecognizer = CMPGestureRecognizer()
+        gestureRecognizer.proxy = gestureRecognizerProxy
+        addGestureRecognizer(gestureRecognizer)
     }
 
     override fun canBecomeFirstResponder() = true
@@ -74,49 +118,12 @@ internal class InteractionUIView(
         return inBounds(point) && touchesDelegate.pointInside(point, withEvent)
     }
 
-    override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesBegan(touches, withEvent)
-
-        _touchesCount += touches.size
-
-        withEvent?.let { event ->
-            touchesDelegate.onTouchesEvent(this, event, UITouchesEventPhase.BEGAN)
-        }
-    }
-
-    override fun touchesEnded(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesEnded(touches, withEvent)
-
-        _touchesCount -= touches.size
-
-        withEvent?.let { event ->
-            touchesDelegate.onTouchesEvent(this, event, UITouchesEventPhase.ENDED)
-        }
-    }
-
-    override fun touchesMoved(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesMoved(touches, withEvent)
-
-        withEvent?.let { event ->
-            touchesDelegate.onTouchesEvent(this, event, UITouchesEventPhase.MOVED)
-        }
-    }
-
-    override fun touchesCancelled(touches: Set<*>, withEvent: UIEvent?) {
-        super.touchesCancelled(touches, withEvent)
-
-        _touchesCount -= touches.size
-
-        withEvent?.let { event ->
-            touchesDelegate.onTouchesEvent(this, event, UITouchesEventPhase.CANCELLED)
-        }
-    }
-
     /**
      * Intentionally clean up all dependencies of InteractionUIView to prevent retain cycles that
      * can be caused by implicit capture of the view by UIKit objects (such as UIEvent).
      */
     fun dispose() {
+        gestureRecognizerProxy = null
         touchesDelegate = object : Delegate {
             override fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean = false
             override fun onTouchesEvent(view: UIView, event: UIEvent, phase: UITouchesEventPhase) {}
