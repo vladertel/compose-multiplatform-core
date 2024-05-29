@@ -63,6 +63,7 @@ import org.jetbrains.skiko.OSVersion
 import org.jetbrains.skiko.SkikoRenderDelegate
 import org.jetbrains.skiko.available
 import platform.CoreGraphics.CGRect
+import platform.CoreGraphics.CGRectZero
 import platform.CoreGraphics.CGSize
 import platform.CoreGraphics.CGSizeEqualToSize
 import platform.Foundation.NSStringFromClass

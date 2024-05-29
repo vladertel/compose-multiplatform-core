@@ -158,7 +158,7 @@ private class SingleLayerComposeSceneImpl(
 
     @Deprecated("To be removed. Temporary hack for iOS interop")
     override fun hitTestInteropView(position: Offset): Boolean {
-        return mainOwner.hitTestInteropView(position)
+        error("Not supported")
     }
 
     override fun processPointerInputEvent(event: PointerInputEvent) =

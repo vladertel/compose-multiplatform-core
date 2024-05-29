@@ -92,7 +92,9 @@ internal class RenderingUIView(
         }
     }
 
-    fun needRedraw() = redrawer.needRedraw()
+    fun needRedraw() {
+        redrawer.needRedraw()
+    }
 
     var isForcedToPresentWithTransactionEveryFrame by redrawer::isForcedToPresentWithTransactionEveryFrame
 

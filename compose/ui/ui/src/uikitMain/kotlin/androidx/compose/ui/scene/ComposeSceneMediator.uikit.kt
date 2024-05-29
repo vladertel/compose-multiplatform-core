@@ -183,16 +183,20 @@ private class RenderingUIViewDelegateImpl(
     }
 }
 
-private class ComposeSceneMediatorRootUIView : UIView(CGRectZero.readValue()) {
+private class ComposeSceneMediatorRootUIView(
+    val getInteropContainerView: () -> UIView,
+    val getInteractionView: () -> UIView,
+) : UIView(CGRectZero.readValue()) {
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
         // forwards touches forward to the children, is never a target for a touch
-        val result = super.hitTest(point, withEvent)
+        // check interop first
+        val interopView = getInteropContainerView().hitTest(point, withEvent)
 
-        return if (result == this) {
-            null
-        } else {
-            result
+        if (interopView != null) {
+            return interopView
         }
+
+        return getInteractionView().hitTest(point, withEvent)
     }
 }
 
@@ -262,10 +266,12 @@ internal class ComposeSceneMediator(
     }
 
     /**
-     * view, that contains [interopViewContainer] and [interactionView] and is added to [container]
+     * view, that contains [interopContainer] and [interactionView] and is added to [container]
      */
-    private val rootView = ComposeSceneMediatorRootUIView()
-
+    private val rootView = ComposeSceneMediatorRootUIView(
+        getInteropContainerView = { interopContainerView },
+        getInteractionView = { interactionView }
+    )
 
     private val interopContext = UIKitInteropContext(
         requestRedraw = ::onComposeSceneInvalidate
@@ -274,7 +280,10 @@ internal class ComposeSceneMediator(
     /**
      * Container for UIKitView and UIKitViewController
      */
-    private val interopViewContainer = UIKitInteropContainer(interopContext)
+    private val interopContainer = UIKitInteropContainer(interopContext)
+
+    private val interopContainerView: UIView
+        get() = interopContainer.containerView
 
     private val interactionBounds: IntRect get() {
         val boundsLayout = _layout as? SceneLayout.Bounds
@@ -359,10 +368,15 @@ internal class ComposeSceneMediator(
 
     private val touchesDelegate: InteractionUIView.Delegate by lazy {
         object : InteractionUIView.Delegate {
+            @OptIn(ExperimentalComposeApi::class)
             override fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean =
-                point.useContents {
-                    val position = this.asDpOffset().toOffset(density)
-                    !scene.hitTestInteropView(position)
+                if (configuration.platformLayers) {
+                    true
+                } else {
+                    point.useContents {
+                        val position = this.asDpOffset().toOffset(density)
+                        !scene.hitTestInteropView(position)
+                    }
                 }
 
             override fun onTouchesEvent(view: UIView, event: UIEvent, phase: UITouchesEventPhase) {
@@ -431,10 +445,10 @@ internal class ComposeSceneMediator(
             getConstraintsToFillParent(rootView, container)
         )
 
-        interopViewContainer.containerView.translatesAutoresizingMaskIntoConstraints = false
-        rootView.addSubview(interopViewContainer.containerView)
+        interopContainerView.translatesAutoresizingMaskIntoConstraints = false
+        rootView.addSubview(interopContainerView)
         NSLayoutConstraint.activateConstraints(
-            getConstraintsToFillParent(interopViewContainer.containerView, rootView)
+            getConstraintsToFillParent(interopContainerView, rootView)
         )
 
         interactionView.translatesAutoresizingMaskIntoConstraints = false
@@ -460,7 +474,7 @@ internal class ComposeSceneMediator(
                  */
                 if (renderingView.isReadyToShowContent.value) {
                     ProvideComposeSceneMediatorCompositionLocals {
-                        interopViewContainer.TrackInteropContainer(
+                        interopContainer.TrackInteropContainer(
                             content = content
                         )
                     }
@@ -487,7 +501,7 @@ internal class ComposeSceneMediator(
     private fun ProvideComposeSceneMediatorCompositionLocals(content: @Composable () -> Unit) =
         CompositionLocalProvider(
             LocalUIKitInteropContext provides interopContext,
-            LocalUIKitInteropContainer provides interopViewContainer,
+            LocalUIKitInteropContainer provides interopContainer,
             LocalKeyboardOverlapHeight provides keyboardOverlapHeightState.value,
             LocalSafeArea provides safeAreaState.value,
             LocalLayoutMargins provides layoutMarginsState.value,
@@ -510,7 +524,9 @@ internal class ComposeSceneMediator(
         interopContext.retrieve().actions.forEach { it.invoke() }
     }
 
-    private fun onComposeSceneInvalidate() = renderingView.needRedraw()
+    private fun onComposeSceneInvalidate() {
+        renderingView.needRedraw()
+    }
 
     fun setLayout(value: SceneLayout) {
         _layout = value
