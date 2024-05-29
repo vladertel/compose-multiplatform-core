@@ -21,10 +21,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol CMPGestureRecognizerProxy <NSObject>
 
-- (void)touchesBegan: (NSSet<UITouch *> *)touches withEvent:(UIEvent *)event;
-- (void)touchesMoved: (NSSet<UITouch *> *)touches withEvent:(UIEvent *)event;
-- (void)touchesEnded: (NSSet<UITouch *> *)touches withEvent:(UIEvent *)event;
-- (void)touchesCancelled: (NSSet<UITouch *> *)touches withEvent:(UIEvent *)event;
+- (void)touchesBegan: (NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
+- (void)touchesMoved: (NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
+- (void)touchesEnded: (NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
+- (void)touchesCancelled: (NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
 
 @end
 
