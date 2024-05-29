@@ -25,6 +25,8 @@ import platform.UIKit.UIPressesEvent
 import platform.UIKit.UIView
 import platform.darwin.NSObject
 import androidx.compose.ui.uikit.utils.*
+import platform.UIKit.UIGestureRecognizer
+import platform.UIKit.UIGestureRecognizerDelegateProtocol
 
 internal enum class UITouchesEventPhase {
     BEGAN, MOVED, ENDED, CANCELLED
@@ -34,7 +36,7 @@ private class GestureRecognizerProxy(
     private val updateTouchesCount: (count: Int) -> Unit,
     private val touchesDelegate: InteractionUIView.Delegate,
     private val view: UIView
-) : NSObject(), CMPGestureRecognizerProxyProtocol {
+) : NSObject(), CMPGestureRecognizerProxyProtocol, UIGestureRecognizerDelegateProtocol {
     /**
      * When there at least one tracked touch, we need notify redrawer about it. It should schedule CADisplayLink which
      * affects frequency of polling UITouch events on high frequency display and forces it to match display refresh rate.
@@ -44,6 +46,13 @@ private class GestureRecognizerProxy(
             field = value
             updateTouchesCount(value)
         }
+
+    override fun gestureRecognizer(
+        gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWithGestureRecognizer: UIGestureRecognizer
+    ): Boolean {
+        return true
+    }
 
     override fun touchesBegan(touches: Set<*>, withEvent: UIEvent?) {
         touchesCount += touches.size
@@ -97,6 +106,7 @@ internal class InteractionUIView(
 
         val gestureRecognizer = CMPGestureRecognizer()
         gestureRecognizer.proxy = gestureRecognizerProxy
+        gestureRecognizer.delegate = gestureRecognizerProxy
         addGestureRecognizer(gestureRecognizer)
     }
 
