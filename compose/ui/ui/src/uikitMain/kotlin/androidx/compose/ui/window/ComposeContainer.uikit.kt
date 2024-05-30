@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.SystemTheme
 import androidx.compose.ui.hapticfeedback.CupertinoHapticFeedback
+import androidx.compose.ui.interop.LocalComposeUIViewControllerConfiguration
 import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.interop.UIKitInteropContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -95,7 +96,7 @@ private val coroutineDispatcher = Dispatchers.Main
 // TODO: Move to androidx.compose.ui.scene
 @ExportObjCClass
 internal class ComposeContainer(
-    private val configuration: ComposeUIViewControllerConfiguration,
+    val configuration: ComposeUIViewControllerConfiguration,
     private val content: @Composable () -> Unit,
 ) : CMPViewController(nibName = null, bundle = null) {
     // TODO: Rename and make private
@@ -439,6 +440,7 @@ internal fun ProvideContainerCompositionLocals(
     CompositionLocalProvider(
         LocalHapticFeedback provides hapticFeedback,
         LocalUIViewController provides this,
+        LocalComposeUIViewControllerConfiguration provides configuration,
         LocalInterfaceOrientation provides interfaceOrientationState.value,
         LocalSystemTheme provides systemThemeState.value,
         LocalLifecycleOwner provides lifecycleOwner,

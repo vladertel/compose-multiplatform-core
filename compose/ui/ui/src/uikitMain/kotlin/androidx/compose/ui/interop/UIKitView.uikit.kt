@@ -18,6 +18,7 @@ package androidx.compose.ui.interop
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -26,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateObserver
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.*
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
@@ -105,6 +105,13 @@ private fun Modifier.interopSemantics(enabled: Boolean, wrappingView: InteropWra
         this
     }
 
+private fun Modifier.interceptPointerEvents(interactive: Boolean, arePlatformLayersUsed: Boolean): Modifier =
+    if (interactive && arePlatformLayersUsed) {
+        this.then(InteropViewCatchPointerModifier())
+    } else {
+        this
+    }
+
 /**
  * @param factory The block creating the [UIView] to be composed.
  * @param modifier The modifier to be applied to the layout. Size should be specified in modifier.
@@ -133,6 +140,7 @@ private fun Modifier.interopSemantics(enabled: Boolean, wrappingView: InteropWra
  *
  * @see Modifier.semantics
  */
+@OptIn(ExperimentalComposeApi::class)
 @Composable
 fun <T : UIView> UIKitView(
     factory: () -> T,
@@ -159,36 +167,35 @@ fun <T : UIView> UIKitView(
     val interopContext = LocalUIKitInteropContext.current
 
     EmptyLayout(
-        modifier.onGloballyPositioned { coordinates ->
-            localToWindowOffset = coordinates.positionInRoot().round()
-            val newRectInPixels = IntRect(localToWindowOffset, coordinates.size)
-            if (rectInPixels != newRectInPixels) {
-                val rect = newRectInPixels.toRect().toDpRect(density)
+        modifier
+            .onGloballyPositioned { coordinates ->
+                localToWindowOffset = coordinates.positionInRoot().round()
+                val newRectInPixels = IntRect(localToWindowOffset, coordinates.size)
+                if (rectInPixels != newRectInPixels) {
+                    val rect = newRectInPixels.toRect().toDpRect(density)
 
-                interopContext.deferAction {
-                    embeddedInteropComponent.wrappingView.setFrame(rect.asCGRect())
-                }
-
-                if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
                     interopContext.deferAction {
-                        onResize(
-                            embeddedInteropComponent.component,
-                            CGRectMake(0.0, 0.0, rect.width.value.toDouble(), rect.height.value.toDouble()),
-                        )
+                        embeddedInteropComponent.wrappingView.setFrame(rect.asCGRect())
                     }
+
+                    if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
+                        interopContext.deferAction {
+                            onResize(
+                                embeddedInteropComponent.component,
+                                CGRectMake(0.0, 0.0, rect.width.value.toDouble(), rect.height.value.toDouble()),
+                            )
+                        }
+                    }
+                    rectInPixels = newRectInPixels
                 }
-                rectInPixels = newRectInPixels
             }
-        }.drawBehind {
-            // Clear interop area to make visible the component under our canvas.
-            drawRect(Color.Transparent, blendMode = BlendMode.Clear)
-        }.trackUIKitInterop(interopContainer, embeddedInteropComponent.wrappingView).let {
-            if (interactive) {
-                it.then(InteropViewCatchPointerModifier())
-            } else {
-                it
+            .drawBehind {
+                // Clear interop area to make visible the component under our canvas.
+                drawRect(Color.Transparent, blendMode = BlendMode.Clear)
             }
-        }.interopSemantics(accessibilityEnabled, embeddedInteropComponent.wrappingView)
+            .trackUIKitInterop(interopContainer, embeddedInteropComponent.wrappingView)
+            .interceptPointerEvents(interactive, LocalComposeUIViewControllerConfiguration.current.platformLayers)
+            .interopSemantics(accessibilityEnabled, embeddedInteropComponent.wrappingView)
     )
 
     DisposableEffect(Unit) {
@@ -249,6 +256,7 @@ fun <T : UIView> UIKitView(
  *
  * @see Modifier.semantics
  */
+@OptIn(ExperimentalComposeApi::class)
 @Composable
 fun <T : UIViewController> UIKitViewController(
     factory: () -> T,
@@ -278,36 +286,35 @@ fun <T : UIViewController> UIKitViewController(
     val interopContext = LocalUIKitInteropContext.current
 
     EmptyLayout(
-        modifier.onGloballyPositioned { coordinates ->
-            localToWindowOffset = coordinates.positionInRoot().round()
-            val newRectInPixels = IntRect(localToWindowOffset, coordinates.size)
-            if (rectInPixels != newRectInPixels) {
-                val rect = newRectInPixels.toRect().toDpRect(density)
+        modifier
+            .onGloballyPositioned { coordinates ->
+                localToWindowOffset = coordinates.positionInRoot().round()
+                val newRectInPixels = IntRect(localToWindowOffset, coordinates.size)
+                if (rectInPixels != newRectInPixels) {
+                    val rect = newRectInPixels.toRect().toDpRect(density)
 
-                interopContext.deferAction {
-                    embeddedInteropComponent.wrappingView.setFrame(rect.asCGRect())
-                }
-
-                if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
                     interopContext.deferAction {
-                        onResize(
-                            embeddedInteropComponent.component,
-                            CGRectMake(0.0, 0.0, rect.width.value.toDouble(), rect.height.value.toDouble()),
-                        )
+                        embeddedInteropComponent.wrappingView.setFrame(rect.asCGRect())
                     }
+
+                    if (rectInPixels.width != newRectInPixels.width || rectInPixels.height != newRectInPixels.height) {
+                        interopContext.deferAction {
+                            onResize(
+                                embeddedInteropComponent.component,
+                                CGRectMake(0.0, 0.0, rect.width.value.toDouble(), rect.height.value.toDouble()),
+                            )
+                        }
+                    }
+                    rectInPixels = newRectInPixels
                 }
-                rectInPixels = newRectInPixels
             }
-        }.drawBehind {
-            // Clear interop area to make visible the component under our canvas.
-            drawRect(Color.Transparent, blendMode = BlendMode.Clear)
-        }.trackUIKitInterop(interopContainer, embeddedInteropComponent.wrappingView).let {
-            if (interactive) {
-                it.then(InteropViewCatchPointerModifier())
-            } else {
-                it
+            .drawBehind {
+                // Clear interop area to make visible the component under our canvas.
+                drawRect(Color.Transparent, blendMode = BlendMode.Clear)
             }
-        }.interopSemantics(accessibilityEnabled, embeddedInteropComponent.wrappingView)
+            .trackUIKitInterop(interopContainer, embeddedInteropComponent.wrappingView)
+            .interceptPointerEvents(interactive, LocalComposeUIViewControllerConfiguration.current.platformLayers)
+            .interopSemantics(accessibilityEnabled, embeddedInteropComponent.wrappingView)
     )
 
     DisposableEffect(Unit) {
