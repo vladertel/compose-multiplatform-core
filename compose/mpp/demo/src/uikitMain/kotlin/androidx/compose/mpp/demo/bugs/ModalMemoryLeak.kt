@@ -57,11 +57,11 @@ val ModalMemoryLeak = Screen.Example("ModalMemoryLeak") {
                 sheetState = sheetState,
             ) {
                 DisposableEffect(Unit) {
-                    val a = malloc((20_000 * 1024).toULong())
+                    var buffer: ByteArray? = ByteArray(20_000 * 1024)
 
                     onDispose {
+                        buffer = null
                         println("Disposed")
-                        free(a)
                     }
                 }
                 Text("ModalBottomSheet3", Modifier.height(500.dp))

@@ -25,10 +25,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)touchesMoved: (NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
 - (void)touchesEnded: (NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
 - (void)touchesCancelled: (NSSet<UITouch *> *)touches withEvent:(nullable UIEvent *)event;
+- (BOOL)shouldRecognizeSimultaneously:(UIGestureRecognizer *)gestureRecognizer withOtherGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
 
 @end
 
-@interface CMPGestureRecognizer : UIGestureRecognizer
+@interface CMPGestureRecognizer : UIGestureRecognizer <UIGestureRecognizerDelegate>
 
 @property (weak, nonatomic) id <CMPGestureRecognizerProxy> proxy;
 

@@ -25,10 +25,19 @@
     
     if (self) {
         self.cancelsTouchesInView = NO;
+        self.delegate = self;
         _touchesCount = 0;
     }
     
     return self;
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    if (_proxy) {
+        return [_proxy shouldRecognizeSimultaneously:gestureRecognizer withOtherGestureRecognizer:otherGestureRecognizer];
+    } else {
+        return NO;
+    }
 }
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {

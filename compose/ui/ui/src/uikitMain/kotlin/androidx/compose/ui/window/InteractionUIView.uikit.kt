@@ -28,7 +28,7 @@ import androidx.compose.ui.uikit.utils.*
 import platform.UIKit.UIGestureRecognizer
 import platform.UIKit.UIGestureRecognizerDelegateProtocol
 
-internal enum class UITouchesEventPhase {
+internal enum class TouchesPhase {
     BEGAN, MOVED, ENDED, CANCELLED
 }
 
@@ -36,7 +36,7 @@ private class GestureRecognizerProxy(
     private val updateTouchesCount: (count: Int) -> Unit,
     private val touchesDelegate: InteractionUIView.Delegate,
     private val view: UIView
-) : NSObject(), CMPGestureRecognizerProxyProtocol, UIGestureRecognizerDelegateProtocol {
+) : NSObject(), CMPGestureRecognizerProxyProtocol {
     /**
      * When there at least one tracked touch, we need notify redrawer about it. It should schedule CADisplayLink which
      * affects frequency of polling UITouch events on high frequency display and forces it to match display refresh rate.
@@ -47,9 +47,9 @@ private class GestureRecognizerProxy(
             updateTouchesCount(value)
         }
 
-    override fun gestureRecognizer(
+    override fun shouldRecognizeSimultaneously(
         gestureRecognizer: UIGestureRecognizer,
-        shouldRecognizeSimultaneouslyWithGestureRecognizer: UIGestureRecognizer
+        withOtherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
         return true
     }
@@ -58,13 +58,13 @@ private class GestureRecognizerProxy(
         touchesCount += touches.size
 
         withEvent?.let { event ->
-            touchesDelegate.onTouchesEvent(view, event, UITouchesEventPhase.BEGAN)
+            touchesDelegate.onTouchesEvent(view, event, TouchesPhase.BEGAN)
         }
     }
 
     override fun touchesMoved(touches: Set<*>, withEvent: UIEvent?) {
         withEvent?.let { event ->
-            touchesDelegate.onTouchesEvent(view, event, UITouchesEventPhase.MOVED)
+            touchesDelegate.onTouchesEvent(view, event, TouchesPhase.MOVED)
         }
     }
 
@@ -72,7 +72,7 @@ private class GestureRecognizerProxy(
         touchesCount -= touches.size
 
         withEvent?.let { event ->
-            touchesDelegate.onTouchesEvent(view, event, UITouchesEventPhase.ENDED)
+            touchesDelegate.onTouchesEvent(view, event, TouchesPhase.ENDED)
         }
     }
 
@@ -80,7 +80,7 @@ private class GestureRecognizerProxy(
         touchesCount -= touches.size
 
         withEvent?.let { event ->
-            touchesDelegate.onTouchesEvent(view, event, UITouchesEventPhase.CANCELLED)
+            touchesDelegate.onTouchesEvent(view, event, TouchesPhase.CANCELLED)
         }
     }
 }
@@ -93,7 +93,7 @@ internal class InteractionUIView(
 ) : UIView(CGRectZero.readValue()) {
     interface Delegate {
         fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean
-        fun onTouchesEvent(view: UIView, event: UIEvent, phase: UITouchesEventPhase)
+        fun onTouchesEvent(view: UIView, event: UIEvent, phase: TouchesPhase)
     }
 
     private var gestureRecognizerProxy: GestureRecognizerProxy? = null
@@ -101,12 +101,12 @@ internal class InteractionUIView(
     init {
         multipleTouchEnabled = true
         userInteractionEnabled = true
+        println("exclusiveTouch: $exclusiveTouch")
 
         gestureRecognizerProxy = GestureRecognizerProxy(updateTouchesCount, touchesDelegate, this)
 
         val gestureRecognizer = CMPGestureRecognizer()
         gestureRecognizer.proxy = gestureRecognizerProxy
-        gestureRecognizer.delegate = gestureRecognizerProxy
         addGestureRecognizer(gestureRecognizer)
     }
 
@@ -137,7 +137,7 @@ internal class InteractionUIView(
         gestureRecognizerProxy = null
         touchesDelegate = object : Delegate {
             override fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean = false
-            override fun onTouchesEvent(view: UIView, event: UIEvent, phase: UITouchesEventPhase) {}
+            override fun onTouchesEvent(view: UIView, event: UIEvent, phase: TouchesPhase) {}
         }
         updateTouchesCount = {}
         inBounds = { false }

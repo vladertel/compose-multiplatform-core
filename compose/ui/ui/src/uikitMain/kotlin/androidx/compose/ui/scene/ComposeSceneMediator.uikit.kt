@@ -72,7 +72,7 @@ import androidx.compose.ui.window.InteractionUIView
 import androidx.compose.ui.window.KeyboardEventHandler
 import androidx.compose.ui.window.KeyboardVisibilityListener
 import androidx.compose.ui.window.RenderingUIView
-import androidx.compose.ui.window.UITouchesEventPhase
+import androidx.compose.ui.window.TouchesPhase
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
 import kotlinx.cinterop.CValue
@@ -379,7 +379,7 @@ internal class ComposeSceneMediator(
                     }
                 }
 
-            override fun onTouchesEvent(view: UIView, event: UIEvent, phase: UITouchesEventPhase) {
+            override fun onTouchesEvent(view: UIView, event: UIEvent, phase: TouchesPhase) {
                 scene.sendPointerEvent(
                     eventType = phase.toPointerEventType(),
                     pointers = event.touchesForView(view)?.map {
@@ -445,17 +445,18 @@ internal class ComposeSceneMediator(
             getConstraintsToFillParent(rootView, container)
         )
 
-        interopContainerView.translatesAutoresizingMaskIntoConstraints = false
-        rootView.addSubview(interopContainerView)
-        NSLayoutConstraint.activateConstraints(
-            getConstraintsToFillParent(interopContainerView, rootView)
-        )
-
         interactionView.translatesAutoresizingMaskIntoConstraints = false
         rootView.addSubview(interactionView)
         NSLayoutConstraint.activateConstraints(
             getConstraintsToFillParent(interactionView, rootView)
         )
+
+        interopContainerView.translatesAutoresizingMaskIntoConstraints = false
+        interactionView.addSubview(interopContainerView)
+        NSLayoutConstraint.activateConstraints(
+            getConstraintsToFillParent(interopContainerView, interactionView)
+        )
+
         // FIXME: interactionView might be smaller than renderingView (shadows etc)
         interactionView.addSubview(renderingView)
     }
@@ -720,12 +721,12 @@ private fun getConstraintsToCenterInParent(
     )
 }
 
-private fun UITouchesEventPhase.toPointerEventType(): PointerEventType =
+private fun TouchesPhase.toPointerEventType(): PointerEventType =
     when (this) {
-        UITouchesEventPhase.BEGAN -> PointerEventType.Press
-        UITouchesEventPhase.MOVED -> PointerEventType.Move
-        UITouchesEventPhase.ENDED -> PointerEventType.Release
-        UITouchesEventPhase.CANCELLED -> PointerEventType.Release
+        TouchesPhase.BEGAN -> PointerEventType.Press
+        TouchesPhase.MOVED -> PointerEventType.Move
+        TouchesPhase.ENDED -> PointerEventType.Release
+        TouchesPhase.CANCELLED -> PointerEventType.Release
     }
 
 private fun UIEvent.historicalChangesForTouch(
