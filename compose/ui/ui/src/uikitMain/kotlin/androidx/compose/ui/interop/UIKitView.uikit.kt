@@ -106,7 +106,7 @@ private fun Modifier.interopSemantics(enabled: Boolean, wrappingView: InteropWra
     }
 
 private fun Modifier.interceptPointerEvents(interactive: Boolean, arePlatformLayersUsed: Boolean): Modifier =
-    if (interactive && arePlatformLayersUsed) {
+    if (interactive && !arePlatformLayersUsed) {
         this.then(InteropViewCatchPointerModifier())
     } else {
         this
