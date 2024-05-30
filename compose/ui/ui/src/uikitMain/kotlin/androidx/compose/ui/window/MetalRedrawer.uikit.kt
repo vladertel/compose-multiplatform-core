@@ -267,7 +267,7 @@ internal class MetalRedrawer(
      * Marks current state as dirty and unpauses display link if needed and enables draw dispatch operation on
      * next vsync
      */
-    fun needRedraw() = displayLinkConditions.needRedraw()
+    fun needRedraw(): Unit = displayLinkConditions.needRedraw()
 
     /**
      * Immediately dispatch draw and block the thread until it's finished and presented on the screen.

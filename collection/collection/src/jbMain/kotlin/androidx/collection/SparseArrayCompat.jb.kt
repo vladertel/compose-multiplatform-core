@@ -19,6 +19,8 @@ package androidx.collection
 import androidx.collection.internal.EMPTY_INTS
 import androidx.collection.internal.EMPTY_OBJECTS
 import androidx.collection.internal.idealIntArraySize
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmSynthetic
 
 /**
  * SparseArrays map integers to Objects. Unlike a normal array of Objects,
@@ -60,9 +62,20 @@ import androidx.collection.internal.idealIntArraySize
 public actual open class SparseArrayCompat<E>
 // JvmOverloads is required on constructor to match expect declaration
 @kotlin.jvm.JvmOverloads public actual constructor(initialCapacity: Int) {
+    @JvmSynthetic // Hide from Java callers.
+    @JvmField
     internal actual var garbage = false
+
+    @JvmSynthetic // Hide from Java callers.
+    @JvmField
     internal actual var keys: IntArray
+
+    @JvmSynthetic // Hide from Java callers.
+    @JvmField
     internal actual var values: Array<Any?>
+
+    @JvmSynthetic // Hide from Java callers.
+    @JvmField
     internal actual var size = 0
 
     init {

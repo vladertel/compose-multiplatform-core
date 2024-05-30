@@ -54,15 +54,6 @@ public expect open class NavController {
         set
 
     /**
-     * Retrieve the current back stack.
-     *
-     * @return The current back stack.
-     */
-    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public val currentBackStack: StateFlow<List<NavBackStackEntry>>
-
-    /**
      * A [StateFlow] that will emit the currently visible [NavBackStackEntries][NavBackStackEntry]
      * whenever they change. If there is no visible [NavBackStackEntry], this will be set to an
      * empty list.

@@ -57,7 +57,7 @@ public actual open class NavController {
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
     @get:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public actual val currentBackStack: StateFlow<List<NavBackStackEntry>> =
+    public val currentBackStack: StateFlow<List<NavBackStackEntry>> =
         _currentBackStack.asStateFlow()
 
     private val _visibleEntries: MutableStateFlow<List<NavBackStackEntry>> =

@@ -17,6 +17,7 @@
 package androidx.build
 
 import androidx.build.dependencies.KOTLIN_NATIVE_VERSION
+import androidx.build.dependencies.kotlinVersion
 import com.android.build.api.variant.AndroidComponentsExtension
 import com.android.build.gradle.AppExtension
 import com.android.build.gradle.AppPlugin
@@ -364,10 +365,9 @@ private fun configureComposeCompilerPlugin(
         val configuration = project.configurations.create(COMPILER_PLUGIN_CONFIGURATION)
         // Add Compose compiler plugin to kotlinPlugin configuration, making sure it works
         // for Playground builds as well
-        val compilerPluginVersion = project.properties["jetbrains.compose.compiler.version"] as String
         project.dependencies.add(
             COMPILER_PLUGIN_CONFIGURATION,
-            "org.jetbrains.compose.compiler:compiler:$compilerPluginVersion"
+            "org.jetbrains.kotlin:kotlin-compose-compiler-plugin-embeddable:$kotlinVersion"
         )
         val kotlinPlugin = configuration.incoming.artifactView { view ->
             view.attributes { attributes ->

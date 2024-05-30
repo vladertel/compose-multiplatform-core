@@ -510,7 +510,7 @@ internal class ComposeSceneMediator(
         interopContext.retrieve().actions.forEach { it.invoke() }
     }
 
-    private fun onComposeSceneInvalidate() = renderingView.needRedraw()
+    private fun onComposeSceneInvalidate(): Unit = renderingView.needRedraw()
 
     fun setLayout(value: SceneLayout) {
         _layout = value
