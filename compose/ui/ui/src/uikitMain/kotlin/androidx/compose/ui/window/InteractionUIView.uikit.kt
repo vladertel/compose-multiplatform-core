@@ -165,7 +165,6 @@ internal class InteractionUIView(
     init {
         multipleTouchEnabled = true
         userInteractionEnabled = true
-        println("exclusiveTouch: $exclusiveTouch")
 
         gestureRecognizerProxy = GestureRecognizerProxy(updateTouchesCount, touchesDelegate, this)
 
