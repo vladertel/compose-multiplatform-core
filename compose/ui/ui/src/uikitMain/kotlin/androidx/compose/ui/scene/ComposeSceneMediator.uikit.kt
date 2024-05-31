@@ -184,19 +184,16 @@ private class RenderingUIViewDelegateImpl(
 }
 
 private class ComposeSceneMediatorRootUIView(
-    val getInteropContainerView: () -> UIView,
     val getInteractionView: () -> UIView,
 ) : UIView(CGRectZero.readValue()) {
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
-        // forwards touches forward to the children, is never a target for a touch
-        // check interop first
-        val interopView = getInteropContainerView().hitTest(point, withEvent)
+        val interactionView = getInteractionView()
 
-        if (interopView != null) {
-            return interopView
+        return if (interactionView.pointInside(point, withEvent)) {
+            interactionView.hitTest(point, withEvent)
+        } else {
+            null
         }
-
-        return getInteractionView().hitTest(point, withEvent)
     }
 }
 
@@ -266,10 +263,9 @@ internal class ComposeSceneMediator(
     }
 
     /**
-     * view, that contains [interopContainer] and [interactionView] and is added to [container]
+     * view, that contains [interactionView] and is added to [container]
      */
     private val rootView = ComposeSceneMediatorRootUIView(
-        getInteropContainerView = { interopContainerView },
         getInteractionView = { interactionView }
     )
 
@@ -438,6 +434,15 @@ internal class ComposeSceneMediator(
             this.onAttachedToWindow?.invoke()
             focusStack?.pushAndFocus(interactionView)
         }
+
+        /*
+         * initialize the hierarchy
+         * | container
+         * |-- rootView
+         *    |-- interactionView
+         *       |-- interopContainerView
+         *       |-- renderingView
+         */
 
         rootView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(rootView)

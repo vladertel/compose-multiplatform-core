@@ -25,11 +25,23 @@ import platform.UIKit.UIPressesEvent
 import platform.UIKit.UIView
 import platform.darwin.NSObject
 import androidx.compose.ui.uikit.utils.*
+import platform.CoreGraphics.CGRect
+import platform.CoreGraphics.CGRectEqualToRect
 import platform.UIKit.UIGestureRecognizer
-import platform.UIKit.UIGestureRecognizerDelegateProtocol
 
 internal enum class TouchesPhase {
     BEGAN, MOVED, ENDED, CANCELLED
+}
+
+private data class HitTestTarget(
+    val view: UIView,
+    val initialRect: CValue<CGRect>,
+) {
+    fun rectIsEqualToInitial(otherView: UIView): Boolean {
+        val currentRect = view.convertRect(view.bounds, toView = otherView)
+
+        return CGRectEqualToRect(initialRect, currentRect)
+    }
 }
 
 private class GestureRecognizerProxy(
@@ -38,11 +50,17 @@ private class GestureRecognizerProxy(
     private val view: UIView
 ) : NSObject(), CMPGestureRecognizerProxyProtocol {
     /**
+     * The actual hit test target, that we can conditionally forward touch events to.
+     * Needed to dynamically handle touches in both Compose and UIKit.
+     */
+    var hitTestTarget: HitTestTarget? = null
+
+    /**
      * When there at least one tracked touch, we need notify redrawer about it. It should schedule CADisplayLink which
      * affects frequency of polling UITouch events on high frequency display and forces it to match display refresh rate.
      */
-    private var touchesCount = 0
-        set(value) {
+    var touchesCount = 0
+        private set(value) {
             field = value
             updateTouchesCount(value)
         }
@@ -60,11 +78,35 @@ private class GestureRecognizerProxy(
         withEvent?.let { event ->
             touchesDelegate.onTouchesEvent(view, event, TouchesPhase.BEGAN)
         }
+
+        // If we have a hit test target, we need to forward the touch events to it.
+        hitTestTarget?.let { target ->
+            target.view.touchesBegan(
+                touches = touches,
+                withEvent = withEvent
+            )
+        }
     }
 
     override fun touchesMoved(touches: Set<*>, withEvent: UIEvent?) {
         withEvent?.let { event ->
             touchesDelegate.onTouchesEvent(view, event, TouchesPhase.MOVED)
+        }
+
+        hitTestTarget?.let { target ->
+            if (target.rectIsEqualToInitial(view)) {
+                target.view.touchesMoved(
+                    touches = touches,
+                    withEvent = withEvent
+                )
+            } else {
+                target.view.touchesCancelled(
+                    touches = touches,
+                    withEvent = withEvent
+                )
+
+                hitTestTarget = null
+            }
         }
     }
 
@@ -74,6 +116,17 @@ private class GestureRecognizerProxy(
         withEvent?.let { event ->
             touchesDelegate.onTouchesEvent(view, event, TouchesPhase.ENDED)
         }
+
+        hitTestTarget?.let { target ->
+            target.view.touchesEnded(
+                touches = touches,
+                withEvent = withEvent
+            )
+        }
+
+        if (touchesCount == 0) {
+            hitTestTarget = null
+        }
     }
 
     override fun touchesCancelled(touches: Set<*>, withEvent: UIEvent?) {
@@ -81,6 +134,17 @@ private class GestureRecognizerProxy(
 
         withEvent?.let { event ->
             touchesDelegate.onTouchesEvent(view, event, TouchesPhase.CANCELLED)
+        }
+
+        hitTestTarget?.let { target ->
+            target.view.touchesCancelled(
+                touches = touches,
+                withEvent = withEvent
+            )
+        }
+
+        if (touchesCount == 0) {
+            hitTestTarget = null
         }
     }
 }
@@ -127,6 +191,29 @@ internal class InteractionUIView(
      */
     override fun pointInside(point: CValue<CGPoint>, withEvent: UIEvent?): Boolean {
         return inBounds(point) && touchesDelegate.pointInside(point, withEvent)
+    }
+
+    override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
+        val view = super.hitTest(point, withEvent) ?: return null
+
+        gestureRecognizerProxy?.let { proxy ->
+            // Multitarget touches forwarding is not supported.
+            if (proxy.touchesCount > 0) {
+                return@let
+            }
+
+            if (view == this) {
+                proxy.hitTestTarget = null
+            } else {
+                proxy.hitTestTarget = HitTestTarget(
+                    view = view,
+                    initialRect = view.convertRect(view.bounds, toView = this)
+                )
+            }
+        }
+
+        // hitTest is called after pointInside, so we can safely return this here
+        return this
     }
 
     /**
