@@ -21,8 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
-import androidx.build.RunApiTasks
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -64,8 +63,6 @@ dependencies {
     androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-livedata-core"))
     androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-viewmodel"))
     androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-viewmodel-savedstate"))
-
-    samples(projectOrArtifact(":hilt:hilt-navigation-compose-samples"))
 }
 
 hilt {
@@ -74,11 +71,11 @@ hilt {
 
 androidx {
     name = "Navigation Compose Hilt Integration"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     mavenVersion = LibraryVersions.HILT_NAVIGATION_COMPOSE
     inceptionYear = "2021"
     description = "Navigation Compose Hilt Integration"
-    runApiTasks = new RunApiTasks.Yes()
     legacyDisableKotlinStrictApiMode = true
     metalavaK2UastEnabled = true
+    samples(projectOrArtifact(":hilt:hilt-navigation-compose-samples"))
 }

@@ -42,6 +42,7 @@ internal constructor(
     /** Converts a raw type [T] to a resulting type [R]. Internal for SDK use only. */
     internal sealed interface Converter<in T : Any, out R : Any> : (T) -> R {
         fun interface FromLong<out R : Any> : Converter<Long, R>
+
         fun interface FromDouble<out R : Any> : Converter<Double, R>
     }
 
@@ -117,19 +118,6 @@ internal constructor(
         ): AggregateMetric<Long> =
             AggregateMetric(
                 converter = Converter.FromLong { it },
-                dataTypeName = dataTypeName,
-                aggregationType = aggregationType,
-                aggregationField = fieldName,
-            )
-
-        internal fun <R : Any> longMetric(
-            dataTypeName: String,
-            aggregationType: AggregationType,
-            fieldName: String,
-            mapper: (Long) -> R,
-        ): AggregateMetric<R> =
-            AggregateMetric(
-                converter = Converter.FromLong(mapper),
                 dataTypeName = dataTypeName,
                 aggregationType = aggregationType,
                 aggregationField = fieldName,

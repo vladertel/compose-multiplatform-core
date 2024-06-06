@@ -22,6 +22,8 @@ import android.os.Build
 import android.util.Size
 import android.view.TextureView
 import android.widget.FrameLayout
+import androidx.camera.viewfinder.surface.ViewfinderSurfaceRequest
+import androidx.camera.viewfinder.surface.populateFromCharacteristics
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
@@ -34,6 +36,7 @@ import java.util.concurrent.TimeoutException
 import org.junit.After
 import org.junit.Assume
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -48,9 +51,9 @@ class TextureViewImplementationTest {
     private val surfaceRequest: ViewfinderSurfaceRequest
         get() {
             if (_surfaceRequest == null) {
-                val cameraManager = ApplicationProvider.getApplicationContext<Context>()
-                    .getSystemService(Context.CAMERA_SERVICE
-                ) as CameraManager
+                val cameraManager =
+                    ApplicationProvider.getApplicationContext<Context>()
+                        .getSystemService(Context.CAMERA_SERVICE) as CameraManager
                 val cameraIds = cameraManager.cameraIdList
                 Assume.assumeTrue("No cameras found on device.", cameraIds.isNotEmpty())
                 val cameraId = cameraIds[0]
@@ -76,88 +79,83 @@ class TextureViewImplementationTest {
         if (_surfaceRequest != null) {
             _surfaceRequest!!.willNotProvideSurface()
             // Ensure all successful requests have their returned future finish.
-            _surfaceRequest!!.viewfinderSurface.close()
             _surfaceRequest = null
         }
     }
 
+    @Ignore // b/324125795
     @LargeTest
     @Test(expected = TimeoutException::class)
-    @Throws(
-        Exception::class
-    )
+    @Throws(Exception::class)
     fun doNotProvideSurface_ifSurfaceTextureNotAvailableYet() {
         val request = surfaceRequest
         implementation!!.onSurfaceRequested(request)
-        request.viewfinderSurface.surface[2, TimeUnit.SECONDS]
+        request.getSurfaceAsync()[2, TimeUnit.SECONDS]
     }
 
+    @Ignore // b/324125795
     @Test
     @Throws(Exception::class)
     fun provideSurface_ifSurfaceTextureAvailable() {
         val surfaceRequest = surfaceRequest
         implementation!!.onSurfaceRequested(surfaceRequest)
-        val surfaceListenableFuture = surfaceRequest.viewfinderSurface.surface
-        implementation!!.mTextureView
+        val surfaceListenableFuture = surfaceRequest.getSurfaceAsync()
+        implementation!!
+            .mTextureView
             ?.surfaceTextureListener!!
             .onSurfaceTextureAvailable(surfaceTexture!!, ANY_WIDTH, ANY_HEIGHT)
         val surface = surfaceListenableFuture.get()
         Truth.assertThat(surface).isNotNull()
     }
 
+    @Ignore // b/324125795
     @Test
     @Throws(Exception::class)
     fun doNotDestroySurface_whenSurfaceTextureBeingDestroyed_andCameraUsingSurface() {
         val surfaceRequest = surfaceRequest
         implementation!!.onSurfaceRequested(surfaceRequest)
-        val surfaceListenableFuture = surfaceRequest.viewfinderSurface.surface
+        val surfaceListenableFuture = surfaceRequest.getSurfaceAsync()
         val surfaceTextureListener = implementation!!.mTextureView?.surfaceTextureListener
         surfaceTextureListener!!.onSurfaceTextureAvailable(surfaceTexture!!, ANY_WIDTH, ANY_HEIGHT)
         surfaceListenableFuture.get()
         Truth.assertThat(implementation!!.mSurfaceReleaseFuture).isNotNull()
-        Truth.assertThat(
-            surfaceTextureListener.onSurfaceTextureDestroyed(
-                surfaceTexture!!
-            )
-        ).isFalse()
+        Truth.assertThat(surfaceTextureListener.onSurfaceTextureDestroyed(surfaceTexture!!))
+            .isFalse()
     }
 
+    @Ignore // b/324125795
     @Test
     @LargeTest
     @Throws(Exception::class)
     fun destroySurface_whenSurfaceTextureBeingDestroyed_andCameraNotUsingSurface() {
         val surfaceRequest = surfaceRequest
         implementation!!.onSurfaceRequested(surfaceRequest)
-        val deferrableSurface = surfaceRequest.viewfinderSurface
-        val surfaceListenableFuture = deferrableSurface.surface
+        val surfaceListenableFuture = surfaceRequest.getSurfaceAsync()
         val surfaceTextureListener = implementation!!.mTextureView?.surfaceTextureListener
         surfaceTextureListener!!.onSurfaceTextureAvailable(surfaceTexture!!, ANY_WIDTH, ANY_HEIGHT)
         surfaceListenableFuture.get()
-        deferrableSurface.close()
+        surfaceRequest.markSurfaceSafeToRelease()
 
         // Wait enough time for surfaceReleaseFuture's listener to be called
         Thread.sleep(1000)
         Truth.assertThat(implementation!!.mSurfaceReleaseFuture).isNull()
-        Truth.assertThat(
-            surfaceTextureListener.onSurfaceTextureDestroyed(
-                surfaceTexture!!
-            )
-        ).isTrue()
+        Truth.assertThat(surfaceTextureListener.onSurfaceTextureDestroyed(surfaceTexture!!))
+            .isTrue()
     }
 
+    @Ignore // b/324125795
     @Test
     @LargeTest
     @Throws(Exception::class)
     fun releaseSurfaceTexture_afterSurfaceTextureDestroyed_andCameraNoLongerUsingSurface() {
         val surfaceRequest = surfaceRequest
         implementation!!.onSurfaceRequested(surfaceRequest)
-        val deferrableSurface = surfaceRequest.viewfinderSurface
-        val surfaceListenableFuture = deferrableSurface.surface
+        val surfaceListenableFuture = surfaceRequest.getSurfaceAsync()
         val surfaceTextureListener = implementation!!.mTextureView?.surfaceTextureListener
         surfaceTextureListener!!.onSurfaceTextureAvailable(surfaceTexture!!, ANY_WIDTH, ANY_HEIGHT)
         surfaceListenableFuture.get()
         surfaceTextureListener.onSurfaceTextureDestroyed(surfaceTexture!!)
-        deferrableSurface.close()
+        surfaceRequest.markSurfaceSafeToRelease()
 
         // Wait enough time for surfaceReleaseFuture's listener to be called
         Thread.sleep(1000)
@@ -167,6 +165,7 @@ class TextureViewImplementationTest {
         }
     }
 
+    @Ignore // b/324125795
     @Test
     @LargeTest
     @Throws(Exception::class)
@@ -174,7 +173,7 @@ class TextureViewImplementationTest {
         val surfaceRequest = surfaceRequest
         implementation!!.onSurfaceRequested(surfaceRequest)
         // Cancel the request from the camera side
-        surfaceRequest.viewfinderSurface.surface.cancel(true)
+        surfaceRequest.getSurfaceAsync().cancel(true)
 
         // Wait enough time for mCompleter's cancellation listener to be called
         Thread.sleep(1000)
@@ -182,6 +181,7 @@ class TextureViewImplementationTest {
         Truth.assertThat(implementation!!.mSurfaceReleaseFuture).isNull()
     }
 
+    @Ignore // b/324125795
     @Test
     @LargeTest
     @Throws(Exception::class)
@@ -193,26 +193,24 @@ class TextureViewImplementationTest {
         surfaceTextureListener!!.onSurfaceTextureAvailable(surfaceTexture!!, ANY_WIDTH, ANY_HEIGHT)
         // Wait enough time for surfaceReleaseFuture's listener to be called.
         Thread.sleep(1000)
-        Truth.assertThat(
-            surfaceTextureListener.onSurfaceTextureDestroyed(
-                surfaceTexture!!
-            )
-        ).isTrue()
+        Truth.assertThat(surfaceTextureListener.onSurfaceTextureDestroyed(surfaceTexture!!))
+            .isTrue()
         Truth.assertThat(implementation!!.mSurfaceTexture).isNull()
     }
 
+    @Ignore // b/324125795
     @Test
     fun doNotCreateTextureView_beforeSensorOutputSizeKnown() {
         Truth.assertThat(parent!!.childCount).isEqualTo(0)
     }
 
+    @Ignore // b/324125795
     @Test
     @Throws(Exception::class)
     fun resetSurfaceTextureOnDetachAndAttachWindow() {
         val surfaceRequest = surfaceRequest
         implementation!!.onSurfaceRequested(surfaceRequest)
-        val deferrableSurface = surfaceRequest.viewfinderSurface
-        val surfaceListenableFuture = deferrableSurface.surface
+        val surfaceListenableFuture = surfaceRequest.getSurfaceAsync()
         val surfaceTextureListener = implementation!!.mTextureView?.surfaceTextureListener
         surfaceTextureListener!!.onSurfaceTextureAvailable(surfaceTexture!!, ANY_WIDTH, ANY_HEIGHT)
         surfaceListenableFuture.get()
@@ -224,20 +222,20 @@ class TextureViewImplementationTest {
         Truth.assertThat(implementation!!.mTextureView?.surfaceTexture).isEqualTo(surfaceTexture)
     }
 
+    @Ignore // b/324125795
     @Test
     @LargeTest
     @Throws(Exception::class)
     fun releaseDetachedSurfaceTexture_whenDeferrableSurfaceClose() {
         val surfaceRequest = surfaceRequest
         implementation!!.onSurfaceRequested(surfaceRequest)
-        val deferrableSurface = surfaceRequest.viewfinderSurface
-        val surfaceListenableFuture = deferrableSurface.surface
+        val surfaceListenableFuture = surfaceRequest.getSurfaceAsync()
         val surfaceTextureListener = implementation!!.mTextureView?.surfaceTextureListener
         surfaceTextureListener!!.onSurfaceTextureAvailable(surfaceTexture!!, ANY_WIDTH, ANY_HEIGHT)
         surfaceListenableFuture.get()
         surfaceTextureListener.onSurfaceTextureDestroyed(surfaceTexture!!)
         Truth.assertThat(implementation!!.mDetachedSurfaceTexture).isNotNull()
-        deferrableSurface.close()
+        surfaceRequest.markSurfaceSafeToRelease()
 
         // Wait enough time for surfaceReleaseFuture's listener to be called
         Thread.sleep(1000)
@@ -248,6 +246,7 @@ class TextureViewImplementationTest {
         Truth.assertThat(implementation!!.mDetachedSurfaceTexture).isNull()
     }
 
+    @Ignore // b/324125795
     @Test
     fun keepOnlyLatestTextureView_whenGetSurfaceProviderCalledMultipleTimes() {
         implementation!!.onSurfaceRequested(surfaceRequest)

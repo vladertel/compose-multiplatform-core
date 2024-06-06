@@ -21,20 +21,15 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.KmpPlatformsKt
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeCompile
 import org.jetbrains.kotlin.konan.target.Family
 
 plugins {
     id("AndroidXPlugin")
 }
-
-def macEnabled = KmpPlatformsKt.enableMac(project)
-def linuxEnabled = KmpPlatformsKt.enableLinux(project)
 
 androidXMultiplatform {
     jvm {
@@ -75,29 +70,23 @@ androidXMultiplatform {
             }
         }
 
-        if (macEnabled || linuxEnabled) {
-            nativeMain {
-                dependsOn(commonMain)
-            }
-
-            nativeTest {
-                dependsOn(commonTest)
-            }
+        nativeMain {
+            dependsOn(commonMain)
         }
 
-        if (macEnabled) {
-            darwinMain {
-                dependsOn(nativeMain)
-            }
+        nativeTest {
+            dependsOn(commonTest)
         }
 
-        if (linuxEnabled) {
-            linuxMain {
-                dependsOn(nativeMain)
-            }
+        darwinMain {
+            dependsOn(nativeMain)
         }
 
-        targets.all { target ->
+        linuxMain {
+            dependsOn(nativeMain)
+        }
+
+        targets.configureEach { target ->
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     def konanTargetFamily = target.konanTarget.family

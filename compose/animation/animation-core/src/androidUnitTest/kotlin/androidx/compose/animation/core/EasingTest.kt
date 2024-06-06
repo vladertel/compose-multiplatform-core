@@ -20,6 +20,7 @@ import androidx.compose.ui.util.floatFromBits
 import com.google.common.truth.Truth.assertThat
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
+import kotlin.math.ulp
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,6 +28,9 @@ import org.junit.runners.JUnit4
 
 @RunWith(JUnit4::class)
 class EasingTest {
+    private val ZeroEpsilon = -(1.0f.ulp)
+    private val OneEpsilon = 1.0f + 1.0f.ulp
+
     @Test
     fun cubicBezierStartsAt0() {
         val easing = FastOutSlowInEasing
@@ -36,7 +40,19 @@ class EasingTest {
     @Test
     fun cubicBezierEndsAt1() {
         val easing = FastOutLinearInEasing
-        assertThat(easing.transform(1f) == 1f)
+        assertThat(easing.transform(1f)).isEqualTo(1.0f)
+    }
+
+    @Test
+    fun cubicBezierDoesntExceed1() {
+        val easing = CubicBezierEasing(0f, 0f, 0.15f, 1f)
+        assertThat(easing.transform(0.999999f) <= 1.0f).isTrue()
+    }
+
+    @Test
+    fun cubicBezierDoesExceed1() {
+        val easing = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1.0f)
+        assertThat(easing.transform(0.6f)).isGreaterThan(1.0f)
     }
 
     @Test
@@ -68,20 +84,21 @@ class EasingTest {
     fun canSolveCubicForSmallFractions() {
         val curve = CubicBezierEasing(0.3f, 0.0f, 0.7f, 1.0f)
 
-        val testValues = intArrayOf(
-            0x3e800000, // 0.25f
-            0x3e000000, // 0.125f
-            0x3d800000, // 0.0625f
-            0x3a800000, // 0.0009765625f
-            0x36000000, // 0.0000019073486328125f
-            0x34800000, // 2.384185791015625e-7f
-            // Values from here are below the epsilon we use in our computations
-            0x34000000, // 1.1920928955078125e-7f
-            0x34210fb0, // 1.50000005305628292263e-7f
-            0x33800000, // 5.9604644775390625e-8f
-            0x33000000, // 2.98023223876953125e-8f
-            0x00000000, // 0.0f
-        )
+        val testValues =
+            intArrayOf(
+                0x3e800000, // 0.25f
+                0x3e000000, // 0.125f
+                0x3d800000, // 0.0625f
+                0x3a800000, // 0.0009765625f
+                0x36000000, // 0.0000019073486328125f
+                0x34800000, // 2.384185791015625e-7f
+                // Values from here are below the epsilon we use in our computations
+                0x34000000, // 1.1920928955078125e-7f
+                0x34210fb0, // 1.50000005305628292263e-7f
+                0x33800000, // 5.9604644775390625e-8f
+                0x33000000, // 2.98023223876953125e-8f
+                0x00000000, // 0.0f
+            )
 
         for (i in testValues) {
             val t = curve.transform(floatFromBits(i))
@@ -96,7 +113,7 @@ class EasingTest {
         // Test the last 16 ulps until 1.0f
         for (i in 0x3f7ffff0..0x3f7fffff) {
             val t = curve.transform(floatFromBits(i))
-            assertTrue(t in 0.0f..1.0f)
+            assertTrue(t in -ZeroEpsilon..OneEpsilon)
         }
     }
 }

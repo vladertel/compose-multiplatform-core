@@ -74,7 +74,7 @@ class LazyListSnapLayoutInfoProviderTest(orientation: Orientation) :
 
         rule.runOnIdle {
             assertEquals(
-                layoutInfoProvider.calculateSnappingOffset(0f).roundToInt(),
+                layoutInfoProvider.calculateSnapOffset(0f).roundToInt(),
                 state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 100 }?.offset ?: 0
             )
         }
@@ -100,12 +100,13 @@ class LazyListSnapLayoutInfoProviderTest(orientation: Orientation) :
         rule.mainClock.advanceTimeUntil { state.firstVisibleItemScrollOffset != 0 } // apply scroll
 
         rule.runOnIdle {
-            val offset = state
-                .layoutInfo
-                .visibleItemsInfo
-                .firstOrNull { it.index == state.firstVisibleItemIndex + 1 }?.offset
+            val offset =
+                state.layoutInfo.visibleItemsInfo
+                    .firstOrNull { it.index == state.firstVisibleItemIndex + 1 }
+                    ?.offset
             assertEquals(
-                layoutInfoProvider.calculateSnappingOffset(2 * minVelocityThreshold.toFloat())
+                layoutInfoProvider
+                    .calculateSnapOffset(2 * minVelocityThreshold.toFloat())
                     .roundToInt(),
                 offset ?: 0
             )
@@ -132,12 +133,13 @@ class LazyListSnapLayoutInfoProviderTest(orientation: Orientation) :
         rule.mainClock.advanceTimeUntil { state.firstVisibleItemScrollOffset != 0 } // apply scroll
 
         rule.runOnIdle {
-            val offset = state
-                .layoutInfo
-                .visibleItemsInfo
-                .firstOrNull { it.index == state.firstVisibleItemIndex }?.offset
+            val offset =
+                state.layoutInfo.visibleItemsInfo
+                    .firstOrNull { it.index == state.firstVisibleItemIndex }
+                    ?.offset
             assertEquals(
-                layoutInfoProvider.calculateSnappingOffset(-2 * minVelocityThreshold.toFloat())
+                layoutInfoProvider
+                    .calculateSnapOffset(-2 * minVelocityThreshold.toFloat())
                     .roundToInt(),
                 offset ?: 0
             )
@@ -150,9 +152,7 @@ class LazyListSnapLayoutInfoProviderTest(orientation: Orientation) :
             state = state,
             flingBehavior = rememberSnapFlingBehavior(layoutInfoProvider)
         ) {
-            items(200) {
-                Box(modifier = Modifier.size(itemSizeDp))
-            }
+            items(200) { Box(modifier = Modifier.size(itemSizeDp)) }
         }
     }
 

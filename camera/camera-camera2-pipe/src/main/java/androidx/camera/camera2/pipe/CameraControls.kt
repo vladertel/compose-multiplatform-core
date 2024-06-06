@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-
 package androidx.camera.camera2.pipe
 
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
-import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 import androidx.camera.camera2.pipe.Result3A.Status
 
@@ -31,6 +28,15 @@ import androidx.camera.camera2.pipe.Result3A.Status
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @JvmInline
 value class AfMode(val value: Int) {
+    fun isOn(): Boolean {
+        return value != CameraMetadata.CONTROL_AF_MODE_OFF
+    }
+
+    fun isContinuous(): Boolean {
+        return value == CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_VIDEO ||
+            value == CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+    }
+
     companion object {
         val OFF = AfMode(CameraMetadata.CONTROL_AF_MODE_OFF)
         val AUTO = AfMode(CameraMetadata.CONTROL_AF_MODE_AUTO)
@@ -41,8 +47,7 @@ value class AfMode(val value: Int) {
 
         val values = listOf(OFF, AUTO, MACRO, CONTINUOUS_VIDEO, CONTINUOUS_PICTURE, EDOF)
 
-        @JvmStatic
-        fun fromIntOrNull(value: Int): AfMode? = values.firstOrNull { it.value == value }
+        @JvmStatic fun fromIntOrNull(value: Int): AfMode? = values.firstOrNull { it.value == value }
     }
 }
 
@@ -50,6 +55,10 @@ value class AfMode(val value: Int) {
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @JvmInline
 value class AeMode(val value: Int) {
+    fun isOn(): Boolean {
+        return value != CameraMetadata.CONTROL_AE_MODE_OFF
+    }
+
     companion object {
         val OFF = AeMode(CameraMetadata.CONTROL_AE_MODE_OFF)
         val ON = AeMode(CameraMetadata.CONTROL_AE_MODE_ON)
@@ -61,8 +70,7 @@ value class AeMode(val value: Int) {
         val values =
             listOf(OFF, ON, ON_AUTO_FLASH, ON_ALWAYS_FLASH, ON_AUTO_FLASH_REDEYE, ON_EXTERNAL_FLASH)
 
-        @JvmStatic
-        fun fromIntOrNull(value: Int): AeMode? = values.firstOrNull { it.value == value }
+        @JvmStatic fun fromIntOrNull(value: Int): AeMode? = values.firstOrNull { it.value == value }
     }
 }
 
@@ -70,6 +78,10 @@ value class AeMode(val value: Int) {
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @JvmInline
 value class AwbMode(val value: Int) {
+    fun isOn(): Boolean {
+        return value != CameraMetadata.CONTROL_AWB_MODE_OFF
+    }
+
     companion object {
         val OFF = AwbMode(CameraMetadata.CONTROL_AWB_MODE_OFF)
         val AUTO = AwbMode(CameraMetadata.CONTROL_AWB_MODE_AUTO)
@@ -130,8 +142,8 @@ value class Lock3ABehavior private constructor(val value: Int) {
         /**
          * This requirement means that we want to lock the values for 3A immediately.
          *
-         * For AE/AWB this is achieved by asking the camera device to lock them immediately by setting
-         * [android.hardware.camera2.CaptureRequest.CONTROL_AE_LOCK],
+         * For AE/AWB this is achieved by asking the camera device to lock them immediately by
+         * setting [android.hardware.camera2.CaptureRequest.CONTROL_AE_LOCK],
          * [android.hardware.camera2.CaptureRequest.CONTROL_AWB_LOCK] to true right away.
          *
          * For AF we immediately ask the camera device to trigger AF by setting the
@@ -141,8 +153,8 @@ value class Lock3ABehavior private constructor(val value: Int) {
         val IMMEDIATE = Lock3ABehavior(1)
 
         /**
-         * Lock 3A values after their current scan is finished. If there is no active ongoing scan then
-         * the values will be locked to the current values.
+         * Lock 3A values after their current scan is finished. If there is no active ongoing scan
+         * then the values will be locked to the current values.
          */
         val AFTER_CURRENT_SCAN = Lock3ABehavior(2)
 

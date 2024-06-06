@@ -5,7 +5,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -15,9 +15,9 @@ plugins {
 
 dependencies {
     api("androidx.annotation:annotation:1.2.0")
-    api(project(":core:core"))
+    api("androidx.core:core:1.13.0")
     implementation("androidx.collection:collection:1.1.0")
-    compileOnly(projectOrArtifact(":fragment:fragment"))
+    compileOnly("androidx.fragment:fragment:1.7.0-rc02")
     compileOnly("androidx.appcompat:appcompat:1.0.1")
     implementation("androidx.dynamicanimation:dynamicanimation:1.0.0")
 
@@ -40,7 +40,7 @@ dependencies {
 }
 
 android {
-    buildTypes.all {
+    buildTypes.configureEach {
         consumerProguardFiles "proguard-rules.pro"
     }
     aaptOptions {
@@ -54,8 +54,9 @@ android {
 
 androidx {
     name = "Transition"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2016"
     description = "Android Transition Support Library"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

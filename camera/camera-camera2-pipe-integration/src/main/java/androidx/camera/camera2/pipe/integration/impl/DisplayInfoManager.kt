@@ -24,14 +24,12 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Size
 import android.view.Display
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.integration.compat.workaround.MaxPreviewSize
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Suppress("DEPRECATION") // getRealSize
 @Singleton
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class DisplayInfoManager @Inject constructor(context: Context) {
     private val MAX_PREVIEW_SIZE = Size(1920, 1080)
     private val maxPreviewSize: MaxPreviewSize = MaxPreviewSize()
@@ -73,9 +71,7 @@ class DisplayInfoManager @Inject constructor(context: Context) {
 
     private var previewSize: Size? = null
 
-    /**
-     * Update the preview size according to current display size.
-     */
+    /** Update the preview size according to current display size. */
     fun refresh() {
         previewSize = calculatePreviewSize()
     }
@@ -94,7 +90,9 @@ class DisplayInfoManager @Inject constructor(context: Context) {
     }
 
     private fun getMaxSizeDisplay(): Display {
-        lazyMaxDisplay?.let { return it }
+        lazyMaxDisplay?.let {
+            return it
+        }
 
         val displays = displayManager.displays
 
@@ -124,16 +122,14 @@ class DisplayInfoManager @Inject constructor(context: Context) {
 
         lazyMaxDisplay = maxDisplayWhenStateNotOff ?: maxDisplay
 
-        return checkNotNull(lazyMaxDisplay) {
-            "No displays found from ${displayManager.displays}!"
-        }
+        return checkNotNull(lazyMaxDisplay) { "No displays found from ${displayManager.displays}!" }
     }
 
-    /**
-     * Calculates the device's screen resolution, or MAX_PREVIEW_SIZE, whichever is smaller.
-     */
+    /** Calculates the device's screen resolution, or MAX_PREVIEW_SIZE, whichever is smaller. */
     private fun calculatePreviewSize(): Size {
-        lazyPreviewSize?.let { return it }
+        lazyPreviewSize?.let {
+            return it
+        }
 
         val displaySize = Point()
         val display: Display = defaultDisplay
@@ -141,13 +137,15 @@ class DisplayInfoManager @Inject constructor(context: Context) {
         //  is deprecated since API level 31.
         display.getRealSize(displaySize)
         var displayViewSize: Size
-        displayViewSize = if (displaySize.x > displaySize.y) {
-            Size(displaySize.x, displaySize.y)
-        } else {
-            Size(displaySize.y, displaySize.x)
-        }
-        if (displayViewSize.width * displayViewSize.height
-            > MAX_PREVIEW_SIZE.width * MAX_PREVIEW_SIZE.height
+        displayViewSize =
+            if (displaySize.x > displaySize.y) {
+                Size(displaySize.x, displaySize.y)
+            } else {
+                Size(displaySize.y, displaySize.x)
+            }
+        if (
+            displayViewSize.width * displayViewSize.height >
+                MAX_PREVIEW_SIZE.width * MAX_PREVIEW_SIZE.height
         ) {
             displayViewSize = MAX_PREVIEW_SIZE
         }

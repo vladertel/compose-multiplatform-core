@@ -23,14 +23,13 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
+import androidx.camera.viewfinder.surface.ViewfinderSurfaceRequest;
 
 /**
  * Wraps the underlying handling of the {@link android.view.Surface} used for viewfinder, which is
  * done using either a {@link android.view.TextureView} (see {@link TextureViewImplementation})
  * or a {@link android.view.SurfaceView} (see {@link SurfaceViewImplementation}).
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 abstract class ViewfinderImplementation {
 
     @NonNull protected final FrameLayout mParent;

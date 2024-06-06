@@ -25,15 +25,21 @@ import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.testutils.assertPixelColor
+import androidx.compose.testutils.assertPixels
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -72,8 +78,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalFoundationApi::class)
 class OverscrollTest {
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     @get:Rule
     val animationScaleRule: AnimationDurationScaleRule =
@@ -121,16 +126,12 @@ class OverscrollTest {
         rule.onNodeWithTag(boxTag).assertExists()
 
         rule.onNodeWithTag(boxTag).performTouchInput {
-            swipeWithVelocity(
-                center,
-                Offset(centerX + 10800, centerY),
-                endVelocity = 30000f
-            )
+            swipeWithVelocity(center, Offset(centerX + 10800, centerY), endVelocity = 30000f)
         }
 
         rule.runOnIdle {
             assertThat(controller.lastVelocity.x).isGreaterThan(0f)
-            assertThat(controller.lastNestedScrollSource).isEqualTo(NestedScrollSource.Fling)
+            assertThat(controller.lastNestedScrollSource).isEqualTo(NestedScrollSource.SideEffect)
         }
     }
 
@@ -142,10 +143,11 @@ class OverscrollTest {
             acummulatedScroll += delta
             delta
         }
-        val viewConfig = rule.setOverscrollContentAndReturnViewConfig(
-            scrollableState = scrollableState,
-            overscrollEffect = controller
-        )
+        val viewConfig =
+            rule.setOverscrollContentAndReturnViewConfig(
+                scrollableState = scrollableState,
+                overscrollEffect = controller
+            )
 
         rule.waitUntil { controller.drawCallsCount == 1 }
 
@@ -160,12 +162,10 @@ class OverscrollTest {
             assertThat(abs(acummulatedScroll - 1000f * 9 / 10)).isWithin(0.1f)
 
             assertThat(controller.lastPreScrollDelta).isEqualTo(Offset(1000f - slop, 0f))
-            assertThat(controller.lastNestedScrollSource).isEqualTo(NestedScrollSource.Drag)
+            assertThat(controller.lastNestedScrollSource).isEqualTo(NestedScrollSource.UserInput)
         }
 
-        rule.onNodeWithTag(boxTag).performTouchInput {
-            up()
-        }
+        rule.onNodeWithTag(boxTag).performTouchInput { up() }
     }
 
     @Test
@@ -180,15 +180,18 @@ class OverscrollTest {
             delta
         }
 
-        val viewConfig = rule.setOverscrollContentAndReturnViewConfig(
-            scrollableState = object : ScrollableState by scrollableState {
-                override val canScrollForward: Boolean
-                    get() = canScroll
-                override val canScrollBackward: Boolean
-                    get() = canScroll
-            },
-            overscrollEffect = controller
-        )
+        val viewConfig =
+            rule.setOverscrollContentAndReturnViewConfig(
+                scrollableState =
+                    object : ScrollableState by scrollableState {
+                        override val canScrollForward: Boolean
+                            get() = canScroll
+
+                        override val canScrollBackward: Boolean
+                            get() = canScroll
+                    },
+                overscrollEffect = controller
+            )
 
         rule.onNodeWithTag(boxTag).performTouchInput {
             down(center)
@@ -202,14 +205,12 @@ class OverscrollTest {
             assertThat(abs(acummulatedScroll - 1000f * 9 / 10)).isWithin(0.1f)
 
             assertThat(controller.lastPreScrollDelta).isEqualTo(Offset(1000f - slop, 0f))
-            assertThat(controller.lastNestedScrollSource).isEqualTo(NestedScrollSource.Drag)
+            assertThat(controller.lastNestedScrollSource).isEqualTo(NestedScrollSource.UserInput)
             controller.lastPreScrollDelta = Offset.Zero
         }
 
         // Inform scrollable that we cannot scroll anymore
-        rule.runOnIdle {
-            canScroll = false
-        }
+        rule.runOnIdle { canScroll = false }
 
         rule.onNodeWithTag(boxTag).performTouchInput {
             down(center)
@@ -232,12 +233,13 @@ class OverscrollTest {
             acummulatedScroll += delta
             delta
         }
-        val flingBehavior = object : FlingBehavior {
-            override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-                lastFlingReceived = initialVelocity
-                return initialVelocity
+        val flingBehavior =
+            object : FlingBehavior {
+                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
+                    lastFlingReceived = initialVelocity
+                    return initialVelocity
+                }
             }
-        }
         rule.setOverscrollContentAndReturnViewConfig(
             scrollableState = scrollableState,
             overscrollEffect = controller,
@@ -249,11 +251,7 @@ class OverscrollTest {
         rule.onNodeWithTag(boxTag).assertExists()
 
         rule.onNodeWithTag(boxTag).performTouchInput {
-            swipeWithVelocity(
-                center,
-                Offset(centerX + 10800, centerY),
-                endVelocity = 30000f
-            )
+            swipeWithVelocity(center, Offset(centerX + 10800, centerY), endVelocity = 30000f)
         }
 
         rule.runOnIdle {
@@ -270,10 +268,11 @@ class OverscrollTest {
             acummulatedScroll += delta
             delta
         }
-        val viewConfiguration = rule.setOverscrollContentAndReturnViewConfig(
-            scrollableState = scrollableState,
-            overscrollEffect = controller
-        )
+        val viewConfiguration =
+            rule.setOverscrollContentAndReturnViewConfig(
+                scrollableState = scrollableState,
+                overscrollEffect = controller
+            )
 
         rule.runOnIdle {
             // no down events, hence 0 animation stops
@@ -286,15 +285,15 @@ class OverscrollTest {
             up()
         }
 
-        val lastAccScroll = rule.runOnIdle {
-            assertThat(controller.isInProgressCallCount).isEqualTo(1)
-            // respect touch slop if overscroll animation is not running
-            assertThat(acummulatedScroll)
-                .isEqualTo(500f - viewConfiguration.touchSlop)
-            // pretend we're settling the overscroll animation
-            controller.animationRunning = true
-            acummulatedScroll
-        }
+        val lastAccScroll =
+            rule.runOnIdle {
+                assertThat(controller.isInProgressCallCount).isEqualTo(1)
+                // respect touch slop if overscroll animation is not running
+                assertThat(acummulatedScroll).isEqualTo(500f - viewConfiguration.touchSlop)
+                // pretend we're settling the overscroll animation
+                controller.animationRunning = true
+                acummulatedScroll
+            }
 
         rule.onNodeWithTag(boxTag).performTouchInput {
             down(center)
@@ -305,19 +304,18 @@ class OverscrollTest {
         // ignores touch slop if overscroll animation is on progress while pointer goes down
         assertThat(acummulatedScroll - lastAccScroll).isEqualTo(500f)
 
-        rule.runOnIdle {
-            assertThat(controller.isInProgressCallCount).isEqualTo(2)
-        }
+        rule.runOnIdle { assertThat(controller.isInProgressCallCount).isEqualTo(2) }
     }
 
     @Test
     fun modifierIsProducingEqualsModifiersForTheSameInput() {
         var overscrollEffect: OverscrollEffect? = null
         rule.setContent {
-            overscrollEffect = AndroidEdgeEffectOverscrollEffect(
-                LocalView.current.context,
-                OverscrollConfiguration(Color.Gray)
-            )
+            overscrollEffect =
+                AndroidEdgeEffectOverscrollEffect(
+                    LocalView.current.context,
+                    OverscrollConfiguration(Color.Gray)
+                )
         }
 
         val first = Modifier.overscroll(overscrollEffect!!)
@@ -327,50 +325,45 @@ class OverscrollTest {
 
     @OptIn(ExperimentalFoundationApi::class)
     @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
-    fun overscrollIsNotClippingTheContentWhenPulled() {
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O, maxSdkVersion = Build.VERSION_CODES.R)
+    fun glowOverscroll_doesNotClip() {
         lateinit var controller: AndroidEdgeEffectOverscrollEffect
         val tag = "container"
         rule.setContent {
             Box {
                 controller = rememberOverscrollEffect() as AndroidEdgeEffectOverscrollEffect
                 Box(
-                    Modifier
+                    Modifier.fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
                         .background(Color.Red)
                         .testTag(tag)
                 ) {
                     Box(
-                        Modifier
-                            .padding(horizontal = 10.dp)
-                            .size(10.dp)
-                            .clipScrollableContainer(Orientation.Vertical)
-                            .overscroll(controller)
-                            .drawBehind {
-                                val extraOffset = 10.dp
-                                    .roundToPx()
-                                    .toFloat()
-                                // we fill the whole parent container so we can test that
-                                // there is no clipping
-                                drawRect(
-                                    Color.Green,
-                                    Offset(-extraOffset, -extraOffset),
-                                    size = Size(
+                        Modifier.padding(10.dp).size(10.dp).overscroll(controller).drawBehind {
+                            val extraOffset = 10.dp.roundToPx().toFloat()
+                            // Draw a green box over the entire red parent container
+                            drawRect(
+                                Color.Green,
+                                Offset(-extraOffset, -extraOffset),
+                                size =
+                                    Size(
                                         size.width + extraOffset * 2,
                                         size.height + extraOffset * 2
                                     )
-                                )
-                            }
+                            )
+                        }
                     )
                 }
             }
         }
 
+        // Overscroll is not displayed, so the content should be entirely green (no clipping)
+        rule.onNodeWithTag(tag).captureToImage().assertPixels { Color.Green }
+
+        // Pull vertically down
         rule.runOnIdle {
-            val offset = Offset(0f, 5f)
-            controller.applyToScroll(
-                offset,
-                source = NestedScrollSource.Drag
-            ) { Offset.Zero }
+            val offset = Offset(x = 0f, y = 50f)
+            controller.applyToScroll(offset, source = NestedScrollSource.UserInput) { Offset.Zero }
             // we have to disable further invalidation requests as otherwise while the overscroll
             // effect is considered active (as it is in a pulled state) this will infinitely
             // schedule next invalidation right from the drawing. this will make our test infra
@@ -379,12 +372,435 @@ class OverscrollTest {
             controller.invalidationEnabled = false
         }
 
-        rule.onNodeWithTag(tag)
-            .captureToImage()
-            // if there is not clipping then the red parent is not visible
-            // but we also don't want to assert that the bg is Green as some overscroll
-            // effects can draw something else on top of this plain green background
-            .assertHasNoColor(Color.Red)
+        // We don't want to assert that the content is entirely green as the glow effect will
+        // change this, so instead we assert that no red from the parent box is visible.
+        rule.onNodeWithTag(tag).captureToImage().assertHasNoColor(Color.Red)
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+    fun stretchOverscroll_doesNotClipCrossAxis_verticalOverscroll() {
+        lateinit var controller: AndroidEdgeEffectOverscrollEffect
+        val tag = "container"
+        rule.setContent {
+            Box {
+                controller = rememberOverscrollEffect() as AndroidEdgeEffectOverscrollEffect
+                Box(
+                    Modifier.fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                        .background(Color.Red)
+                        .testTag(tag)
+                ) {
+                    Box(
+                        Modifier.padding(10.dp)
+                            .size(10.dp)
+                            // Stretch overscroll will apply the stretch to the surrounding canvas,
+                            // so add a graphics layer to get a canvas sized to the content. The
+                            // expected usage is for this to be clipScrollableContainer() or
+                            // similar, since a container that shows overscroll should clip the
+                            // main axis, but we don't use that here as we want to test the
+                            // implicit clipping behavior.
+                            .graphicsLayer()
+                            .overscroll(controller)
+                            .drawBehind {
+                                val extraOffset = 10.dp.roundToPx().toFloat()
+                                // Draw a green box over the entire red parent container
+                                drawRect(
+                                    Color.Green,
+                                    Offset(-extraOffset, -extraOffset),
+                                    size =
+                                        Size(
+                                            size.width + extraOffset * 2,
+                                            size.height + extraOffset * 2
+                                        )
+                                )
+                            }
+                    )
+                }
+            }
+        }
+
+        // Overscroll is not displayed, so the content should be entirely green (no clipping)
+        rule.onNodeWithTag(tag).captureToImage().assertPixels { Color.Green }
+
+        // Stretch vertically down
+        rule.runOnIdle {
+            val offset = Offset(x = 0f, y = 50f)
+            controller.applyToScroll(offset, source = NestedScrollSource.UserInput) { Offset.Zero }
+            // we have to disable further invalidation requests as otherwise while the overscroll
+            // effect is considered active (as it is in a pulled state) this will infinitely
+            // schedule next invalidation right from the drawing. this will make our test infra
+            // to never be switched into idle state so this fill freeze instead of proceeding
+            // to the next step in the test.
+            controller.invalidationEnabled = false
+        }
+
+        // Overscroll should be clipped vertically (to prevent stretching transparent pixels
+        // outside the content), but not horizontally, so (roughly) the top and bottom third should
+        // be red, and the center should be green. Because the stretch effect will move this a bit,
+        // we instead roughly assert by splitting the bitmap into 9 sections and asserting each
+        // center pixel.
+        // +---+---+---+
+        // | R | R | R |
+        // +---+---+---+
+        // | G | G | G |
+        // +---+---+---+
+        // | R | R | R |
+        // +---+---+---+
+        with(rule.onNodeWithTag(tag).captureToImage().toPixelMap()) {
+            // Top left, top middle, top right should be red, as we clip vertically
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 1, y = (height / 6) * 1)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 3, y = (height / 6) * 1)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 5, y = (height / 6) * 1)
+            // Middle left, middle, middle right should be green, as we don't clip horizontally
+            assertPixelColor(expected = Color.Green, x = (width / 6) * 1, y = (height / 6) * 3)
+            assertPixelColor(expected = Color.Green, x = (width / 6) * 3, y = (height / 6) * 3)
+            assertPixelColor(expected = Color.Green, x = (width / 6) * 5, y = (height / 6) * 3)
+            // Bottom left, bottom middle, bottom right should be red, as we clip vertically
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 1, y = (height / 6) * 5)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 3, y = (height / 6) * 5)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 5, y = (height / 6) * 5)
+        }
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+    fun stretchOverscroll_doesNotClipCrossAxis_horizontalOverscroll() {
+        lateinit var controller: AndroidEdgeEffectOverscrollEffect
+        val tag = "container"
+        rule.setContent {
+            Box {
+                controller = rememberOverscrollEffect() as AndroidEdgeEffectOverscrollEffect
+                Box(
+                    Modifier.fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                        .background(Color.Red)
+                        .testTag(tag)
+                ) {
+                    Box(
+                        Modifier.padding(10.dp)
+                            .size(10.dp)
+                            // Stretch overscroll will apply the stretch to the surrounding canvas,
+                            // so add a graphics layer to get a canvas sized to the content. The
+                            // expected usage is for this to be clipScrollableContainer() or
+                            // similar, since a container that shows overscroll should clip the
+                            // main axis, but we don't use that here as we want to test the
+                            // implicit clipping behavior.
+                            .graphicsLayer()
+                            .overscroll(controller)
+                            .drawBehind {
+                                val extraOffset = 10.dp.roundToPx().toFloat()
+                                // Draw a green box over the entire red parent container
+                                drawRect(
+                                    Color.Green,
+                                    Offset(-extraOffset, -extraOffset),
+                                    size =
+                                        Size(
+                                            size.width + extraOffset * 2,
+                                            size.height + extraOffset * 2
+                                        )
+                                )
+                            }
+                    )
+                }
+            }
+        }
+
+        // Overscroll is not displayed, so the content should be entirely green (no clipping)
+        rule.onNodeWithTag(tag).captureToImage().assertPixels { Color.Green }
+
+        // Stretch horizontally right
+        rule.runOnIdle {
+            val offset = Offset(x = 50f, y = 0f)
+            controller.applyToScroll(offset, source = NestedScrollSource.UserInput) { Offset.Zero }
+            // we have to disable further invalidation requests as otherwise while the overscroll
+            // effect is considered active (as it is in a pulled state) this will infinitely
+            // schedule next invalidation right from the drawing. this will make our test infra
+            // to never be switched into idle state so this fill freeze instead of proceeding
+            // to the next step in the test.
+            controller.invalidationEnabled = false
+        }
+
+        // Overscroll should be clipped horizontally (to prevent stretching transparent pixels
+        // outside the content), but not vertically, so (roughly) the left and right third should
+        // be red, and the center should be green. Because the stretch effect will move this a bit,
+        // we instead roughly assert by splitting the bitmap into 9 sections and asserting each
+        // center pixel.
+        // +---+---+---+
+        // | R | G | R |
+        // +---+---+---+
+        // | R | G | R |
+        // +---+---+---+
+        // | R | G | R |
+        // +---+---+---+
+        with(rule.onNodeWithTag(tag).captureToImage().toPixelMap()) {
+            // Top left, top middle, top right should be red, green, red
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 1, y = (height / 6) * 1)
+            assertPixelColor(expected = Color.Green, x = (width / 6) * 3, y = (height / 6) * 1)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 5, y = (height / 6) * 1)
+            // Middle left, middle, middle right should be red, green, red
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 1, y = (height / 6) * 3)
+            assertPixelColor(expected = Color.Green, x = (width / 6) * 3, y = (height / 6) * 3)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 5, y = (height / 6) * 3)
+            // Bottom left, bottom middle, bottom right should be red, green, red
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 1, y = (height / 6) * 5)
+            assertPixelColor(expected = Color.Green, x = (width / 6) * 3, y = (height / 6) * 5)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 5, y = (height / 6) * 5)
+        }
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+    fun stretchOverscroll_clipsBothAxes_overscrollInBothDirections() {
+        lateinit var controller: AndroidEdgeEffectOverscrollEffect
+        val tag = "container"
+        rule.setContent {
+            Box {
+                controller = rememberOverscrollEffect() as AndroidEdgeEffectOverscrollEffect
+                Box(
+                    Modifier.fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                        .background(Color.Red)
+                        .testTag(tag)
+                ) {
+                    Box(
+                        Modifier.padding(10.dp)
+                            .size(10.dp)
+                            // Stretch overscroll will apply the stretch to the surrounding canvas,
+                            // so add a graphics layer to get a canvas sized to the content. The
+                            // expected usage is for this to be clipScrollableContainer() or
+                            // similar, since a container that shows overscroll should clip the
+                            // main axis, but we don't use that here as we want to test the
+                            // implicit clipping behavior.
+                            .graphicsLayer()
+                            .overscroll(controller)
+                            .drawBehind {
+                                val extraOffset = 10.dp.roundToPx().toFloat()
+                                // Draw a green box over the entire red parent container
+                                drawRect(
+                                    Color.Green,
+                                    Offset(-extraOffset, -extraOffset),
+                                    size =
+                                        Size(
+                                            size.width + extraOffset * 2,
+                                            size.height + extraOffset * 2
+                                        )
+                                )
+                            }
+                    )
+                }
+            }
+        }
+
+        // Overscroll is not displayed, so the content should be entirely green (no clipping)
+        rule.onNodeWithTag(tag).captureToImage().assertPixels { Color.Green }
+
+        // Stretch horizontally and vertically to the bottom right
+        rule.runOnIdle {
+            val offset = Offset(x = 50f, y = 50f)
+            controller.applyToScroll(offset, source = NestedScrollSource.UserInput) { Offset.Zero }
+            // we have to disable further invalidation requests as otherwise while the overscroll
+            // effect is considered active (as it is in a pulled state) this will infinitely
+            // schedule next invalidation right from the drawing. this will make our test infra
+            // to never be switched into idle state so this fill freeze instead of proceeding
+            // to the next step in the test.
+            controller.invalidationEnabled = false
+        }
+
+        // Overscroll should be clipped horizontally and vertically to prevent stretching
+        // transparent pixels outside the content, so only the center area should be green.
+        // Because the stretch effect will move this a bit, we instead roughly assert by
+        // splitting the bitmap into 9 sections and asserting each center pixel.
+        // +---+---+---+
+        // | R | R | R |
+        // +---+---+---+
+        // | R | G | R |
+        // +---+---+---+
+        // | R | R | R |
+        // +---+---+---+
+        with(rule.onNodeWithTag(tag).captureToImage().toPixelMap()) {
+            // Top left, top middle, top right should be red
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 1, y = (height / 6) * 1)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 3, y = (height / 6) * 1)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 5, y = (height / 6) * 1)
+            // Middle left, middle, middle right should be red, green, red
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 1, y = (height / 6) * 3)
+            assertPixelColor(expected = Color.Green, x = (width / 6) * 3, y = (height / 6) * 3)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 5, y = (height / 6) * 3)
+            // Bottom left, bottom middle, bottom right should be red
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 1, y = (height / 6) * 5)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 3, y = (height / 6) * 5)
+            assertPixelColor(expected = Color.Red, x = (width / 6) * 5, y = (height / 6) * 5)
+        }
+    }
+
+    /**
+     * Similar to the tests above, but instead of asserting overall clipping behavior in all axes,
+     * this is a specific regression test for b/313463733 to make sure that the stretch isn't
+     * 'starting' from out of bound pixels, as this will either cause these pixels to become visible
+     * when stretching down, or if there are no pixels (transparent) there, this will cause any
+     * background underneath the content to become visible.
+     */
+    @OptIn(ExperimentalFoundationApi::class)
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+    fun stretchOverscroll_doesNotIncludeUnclippedPixels_verticalOverscroll() {
+        lateinit var controller: AndroidEdgeEffectOverscrollEffect
+        val tag = "container"
+        rule.setContent {
+            Box {
+                controller = rememberOverscrollEffect() as AndroidEdgeEffectOverscrollEffect
+                Box(
+                    Modifier.fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                        .background(Color.Red)
+                        .testTag(tag)
+                ) {
+                    Box(
+                        Modifier.size(10.dp)
+                            // Stretch overscroll will apply the stretch to the surrounding canvas,
+                            // so add a graphics layer to get a canvas sized to the content. The
+                            // expected usage is for this to be clipScrollableContainer() or
+                            // similar, since a container that shows overscroll should clip the
+                            // main axis, but we don't use that here as we want to test the
+                            // implicit clipping behavior.
+                            .graphicsLayer()
+                            .overscroll(controller)
+                            // This green background will be drawn fully occluding the red
+                            // background of the parent box with the same size
+                            .background(Color.Green)
+                    )
+                }
+            }
+        }
+
+        // Overscroll is not displayed, so the content should be entirely green
+        rule.onNodeWithTag(tag).captureToImage().assertPixels { Color.Green }
+
+        // Stretch vertically down
+        rule.runOnIdle {
+            val offset = Offset(x = 0f, y = 50f)
+            controller.applyToScroll(offset, source = NestedScrollSource.UserInput) { Offset.Zero }
+            // we have to disable further invalidation requests as otherwise while the overscroll
+            // effect is considered active (as it is in a pulled state) this will infinitely
+            // schedule next invalidation right from the drawing. this will make our test infra
+            // to never be switched into idle state so this fill freeze instead of proceeding
+            // to the next step in the test.
+            controller.invalidationEnabled = false
+        }
+
+        // We don't want to assert that the content is entirely green as the stretch effect will
+        // change this a bit, so instead we assert that no red from the parent box is visible.
+        rule.onNodeWithTag(tag).captureToImage().assertHasNoColor(Color.Red)
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+    fun stretchOverscroll_doesNotIncludeUnclippedPixels_horizontalOverscroll() {
+        lateinit var controller: AndroidEdgeEffectOverscrollEffect
+        val tag = "container"
+        rule.setContent {
+            Box {
+                controller = rememberOverscrollEffect() as AndroidEdgeEffectOverscrollEffect
+                Box(
+                    Modifier.fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                        .background(Color.Red)
+                        .testTag(tag)
+                ) {
+                    Box(
+                        Modifier.size(10.dp)
+                            // Stretch overscroll will apply the stretch to the surrounding canvas,
+                            // so add a graphics layer to get a canvas sized to the content. The
+                            // expected usage is for this to be clipScrollableContainer() or
+                            // similar, since a container that shows overscroll should clip the
+                            // main axis, but we don't use that here as we want to test the
+                            // implicit clipping behavior.
+                            .graphicsLayer()
+                            .overscroll(controller)
+                            // This green background will be drawn fully occluding the red
+                            // background of the parent box with the same size
+                            .background(Color.Green)
+                    )
+                }
+            }
+        }
+
+        // Overscroll is not displayed, so the content should be entirely green
+        rule.onNodeWithTag(tag).captureToImage().assertPixels { Color.Green }
+
+        // Stretch horizontally right
+        rule.runOnIdle {
+            val offset = Offset(x = 50f, y = 0f)
+            controller.applyToScroll(offset, source = NestedScrollSource.UserInput) { Offset.Zero }
+            // we have to disable further invalidation requests as otherwise while the overscroll
+            // effect is considered active (as it is in a pulled state) this will infinitely
+            // schedule next invalidation right from the drawing. this will make our test infra
+            // to never be switched into idle state so this fill freeze instead of proceeding
+            // to the next step in the test.
+            controller.invalidationEnabled = false
+        }
+
+        // We don't want to assert that the content is entirely green as the stretch effect will
+        // change this a bit, so instead we assert that no red from the parent box is visible.
+        rule.onNodeWithTag(tag).captureToImage().assertHasNoColor(Color.Red)
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+    fun stretchOverscroll_doesNotIncludeUnclippedPixels_overscrollInBothDirections() {
+        lateinit var controller: AndroidEdgeEffectOverscrollEffect
+        val tag = "container"
+        rule.setContent {
+            Box {
+                controller = rememberOverscrollEffect() as AndroidEdgeEffectOverscrollEffect
+                Box(
+                    Modifier.fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                        .background(Color.Red)
+                        .testTag(tag)
+                ) {
+                    Box(
+                        Modifier.size(10.dp)
+                            // Stretch overscroll will apply the stretch to the surrounding canvas,
+                            // so add a graphics layer to get a canvas sized to the content. The
+                            // expected usage is for this to be clipScrollableContainer() or
+                            // similar, since a container that shows overscroll should clip the
+                            // main axis, but we don't use that here as we want to test the
+                            // implicit clipping behavior.
+                            .graphicsLayer()
+                            .overscroll(controller)
+                            // This green background will be drawn fully occluding the red
+                            // background of the parent box with the same size
+                            .background(Color.Green)
+                    )
+                }
+            }
+        }
+
+        // Overscroll is not displayed, so the content should be entirely green
+        rule.onNodeWithTag(tag).captureToImage().assertPixels { Color.Green }
+
+        // Stretch horizontally and vertically to the bottom right
+        rule.runOnIdle {
+            val offset = Offset(x = 50f, y = 50f)
+            controller.applyToScroll(offset, source = NestedScrollSource.UserInput) { Offset.Zero }
+            // we have to disable further invalidation requests as otherwise while the overscroll
+            // effect is considered active (as it is in a pulled state) this will infinitely
+            // schedule next invalidation right from the drawing. this will make our test infra
+            // to never be switched into idle state so this fill freeze instead of proceeding
+            // to the next step in the test.
+            controller.invalidationEnabled = false
+        }
+
+        // We don't want to assert that the content is entirely green as the stretch effect will
+        // change this a bit, so instead we assert that no red from the parent box is visible.
+        rule.onNodeWithTag(tag).captureToImage().assertHasNoColor(Color.Red)
     }
 
     @OptIn(ExperimentalFoundationApi::class)
@@ -395,11 +811,7 @@ class OverscrollTest {
         rule.setContent {
             Box {
                 effect = rememberOverscrollEffect()
-                Box(
-                    Modifier
-                        .overscroll(effect)
-                        .size(0.dp)
-                )
+                Box(Modifier.overscroll(effect).size(0.dp))
             }
         }
 
@@ -408,7 +820,7 @@ class OverscrollTest {
                 val offset = Offset(-10f, -10f)
                 var offsetConsumed: Offset? = null
 
-                effect.applyToScroll(offset, NestedScrollSource.Drag) {
+                effect.applyToScroll(offset, NestedScrollSource.UserInput) {
                     offsetConsumed = offset - it
                     Offset.Zero
                 }
@@ -432,16 +844,14 @@ class OverscrollTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
     fun notAttachedEffectIsNotConsumingOffsetsAndVelocity() {
         lateinit var effect: OverscrollEffect
-        rule.setContent {
-            effect = rememberOverscrollEffect()
-        }
+        rule.setContent { effect = rememberOverscrollEffect() }
 
         rule.runOnIdle {
             repeat(2) {
                 val offset = Offset(0f, 10f)
                 var offsetConsumed: Offset? = null
 
-                effect.applyToScroll(offset, NestedScrollSource.Drag) {
+                effect.applyToScroll(offset, NestedScrollSource.UserInput) {
                     offsetConsumed = offset - it
                     Offset.Zero
                 }
@@ -475,11 +885,7 @@ class OverscrollTest {
         rule.onNodeWithTag(boxTag).assertExists()
 
         rule.onNodeWithTag(boxTag).performTouchInput {
-            swipeWithVelocity(
-                center,
-                Offset(centerX + 10800, centerY),
-                endVelocity = 30000f
-            )
+            swipeWithVelocity(center, Offset(centerX + 10800, centerY), endVelocity = 30000f)
         }
 
         rule.runOnIdle {
@@ -515,11 +921,7 @@ class OverscrollTest {
         rule.onNodeWithTag(boxTag).assertExists()
 
         rule.onNodeWithTag(boxTag).performTouchInput {
-            swipeWithVelocity(
-                center,
-                Offset(centerX, centerY + 10800),
-                endVelocity = 30000f
-            )
+            swipeWithVelocity(center, Offset(centerX, centerY + 10800), endVelocity = 30000f)
         }
 
         rule.runOnIdle {
@@ -559,9 +961,7 @@ class OverscrollTest {
             up()
         }
 
-        rule.runOnIdle {
-            assertThat(inspectableConnection.preScrollOffset.x).isEqualTo(0f)
-        }
+        rule.runOnIdle { assertThat(inspectableConnection.preScrollOffset.x).isEqualTo(0f) }
     }
 
     @Test
@@ -581,9 +981,7 @@ class OverscrollTest {
             swipeWithVelocity(center, center + Offset(100f, 100f), endVelocity = 1000f)
         }
 
-        rule.runOnIdle {
-            assertThat(inspectableConnection.preScrollVelocity.x).isEqualTo(0)
-        }
+        rule.runOnIdle { assertThat(inspectableConnection.preScrollVelocity.x).isEqualTo(0) }
     }
 
     @Test
@@ -605,9 +1003,7 @@ class OverscrollTest {
             up()
         }
 
-        rule.runOnIdle {
-            assertThat(inspectableConnection.preScrollOffset.y).isEqualTo(0f)
-        }
+        rule.runOnIdle { assertThat(inspectableConnection.preScrollOffset.y).isEqualTo(0f) }
     }
 
     @Test
@@ -629,9 +1025,7 @@ class OverscrollTest {
             }
         }
 
-        rule.runOnIdle {
-            assertThat(inspectableConnection.preScrollVelocity.y).isEqualTo(0)
-        }
+        rule.runOnIdle { assertThat(inspectableConnection.preScrollVelocity.y).isEqualTo(0) }
     }
 
     private fun assertSingleAxisValue(mainAxis: Float, crossAxis: Float) {
@@ -726,13 +1120,9 @@ class OverscrollTest {
             assertThat(controller.lastOverscrollDelta).isEqualTo(Offset.Zero)
         }
 
-        rule.onNodeWithTag(boxTag).performTouchInput {
-            up()
-        }
+        rule.onNodeWithTag(boxTag).performTouchInput { up() }
 
-        rule.runOnIdle {
-            consumeOnlyHalf = true
-        }
+        rule.runOnIdle { consumeOnlyHalf = true }
 
         rule.onNodeWithTag(boxTag).performTouchInput {
             down(center)
@@ -744,12 +1134,10 @@ class OverscrollTest {
             assertThat(controller.lastInitialDragDelta.y).isZero()
             assertThat(controller.lastOverscrollDelta.x)
                 .isEqualTo(controller.lastInitialDragDelta.x / 2)
-            assertThat(controller.lastNestedScrollSource).isEqualTo(NestedScrollSource.Drag)
+            assertThat(controller.lastNestedScrollSource).isEqualTo(NestedScrollSource.UserInput)
         }
 
-        rule.onNodeWithTag(boxTag).performTouchInput {
-            up()
-        }
+        rule.onNodeWithTag(boxTag).performTouchInput { up() }
 
         rule.runOnIdle {
             assertThat(controller.lastVelocity.x).isWithin(0.01f).of(0f)
@@ -767,8 +1155,7 @@ class OverscrollTest {
             val scrollableState = ScrollableState { delta -> delta }
             Box(Modifier.nestedScroll(NoOpConnection)) {
                 Box(
-                    Modifier
-                        .testTag(boxTag)
+                    Modifier.testTag(boxTag)
                         .size(300.dp)
                         .overscroll(overscrollController)
                         .scrollable(
@@ -794,17 +1181,14 @@ class OverscrollTest {
         var drawCount = 0
         rule.setContent {
             Spacer(
-                modifier = Modifier.testTag(boxTag)
-                    .size(100.dp)
-                    .overscroll(ScrollableDefaults.overscrollEffect())
-                    .drawBehind {
-                        drawCount++
-                    }
+                modifier =
+                    Modifier.testTag(boxTag)
+                        .size(100.dp)
+                        .overscroll(ScrollableDefaults.overscrollEffect())
+                        .drawBehind { drawCount++ }
             )
         }
-        rule.runOnIdle {
-            assertEquals(1, drawCount)
-        }
+        rule.runOnIdle { assertEquals(1, drawCount) }
     }
 
     @OptIn(ExperimentalTestApi::class)
@@ -818,8 +1202,7 @@ class OverscrollTest {
             val scrollableState = ScrollableState { delta -> delta }
             Box(Modifier.nestedScroll(NoOpConnection)) {
                 Box(
-                    Modifier
-                        .testTag(boxTag)
+                    Modifier.testTag(boxTag)
                         .size(300.dp)
                         .overscroll(overscrollController)
                         .scrollable(
@@ -861,8 +1244,7 @@ private fun ComposeContentTestRule.setOverscrollContentAndReturnViewConfig(
         viewConfiguration = LocalViewConfiguration.current
         Box(Modifier.nestedScroll(inspectableConnection)) {
             Box(
-                Modifier
-                    .testTag("box")
+                Modifier.testTag("box")
                     .size(300.dp)
                     .overscroll(overscrollEffect)
                     .scrollable(
@@ -882,9 +1264,9 @@ private fun ImageBitmap.assertHasNoColor(color: Color) {
     val pixel = toPixelMap()
     for (x in 0 until width) {
         for (y in 0 until height) {
-            assertWithMessage(
-                "Pixel at [$x,$y] was equal to $color"
-            ).that(pixel[x, y]).isNotEqualTo(color)
+            assertWithMessage("Pixel at [$x,$y] was equal to $color")
+                .that(pixel[x, y])
+                .isNotEqualTo(color)
         }
     }
 }
@@ -934,7 +1316,5 @@ private class OffsetOverscrollEffectCounter : OverscrollEffect {
     }
 
     override val isInProgress: Boolean = false
-    override val effectModifier: Modifier = Modifier.offset {
-        IntOffset(x = 0, y = 0)
-    }
+    override val effectModifier: Modifier = Modifier.offset { IntOffset(x = 0, y = 0) }
 }

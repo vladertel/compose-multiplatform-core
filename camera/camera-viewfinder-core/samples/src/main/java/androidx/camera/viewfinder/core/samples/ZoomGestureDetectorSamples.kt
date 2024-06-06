@@ -21,6 +21,7 @@ import android.view.MotionEvent
 import androidx.annotation.Sampled
 import androidx.camera.core.Camera
 import androidx.camera.viewfinder.core.ZoomGestureDetector
+import androidx.camera.viewfinder.core.ZoomGestureDetector.ZoomEvent
 import kotlin.math.max
 import kotlin.math.min
 
@@ -31,28 +32,27 @@ private lateinit var camera: Camera
 
 @Sampled
 fun onTouchEventSample(event: MotionEvent): Boolean {
-    val zoomGestureDetector = ZoomGestureDetector(context) { type, detector ->
-        when (type) {
-            ZoomGestureDetector.ZOOM_GESTURE_MOVE -> {
-                val zoomState = camera.cameraInfo.zoomState.value!!
-                val ratio = zoomState.zoomRatio * detector.scaleFactor
-                val minRatio = zoomState.minZoomRatio
-                val maxRatio = zoomState.maxZoomRatio
-                val clampedRatio = min(max(ratio, minRatio), maxRatio)
-                camera.cameraControl.setZoomRatio(clampedRatio)
+    val zoomGestureDetector =
+        ZoomGestureDetector(context) { zoomEvent ->
+            when (zoomEvent) {
+                is ZoomEvent.Move -> {
+                    val zoomState = camera.cameraInfo.zoomState.value!!
+                    val ratio = zoomState.zoomRatio * zoomEvent.scaleFactor
+                    val minRatio = zoomState.minZoomRatio
+                    val maxRatio = zoomState.maxZoomRatio
+                    val clampedRatio = min(max(ratio, minRatio), maxRatio)
+                    camera.cameraControl.setZoomRatio(clampedRatio)
+                }
+                is ZoomEvent.Begin -> {
+                    // Handle the begin event. For example, determine whether this gesture
+                    // should be processed further.
+                }
+                is ZoomEvent.End -> {
+                    // Handle the end event. For example, show a UI indicator.
+                }
             }
-
-            ZoomGestureDetector.ZOOM_GESTURE_BEGIN -> {
-                // Handle the begin event. For example, determine whether this gesture
-                // should be processed further.
-            }
-
-            ZoomGestureDetector.ZOOM_GESTURE_END -> {
-                // Handle the end event. For example, show a UI indicator.
-            }
+            true
         }
-        true
-    }
 
     return zoomGestureDetector.onTouchEvent(event)
 }

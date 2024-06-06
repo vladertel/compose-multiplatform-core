@@ -21,13 +21,13 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
     id("com.android.library")
     id("kotlin-android")
+    alias(libs.plugins.kotlinSerialization)
 }
 
 dependencies {
@@ -37,6 +37,7 @@ dependencies {
     api("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
     api("androidx.annotation:annotation-experimental:1.4.0")
     implementation('androidx.collection:collection:1.1.0')
+    implementation(libs.kotlinSerializationCore)
 
     api(libs.kotlinStdlib)
     androidTestImplementation(projectOrArtifact(":lifecycle:lifecycle-runtime-testing"))
@@ -68,8 +69,9 @@ android {
 
 androidx {
     name = "Navigation Runtime"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2017"
     description = "Android Navigation-Runtime"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

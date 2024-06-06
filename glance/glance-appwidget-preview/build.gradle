@@ -43,8 +43,10 @@ dependencies {
     api(project(":glance:glance-appwidget"))
 
     androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.kotlinTest)
     androidTestImplementation(libs.testRunner)
     androidTestImplementation(libs.testRules)
+    androidTestImplementation(libs.truth)
 }
 
 android {
@@ -57,9 +59,9 @@ android {
 androidx {
     name = "Glance AppWidget Preview"
     type = LibraryType.PUBLISHED_LIBRARY
-    mavenVersion = LibraryVersions.GLANCE_PREVIEW
     inceptionYear = "2022"
     description = "Glance tooling library. This library provides the API required for the " +
             "GlanceAppWidget components and its Glance @Composable to be previewable in the IDE."
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

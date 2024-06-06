@@ -18,33 +18,24 @@ package androidx.room
 
 import android.os.CancellationSignal
 import androidx.annotation.RestrictTo
+import androidx.room.coroutines.createFlow as createFlowCommon
+import androidx.room.util.getCoroutineContext
 import java.util.concurrent.Callable
-import kotlin.coroutines.coroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 
-/**
- * A helper class for supporting Kotlin Coroutines in Room.
- *
- */
+/** A helper class for supporting Kotlin Coroutines in Room. */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 public class CoroutinesRoom private constructor() {
 
     public companion object {
 
         @JvmStatic
+        @Deprecated("No longer called by generated implementation")
         public suspend fun <R> execute(
             db: RoomDatabase,
             inTransaction: Boolean,
@@ -54,17 +45,12 @@ public class CoroutinesRoom private constructor() {
                 return callable.call()
             }
 
-            // Use the transaction dispatcher if we are on a transaction coroutine, otherwise
-            // use the database dispatchers.
-            val context = coroutineContext[TransactionElement]?.transactionDispatcher
-                ?: if (inTransaction) db.transactionDispatcher else db.getQueryDispatcher()
-            return withContext(context) {
-                callable.call()
-            }
+            val context = db.getCoroutineContext(inTransaction)
+            return withContext(context) { callable.call() }
         }
 
-        @OptIn(DelicateCoroutinesApi::class)
         @JvmStatic
+        @Deprecated("No longer called by generated implementation")
         public suspend fun <R> execute(
             db: RoomDatabase,
             inTransaction: Boolean,
@@ -75,19 +61,17 @@ public class CoroutinesRoom private constructor() {
                 return callable.call()
             }
 
-            // Use the transaction dispatcher if we are on a transaction coroutine, otherwise
-            // use the database dispatchers.
-            val context = coroutineContext[TransactionElement]?.transactionDispatcher
-                ?: if (inTransaction) db.transactionDispatcher else db.getQueryDispatcher()
+            val context = db.getCoroutineContext(inTransaction)
             return suspendCancellableCoroutine<R> { continuation ->
-                val job = GlobalScope.launch(context) {
-                    try {
-                        val result = callable.call()
-                        continuation.resume(result)
-                    } catch (exception: Throwable) {
-                        continuation.resumeWithException(exception)
+                val job =
+                    db.getCoroutineScope().launch(context) {
+                        try {
+                            val result = callable.call()
+                            continuation.resume(result)
+                        } catch (exception: Throwable) {
+                            continuation.resumeWithException(exception)
+                        }
                     }
-                }
                 continuation.invokeOnCancellation {
                     cancellationSignal?.cancel()
                     job.cancel()
@@ -96,60 +80,13 @@ public class CoroutinesRoom private constructor() {
         }
 
         @JvmStatic
+        @Deprecated("No longer called by generated implementation")
         public fun <R> createFlow(
             db: RoomDatabase,
             inTransaction: Boolean,
             tableNames: Array<String>,
             callable: Callable<R>
-        ): Flow<@JvmSuppressWildcards R> = flow {
-            coroutineScope {
-                // Observer channel receives signals from the invalidation tracker to emit queries.
-                val observerChannel = Channel<Unit>(Channel.CONFLATED)
-                val observer = object : InvalidationTracker.Observer(tableNames) {
-                    override fun onInvalidated(tables: Set<String>) {
-                        observerChannel.trySend(Unit)
-                    }
-                }
-                observerChannel.trySend(Unit) // Initial signal to perform first query.
-                val queryContext = coroutineContext[TransactionElement]?.transactionDispatcher
-                    ?: if (inTransaction) db.transactionDispatcher else db.getQueryDispatcher()
-                val resultChannel = Channel<R>()
-                launch(queryContext) {
-                    db.invalidationTracker.addObserver(observer)
-                    try {
-                        // Iterate until cancelled, transforming observer signals to query results
-                        // to be emitted to the flow.
-                        for (signal in observerChannel) {
-                            val result = callable.call()
-                            resultChannel.send(result)
-                        }
-                    } finally {
-                        db.invalidationTracker.removeObserver(observer)
-                    }
-                }
-
-                emitAll(resultChannel)
-            }
-        }
+        ): Flow<@JvmSuppressWildcards R> =
+            createFlowCommon(db, inTransaction, tableNames) { callable.call() }
     }
 }
-
-/**
- * Gets the query coroutine dispatcher.
- *
- */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-public fun RoomDatabase.getQueryDispatcher(): CoroutineDispatcher {
-    return backingFieldMap.getOrPut("QueryDispatcher") {
-        queryExecutor.asCoroutineDispatcher()
-    } as CoroutineDispatcher
-}
-
-/**
- * Gets the transaction coroutine dispatcher.
- *
- */
-internal val RoomDatabase.transactionDispatcher: CoroutineDispatcher
-    get() = backingFieldMap.getOrPut("TransactionDispatcher") {
-        transactionExecutor.asCoroutineDispatcher()
-    } as CoroutineDispatcher

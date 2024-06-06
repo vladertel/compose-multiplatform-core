@@ -21,9 +21,9 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.KmpPlatformsKt
+
 import androidx.build.PlatformIdentifier
-import androidx.build.Publish
+import androidx.build.LibraryType
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 plugins {
@@ -31,11 +31,9 @@ plugins {
     id("com.android.library")
 }
 
-def nativeEnabled = KmpPlatformsKt.enableNative(project)
 
 androidXMultiplatform {
     android()
-    androidNative()
     ios()
     jvm()
     linux()
@@ -47,7 +45,7 @@ androidXMultiplatform {
         commonMain {
             dependencies {
                 implementation(libs.kotlinStdlib)
-                api(project(":annotation:annotation"))
+                api("androidx.annotation:annotation:1.8.0")
             }
         }
         commonTest {
@@ -69,12 +67,10 @@ androidXMultiplatform {
         jvmMain {
             dependsOn(commonMain)
         }
-        if (nativeEnabled) {
-            nativeMain {
-                dependsOn(commonMain)
-            }
+        nativeMain {
+            dependsOn(commonMain)
         }
-        targets.all { target ->
+        targets.configureEach { target ->
             if (target.platformType == KotlinPlatformType.native) {
                 def main = target.compilations["main"]
                 main.defaultSourceSet {
@@ -83,6 +79,8 @@ androidXMultiplatform {
             }
         }
     }
+
+    enableBinaryCompatibilityValidator = true
 }
 
 android {
@@ -91,8 +89,9 @@ android {
 
 androidx {
     name = "SQLite"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2017"
     description = "SQLite API"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

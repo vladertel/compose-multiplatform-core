@@ -17,10 +17,8 @@
 package androidx.compose.foundation.content.internal
 
 import androidx.compose.ui.draganddrop.DragAndDropEvent
-import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
+import androidx.compose.ui.node.DelegatableNode
 
-internal actual fun CompositionLocalConsumerModifierNode.dragAndDropRequestPermission(
-    event: DragAndDropEvent
-) {
+internal actual fun DelegatableNode.dragAndDropRequestPermission(event: DragAndDropEvent) {
     /* no-op */
 }

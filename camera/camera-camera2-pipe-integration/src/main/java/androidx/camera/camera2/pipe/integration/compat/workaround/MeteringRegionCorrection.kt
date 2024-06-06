@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-
 package androidx.camera.camera2.pipe.integration.compat.workaround
 
 import android.graphics.PointF
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.integration.compat.quirk.AfRegionFlipHorizontallyQuirk
 import androidx.camera.camera2.pipe.integration.compat.quirk.CameraQuirks
 import androidx.camera.core.FocusMeteringAction
@@ -49,16 +46,15 @@ interface MeteringRegionCorrection {
 }
 
 object MeteringRegionQuirkCorrection : MeteringRegionCorrection {
-    /**
-     * Return corrected normalized point by given MeteringPoint, MeteringMode and Quirks.
-     */
+    /** Return corrected normalized point by given MeteringPoint, MeteringMode and Quirks. */
     override fun getCorrectedPoint(
         meteringPoint: MeteringPoint,
         @FocusMeteringAction.MeteringMode meteringMode: Int,
-    ) = when (meteringMode) {
-        FocusMeteringAction.FLAG_AF -> PointF(1f - meteringPoint.x, meteringPoint.y)
-        else -> PointF(meteringPoint.x, meteringPoint.y)
-    }
+    ) =
+        when (meteringMode) {
+            FocusMeteringAction.FLAG_AF -> PointF(1f - meteringPoint.x, meteringPoint.y)
+            else -> PointF(meteringPoint.x, meteringPoint.y)
+        }
 }
 
 object NoOpMeteringRegionCorrection : MeteringRegionCorrection {

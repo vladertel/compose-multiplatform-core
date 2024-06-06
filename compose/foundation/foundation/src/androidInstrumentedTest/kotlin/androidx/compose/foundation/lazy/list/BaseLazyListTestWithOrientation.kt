@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+
 package androidx.compose.foundation.lazy.list
 
 import androidx.compose.animation.core.snap
@@ -48,9 +50,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
-open class BaseLazyListTestWithOrientation(
-    private val orientation: Orientation
-) : BaseLazyLayoutTestWithOrientation(orientation) {
+open class BaseLazyListTestWithOrientation(private val orientation: Orientation) :
+    BaseLazyLayoutTestWithOrientation(orientation) {
 
     fun Modifier.fillMaxCrossAxis() =
         if (vertical) {
@@ -80,16 +81,15 @@ open class BaseLazyListTestWithOrientation(
     }
 
     fun LazyListState.scrollTo(index: Int) {
-        runBlocking(Dispatchers.Main + AutoTestFrameClock()) {
-            scrollToItem(index)
-        }
+        runBlocking(Dispatchers.Main + AutoTestFrameClock()) { scrollToItem(index) }
     }
 
-    fun SemanticsNodeInteraction.scrollBy(offset: Dp) = scrollBy(
-        x = if (vertical) 0.dp else offset,
-        y = if (!vertical) 0.dp else offset,
-        density = rule.density
-    )
+    fun SemanticsNodeInteraction.scrollBy(offset: Dp) =
+        scrollBy(
+            x = if (vertical) 0.dp else offset,
+            y = if (!vertical) 0.dp else offset,
+            density = rule.density
+        )
 
     fun composeViewSwipeForward() {
         if (orientation == Orientation.Vertical) {
@@ -124,11 +124,12 @@ open class BaseLazyListTestWithOrientation(
         content: LazyListScope.() -> Unit
     ) {
         if (vertical) {
-            val verticalArrangement = when {
-                spacedBy != 0.dp -> Arrangement.spacedBy(spacedBy)
-                reverseLayout xor reverseArrangement -> Arrangement.Bottom
-                else -> Arrangement.Top
-            }
+            val verticalArrangement =
+                when {
+                    spacedBy != 0.dp -> Arrangement.spacedBy(spacedBy)
+                    reverseLayout xor reverseArrangement -> Arrangement.Bottom
+                    else -> Arrangement.Top
+                }
             LazyColumn(
                 modifier = modifier,
                 state = state,
@@ -140,11 +141,12 @@ open class BaseLazyListTestWithOrientation(
                 content = content
             )
         } else {
-            val horizontalArrangement = when {
-                spacedBy != 0.dp -> Arrangement.spacedBy(spacedBy)
-                reverseLayout xor reverseArrangement -> Arrangement.End
-                else -> Arrangement.Start
-            }
+            val horizontalArrangement =
+                when {
+                    spacedBy != 0.dp -> Arrangement.spacedBy(spacedBy)
+                    reverseLayout xor reverseArrangement -> Arrangement.End
+                    else -> Arrangement.Start
+                }
             LazyRow(
                 modifier = modifier,
                 state = state,
@@ -172,11 +174,12 @@ open class BaseLazyListTestWithOrientation(
         content: LazyListScope.() -> Unit
     ) {
         if (vertical) {
-            val verticalArrangement = when {
-                spacedBy != 0.dp -> Arrangement.spacedBy(spacedBy)
-                reverseLayout xor reverseArrangement -> Arrangement.Bottom
-                else -> Arrangement.Top
-            }
+            val verticalArrangement =
+                when {
+                    spacedBy != 0.dp -> Arrangement.spacedBy(spacedBy)
+                    reverseLayout xor reverseArrangement -> Arrangement.Bottom
+                    else -> Arrangement.Top
+                }
             LazyColumn(
                 modifier = modifier,
                 state = state,
@@ -189,11 +192,12 @@ open class BaseLazyListTestWithOrientation(
                 content = content
             )
         } else {
-            val horizontalArrangement = when {
-                spacedBy != 0.dp -> Arrangement.spacedBy(spacedBy)
-                reverseLayout xor reverseArrangement -> Arrangement.End
-                else -> Arrangement.Start
-            }
+            val horizontalArrangement =
+                when {
+                    spacedBy != 0.dp -> Arrangement.spacedBy(spacedBy)
+                    reverseLayout xor reverseArrangement -> Arrangement.End
+                    else -> Arrangement.Start
+                }
             LazyRow(
                 modifier = modifier,
                 state = state,

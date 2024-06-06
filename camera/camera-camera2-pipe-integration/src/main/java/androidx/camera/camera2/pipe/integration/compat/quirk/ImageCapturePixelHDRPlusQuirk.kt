@@ -17,7 +17,6 @@ package androidx.camera.camera2.pipe.integration.compat.quirk
 
 import android.annotation.SuppressLint
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.impl.Quirk
 
@@ -25,29 +24,23 @@ import androidx.camera.core.impl.Quirk
  * QuirkSummary
  * - Bug Id: b/123897971
  * - Description: Quirk required to turn on/off HDR+ on Pixel devices by enabling/disabling
- *   zero-shutter-lag (ZSL) mode on the capture request, depending on the image
- *   capture use case's capture mode, i.e. prioritizing image capture latency over
- *   quality, or vice versa. This means that when the capture mode is
- *   [ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY], HDR+ is turned off by
- *   disabling ZSL, and when it is
- *   [ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY], HDR+ is turned on by enabling ZSL.
+ *   zero-shutter-lag (ZSL) mode on the capture request, depending on the image capture use case's
+ *   capture mode, i.e. prioritizing image capture latency over quality, or vice versa. This means
+ *   that when the capture mode is [ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY], HDR+ is turned off
+ *   by disabling ZSL, and when it is [ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY], HDR+ is turned
+ *   on by enabling ZSL.
  * - Device(s): Pixel 2, Pixel 2 XL, Pixel 3, Pixel 3 XL
  *
  * TODO: enable CameraXQuirksClassDetector lint check when kotlin is supported.
  */
 @SuppressLint("CameraXQuirksClassDetector")
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class ImageCapturePixelHDRPlusQuirk : Quirk {
     companion object {
-        private val BUILD_MODELS = listOf(
-            "Pixel 2",
-            "Pixel 2 XL",
-            "Pixel 3",
-            "Pixel 3 XL"
-        )
+        private val BUILD_MODELS = listOf("Pixel 2", "Pixel 2 XL", "Pixel 3", "Pixel 3 XL")
 
         fun isEnabled(): Boolean {
-            return BUILD_MODELS.contains(Build.MODEL) && "Google" == Build.MANUFACTURER &&
+            return BUILD_MODELS.contains(Build.MODEL) &&
+                "Google" == Build.MANUFACTURER &&
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
         }
     }

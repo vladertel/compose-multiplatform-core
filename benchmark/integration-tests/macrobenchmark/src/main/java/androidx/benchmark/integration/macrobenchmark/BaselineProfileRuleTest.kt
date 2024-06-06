@@ -38,24 +38,25 @@ import org.junit.Test
 @SdkSuppress(minSdkVersion = 29)
 class BaselineProfileRuleTest {
 
-    @get:Rule
-    val baselineRule = BaselineProfileRule()
+    @get:Rule val baselineRule = BaselineProfileRule()
 
     @Before
     fun setup() {
+        // Mokey devices seem to behave differently (b/319515652) and the generated profile
+        // doesn't output the class symbol line. This makes the test fail. While we investigate
+        // the scope of the failure, suppress the test on this device
         assumeFalse(isMokeyDevice())
     }
 
     @Test
     fun appNotInstalled() {
-        val error = assertFailsWith<AssertionError> {
-            baselineRule.collect(
-                packageName = "fake.package.not.installed",
-                profileBlock = {
-                    fail("not expected")
-                }
-            )
-        }
+        val error =
+            assertFailsWith<AssertionError> {
+                baselineRule.collect(
+                    packageName = "fake.package.not.installed",
+                    profileBlock = { fail("not expected") }
+                )
+            }
         println(error.message)
         assertTrue(error.message!!.contains("Unable to find target package"))
     }
@@ -141,7 +142,8 @@ class BaselineProfileRuleTest {
 
                 List content was:
                 ${this.joinToString(System.lineSeparator())}
-            """.trimIndent()
+            """
+                    .trimIndent()
             )
         }
     }

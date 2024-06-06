@@ -16,6 +16,9 @@
 
 package androidx.build
 
+import androidx.build.buildInfo.CreateLibraryBuildInfoFileTask
+import androidx.build.checkapi.shouldConfigureApiTasks
+import com.android.build.api.dsl.LibraryExtension
 import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.LibraryPlugin
 import com.android.utils.childrenIterator
@@ -77,7 +80,7 @@ fun Project.configureMavenArtifactUpload(
         if (!androidXExtension.shouldPublish()) {
             return@afterEvaluate
         }
-        components.all { component ->
+        components.configureEach { component ->
             if (isValidReleaseComponent(component)) {
                 registerOnFirstPublishableArtifact(component)
             }
@@ -86,15 +89,20 @@ fun Project.configureMavenArtifactUpload(
     // validate that all libraries that should be published actually get registered.
     gradle.taskGraph.whenReady {
         if (releaseTaskShouldBeRegistered(androidXExtension)) {
-            tasks.findByName(Release.PROJECT_ARCHIVE_ZIP_TASK_NAME)
-                ?: throw GradleException(
-                    "Project $name is configured for publishing, but a " +
-                        "'createProjectZip' task was never registered. This is likely a bug in" +
-                        "AndroidX plugin configuration"
-                )
+            validateTaskIsRegistered(Release.PROJECT_ARCHIVE_ZIP_TASK_NAME)
+        }
+        if (buildInfoTaskShouldBeRegistered(androidXExtension)) {
+            validateTaskIsRegistered(CreateLibraryBuildInfoFileTask.TASK_NAME)
         }
     }
 }
+
+private fun Project.validateTaskIsRegistered(taskName: String) =
+    tasks.findByName(taskName)
+        ?: throw GradleException(
+            "Project $name is configured for publishing, but a '$taskName' task was never " +
+                "registered. This is likely a bug in AndroidX plugin configuration."
+        )
 
 private fun Project.releaseTaskShouldBeRegistered(extension: AndroidXExtension): Boolean {
     if (plugins.hasPlugin(AppPlugin::class.java)) {
@@ -104,6 +112,13 @@ private fun Project.releaseTaskShouldBeRegistered(extension: AndroidXExtension):
         return false
     }
     return extension.shouldPublish()
+}
+
+private fun Project.buildInfoTaskShouldBeRegistered(extension: AndroidXExtension): Boolean {
+    if (plugins.hasPlugin(AppPlugin::class.java)) {
+        return false
+    }
+    return extension.shouldRelease()
 }
 
 /** Configure publishing for a [SoftwareComponent]. */
@@ -151,6 +166,7 @@ private fun Project.configureComponentPublishing(
                 tasks.getByName("publishPluginMavenPublicationToMavenRepository").doFirst {
                     removePreviouslyUploadedArchives(projectArchiveDir)
                 }
+                afterConfigure()
             } else {
                 if (project.isMultiplatformPublicationEnabled()) {
                     configureMultiplatformPublication(componentFactory, afterConfigure)
@@ -163,7 +179,7 @@ private fun Project.configureComponentPublishing(
                 }
             }
         }
-        publications.withType(MavenPublication::class.java).all { publication ->
+        publications.withType(MavenPublication::class.java).configureEach { publication ->
             val isKmpAnchor = (publication.name == KMP_ANCHOR_PUBLICATION_NAME)
             val pomPlatform = androidxKmpExtension.defaultPlatform
             // b/297355397 If a kmp project has Android as the default platform, there might
@@ -173,18 +189,33 @@ private fun Project.configureComponentPublishing(
             val addStubAar = isKmpAnchor && pomPlatform == PlatformIdentifier.ANDROID.id
             val buildDir = project.layout.buildDirectory
             if (addStubAar) {
+                val minSdk =
+                    project.extensions.findByType<LibraryExtension>()?.defaultConfig?.minSdk
+                        ?: extensions
+                            .findByType<AndroidXMultiplatformExtension>()
+                            ?.agpKmpExtension
+                            ?.minSdk
+                        ?: throw GradleException(
+                            "Couldn't find valid Android extension to read minSdk from"
+                        )
                 // create a unique namespace for this .aar, different from the android artifact
-                val stubNamespace = project.group.toString().replace(':', '.') + ".anchor"
+                val stubNamespace =
+                    project.group.toString().replace(':', '.') +
+                        "." +
+                        project.name.toString().replace('-', '.') +
+                        ".anchor"
                 val unpackedStubAarTask =
                     tasks.register("unpackedStubAar", UnpackedStubAarTask::class.java) { aarTask ->
-                    aarTask.aarPackage.set(stubNamespace)
-                    aarTask.outputDir.set(buildDir.dir("intermediates/stub-aar"))
-                }
-                val stubAarTask = tasks.register("stubAar", Zip::class.java) { zipTask ->
-                    zipTask.from(unpackedStubAarTask.flatMap { it.outputDir })
-                    zipTask.destinationDirectory.set(buildDir.dir("outputs"))
-                    zipTask.archiveExtension.set("aar")
-                }
+                        aarTask.aarPackage.set(stubNamespace)
+                        aarTask.minSdkVersion.set(minSdk)
+                        aarTask.outputDir.set(buildDir.dir("intermediates/stub-aar"))
+                    }
+                val stubAarTask =
+                    tasks.register("stubAar", Zip::class.java) { zipTask ->
+                        zipTask.from(unpackedStubAarTask.flatMap { it.outputDir })
+                        zipTask.destinationDirectory.set(buildDir.dir("outputs"))
+                        zipTask.archiveExtension.set("aar")
+                    }
                 publication.artifact(stubAarTask)
             }
 
@@ -209,6 +240,7 @@ private fun Project.configureComponentPublishing(
         task.doLast {
             val metadataFile = task.outputFile.asFile.get()
             val metadata = metadataFile.readText()
+            verifyGradleMetadata(metadata)
             val sortedMetadata = sortGradleMetadataDependencies(metadata)
 
             if (metadata != sortedMetadata) {
@@ -297,6 +329,21 @@ fun sortGradleMetadataDependencies(metadata: String): String {
     return stringWriter.toString()
 }
 
+/**
+ * Checks the variants field in the metadata file has an entry containing "sourcesElements". All our
+ * publications must be published with a sources variant.
+ */
+fun verifyGradleMetadata(metadata: String) {
+    val gson = GsonBuilder().create()
+    val jsonObj = gson.fromJson(metadata, JsonObject::class.java)!!
+    jsonObj.getAsJsonArray("variants").firstOrNull { variantElement ->
+        variantElement.asJsonObject
+            .get("name")
+            .asString
+            .contains(other = sourcesConfigurationName, ignoreCase = true)
+    } ?: throw Exception("The $sourcesConfigurationName variant must exist in the module file.")
+}
+
 private fun Project.isMultiplatformPublicationEnabled(): Boolean {
     return extensions.findByType<KotlinMultiplatformExtension>() != null
 }
@@ -307,7 +354,7 @@ private fun Project.configureMultiplatformPublication(
 ) {
     val multiplatformExtension = extensions.findByType<KotlinMultiplatformExtension>()!!
 
-    multiplatformExtension.targets.all { target ->
+    multiplatformExtension.targets.configureEach { target ->
         if (target is KotlinAndroidTarget) {
             target.publishLibraryVariants(Release.DEFAULT_PUBLISH_CONFIG)
         }
@@ -326,10 +373,15 @@ private fun Project.replaceBaseMultiplatformPublication(
     afterConfigure: () -> Unit
 ) {
     val kotlinComponent = components.findByName("kotlin") as SoftwareComponentInternal
-    withSourcesComponents(
-        componentFactory,
-        setOf("androidxSourcesElements", "libraryVersionMetadata")
-    ) { sourcesComponents ->
+    val sourcesElements = buildSet {
+        add("androidxSourcesElements")
+        // Wait for libraryVersionMetadata if it should exist because the project runs API tasks.
+        // There are some libraries (generated icons) that release without running API tasks.
+        if (androidXExtension.shouldConfigureApiTasks()) {
+            add("libraryVersionMetadata")
+        }
+    }
+    withSourcesComponents(componentFactory, sourcesElements) { sourcesComponents ->
         configure<PublishingExtension> {
             publications { pubs ->
                 pubs.create<MavenPublication>(KMP_ANCHOR_PUBLICATION_NAME) {
@@ -469,11 +521,12 @@ private fun Project.addInformativeMetadata(extension: AndroidXExtension, pom: Ma
     pom.inceptionYear.set(provider { extension.inceptionYear })
     pom.licenses { licenses ->
         licenses.license { license ->
-            license.name.set("The Apache Software License, Version 2.0")
-            license.url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+            license.name.set(extension.license.name)
+            license.url.set(extension.license.url)
             license.distribution.set("repo")
         }
-        for (extraLicense in extension.getLicenses()) {
+
+        for (extraLicense in extension.getExtraLicenses()) {
             licenses.license { license ->
                 license.name.set(provider { extraLicense.name })
                 license.url.set(provider { extraLicense.url })

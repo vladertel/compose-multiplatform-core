@@ -21,10 +21,10 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.KmpPlatformsKt
+
+import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import androidx.build.Publish
 import org.jetbrains.kotlin.konan.target.Family
 
 
@@ -33,10 +33,9 @@ plugins {
     id("com.android.library")
 }
 
-def macEnabled = KmpPlatformsKt.enableMac(project)
-def linuxEnabled = KmpPlatformsKt.enableLinux(project)
-
 androidXMultiplatform {
+    enableBinaryCompatibilityValidator = true
+
     jvm()
     mac()
     linux()
@@ -50,7 +49,7 @@ androidXMultiplatform {
             dependencies {
                 api(libs.kotlinStdlib)
                 api(libs.kotlinCoroutinesCore)
-                api("androidx.annotation:annotation:1.7.0")
+                api("androidx.annotation:annotation:1.8.0")
             }
         }
 
@@ -103,30 +102,25 @@ androidXMultiplatform {
             }
         }
 
-        if (macEnabled || linuxEnabled) {
-            nativeMain {
-                dependsOn(commonMain)
-                dependencies {
-                    implementation(libs.atomicFu)
-                }
-            }
-            nativeTest {
-                dependsOn(commonTest)
+        nativeMain {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(libs.atomicFu)
             }
         }
-        if (macEnabled) {
-            darwinMain {
-                dependsOn(nativeMain)
-            }
+        nativeTest {
+            dependsOn(commonTest)
         }
 
-        if (linuxEnabled) {
-            linuxMain {
-                dependsOn(nativeMain)
-            }
+        darwinMain {
+            dependsOn(nativeMain)
         }
 
-        targets.all { target ->
+        linuxMain {
+            dependsOn(nativeMain)
+        }
+
+        targets.configureEach { target ->
             if (target.platformType == KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     def konanTargetFamily = target.konanTarget.family
@@ -146,17 +140,13 @@ androidXMultiplatform {
     }
 }
 
-// top level declaration because the KGP sourceSets declaration used by androidXMultiplatform
-// does not support constraints or samples configurations yet
-dependencies {
-    samples(project(":paging:paging-samples"))
-}
-
 androidx {
     name = "Paging-Common"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2017"
     description = "Android Paging-Common"
+    legacyDisableKotlinStrictApiMode = true
+    samples(project(":paging:paging-samples"))
 }
 
 android {

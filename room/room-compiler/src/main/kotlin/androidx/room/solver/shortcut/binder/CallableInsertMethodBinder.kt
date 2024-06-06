@@ -42,10 +42,8 @@ class CallableInsertMethodBinder(
         fun createInsertBinder(
             typeArg: XType,
             adapter: InsertOrUpsertMethodAdapter?,
-            addCodeBlock: XCodeBlock.Builder.(
-                callableImpl: XTypeSpec,
-                dbField: XPropertySpec
-            ) -> Unit
+            addCodeBlock:
+                XCodeBlock.Builder.(callableImpl: XTypeSpec, dbField: XPropertySpec) -> Unit
         ) = CallableInsertMethodBinder(typeArg, addCodeBlock, adapter)
     }
 
@@ -55,23 +53,34 @@ class CallableInsertMethodBinder(
         dbProperty: XPropertySpec,
         scope: CodeGenScope
     ) {
-        val adapterScope = scope.fork()
-        val callableImpl = CallableTypeSpecBuilder(scope.language, typeArg.asTypeName()) {
-            addCode(
-                XCodeBlock.builder(language).apply {
-                    adapter?.createMethodBody(
-                        parameters = parameters,
-                        adapters = adapters,
-                        dbProperty = dbProperty,
-                        scope = adapterScope
-                    )
-                    addCode(adapterScope.generate())
-                }.build()
-            )
-        }.build()
+        convertAndReturnCompat(parameters, adapters, dbProperty, scope)
+    }
 
-        scope.builder.apply {
-            addStmntBlock(callableImpl, dbProperty)
-        }
+    override fun convertAndReturnCompat(
+        parameters: List<ShortcutQueryParameter>,
+        adapters: Map<String, Pair<XPropertySpec, Any>>,
+        dbProperty: XPropertySpec,
+        scope: CodeGenScope
+    ) {
+        val adapterScope = scope.fork()
+        val callableImpl =
+            CallableTypeSpecBuilder(scope.language, typeArg.asTypeName()) {
+                    addCode(
+                        XCodeBlock.builder(language)
+                            .apply {
+                                adapter?.generateMethodBodyCompat(
+                                    parameters = parameters,
+                                    adapters = adapters,
+                                    dbProperty = dbProperty,
+                                    scope = adapterScope
+                                )
+                                addCode(adapterScope.generate())
+                            }
+                            .build()
+                    )
+                }
+                .build()
+
+        scope.builder.apply { addStmntBlock(callableImpl, dbProperty) }
     }
 }

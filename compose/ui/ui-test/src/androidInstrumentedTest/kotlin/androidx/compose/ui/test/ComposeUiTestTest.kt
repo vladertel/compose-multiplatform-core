@@ -17,7 +17,6 @@
 package androidx.compose.ui.test
 
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
@@ -38,62 +37,34 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.testutils.WithTouchSlop
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.espresso.IdlingPolicies
 import androidx.test.espresso.IdlingPolicy
-import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth.assertWithMessage
-import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Runnable
-import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.After
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TestWatcher
-import org.junit.runner.Description
 import org.junit.runner.RunWith
-import org.junit.runners.model.Statement
 
+/** Smoke test to see if ComposeUiTest provides basic functionality. */
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalTestApi::class)
 class ComposeUiTestTest {
 
     private var idlingPolicy: IdlingPolicy? = null
-    private lateinit var testDescription: Description
-
-    /**
-     * Records the current [testDescription] for tests that need to invoke the compose test rule
-     * directly.
-     */
-    @get:Rule
-    val testWatcher = object : TestWatcher() {
-        override fun starting(description: Description) {
-            testDescription = description
-        }
-    }
 
     @Before
     fun setup() {
@@ -108,20 +79,14 @@ class ComposeUiTestTest {
     }
 
     @Composable
-    private fun ClickCounter(
-        clicks: MutableState<Int> = remember { mutableStateOf(0) }
-    ) {
+    private fun ClickCounter(clicks: MutableState<Int> = remember { mutableStateOf(0) }) {
         Column {
-            Button(onClick = { clicks.value++ }) {
-                Text("Click me")
-            }
+            Button(onClick = { clicks.value++ }) { Text("Click me") }
             Text("Click count: ${clicks.value}")
         }
     }
 
-    /**
-     * Check that basic scenarios work: a composition that is recomposed due to a state change.
-     */
+    /** Check that basic scenarios work: a composition that is recomposed due to a state change. */
     @Test
     fun testStateChange() = runComposeUiTest {
         val clicks = mutableStateOf(0)
@@ -150,9 +115,9 @@ class ComposeUiTestTest {
     }
 
     /**
-     * Check that animation scenarios work: a composition with an animation in its initial state
-     * is idle, stays non-idle while the animation animates to a new target and is idle again
-     * after that.
+     * Check that animation scenarios work: a composition with an animation in its initial state is
+     * idle, stays non-idle while the animation animates to a new target and is idle again after
+     * that.
      */
     @Test
     fun testAnimation() = runComposeUiTest {
@@ -160,12 +125,7 @@ class ComposeUiTestTest {
         setContent {
             val offset = animateFloatAsState(target)
             Box(Modifier.fillMaxSize()) {
-                Box(
-                    Modifier
-                        .size(10.dp)
-                        .offset(x = offset.value.dp)
-                        .testTag("box")
-                )
+                Box(Modifier.size(10.dp).offset(x = offset.value.dp).testTag("box"))
             }
         }
         onNodeWithTag("box").assertLeftPositionInRootIsEqualTo(0.dp)
@@ -174,8 +134,8 @@ class ComposeUiTestTest {
     }
 
     /**
-     * Check that scrolling and controlling the clock works: a scrollable receives a swipe while
-     * the clock is paused, when the clock is resumed it performs the fling.
+     * Check that scrolling and controlling the clock works: a scrollable receives a swipe while the
+     * clock is paused, when the clock is resumed it performs the fling.
      */
     @OptIn(ExperimentalFoundationApi::class)
     @Test
@@ -193,21 +153,11 @@ class ComposeUiTestTest {
                 CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
                     Box(Modifier.fillMaxSize()) {
                         Column(
-                            Modifier
-                                .requiredSize(200.dp)
-                                .verticalScroll(
-                                    scrollState,
-                                    flingBehavior = flingBehavior
-                                )
+                            Modifier.requiredSize(200.dp)
+                                .verticalScroll(scrollState, flingBehavior = flingBehavior)
                                 .testTag("list")
                         ) {
-                            repeat(n) {
-                                Spacer(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(30.dp)
-                                )
-                            }
+                            repeat(n) { Spacer(Modifier.fillMaxWidth().height(30.dp)) }
                         }
                     }
                 }
@@ -219,9 +169,7 @@ class ComposeUiTestTest {
         mainClock.autoAdvance = false
         onNodeWithTag("list").performTouchInput {
             down(bottomCenter)
-            repeat(10) {
-                moveTo(bottomCenter - percentOffset(y = (it + 1) / 10f))
-            }
+            repeat(10) { moveTo(bottomCenter - percentOffset(y = (it + 1) / 10f)) }
             up()
         }
         waitForIdle()
@@ -247,233 +195,13 @@ class ComposeUiTestTest {
 
         override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
             for (delta in deltas) {
-                withFrameNanos {
-                    scrollBy(delta.toFloat())
-                }
+                withFrameNanos { scrollBy(delta.toFloat()) }
             }
             return 0f
         }
     }
 
     @Test
-    fun getActivityTest() = runAndroidComposeUiTest<ComponentActivity> {
-        assertThat(activity).isNotNull()
-    }
-
-    @Test
-    fun effectContextPropagatedToComposition_runComposeUiTest() {
-        val testElement = TestCoroutineContextElement()
-        runComposeUiTest(effectContext = testElement) {
-            lateinit var compositionScope: CoroutineScope
-            setContent {
-                compositionScope = rememberCoroutineScope()
-            }
-
-            runOnIdle {
-                val elementFromComposition =
-                    compositionScope.coroutineContext[TestCoroutineContextElement]
-                assertThat(elementFromComposition).isSameInstanceAs(testElement)
-            }
-        }
-    }
-
-    @Test
-    fun effectContextPropagatedToComposition_createComposeRule() {
-        val testElement = TestCoroutineContextElement()
-        lateinit var compositionScope: CoroutineScope
-        val rule = createComposeRule(testElement)
-        val baseStatement = object : Statement() {
-            override fun evaluate() {
-                rule.setContent {
-                    compositionScope = rememberCoroutineScope()
-                }
-                rule.waitForIdle()
-            }
-        }
-        rule.apply(baseStatement, testDescription)
-            .evaluate()
-
-        val elementFromComposition =
-            compositionScope.coroutineContext[TestCoroutineContextElement]
-        assertThat(elementFromComposition).isSameInstanceAs(testElement)
-    }
-
-    @Test
-    fun effectContextPropagatedToComposition_createAndroidComposeRule() {
-        val testElement = TestCoroutineContextElement()
-        lateinit var compositionScope: CoroutineScope
-        val rule = createAndroidComposeRule<ComponentActivity>(testElement)
-        val baseStatement = object : Statement() {
-            override fun evaluate() {
-                rule.setContent {
-                    compositionScope = rememberCoroutineScope()
-                }
-                rule.waitForIdle()
-            }
-        }
-        rule.apply(baseStatement, testDescription)
-            .evaluate()
-
-        val elementFromComposition =
-            compositionScope.coroutineContext[TestCoroutineContextElement]
-        assertThat(elementFromComposition).isSameInstanceAs(testElement)
-    }
-
-    @Test
-    fun effectContextPropagatedToComposition_createEmptyComposeRule() {
-        val testElement = TestCoroutineContextElement()
-        lateinit var compositionScope: CoroutineScope
-        val composeRule = createEmptyComposeRule(testElement)
-        val activityRule = ActivityScenarioRule(ComponentActivity::class.java)
-        val baseStatement = object : Statement() {
-            override fun evaluate() {
-                activityRule.scenario.onActivity {
-                    it.setContent {
-                        compositionScope = rememberCoroutineScope()
-                    }
-                }
-                composeRule.waitForIdle()
-            }
-        }
-        activityRule.apply(composeRule.apply(baseStatement, testDescription), testDescription)
-            .evaluate()
-
-        val elementFromComposition =
-            compositionScope.coroutineContext[TestCoroutineContextElement]
-        assertThat(elementFromComposition).isSameInstanceAs(testElement)
-    }
-
-    @Test
-    fun motionDurationScale_defaultValue() = runComposeUiTest {
-        var lastRecordedMotionDurationScale: Float? = null
-        setContent {
-            val context = rememberCoroutineScope().coroutineContext
-            lastRecordedMotionDurationScale = context[MotionDurationScale]?.scaleFactor
-        }
-
-        runOnIdle {
-            assertThat(lastRecordedMotionDurationScale).isNull()
-        }
-    }
-
-    @Test
-    fun motionDurationScale_propagatedToCoroutines() {
-        val motionDurationScale = object : MotionDurationScale {
-            override val scaleFactor: Float get() = 0f
-        }
-        runComposeUiTest(effectContext = motionDurationScale) {
-            var lastRecordedMotionDurationScale: Float? = null
-            setContent {
-                val context = rememberCoroutineScope().coroutineContext
-                lastRecordedMotionDurationScale = context[MotionDurationScale]?.scaleFactor
-            }
-
-            runOnIdle {
-                assertThat(lastRecordedMotionDurationScale).isEqualTo(0f)
-            }
-        }
-    }
-
-    @Test
-    fun customDispatcher_ignoredWhenNotSubclassOfTestDispatcher() {
-        class CustomNonTestDispatcher : CoroutineDispatcher() {
-            private var queuedTasks = mutableListOf<Runnable>()
-            override fun dispatch(context: CoroutineContext, block: Runnable) {
-                queuedTasks.add(block)
-            }
-
-            fun runQueuedTasks() {
-                val tasksToRun = queuedTasks
-                queuedTasks = mutableListOf()
-                tasksToRun.forEach {
-                    it.run()
-                }
-            }
-        }
-
-        val customDispatcher = CustomNonTestDispatcher()
-
-        var expectCounter = 0
-        fun expect(value: Int) {
-            assertWithMessage("Expected sequence")
-                .that(expectCounter)
-                .isEqualTo(value)
-            expectCounter++
-        }
-
-        runComposeUiTest(effectContext = customDispatcher) {
-            setContent {
-                LaunchedEffect(Unit) {
-                    expect(2)
-                    withFrameNanos {
-                        expect(4)
-                    }
-                    expect(6)
-                }
-            }
-            expect(0)
-
-            // None of these will actually start the effect, because we control tasks.
-            waitForIdle()
-            mainClock.advanceTimeByFrame()
-            waitForIdle()
-            expect(1)
-
-            // This will actually start the effect.
-            customDispatcher.runQueuedTasks()
-            expect(3)
-
-            // This runs the first withFrameNanos.
-            mainClock.advanceTimeByFrame()
-            expect(5)
-
-            // And this resumes the effect coroutine after withFrameNanos.
-            customDispatcher.runQueuedTasks()
-            expect(7)
-        }
-    }
-
-    @Test
-    fun customDispatcher_usedWhenSubclassesTestDispatcher() {
-        var expectCounter = 0
-        fun expect(value: Int) {
-            assertWithMessage("Expected sequence")
-                .that(expectCounter)
-                .isEqualTo(value)
-            expectCounter++
-        }
-
-        val customDispatcher = StandardTestDispatcher()
-
-        // TestDispatcher has an internal constructor so we can't make our own subclass.
-        // StandardTestDispatcher was the only other subclass of TestDispatcher at the time this
-        // test was initially written.
-        runComposeUiTest(effectContext = customDispatcher) {
-            setContent {
-                LaunchedEffect(Unit) {
-                    expect(2)
-                    withFrameNanos {
-                        expect(3)
-                    }
-                    expect(4)
-                }
-            }
-            expect(0)
-
-            // This won't wait for the effect to launch…
-            waitForIdle()
-            expect(1)
-
-            // …but this will, because Compose detected the custom TestDispatcher and wired the
-            // clock to it.
-            mainClock.advanceTimeByFrame()
-            expect(5)
-        }
-    }
-
-    private class TestCoroutineContextElement : CoroutineContext.Element {
-        override val key: CoroutineContext.Key<*> get() = Key
-
-        companion object Key : CoroutineContext.Key<TestCoroutineContextElement>
-    }
+    fun getActivityTest() =
+        runAndroidComposeUiTest<ComponentActivity> { assertThat(activity).isNotNull() }
 }

@@ -18,11 +18,13 @@ package androidx.compose.ui.focus
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection.Companion.Exit
 import androidx.compose.ui.focus.FocusRequester.Companion.Default
 import androidx.compose.ui.focus.FocusStateImpl.Active
 import androidx.compose.ui.focus.FocusStateImpl.ActiveParent
 import androidx.compose.ui.focus.FocusStateImpl.Captured
 import androidx.compose.ui.focus.FocusStateImpl.Inactive
+import androidx.compose.ui.internal.checkPreconditionNotNull
 import androidx.compose.ui.layout.BeyondBoundsLayout
 import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.modifier.ModifierLocalModifierNode
@@ -30,7 +32,6 @@ import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.Nodes
 import androidx.compose.ui.node.ObserverModifierNode
-import androidx.compose.ui.node.dispatchForKind
 import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.node.requireOwner
 import androidx.compose.ui.node.visitAncestors
@@ -52,15 +53,16 @@ internal class FocusTargetNode :
     // end of the transaction, this state is stored as committed focus state.
     private var committedFocusState: FocusStateImpl? = null
 
+    override val shouldAutoInvalidate = false
+
     @OptIn(ExperimentalComposeUiApi::class)
     override var focusState: FocusStateImpl
-        get() = focusTransactionManager?.run { uncommittedFocusState }
-            ?: committedFocusState
-            ?: Inactive
+        get() =
+            focusTransactionManager?.run { uncommittedFocusState }
+                ?: committedFocusState
+                ?: Inactive
         set(value) {
-            with(requireTransactionManager()) {
-                uncommittedFocusState = value
-            }
+            with(requireTransactionManager()) { uncommittedFocusState = value }
         }
 
     var previouslyFocusedChildHash: Int = 0
@@ -74,22 +76,24 @@ internal class FocusTargetNode :
         if (previousFocusState != focusState) refreshFocusEventNodes()
     }
 
-    /**
-     * Clears focus if this focus target has it.
-     */
-    override fun onReset() {
-        //  Note: onReset() is called after onEndApplyChanges, so we can't schedule any nodes for
+    /** Clears focus if this focus target has it. */
+    override fun onDetach() {
+        //  Note: this is called after onEndApplyChanges, so we can't schedule any nodes for
         //  invalidation here. If we do, they will be run on the next onEndApplyChanges.
         when (focusState) {
             // Clear focus from the current FocusTarget.
             // This currently clears focus from the entire hierarchy, but we can change the
             // implementation so that focus is sent to the immediate focus parent.
-            Active, Captured -> {
-                requireOwner().focusOwner.clearFocus(
-                    force = true,
-                    refreshFocusEvents = true,
-                    clearOwnerFocus = false
-                )
+            Active,
+            Captured -> {
+                requireOwner()
+                    .focusOwner
+                    .clearFocus(
+                        force = true,
+                        refreshFocusEvents = true,
+                        clearOwnerFocus = false,
+                        focusDirection = @OptIn(ExperimentalComposeUiApi::class) Exit
+                    )
                 // We don't clear the owner's focus yet, because this could trigger an initial
                 // focus scenario after the focus is cleared. Instead, we schedule invalidation
                 // after onApplyChanges. The FocusInvalidationManager contains the invalidation
@@ -107,8 +111,8 @@ internal class FocusTargetNode :
 
     /**
      * Visits parent [FocusPropertiesModifierNode]s and runs
-     * [FocusPropertiesModifierNode.applyFocusProperties] on each parent.
-     * This effectively collects an aggregated focus state.
+     * [FocusPropertiesModifierNode.applyFocusProperties] on each parent. This effectively collects
+     * an aggregated focus state.
      */
     internal fun fetchFocusProperties(): FocusProperties {
         val properties = FocusPropertiesImpl()
@@ -121,11 +125,11 @@ internal class FocusTargetNode :
     /**
      * Fetch custom enter destination associated with this [focusTarget].
      *
-     * Custom focus enter properties are specified as a lambda. If the user runs code in this
-     * lambda that triggers a focus search, or some other focus change that causes focus to leave
-     * the sub-hierarchy associated with this node, we could end up in a loop as that operation
-     * will trigger another invocation of the lambda associated with the focus exit property.
-     * This function prevents that re-entrant scenario by ensuring there is only one concurrent
+     * Custom focus enter properties are specified as a lambda. If the user runs code in this lambda
+     * that triggers a focus search, or some other focus change that causes focus to leave the
+     * sub-hierarchy associated with this node, we could end up in a loop as that operation will
+     * trigger another invocation of the lambda associated with the focus exit property. This
+     * function prevents that re-entrant scenario by ensuring there is only one concurrent
      * invocation of this lambda.
      */
     internal inline fun fetchCustomEnter(
@@ -136,9 +140,7 @@ internal class FocusTargetNode :
             isProcessingCustomEnter = true
             try {
                 @OptIn(ExperimentalComposeUiApi::class)
-                fetchFocusProperties().enter(focusDirection).also {
-                    if (it !== Default) block(it)
-                }
+                fetchFocusProperties().enter(focusDirection).also { if (it !== Default) block(it) }
             } finally {
                 isProcessingCustomEnter = false
             }
@@ -148,11 +150,11 @@ internal class FocusTargetNode :
     /**
      * Fetch custom exit destination associated with this [focusTarget].
      *
-     * Custom focus exit properties are specified as a lambda. If the user runs code in this
-     * lambda that triggers a focus search, or some other focus change that causes focus to leave
-     * the sub-hierarchy associated with this node, we could end up in a loop as that operation
-     * will trigger another invocation of the lambda associated with the focus exit property.
-     * This function prevents that re-entrant scenario by ensuring there is only one concurrent
+     * Custom focus exit properties are specified as a lambda. If the user runs code in this lambda
+     * that triggers a focus search, or some other focus change that causes focus to leave the
+     * sub-hierarchy associated with this node, we could end up in a loop as that operation will
+     * trigger another invocation of the lambda associated with the focus exit property. This
+     * function prevents that re-entrant scenario by ensuring there is only one concurrent
      * invocation of this lambda.
      */
     internal inline fun fetchCustomExit(
@@ -163,9 +165,7 @@ internal class FocusTargetNode :
             isProcessingCustomExit = true
             try {
                 @OptIn(ExperimentalComposeUiApi::class)
-                fetchFocusProperties().exit(focusDirection).also {
-                    if (it !== Default) block(it)
-                }
+                fetchFocusProperties().exit(focusDirection).also { if (it !== Default) block(it) }
             } finally {
                 isProcessingCustomExit = false
             }
@@ -174,9 +174,10 @@ internal class FocusTargetNode :
 
     internal fun commitFocusState() {
         with(requireTransactionManager()) {
-            committedFocusState = checkNotNull(uncommittedFocusState) {
-                "committing a node that was not updated in the current transaction"
-            }
+            committedFocusState =
+                checkPreconditionNotNull(uncommittedFocusState) {
+                    "committing a node that was not updated in the current transaction"
+                }
         }
     }
 
@@ -186,36 +187,16 @@ internal class FocusTargetNode :
             // Clear focus from the current FocusTarget.
             // This currently clears focus from the entire hierarchy, but we can change the
             // implementation so that focus is sent to the immediate focus parent.
-            Active, Captured -> {
+            Active,
+            Captured -> {
                 lateinit var focusProperties: FocusProperties
-                observeReads {
-                    focusProperties = fetchFocusProperties()
-                }
+                observeReads { focusProperties = fetchFocusProperties() }
                 if (!focusProperties.canFocus) {
                     requireOwner().focusOwner.clearFocus(force = true)
                 }
             }
-
-            ActiveParent, Inactive -> {}
-        }
-    }
-
-    internal fun scheduleInvalidationForFocusEvents() {
-        // Since this is potentially called while _this_ node is getting detached, it is possible
-        // that the nodes above us are already detached, thus, we check for isAttached here.
-        // We should investigate changing the order that children.detach() is called relative to
-        // actually nulling out / detaching ones self.
-        visitAncestors(
-            mask = Nodes.FocusEvent or Nodes.FocusTarget,
-            includeSelf = true
-        ) {
-            if (it.isKind(Nodes.FocusTarget)) return@visitAncestors
-
-            if (it.isAttached) {
-                it.dispatchForKind(Nodes.FocusEvent) { eventNode ->
-                    eventNode.invalidateFocusEvent()
-                }
-            }
+            ActiveParent,
+            Inactive -> {}
         }
     }
 
@@ -229,6 +210,7 @@ internal class FocusTargetNode :
         }
 
         override fun hashCode() = "focusTarget".hashCode()
+
         override fun equals(other: Any?) = other === this
     }
 
@@ -242,7 +224,9 @@ internal class FocusTargetNode :
 
                 return when (it.focusState) {
                     ActiveParent -> true
-                    Active, Captured, Inactive -> false
+                    Active,
+                    Captured,
+                    Inactive -> false
                 }
             }
             return false
@@ -253,7 +237,9 @@ internal class FocusTargetNode :
                 if (!it.isInitialized()) return@visitSubtreeIf true
 
                 return when (it.focusState) {
-                    Active, ActiveParent, Captured -> true
+                    Active,
+                    ActiveParent,
+                    Captured -> true
                     Inactive -> false
                 }
             }

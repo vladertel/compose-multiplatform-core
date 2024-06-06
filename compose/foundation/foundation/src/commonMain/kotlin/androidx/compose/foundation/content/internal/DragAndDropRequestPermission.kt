@@ -17,11 +17,7 @@
 package androidx.compose.foundation.content.internal
 
 import androidx.compose.ui.draganddrop.DragAndDropEvent
-import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
+import androidx.compose.ui.node.DelegatableNode
 
-/**
- * Requests necessary platform permissions to read the content that's delivered by [event].
- */
-internal expect fun CompositionLocalConsumerModifierNode.dragAndDropRequestPermission(
-    event: DragAndDropEvent
-)
+/** Requests necessary platform permissions to read the content that's delivered by [event]. */
+internal expect fun DelegatableNode.dragAndDropRequestPermission(event: DragAndDropEvent)

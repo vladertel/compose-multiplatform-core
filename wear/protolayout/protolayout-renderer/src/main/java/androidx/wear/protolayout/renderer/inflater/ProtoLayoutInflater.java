@@ -23,13 +23,12 @@ import static android.view.View.LAYOUT_DIRECTION_RTL;
 import static android.view.View.VISIBLE;
 
 import static androidx.core.util.Preconditions.checkNotNull;
-import static androidx.wear.protolayout.proto.LayoutElementProto.ArcDirection.ARC_DIRECTION_CLOCKWISE_VALUE;
 import static androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer.FIRST_CHILD_INDEX;
 import static androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer.ROOT_NODE_ID;
 import static androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer.getParentNodePosId;
 
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
-import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -73,7 +72,6 @@ import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.view.ViewOutlineProvider;
 import android.view.ViewParent;
-import android.view.ViewTreeObserver.OnPreDrawListener;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.AnimationSet;
 import android.view.animation.TranslateAnimation;
@@ -93,7 +91,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.AccessibilityDelegateCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
-import androidx.wear.protolayout.renderer.common.SeekableAnimatedVectorDrawable;
+import androidx.vectordrawable.graphics.drawable.SeekableAnimatedVectorDrawable;
 import androidx.wear.protolayout.expression.pipeline.AnimationsHelper;
 import androidx.wear.protolayout.expression.proto.AnimationParameterProto.AnimationSpec;
 import androidx.wear.protolayout.expression.proto.DynamicProto.DynamicFloat;
@@ -119,12 +117,14 @@ import androidx.wear.protolayout.proto.DimensionProto.ExpandedAngularDimensionPr
 import androidx.wear.protolayout.proto.DimensionProto.ExpandedDimensionProp;
 import androidx.wear.protolayout.proto.DimensionProto.ExtensionDimension;
 import androidx.wear.protolayout.proto.DimensionProto.ImageDimension;
+import androidx.wear.protolayout.proto.DimensionProto.PivotDimension;
 import androidx.wear.protolayout.proto.DimensionProto.ProportionalDimensionProp;
 import androidx.wear.protolayout.proto.DimensionProto.SpProp;
 import androidx.wear.protolayout.proto.DimensionProto.SpacerDimension;
 import androidx.wear.protolayout.proto.DimensionProto.WrappedDimensionProp;
 import androidx.wear.protolayout.proto.FingerprintProto.NodeFingerprint;
 import androidx.wear.protolayout.proto.LayoutElementProto.Arc;
+import androidx.wear.protolayout.proto.LayoutElementProto.ArcDirection;
 import androidx.wear.protolayout.proto.LayoutElementProto.ArcLayoutElement;
 import androidx.wear.protolayout.proto.LayoutElementProto.ArcLine;
 import androidx.wear.protolayout.proto.LayoutElementProto.ArcSpacer;
@@ -145,6 +145,7 @@ import androidx.wear.protolayout.proto.LayoutElementProto.SpanImage;
 import androidx.wear.protolayout.proto.LayoutElementProto.SpanText;
 import androidx.wear.protolayout.proto.LayoutElementProto.SpanVerticalAlignmentProp;
 import androidx.wear.protolayout.proto.LayoutElementProto.Spannable;
+import androidx.wear.protolayout.proto.LayoutElementProto.StrokeCapProp;
 import androidx.wear.protolayout.proto.LayoutElementProto.Text;
 import androidx.wear.protolayout.proto.LayoutElementProto.TextOverflow;
 import androidx.wear.protolayout.proto.LayoutElementProto.TextOverflowProp;
@@ -152,6 +153,8 @@ import androidx.wear.protolayout.proto.ModifiersProto.ArcModifiers;
 import androidx.wear.protolayout.proto.ModifiersProto.Background;
 import androidx.wear.protolayout.proto.ModifiersProto.Border;
 import androidx.wear.protolayout.proto.ModifiersProto.Clickable;
+import androidx.wear.protolayout.proto.ModifiersProto.Corner;
+import androidx.wear.protolayout.proto.ModifiersProto.CornerRadius;
 import androidx.wear.protolayout.proto.ModifiersProto.EnterTransition;
 import androidx.wear.protolayout.proto.ModifiersProto.ExitTransition;
 import androidx.wear.protolayout.proto.ModifiersProto.FadeInTransition;
@@ -160,25 +163,31 @@ import androidx.wear.protolayout.proto.ModifiersProto.Modifiers;
 import androidx.wear.protolayout.proto.ModifiersProto.Padding;
 import androidx.wear.protolayout.proto.ModifiersProto.Semantics;
 import androidx.wear.protolayout.proto.ModifiersProto.SemanticsRole;
+import androidx.wear.protolayout.proto.ModifiersProto.Shadow;
 import androidx.wear.protolayout.proto.ModifiersProto.SlideDirection;
 import androidx.wear.protolayout.proto.ModifiersProto.SlideInTransition;
 import androidx.wear.protolayout.proto.ModifiersProto.SlideOutTransition;
 import androidx.wear.protolayout.proto.ModifiersProto.SlideParentSnapOption;
 import androidx.wear.protolayout.proto.ModifiersProto.SpanModifiers;
+import androidx.wear.protolayout.proto.ModifiersProto.Transformation;
 import androidx.wear.protolayout.proto.StateProto.State;
 import androidx.wear.protolayout.proto.TriggerProto.OnConditionMetTrigger;
 import androidx.wear.protolayout.proto.TriggerProto.OnLoadTrigger;
 import androidx.wear.protolayout.proto.TriggerProto.Trigger;
 import androidx.wear.protolayout.proto.TypesProto.BoolProp;
+import androidx.wear.protolayout.proto.TypesProto.FloatProp;
 import androidx.wear.protolayout.proto.TypesProto.StringProp;
 import androidx.wear.protolayout.renderer.ProtoLayoutExtensionViewProvider;
 import androidx.wear.protolayout.renderer.ProtoLayoutTheme;
 import androidx.wear.protolayout.renderer.ProtoLayoutTheme.FontSet;
 import androidx.wear.protolayout.renderer.R;
 import androidx.wear.protolayout.renderer.common.LoggingUtils;
+import androidx.wear.protolayout.renderer.common.NoOpProviderStatsLogger;
 import androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer;
 import androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer.LayoutDiff;
 import androidx.wear.protolayout.renderer.common.ProtoLayoutDiffer.TreeNodeWithChange;
+import androidx.wear.protolayout.renderer.common.ProviderStatsLogger.InflaterStatsLogger;
+import androidx.wear.protolayout.renderer.common.RenderingArtifact;
 import androidx.wear.protolayout.renderer.dynamicdata.ProtoLayoutDynamicDataPipeline;
 import androidx.wear.protolayout.renderer.inflater.RenderedMetadata.LayoutInfo;
 import androidx.wear.protolayout.renderer.inflater.RenderedMetadata.LinearLayoutProperties;
@@ -193,6 +202,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -296,6 +306,7 @@ public final class ProtoLayoutInflater {
     final String mClickableIdExtra;
 
     @Nullable private final LoggingUtils mLoggingUtils;
+    @NonNull private final InflaterStatsLogger mInflaterStatsLogger;
 
     @Nullable final Executor mLoadActionExecutor;
     final LoadActionListener mLoadActionListener;
@@ -523,12 +534,13 @@ public final class ProtoLayoutInflater {
         @NonNull private final String mClickableIdExtra;
 
         @Nullable private final LoggingUtils mLoggingUtils;
+        @NonNull private final InflaterStatsLogger mInflaterStatsLogger;
         @Nullable private final ProtoLayoutExtensionViewProvider mExtensionViewProvider;
         private final boolean mAnimationEnabled;
 
         private final boolean mAllowLayoutChangingBindsWithoutDefault;
 
-        private final boolean mApplyFontVarianBodyAsDefault;
+        private final boolean mApplyFontVariantBodyAsDefault;
 
         Config(
                 @NonNull Context uiContext,
@@ -542,9 +554,10 @@ public final class ProtoLayoutInflater {
                 @Nullable ProtoLayoutExtensionViewProvider extensionViewProvider,
                 @NonNull String clickableIdExtra,
                 @Nullable LoggingUtils loggingUtils,
+                @NonNull InflaterStatsLogger inflaterStatsLogger,
                 boolean animationEnabled,
                 boolean allowLayoutChangingBindsWithoutDefault,
-                boolean applyFontVarianBodyAsDefault) {
+                boolean applyFontVariantBodyAsDefault) {
             this.mUiContext = uiContext;
             this.mLayout = layout;
             this.mLayoutResourceResolvers = layoutResourceResolvers;
@@ -557,8 +570,9 @@ public final class ProtoLayoutInflater {
             this.mAllowLayoutChangingBindsWithoutDefault = allowLayoutChangingBindsWithoutDefault;
             this.mClickableIdExtra = clickableIdExtra;
             this.mLoggingUtils = loggingUtils;
+            this.mInflaterStatsLogger = inflaterStatsLogger;
             this.mExtensionViewProvider = extensionViewProvider;
-            this.mApplyFontVarianBodyAsDefault = applyFontVarianBodyAsDefault;
+            this.mApplyFontVariantBodyAsDefault = applyFontVariantBodyAsDefault;
         }
 
         /** A {@link Context} suitable for interacting with UI. */
@@ -633,6 +647,12 @@ public final class ProtoLayoutInflater {
             return mLoggingUtils;
         }
 
+        /** Stats logger used for telemetry. */
+        @NonNull
+        public InflaterStatsLogger getInflaterStatsLogger() {
+            return mInflaterStatsLogger;
+        }
+
         /** View provider for the renderer extension. */
         @Nullable
         public ProtoLayoutExtensionViewProvider getExtensionViewProvider() {
@@ -655,7 +675,7 @@ public final class ProtoLayoutInflater {
 
         /** Whether to apply FONT_VARIANT_BODY as default variant. */
         public boolean getApplyFontVariantBodyAsDefault() {
-            return mApplyFontVarianBodyAsDefault;
+            return mApplyFontVariantBodyAsDefault;
         }
 
         /** Builder for the Config class. */
@@ -673,6 +693,7 @@ public final class ProtoLayoutInflater {
             @Nullable private String mClickableIdExtra;
 
             @Nullable private LoggingUtils mLoggingUtils;
+            @Nullable private InflaterStatsLogger mInflaterStatsLogger;
 
             @Nullable private ProtoLayoutExtensionViewProvider mExtensionViewProvider = null;
 
@@ -783,6 +804,14 @@ public final class ProtoLayoutInflater {
                 return this;
             }
 
+            /** Sets the stats logger used for telemetry. */
+            @NonNull
+            public Builder setInflaterStatsLogger(
+                    @NonNull InflaterStatsLogger inflaterStatsLogger) {
+                this.mInflaterStatsLogger = inflaterStatsLogger;
+                return this;
+            }
+
             /**
              * Sets whether a "layout changing" data bind can be applied without the
              * "value_for_layout" field being filled in, or being set to zero / empty. Defaults to
@@ -829,7 +858,11 @@ public final class ProtoLayoutInflater {
                 if (mClickableIdExtra == null) {
                     mClickableIdExtra = DEFAULT_CLICKABLE_ID_EXTRA;
                 }
-
+                if (mInflaterStatsLogger == null) {
+                    mInflaterStatsLogger =
+                            new NoOpProviderStatsLogger("No implementation was provided")
+                                    .createInflaterStatsLogger();
+                }
                 return new Config(
                         mUiContext,
                         mLayout,
@@ -842,6 +875,7 @@ public final class ProtoLayoutInflater {
                         mExtensionViewProvider,
                         checkNotNull(mClickableIdExtra),
                         mLoggingUtils,
+                        mInflaterStatsLogger,
                         mAnimationEnabled,
                         mAllowLayoutChangingBindsWithoutDefault,
                         mApplyFontVariantBodyAsDefault);
@@ -868,12 +902,17 @@ public final class ProtoLayoutInflater {
                 config.getAllowLayoutChangingBindsWithoutDefault();
         this.mClickableIdExtra = config.getClickableIdExtra();
         this.mLoggingUtils = config.getLoggingUtils();
+        this.mInflaterStatsLogger = config.getInflaterStatsLogger();
         this.mExtensionViewProvider = config.getExtensionViewProvider();
         this.mApplyFontVariantBodyAsDefault = config.getApplyFontVariantBodyAsDefault();
     }
 
+    private int dpToPx(float dp) {
+        return round(dp * mUiContext.getResources().getDisplayMetrics().density);
+    }
+
     private int safeDpToPx(float dp) {
-        return round(max(0, dp) * mUiContext.getResources().getDisplayMetrics().density);
+        return max(0, dpToPx(dp));
     }
 
     private int safeDpToPx(DpProp dpProp) {
@@ -1350,8 +1389,10 @@ public final class ProtoLayoutInflater {
         }
 
         if (hasAction) {
-            // Apply ripple effect
-            applyRippleEffect(view);
+            if (!clickable.hasVisualFeedbackEnabled() || clickable.getVisualFeedbackEnabled()) {
+                // Apply ripple effect
+                applyRippleEffect(view);
+            }
 
             if (!extendTouchTarget) {
                 // For temporarily disable the touch size check for element on arc
@@ -1401,7 +1442,8 @@ public final class ProtoLayoutInflater {
         if (mProtoLayoutTheme.getRippleResId() != 0) {
             try {
                 view.setForeground(
-                        mProtoLayoutTheme.getTheme()
+                        mProtoLayoutTheme
+                                .getTheme()
                                 .getDrawable(mProtoLayoutTheme.getRippleResId()));
                 return;
             } catch (Resources.NotFoundException e) {
@@ -1425,7 +1467,8 @@ public final class ProtoLayoutInflater {
         if (isValid) {
             view.setForeground(mUiContext.getDrawable(outValue.resourceId));
         } else {
-            Log.e(TAG,
+            Log.e(
+                    TAG,
                     "Could not resolve android.R.attr.selectableItemBackground from Ui Context.");
         }
     }
@@ -1508,16 +1551,67 @@ public final class ProtoLayoutInflater {
             handleProp(background.getColor(), drawable::setColor, posId, pipelineMaker);
         }
 
-        if (background.hasCorner()) {
-            final int radiusPx = safeDpToPx(background.getCorner().getRadius());
-            if (radiusPx != 0) {
-                drawable.setCornerRadius(radiusPx);
-                view.setClipToOutline(true);
-                view.setOutlineProvider(ViewOutlineProvider.BACKGROUND);
-            }
-        }
+        applyCornerToBackground(view, background, drawable);
 
         return drawable;
+    }
+
+    private void applyCornerToBackground(
+            View view, @NonNull Background background, @NonNull GradientDrawable drawable) {
+        if (!background.hasCorner()) {
+            return;
+        }
+
+        // apply corner
+        final Corner corner = background.getCorner();
+        final int radiusPx = corner.hasRadius() ? safeDpToPx(corner.getRadius()) : 0;
+        float[] radii = new float[8];
+        Arrays.fill(radii, radiusPx);
+        if (corner.hasTopLeftRadius()) {
+            setCornerRadiusToArray(corner.getTopLeftRadius(), radii, /* index= */ 0);
+        }
+        if (corner.hasTopRightRadius()) {
+            setCornerRadiusToArray(corner.getTopRightRadius(), radii, /* index= */ 2);
+        }
+        if (corner.hasBottomRightRadius()) {
+            setCornerRadiusToArray(corner.getBottomRightRadius(), radii, /* index= */ 4);
+        }
+        if (corner.hasBottomLeftRadius()) {
+            setCornerRadiusToArray(corner.getBottomLeftRadius(), radii, /* index= */ 6);
+        }
+
+        if (areAllEqual(radii, /* count= */ 8)) {
+            if (radii[0] == 0) {
+                return;
+            }
+            // The implementation in GradientDrawable is more efficient by calling setCornerRadius
+            // than calling setCornerRadii with an array of all equal items.
+            drawable.setCornerRadius(radii[0]);
+        } else {
+            drawable.setCornerRadii(radii);
+        }
+
+        view.setClipToOutline(true);
+        view.setOutlineProvider(ViewOutlineProvider.BACKGROUND);
+    }
+
+    private void setCornerRadiusToArray(
+            @NonNull CornerRadius cornerRadius, float[] radii, int index) {
+        if (cornerRadius.hasX()) {
+            radii[index] = safeDpToPx(cornerRadius.getX());
+        }
+        if (cornerRadius.hasY()) {
+            radii[index + 1] = safeDpToPx(cornerRadius.getY());
+        }
+    }
+
+    private static boolean areAllEqual(float[] array, int count) {
+        for (int i = 1; i < count; i++) {
+            if (array[0] != array[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private GradientDrawable applyBorder(
@@ -1538,6 +1632,119 @@ public final class ProtoLayoutInflater {
                 pipelineMaker);
 
         return drawable;
+    }
+
+    private void applyTransformation(
+            @NonNull View view,
+            @NonNull Transformation transformation,
+            @NonNull String posId,
+            @NonNull Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
+        // In a composite transformation, the order of applying the individual transformations
+        // does not affect the result, as Android view does the transformation in fixed order by
+        // first scale, then rotate then translate.
+
+        if (transformation.hasTranslationX()) {
+            handleProp(
+                    transformation.getTranslationX(),
+                    translationX -> view.setTranslationX(dpToPx(translationX)),
+                    posId,
+                    pipelineMaker);
+        }
+
+        if (transformation.hasTranslationY()) {
+            handleProp(
+                    transformation.getTranslationY(),
+                    translationY -> view.setTranslationY(dpToPx(translationY)),
+                    posId,
+                    pipelineMaker);
+        }
+
+        if (transformation.hasScaleX()) {
+            handleProp(transformation.getScaleX(), view::setScaleX, posId, pipelineMaker);
+        }
+
+        if (transformation.hasScaleY()) {
+            handleProp(transformation.getScaleY(), view::setScaleY, posId, pipelineMaker);
+        }
+
+        if (transformation.hasRotation()) {
+            handleProp(transformation.getRotation(), view::setRotation, posId, pipelineMaker);
+        }
+
+        if (transformation.hasPivotX()) {
+            applyTransformationPivot(
+                    view,
+                    transformation.getPivotX(),
+                    offsetDp -> setPivotInOffsetDp(view, offsetDp, PivotType.X),
+                    locationRatio -> setPivotInLocationRatio(view, locationRatio, PivotType.X),
+                    posId,
+                    pipelineMaker);
+        }
+
+        if (transformation.hasPivotY()) {
+            applyTransformationPivot(
+                    view,
+                    transformation.getPivotY(),
+                    offsetDp -> setPivotInOffsetDp(view, offsetDp, PivotType.Y),
+                    locationRatio -> setPivotInLocationRatio(view, locationRatio, PivotType.Y),
+                    posId,
+                    pipelineMaker);
+        }
+    }
+
+    private enum PivotType {
+        X,
+        Y
+    }
+
+    private void setPivotInOffsetDp(View view, float pivot, PivotType type) {
+        if (type == PivotType.X) {
+            view.setPivotX(dpToPx(pivot) + view.getWidth() * 0.5f);
+        } else {
+            view.setPivotY(dpToPx(pivot) + view.getHeight() * 0.5f);
+        }
+    }
+
+    private void setPivotInLocationRatio(View view, float pivot, PivotType type) {
+        if (type == PivotType.X) {
+            view.setPivotX(pivot * view.getWidth());
+        } else {
+            view.setPivotY(pivot * view.getHeight());
+        }
+    }
+
+    private void applyTransformationPivot(
+            View view,
+            PivotDimension pivotDimension,
+            Consumer<Float> consumerOffsetDp,
+            Consumer<Float> consumerLocationRatio,
+            @NonNull String posId,
+            Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
+        switch (pivotDimension.getInnerCase()) {
+            case OFFSET_DP:
+                DpProp offset = pivotDimension.getOffsetDp();
+                handleProp(
+                        offset,
+                        value -> view.post(() -> consumerOffsetDp.accept(value)),
+                        consumerOffsetDp,
+                        posId,
+                        pipelineMaker);
+                break;
+            case LOCATION_RATIO:
+                FloatProp ratio = pivotDimension.getLocationRatio().getRatio();
+                handleProp(
+                        ratio,
+                        value -> view.post(() -> consumerLocationRatio.accept(value)),
+                        consumerLocationRatio,
+                        posId,
+                        pipelineMaker);
+                break;
+            case INNER_NOT_SET:
+                Log.w(
+                        TAG,
+                        "PivotDimension has an unknown dimension type: "
+                                + pivotDimension.getInnerCase().name());
+        }
     }
 
     private View applyModifiers(
@@ -1601,6 +1808,18 @@ public final class ProtoLayoutInflater {
                     p ->
                             p.storeAnimatedVisibilityFor(
                                     posId, modifiers.getContentUpdateAnimation()));
+        }
+
+        if (modifiers.hasTransformation()) {
+            applyTransformation(
+                    wrapper == null ? view : wrapper,
+                    modifiers.getTransformation(),
+                    posId,
+                    pipelineMaker);
+        }
+
+        if (modifiers.hasOpacity()) {
+            handleProp(modifiers.getOpacity(), view::setAlpha, posId, pipelineMaker);
         }
 
         return view;
@@ -1864,6 +2083,10 @@ public final class ProtoLayoutInflater {
 
         if (modifiers.hasSemantics()) {
             applySemantics(view, modifiers.getSemantics(), posId, pipelineMaker);
+        }
+
+        if (modifiers.hasOpacity()) {
+            handleProp(modifiers.getOpacity(), view::setAlpha, posId, pipelineMaker);
         }
 
         return view;
@@ -2341,16 +2564,7 @@ public final class ProtoLayoutInflater {
             if (spacer.getWidth().hasLinearDimension()) {
                 handleProp(
                         spacer.getWidth().getLinearDimension(),
-                        width -> {
-                            LayoutParams lp = view.getLayoutParams();
-                            if (lp == null) {
-                                Log.e(TAG, "LayoutParams was null when updating spacer width");
-                                return;
-                            }
-
-                            lp.width = safeDpToPx(width);
-                            view.requestLayout();
-                        },
+                        widthDp -> updateLayoutWidthParam(view, widthDp),
                         posId,
                         pipelineMaker);
             }
@@ -2358,16 +2572,7 @@ public final class ProtoLayoutInflater {
             if (spacer.getHeight().hasLinearDimension()) {
                 handleProp(
                         spacer.getHeight().getLinearDimension(),
-                        height -> {
-                            LayoutParams lp = view.getLayoutParams();
-                            if (lp == null) {
-                                Log.e(TAG, "LayoutParams was null when updating spacer height");
-                                return;
-                            }
-
-                            lp.height = safeDpToPx(height);
-                            view.requestLayout();
-                        },
+                        heightDp -> updateLayoutHeightParam(view, heightDp),
                         posId,
                         pipelineMaker);
             }
@@ -2377,45 +2582,14 @@ public final class ProtoLayoutInflater {
             if (spacer.getWidth().hasLinearDimension()) {
                 handleProp(
                         spacer.getWidth().getLinearDimension(),
-                        width -> {
-                            // Update minimum width first, because LayoutParams could be null.
-                            // This calls requestLayout.
-                            int widthPx = safeDpToPx(width);
-                            view.setMinimumWidth(widthPx);
-
-                            // We still need to update layout params in case other dimension is
-                            // expand, so 0 could
-                            // be miss interpreted.
-                            LayoutParams lp = view.getLayoutParams();
-                            if (lp == null) {
-                                Log.e(TAG, "LayoutParams was null when updating spacer width");
-                                return;
-                            }
-
-                            lp.width = widthPx;
-                        },
+                        widthDp -> updateLayoutWidthParam(view, widthDp),
                         posId,
                         pipelineMaker);
             }
             if (spacer.getHeight().hasLinearDimension()) {
                 handleProp(
                         spacer.getHeight().getLinearDimension(),
-                        height -> {
-                            // Update minimum height first, because LayoutParams could be null.
-                            // This calls requestLayout.
-                            int heightPx = safeDpToPx(height);
-                            view.setMinimumHeight(heightPx);
-
-                            // We still need to update layout params in case other dimension is
-                            // expand, so 0 could be miss interpreted.
-                            LayoutParams lp = view.getLayoutParams();
-                            if (lp == null) {
-                                Log.e(TAG, "LayoutParams was null when updating spacer height");
-                                return;
-                            }
-
-                            lp.height = heightPx;
-                        },
+                        heightDp -> updateLayoutHeightParam(view, heightDp),
                         posId,
                         pipelineMaker);
             }
@@ -2434,6 +2608,48 @@ public final class ProtoLayoutInflater {
                             .getParentProperties()
                             .applyPendingChildLayoutParams(layoutParams));
         }
+    }
+
+    private void updateLayoutWidthParam(@NonNull View view, float widthDp) {
+        scheduleLayoutParamsUpdate(
+                view,
+                () -> {
+                    checkNotNull(view.getLayoutParams()).width = safeDpToPx(widthDp);
+                    view.requestLayout();
+                });
+    }
+
+    private void updateLayoutHeightParam(@NonNull View view, float heightDp) {
+        scheduleLayoutParamsUpdate(
+                view,
+                () -> {
+                    checkNotNull(view.getLayoutParams()).height = safeDpToPx(heightDp);
+                    view.requestLayout();
+                });
+    }
+
+    private void scheduleLayoutParamsUpdate(@NonNull View view, Runnable layoutParamsUpdater) {
+        if (view.getLayoutParams() != null) {
+            layoutParamsUpdater.run();
+            return;
+        }
+
+        // View#getLayoutParams() returns null if this view is not attached to a parent ViewGroup.
+        // And once the view is attached to a parent ViewGroup, it guarantees a non-null return
+        // value. Thus, we use the listener to do the update of the layout param the moment that the
+        // view is attached to window.
+        view.addOnAttachStateChangeListener(
+                new View.OnAttachStateChangeListener() {
+
+                    @Override
+                    public void onViewAttachedToWindow(@NonNull View v) {
+                        layoutParamsUpdater.run();
+                        v.removeOnAttachStateChangeListener(this);
+                    }
+
+                    @Override
+                    public void onViewDetachedFromWindow(@NonNull View v) {}
+                });
     }
 
     @Nullable
@@ -2573,8 +2789,10 @@ public final class ProtoLayoutInflater {
         applyTextOverflow(textView, overflow, text.getMarqueeParameters());
 
         if (overflow.getValue() == TextOverflow.TEXT_OVERFLOW_ELLIPSIZE
-                && !text.getText().hasDynamicValue()) {
-            adjustMaxLinesForEllipsize(textView);
+                && !text.getText().hasDynamicValue()
+                // There's no need for any optimizations if max lines is already 1.
+                && textView.getMaxLines() != 1) {
+            OneOffPreDrawListener.add(textView, () -> adjustMaxLinesForEllipsize(textView));
         }
 
         // Text auto size is not supported for dynamic text.
@@ -2592,12 +2810,10 @@ public final class ProtoLayoutInflater {
                     isAutoSizeAllowed);
         }
 
-        boolean excludeFontPadding = false;
-
-        if (text.hasAndroidTextStyle()) {
-            excludeFontPadding = text.getAndroidTextStyle().getExcludeFontPadding();
-        }
-        applyExcludeFontPadding(textView, excludeFontPadding);
+        // AndroidTextStyle proto is existing only for newer builders and older renderer mix to also
+        // have excluded font padding. Here, it's being ignored, and default value (excluded font
+        // padding) is used.
+        applyExcludeFontPadding(textView);
 
         if (text.hasLineHeight()) {
             float lineHeightPx = toPx(text.getLineHeight());
@@ -2675,57 +2891,42 @@ public final class ProtoLayoutInflater {
      * different than what TEXT_OVERFLOW_ELLIPSIZE_END does, as that option just ellipsizes the last
      * line of text.
      */
-    private void adjustMaxLinesForEllipsize(@NonNull TextView textView) {
-        textView
-                .getViewTreeObserver()
-                .addOnPreDrawListener(
-                        new OnPreDrawListener() {
-                            @Override
-                            public boolean onPreDraw() {
-                                ViewParent maybeParent = textView.getParent();
-                                if (!(maybeParent instanceof View)) {
-                                    Log.d(
-                                            TAG,
-                                            "Couldn't adjust max lines for ellipsizing as"
-                                                    + "there's no View/ViewGroup parent.");
-                                    return false;
-                                }
+    private static boolean adjustMaxLinesForEllipsize(@NonNull TextView textView) {
+        ViewParent maybeParent = textView.getParent();
+        if (!(maybeParent instanceof View)) {
+            Log.d(
+                    TAG,
+                    "Couldn't adjust max lines for ellipsizing as there's no View/ViewGroup"
+                            + " parent.");
+            return true;
+        }
 
-                                textView.getViewTreeObserver().removeOnPreDrawListener(this);
+        View parent = (View) maybeParent;
+        int availableHeight = parent.getHeight();
+        int oneLineHeight = textView.getLineHeight();
+        // This is what was set in proto, we shouldn't exceed it.
+        int maxMaxLines = textView.getMaxLines();
+        // Avoid having maxLines as 0 in case the space is really tight.
+        int availableLines = max(availableHeight / oneLineHeight, 1);
 
-                                View parent = (View) maybeParent;
-                                int availableHeight = parent.getHeight();
-                                int oneLineHeight = textView.getLineHeight();
-                                // This is what was set in proto, we shouldn't exceed it.
-                                int maxMaxLines = textView.getMaxLines();
-                                // Avoid having maxLines as 0 in case the space is really tight.
-                                int availableLines = max(availableHeight / oneLineHeight, 1);
+        // Update only if changed.
+        if (availableLines < maxMaxLines) {
+            textView.setMaxLines(availableLines);
+            // Cancel the current drawing pass.
+            return false;
+        }
 
-                                // Update only if changed.
-                                if (availableLines < maxMaxLines) {
-                                    textView.setMaxLines(availableLines);
-                                }
-
-                                // Cancel the current drawing pass.
-                                return false;
-                            }
-                        });
+        return true;
     }
 
     /**
-     * Sets whether the padding is included or not. If font padding is not included, sets the
-     * correct padding to the TextView to avoid clipping taller languages.
+     * Sets font padding to be excluded and applies correct padding to the TextView to avoid
+     * clipping taller languages.
      */
-    private void applyExcludeFontPadding(TextView textView, boolean excludeFontPadding) {
-        // Reversed value, since TextView sets padding to be included, while our protos are for
-        // excluding it.
-        textView.setIncludeFontPadding(!excludeFontPadding);
+    private void applyExcludeFontPadding(TextView textView) {
+        textView.setIncludeFontPadding(false);
 
-        // We need to update padding in the TextView if font's padding is not used, to avoid
-        // clipping of taller languages.
-        if (!excludeFontPadding) {
-            return;
-        }
+        // We need to update padding in the TextView to avoid clipping of taller languages.
 
         float ascent = textView.getPaint().getFontMetrics().ascent;
         float descent = textView.getPaint().getFontMetrics().descent;
@@ -3027,7 +3228,7 @@ public final class ProtoLayoutInflater {
      *     to the image view; otherwise returns null to indicate the failure of setting drawable.
      */
     @Nullable
-    private static Drawable setImageDrawable(
+    private Drawable setImageDrawable(
             ImageView imageView, Future<Drawable> drawableFuture, String protoResId) {
         try {
             return setImageDrawable(imageView, drawableFuture.get(), protoResId);
@@ -3044,8 +3245,10 @@ public final class ProtoLayoutInflater {
      *     null to indicate the failure of setting drawable.
      */
     @Nullable
-    private static Drawable setImageDrawable(
-            ImageView imageView, Drawable drawable, String protoResId) {
+    private Drawable setImageDrawable(ImageView imageView, Drawable drawable, String protoResId) {
+        if (drawable != null) {
+            mInflaterStatsLogger.logDrawableUsage(drawable);
+        }
         if (drawable instanceof BitmapDrawable
                 && ((BitmapDrawable) drawable).getBitmap().getByteCount()
                         > DEFAULT_MAX_BITMAP_RAW_SIZE) {
@@ -3079,113 +3282,135 @@ public final class ProtoLayoutInflater {
 
         WearCurvedLineView lineView = new WearCurvedLineView(mUiContext);
 
-        // A ArcLineView must always be the same width/height as its parent, so it can draw the line
-        // properly inside of those bounds.
-        ArcLayout.LayoutParams layoutParams =
-                new ArcLayout.LayoutParams(generateDefaultLayoutParams());
-        layoutParams.width = LayoutParams.MATCH_PARENT;
-        layoutParams.height = LayoutParams.MATCH_PARENT;
+        try {
+            lineView.setUpdatesEnabled(false);
 
-        if (line.hasBrush()) {
-            lineView.setBrush(line.getBrush());
-        } else if (line.hasColor()) {
-            handleProp(line.getColor(), lineView::setColor, posId, pipelineMaker);
-        } else {
-            lineView.setColor(LINE_COLOR_DEFAULT);
-        }
+            // A ArcLineView must always be the same width/height as its parent, so it can draw the
+            // line properly inside of those bounds.
+            ArcLayout.LayoutParams layoutParams =
+                    new ArcLayout.LayoutParams(generateDefaultLayoutParams());
+            layoutParams.width = LayoutParams.MATCH_PARENT;
+            layoutParams.height = LayoutParams.MATCH_PARENT;
 
-        if (line.hasStrokeCap()) {
-            switch (line.getStrokeCap().getValue()) {
-                case STROKE_CAP_BUTT:
-                    lineView.setStrokeCap(Cap.BUTT);
-                    break;
-                case STROKE_CAP_ROUND:
-                    lineView.setStrokeCap(Cap.ROUND);
-                    break;
-                case STROKE_CAP_SQUARE:
-                    lineView.setStrokeCap(Cap.SQUARE);
-                    break;
-                case UNRECOGNIZED:
-                case STROKE_CAP_UNDEFINED:
-                    Log.w(TAG, "Undefined StrokeCap value.");
-                    break;
+            if (line.hasBrush()) {
+                lineView.setBrush(line.getBrush());
+            } else if (line.hasColor()) {
+                handleProp(line.getColor(), lineView::setColor, posId, pipelineMaker);
+            } else {
+                lineView.setColor(LINE_COLOR_DEFAULT);
             }
-        }
 
-        lineView.setThickness(thicknessPx);
-
-        DegreesProp length = DegreesProp.getDefaultInstance();
-        if (line.hasAngularLength()) {
-            final ArcLineLength angularLength = line.getAngularLength();
-            switch (angularLength.getInnerCase()) {
-                case DEGREES:
-                    length = line.getAngularLength().getDegrees();
-                    handleProp(length, lineView::setLineSweepAngleDegrees, posId, pipelineMaker);
-                    break;
-
-                case EXPANDED_ANGULAR_DIMENSION:
-                    {
-                        ExpandedAngularDimensionProp expandedAngularDimension =
-                                angularLength.getExpandedAngularDimension();
-                        layoutParams.setWeight(
-                                expandedAngularDimension.hasLayoutWeight()
-                                        ? expandedAngularDimension.getLayoutWeight().getValue()
-                                        : 1.0f);
-                        length = DegreesProp.getDefaultInstance();
+            if (line.hasStrokeCap()) {
+                StrokeCapProp strokeCapProp = line.getStrokeCap();
+                switch (strokeCapProp.getValue()) {
+                    case STROKE_CAP_BUTT:
+                        lineView.setStrokeCap(Cap.BUTT);
                         break;
-                    }
+                    case STROKE_CAP_ROUND:
+                        lineView.setStrokeCap(Cap.ROUND);
+                        break;
+                    case STROKE_CAP_SQUARE:
+                        lineView.setStrokeCap(Cap.SQUARE);
+                        break;
+                    case UNRECOGNIZED:
+                    case STROKE_CAP_UNDEFINED:
+                        Log.w(TAG, "Undefined StrokeCap value.");
+                        break;
+                }
 
-                case INNER_NOT_SET:
-                    break;
+                if (strokeCapProp.hasShadow()) {
+                    Shadow shadow = strokeCapProp.getShadow();
+                    int color =
+                            shadow.getColor().hasArgb() ? shadow.getColor().getArgb() : Color.BLACK;
+                    lineView.setStrokeCapShadow(
+                            safeDpToPx(shadow.getBlurRadius().getValue()), color);
+                }
             }
-        } else {
-            length = line.getLength();
-            handleProp(length, lineView::setLineSweepAngleDegrees, posId, pipelineMaker);
-        }
 
-        SizedArcContainer sizeWrapper = null;
-        SizedArcContainer.LayoutParams sizedLp =
-                new SizedArcContainer.LayoutParams(
-                        LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
-        @Nullable Float sizeForLayout = resolveSizeForLayoutIfNeeded(length);
-        if (sizeForLayout != null) {
-            int arcDirection =
+            lineView.setThickness(thicknessPx);
+
+            DegreesProp length = DegreesProp.getDefaultInstance();
+
+            if (line.hasAngularLength()) {
+                final ArcLineLength angularLength = line.getAngularLength();
+                switch (angularLength.getInnerCase()) {
+                    case DEGREES:
+                        length = line.getAngularLength().getDegrees();
+                        handleProp(
+                                length, lineView::setLineSweepAngleDegrees, posId, pipelineMaker);
+                        break;
+
+                    case EXPANDED_ANGULAR_DIMENSION:
+                        {
+                            ExpandedAngularDimensionProp expandedAngularDimension =
+                                    angularLength.getExpandedAngularDimension();
+                            layoutParams.setWeight(
+                                    expandedAngularDimension.hasLayoutWeight()
+                                            ? expandedAngularDimension.getLayoutWeight().getValue()
+                                            : 1.0f);
+                            length = DegreesProp.getDefaultInstance();
+                            break;
+                        }
+                    case INNER_NOT_SET:
+                        break;
+                }
+            } else {
+                length = line.getLength();
+                handleProp(length, lineView::setLineSweepAngleDegrees, posId, pipelineMaker);
+            }
+
+            ArcDirection arcLineDirection =
                     line.hasArcDirection()
-                            ? line.getArcDirection().getValueValue()
-                            : ARC_DIRECTION_CLOCKWISE_VALUE;
-            sizeWrapper = new SizedArcContainer(mUiContext, arcDirection);
-            if (sizeForLayout <= 0f) {
-                Log.w(
-                        TAG,
-                        "ArcLine length's value_for_layout is not a positive value. Element won't"
-                                + " be visible.");
+                            ? line.getArcDirection().getValue()
+                            : ArcDirection.ARC_DIRECTION_CLOCKWISE;
+
+            lineView.setLineDirection(arcLineDirection);
+
+            SizedArcContainer sizeWrapper = null;
+            SizedArcContainer.LayoutParams sizedLp =
+                    new SizedArcContainer.LayoutParams(
+                            LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+            @Nullable Float sizeForLayout = resolveSizeForLayoutIfNeeded(length);
+            if (sizeForLayout != null) {
+                sizeWrapper = new SizedArcContainer(mUiContext);
+                sizeWrapper.setArcDirection(arcLineDirection);
+                if (sizeForLayout <= 0f) {
+                    Log.w(
+                            TAG,
+                            "ArcLine length's value_for_layout is not a positive value. Element"
+                                    + " won't be visible.");
+                }
+                sizeWrapper.setSweepAngleDegrees(sizeForLayout);
+                sizedLp.setAngularAlignment(
+                        angularAlignmentProtoToAngularAlignment(
+                                length.getAngularAlignmentForLayout()));
+
+                // Also clamp the line to that angle...
+                lineView.setMaxSweepAngleDegrees(sizeForLayout);
             }
-            sizeWrapper.setSweepAngleDegrees(sizeForLayout);
-            sizedLp.setAngularAlignment(
-                    angularAlignmentProtoToAngularAlignment(length.getAngularAlignmentForLayout()));
 
-            // Also clamp the line to that angle...
-            lineView.setMaxSweepAngleDegrees(sizeForLayout);
-        }
+            View wrappedView =
+                    applyModifiersToArcLayoutView(
+                            lineView, line.getModifiers(), posId, pipelineMaker);
 
-        View wrappedView =
-                applyModifiersToArcLayoutView(lineView, line.getModifiers(), posId, pipelineMaker);
-
-        if (sizeWrapper != null) {
-            sizeWrapper.addView(wrappedView, sizedLp);
-            parentViewWrapper.maybeAddView(sizeWrapper, layoutParams);
-            return new InflatedView(
-                    sizeWrapper,
-                    parentViewWrapper
-                            .getParentProperties()
-                            .applyPendingChildLayoutParams(layoutParams));
-        } else {
-            parentViewWrapper.maybeAddView(wrappedView, layoutParams);
-            return new InflatedView(
-                    wrappedView,
-                    parentViewWrapper
-                            .getParentProperties()
-                            .applyPendingChildLayoutParams(layoutParams));
+            if (sizeWrapper != null) {
+                sizeWrapper.addView(wrappedView, sizedLp);
+                parentViewWrapper.maybeAddView(sizeWrapper, layoutParams);
+                return new InflatedView(
+                        sizeWrapper,
+                        parentViewWrapper
+                                .getParentProperties()
+                                .applyPendingChildLayoutParams(layoutParams));
+            } else {
+                parentViewWrapper.maybeAddView(wrappedView, layoutParams);
+                return new InflatedView(
+                        wrappedView,
+                        parentViewWrapper
+                                .getParentProperties()
+                                .applyPendingChildLayoutParams(layoutParams));
+            }
+        } finally {
+            lineView.setUpdatesEnabled(true);
         }
     }
 
@@ -3501,8 +3726,6 @@ public final class ProtoLayoutInflater {
 
         boolean isAnySpanClickable = false;
 
-        boolean excludeFontPadding = false;
-
         for (Span element : spannable.getSpansList()) {
             switch (element.getInnerCase()) {
                 case IMAGE:
@@ -3522,10 +3745,6 @@ public final class ProtoLayoutInflater {
                         isAnySpanClickable = true;
                     }
 
-                    if (protoText.hasAndroidTextStyle()
-                            && protoText.getAndroidTextStyle().getExcludeFontPadding()) {
-                        excludeFontPadding = true;
-                    }
                     break;
                 case INNER_NOT_SET:
                     Log.w(TAG, "Unknown Span child type.");
@@ -3568,7 +3787,10 @@ public final class ProtoLayoutInflater {
 
         tv.setText(builder);
 
-        applyExcludeFontPadding(tv, excludeFontPadding);
+        // AndroidTextStyle proto is existing only for newer builders and older renderer mix to also
+        // have excluded font padding. Here, it's being ignored, and default value (excluded font
+        // padding) is used.
+        applyExcludeFontPadding(tv);
 
         if (isAnySpanClickable) {
             // For any ClickableSpans to work, the MovementMethod must be set to LinkMovementMethod.
@@ -3608,15 +3830,26 @@ public final class ProtoLayoutInflater {
 
         switch (element.getInnerCase()) {
             case ADAPTER:
-                // Fall back to the normal inflater.
-                inflatedView =
-                        inflateLayoutElement(
-                                parentViewWrapper,
-                                element.getAdapter().getContent(),
-                                nodePosId,
-                                /* includeChildren= */ true,
-                                layoutInfoBuilder,
-                                pipelineMaker);
+                if (hasTransformation(element.getAdapter().getContent())) {
+                    Log.e(
+                            TAG,
+                            "Error inflating "
+                                    + element.getAdapter().getContent().getInnerCase().name()
+                                    + " in the arc. Transformation modifier is not supported for "
+                                    + "the layout element"
+                                    + "  inside an ArcAdapter.");
+                    inflatedView = null;
+                } else {
+                    // Fall back to the normal inflater.
+                    inflatedView =
+                            inflateLayoutElement(
+                                    parentViewWrapper,
+                                    element.getAdapter().getContent(),
+                                    nodePosId,
+                                    /* includeChildren= */ true,
+                                    layoutInfoBuilder,
+                                    pipelineMaker);
+                }
                 break;
 
             case SPACER:
@@ -3663,6 +3896,41 @@ public final class ProtoLayoutInflater {
             pipelineMaker.ifPresent(pipe -> pipe.rememberNode(nodePosId));
         }
         return inflatedView;
+    }
+
+    /** Checks whether a layout element has a transformation modifier. */
+    private static boolean hasTransformation(@NonNull LayoutElement content) {
+        switch (content.getInnerCase()) {
+            case IMAGE:
+                return content.getImage().hasModifiers()
+                        && content.getImage().getModifiers().hasTransformation();
+            case TEXT:
+                return content.getText().hasModifiers()
+                        && content.getText().getModifiers().hasTransformation();
+            case SPACER:
+                return content.getSpacer().hasModifiers()
+                        && content.getSpacer().getModifiers().hasTransformation();
+            case BOX:
+                return content.getBox().hasModifiers()
+                        && content.getBox().getModifiers().hasTransformation();
+            case ROW:
+                return content.getRow().hasModifiers()
+                        && content.getRow().getModifiers().hasTransformation();
+            case COLUMN:
+                return content.getColumn().hasModifiers()
+                        && content.getColumn().getModifiers().hasTransformation();
+            case SPANNABLE:
+                return content.getSpannable().hasModifiers()
+                        && content.getSpannable().getModifiers().hasTransformation();
+            case ARC:
+                return content.getArc().hasModifiers()
+                        && content.getArc().getModifiers().hasTransformation();
+            case EXTENSION:
+                // fall through
+            case INNER_NOT_SET:
+                return false;
+        }
+        return false;
     }
 
     @Nullable
@@ -3878,15 +4146,26 @@ public final class ProtoLayoutInflater {
             Consumer<Float> consumer,
             String posId,
             Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
+        handleProp(dpProp, consumer, consumer, posId, pipelineMaker);
+    }
+
+    private void handleProp(
+            DpProp dpProp,
+            Consumer<Float> staticValueConsumer,
+            Consumer<Float> dynamicValueConsumer,
+            String posId,
+            Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
         if (dpProp.hasDynamicValue() && pipelineMaker.isPresent()) {
             try {
-                pipelineMaker.get().addPipelineFor(dpProp, dpProp.getValue(), posId, consumer);
+                pipelineMaker
+                        .get()
+                        .addPipelineFor(dpProp, dpProp.getValue(), posId, dynamicValueConsumer);
             } catch (RuntimeException ex) {
                 Log.e(TAG, "Error building pipeline", ex);
-                consumer.accept(dpProp.getValue());
+                staticValueConsumer.accept(dpProp.getValue());
             }
         } else {
-            consumer.accept(dpProp.getValue());
+            staticValueConsumer.accept(dpProp.getValue());
         }
     }
 
@@ -3921,6 +4200,38 @@ public final class ProtoLayoutInflater {
             }
         } else {
             consumer.accept(boolProp.getValue());
+        }
+    }
+
+    private void handleProp(
+            FloatProp floatProp,
+            Consumer<Float> consumer,
+            String posId,
+            Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
+        handleProp(floatProp, consumer, consumer, posId, pipelineMaker);
+    }
+
+    private void handleProp(
+            FloatProp floatProp,
+            Consumer<Float> staticValueConsumer,
+            Consumer<Float> dynamicValueconsumer,
+            String posId,
+            Optional<ProtoLayoutDynamicDataPipeline.PipelineMaker> pipelineMaker) {
+        if (floatProp.hasDynamicValue() && pipelineMaker.isPresent()) {
+            try {
+                pipelineMaker
+                        .get()
+                        .addPipelineFor(
+                                floatProp.getDynamicValue(),
+                                floatProp.getValue(),
+                                posId,
+                                dynamicValueconsumer);
+            } catch (RuntimeException ex) {
+                Log.e(TAG, "Error building pipeline", ex);
+                staticValueConsumer.accept(floatProp.getValue());
+            }
+        } else {
+            staticValueConsumer.accept(floatProp.getValue());
         }
     }
 
@@ -3988,11 +4299,8 @@ public final class ProtoLayoutInflater {
                 && !containsMeasurableWidth(containerHeight, elements)) {
             return false;
         }
-        if (containerHeight.hasWrappedDimension()
-                && !containsMeasurableHeight(containerWidth, elements)) {
-            return false;
-        }
-        return true;
+        return !containerHeight.hasWrappedDimension()
+                || containsMeasurableHeight(containerWidth, elements);
     }
 
     private boolean containsMeasurableWidth(
@@ -4318,7 +4626,7 @@ public final class ProtoLayoutInflater {
     /** Apply the mutation that was previously computed with {@link #computeMutation}. */
     @UiThread
     @NonNull
-    public ListenableFuture<Void> applyMutation(
+    public ListenableFuture<RenderingArtifact> applyMutation(
             @NonNull ViewGroup prevInflatedParent, @NonNull ViewGroupMutation groupMutation) {
         RenderedMetadata prevRenderedMetadata = getRenderedMetadata(prevInflatedParent);
         if (prevRenderedMetadata != null
@@ -4331,11 +4639,11 @@ public final class ProtoLayoutInflater {
         }
         if (groupMutation.isNoOp()) {
             // Nothing to do.
-            return immediateVoidFuture();
+            return immediateFuture(RenderingArtifact.create(mInflaterStatsLogger));
         }
 
         if (groupMutation.mPipelineMaker.isPresent()) {
-            SettableFuture<Void> result = SettableFuture.create();
+            SettableFuture<RenderingArtifact> result = SettableFuture.create();
             groupMutation
                     .mPipelineMaker
                     .get()
@@ -4345,7 +4653,7 @@ public final class ProtoLayoutInflater {
                             () -> {
                                 try {
                                     applyMutationInternal(prevInflatedParent, groupMutation);
-                                    result.set(null);
+                                    result.set(RenderingArtifact.create(mInflaterStatsLogger));
                                 } catch (ViewMutationException ex) {
                                     result.setException(ex);
                                 }
@@ -4354,7 +4662,7 @@ public final class ProtoLayoutInflater {
         } else {
             try {
                 applyMutationInternal(prevInflatedParent, groupMutation);
-                return immediateVoidFuture();
+                return immediateFuture(RenderingArtifact.create(mInflaterStatsLogger));
             } catch (ViewMutationException ex) {
                 return immediateFailedFuture(ex);
             }
@@ -4363,6 +4671,7 @@ public final class ProtoLayoutInflater {
 
     private void applyMutationInternal(
             @NonNull ViewGroup prevInflatedParent, @NonNull ViewGroupMutation groupMutation) {
+        mInflaterStatsLogger.logMutationChangedNodes(groupMutation.mInflatedViews.size());
         for (InflatedView inflatedView : groupMutation.mInflatedViews) {
             String posId = inflatedView.getTag();
             if (posId == null) {
@@ -4390,15 +4699,21 @@ public final class ProtoLayoutInflater {
             }
             // Remove the touch delegate to the view to be updated
             if (immediateParent.getTouchDelegate() != null) {
-                ((TouchDelegateComposite) immediateParent.getTouchDelegate())
-                        .removeDelegate(viewToUpdate);
+                TouchDelegateComposite delegateComposite =
+                        (TouchDelegateComposite) immediateParent.getTouchDelegate();
+                delegateComposite.removeDelegate(viewToUpdate);
 
                 // Make sure to remove the touch delegate when the actual clickable view is wrapped,
                 // for example ImageView inside the RatioViewWrapper
                 if (viewToUpdate instanceof ViewGroup
                         && ((ViewGroup) viewToUpdate).getChildCount() > 0) {
-                    ((TouchDelegateComposite) immediateParent.getTouchDelegate())
-                            .removeDelegate(((ViewGroup) viewToUpdate).getChildAt(0));
+                    delegateComposite.removeDelegate(((ViewGroup) viewToUpdate).getChildAt(0));
+                }
+
+                // If no more touch delegate left in the composite, remove it completely from the
+                // parent
+                if (delegateComposite.isEmpty()) {
+                    immediateParent.setTouchDelegate(null);
                 }
             }
             immediateParent.removeViewAt(childIndex);

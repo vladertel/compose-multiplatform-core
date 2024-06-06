@@ -28,51 +28,47 @@ import androidx.wear.compose.material3.tokens.MotionTokens
 import androidx.wear.compose.materialcore.animateSelectionColor
 
 /**
- * [Radio] provides an animated radio selection control for use in [RadioButton]
- * or [SplitRadioButton].
+ * [RadioButton] provides an animated radio selection control for use in [SelectableButton] or
+ * [SplitSelectableButton].
  *
  * RadioButton sample:
- * @sample androidx.wear.compose.material3.samples.RadioButton
  *
- * @param modifier Modifier to be applied to the radio control. This can be used to provide a
- * content description for accessibility.
- * @param colors [RadioColors] from which the [Radio] control colors will be obtained.
+ * @sample androidx.wear.compose.material3.samples.SelectableButtonSample
+ *
+ * @param modifier Modifier to be applied to the radio button control. This can be used to provide a
+ *   content description for accessibility.
+ * @param colors [RadioButtonColors] from which the [RadioButton] control colors will be obtained.
  */
 @Composable
-fun SelectionControlScope.Radio(
+fun SelectionControlScope.RadioButton(
     modifier: Modifier = Modifier,
-    colors: RadioColors = RadioDefaults.colors(),
-) = androidx.wear.compose.materialcore.RadioButton(
-    modifier = modifier,
-    selected = isSelected,
-    enabled = isEnabled,
-    ringColor = { isEnabled, isSelected ->
-        colors.color(
-            enabled = isEnabled,
-            selected = isSelected
-        )
-    },
-    dotColor = { isEnabled, isSelected ->
-        colors.color(
-            enabled = isEnabled,
-            selected = isSelected
-        )
-    },
-    onClick = null,
-    interactionSource = null,
-    dotRadiusProgressDuration = {
-        isSelected -> if (isSelected) MotionTokens.DurationMedium1 else MotionTokens.DurationShort3
-    },
-    dotAlphaProgressDuration = MotionTokens.DurationShort3,
-    dotAlphaProgressDelay = MotionTokens.DurationShort2,
-    easing = MotionTokens.EasingStandardDecelerate,
-    width = WIDTH,
-    height = HEIGHT,
-    ripple = rippleOrFallbackImplementation()
-)
+    colors: RadioButtonColors = RadioButtonDefaults.colors(),
+) =
+    androidx.wear.compose.materialcore.RadioButton(
+        modifier = modifier,
+        selected = isSelected,
+        enabled = isEnabled,
+        ringColor = { isEnabled, isSelected ->
+            colors.color(enabled = isEnabled, selected = isSelected)
+        },
+        dotColor = { isEnabled, isSelected ->
+            colors.color(enabled = isEnabled, selected = isSelected)
+        },
+        onClick = null,
+        interactionSource = null,
+        dotRadiusProgressDuration = { isSelected ->
+            if (isSelected) MotionTokens.DurationMedium1 else MotionTokens.DurationShort3
+        },
+        dotAlphaProgressDuration = MotionTokens.DurationShort3,
+        dotAlphaProgressDelay = MotionTokens.DurationShort2,
+        easing = MotionTokens.EasingStandardDecelerate,
+        width = WIDTH,
+        height = HEIGHT,
+        ripple = rippleOrFallbackImplementation()
+    )
 
 /**
- * Represents the content colors used in the [Radio] selection control in different states.
+ * Represents the content colors used in the [RadioButton] selection control in different states.
  *
  * @param selectedColor The color of the radio control when enabled and selected.
  * @param unselectedColor The color of the radio control when enabled and unselected.
@@ -80,26 +76,27 @@ fun SelectionControlScope.Radio(
  * @param disabledUnselectedColor The color of the radio control when disabled and unselected.
  */
 @Immutable
-class RadioColors(
+class RadioButtonColors(
     val selectedColor: Color,
     val unselectedColor: Color,
     val disabledSelectedColor: Color,
     val disabledUnselectedColor: Color
 ) {
     @Composable
-    internal fun color(enabled: Boolean, selected: Boolean): State<Color> = animateSelectionColor(
-        enabled = enabled,
-        checked = selected,
-        checkedColor = selectedColor,
-        uncheckedColor = unselectedColor,
-        disabledCheckedColor = disabledSelectedColor,
-        disabledUncheckedColor = disabledUnselectedColor,
-        animationSpec = COLOR_ANIMATION_SPEC
-    )
+    internal fun color(enabled: Boolean, selected: Boolean): State<Color> =
+        animateSelectionColor(
+            enabled = enabled,
+            checked = selected,
+            checkedColor = selectedColor,
+            uncheckedColor = unselectedColor,
+            disabledCheckedColor = disabledSelectedColor,
+            disabledUncheckedColor = disabledUnselectedColor,
+            animationSpec = COLOR_ANIMATION_SPEC
+        )
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other == null || other !is RadioColors) return false
+        if (other == null || other !is RadioButtonColors) return false
 
         if (selectedColor != other.selectedColor) return false
         if (unselectedColor != other.unselectedColor) return false
@@ -118,26 +115,30 @@ class RadioColors(
     }
 }
 
-/**
- * Contains the default values used by the [Radio] selection control.
- */
-object RadioDefaults {
+/** Contains the default values used by the [RadioButton] selection control. */
+object RadioButtonDefaults {
     /**
-     * Creates a [RadioColors] for use in a [Radio] selection control.
+     * Creates a [RadioButtonColors] for use in a [RadioButton] selection control.
      *
      * @param selectedColor The color of the radio control when enabled and selected.
      * @param unselectedColor The color of the radio control when enabled and unselected.
+     * @param disabledSelectedColor The color of the radio control when selected and disabled
+     * @param disabledUnselectedColor The color of the radio control unselected and disabled
      */
     @Composable
     fun colors(
         selectedColor: Color = MaterialTheme.colorScheme.primary,
-        unselectedColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
-    ): RadioColors {
-        return RadioColors(
+        unselectedColor: Color = MaterialTheme.colorScheme.outline,
+        disabledSelectedColor: Color =
+            MaterialTheme.colorScheme.onSurface.toDisabledColor(disabledAlpha = 0.12f),
+        disabledUnselectedColor: Color =
+            MaterialTheme.colorScheme.onSurface.toDisabledColor(disabledAlpha = 0.12f),
+    ): RadioButtonColors {
+        return RadioButtonColors(
             selectedColor = selectedColor,
             unselectedColor = unselectedColor,
-            disabledSelectedColor = selectedColor.toDisabledColor(),
-            disabledUnselectedColor = unselectedColor.toDisabledColor()
+            disabledSelectedColor = disabledSelectedColor,
+            disabledUnselectedColor = disabledUnselectedColor
         )
     }
 }

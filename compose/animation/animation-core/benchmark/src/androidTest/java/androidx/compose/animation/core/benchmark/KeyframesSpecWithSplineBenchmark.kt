@@ -40,20 +40,21 @@ class KeyframesSpecWithSplineBenchmark {
     private val durationMillisToTest = 10_000
     private val playTimeNanosToEvaluate = (durationMillisToTest * 0.77f).roundToLong() * 1_000_000
 
-    @get:Rule
-    val benchmarkRule = BenchmarkRule()
+    @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test
     fun benchmark_firstFrame() {
         benchmarkRule.measureRepeated {
-            val vectorized = keyframesWithSpline {
-                durationMillis = durationMillisToTest
+            val vectorized =
+                keyframesWithSpline {
+                        durationMillis = durationMillisToTest
 
-                Offset(12f, 30f) at 10
-                Offset(-30f, 500f) at 500
-                Offset(8f, 10f) at 600
-                Offset(234f, 543f) at 700
-            }.vectorize(Offset.VectorConverter)
+                        Offset(12f, 30f) at 10
+                        Offset(-30f, 500f) at 500
+                        Offset(8f, 10f) at 600
+                        Offset(234f, 543f) at 700
+                    }
+                    .vectorize(Offset.VectorConverter)
 
             // Get first value to guarantee the spline has been calculated
             vectorized.getValueFromNanos(
@@ -69,31 +70,34 @@ class KeyframesSpecWithSplineBenchmark {
     fun benchmark_vectorized() {
         benchmarkRule.measureRepeated {
             keyframesWithSpline {
-                durationMillis = durationMillisToTest
+                    durationMillis = durationMillisToTest
 
-                Offset(12f, 30f) at 10
-                Offset(-30f, 500f) at 500
-                Offset(8f, 10f) at 600
-                Offset(234f, 543f) at 700
-            }.vectorize(Offset.VectorConverter)
+                    Offset(12f, 30f) at 10
+                    Offset(-30f, 500f) at 500
+                    Offset(8f, 10f) at 600
+                    Offset(234f, 543f) at 700
+                }
+                .vectorize(Offset.VectorConverter)
         }
     }
 
     @Test
     fun benchmark_frameToFrame() {
-        val vectorized = keyframesWithSpline {
-            durationMillis = durationMillisToTest
+        val vectorized =
+            keyframesWithSpline {
+                    durationMillis = durationMillisToTest
 
-            Offset(12f, 30f) at 10
-            Offset(-30f, 500f) at 500
-            Offset(8f, 10f) at 600
-            Offset(234f, 543f) at 700
-        }.vectorize(Offset.VectorConverter)
+                    Offset(12f, 30f) at 10
+                    Offset(-30f, 500f) at 500
+                    Offset(8f, 10f) at 600
+                    Offset(234f, 543f) at 700
+                }
+                .vectorize(Offset.VectorConverter)
 
         // Cal the first frame before measuring, to guarantee the spline interpolation is built
         vectorized.getValueFromNanos(
             // Avoid using a number that may match one of the given timestamps, it will prevent the
-            // MonoSpline from initializing, an irrational number factor should work well
+            // MonoSpline from initializing, a number with periodic decimals should work well
             playTimeNanos = playTimeNanosToEvaluate * 2 / 3L,
             initialValue = initialVector,
             targetValue = targetVector,
@@ -120,19 +124,21 @@ class KeyframesSpecWithSplineBenchmark {
 
     @Test
     fun benchmark_invalidated_frameToFrame() {
-        val vectorized = keyframesWithSpline {
-            durationMillis = durationMillisToTest
+        val vectorized =
+            keyframesWithSpline {
+                    durationMillis = durationMillisToTest
 
-            Offset(12f, 30f) at 10
-            Offset(-30f, 500f) at 500
-            Offset(8f, 10f) at 600
-            Offset(234f, 543f) at 700
-        }.vectorize(Offset.VectorConverter)
+                    Offset(12f, 30f) at 10
+                    Offset(-30f, 500f) at 500
+                    Offset(8f, 10f) at 600
+                    Offset(234f, 543f) at 700
+                }
+                .vectorize(Offset.VectorConverter)
 
         // Cal the first frame before measuring, to guarantee the spline interpolation is built
         vectorized.getValueFromNanos(
             // Avoid using a number that may match one of the given timestamps, it will prevent the
-            // MonoSpline from initializing, an irrational number factor should work well
+            // MonoSpline from initializing, a number with periodic decimals should work well
             playTimeNanos = playTimeNanosToEvaluate * 2 / 3L,
             initialValue = initialVector,
             targetValue = targetVector,

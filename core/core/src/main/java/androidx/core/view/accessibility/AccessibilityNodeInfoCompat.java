@@ -2115,7 +2115,7 @@ public class AccessibilityNodeInfoCompat {
      */
     @SuppressWarnings("ActionValue")
     public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY =
-            "android.core.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_KEY";
+            "android.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_KEY";
 
     /**
      * Integer argument specifying the start index of the requested text location data. Must be
@@ -2125,7 +2125,7 @@ public class AccessibilityNodeInfoCompat {
      */
     @SuppressWarnings("ActionValue")
     public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX =
-            "android.core.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX";
+            "android.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX";
 
     /**
      * Integer argument specifying the end index of the requested text location data. Must be
@@ -2135,7 +2135,7 @@ public class AccessibilityNodeInfoCompat {
      */
     @SuppressWarnings("ActionValue")
     public static final String EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH =
-            "android.core.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH";
+            "android.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH";
 
     /**
      * The maximum allowed length of the requested text location data.
@@ -4168,16 +4168,12 @@ public class AccessibilityNodeInfoCompat {
      */
     @SuppressWarnings("MixedMutabilityReturnType")
     public List<AccessibilityNodeInfoCompat> findAccessibilityNodeInfosByViewId(String viewId) {
-        if (Build.VERSION.SDK_INT >= 18) {
-            List<AccessibilityNodeInfo> nodes = mInfo.findAccessibilityNodeInfosByViewId(viewId);
-            List<AccessibilityNodeInfoCompat> result = new ArrayList<>();
-            for (AccessibilityNodeInfo node : nodes) {
+        List<AccessibilityNodeInfo> nodes = mInfo.findAccessibilityNodeInfosByViewId(viewId);
+        List<AccessibilityNodeInfoCompat> result = new ArrayList<>();
+        for (AccessibilityNodeInfo node : nodes) {
                 result.add(AccessibilityNodeInfoCompat.wrap(node));
             }
-            return result;
-        } else {
-            return Collections.emptyList();
-        }
+        return result;
     }
 
     /**

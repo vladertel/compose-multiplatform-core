@@ -5,7 +5,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -21,7 +21,7 @@ dependencies {
         implementation(project(":core:core-testing"))
     }
 
-    api("androidx.annotation:annotation:1.6.0")
+    api("androidx.annotation:annotation:1.8.0")
     api("androidx.annotation:annotation-experimental:1.4.0")
     api("androidx.lifecycle:lifecycle-runtime:2.6.2")
     api("androidx.versionedparcelable:versionedparcelable:1.1.1")
@@ -78,7 +78,7 @@ android {
     aaptOptions {
         noCompress "ttf"
     }
-    buildTypes.all {
+    buildTypes.configureEach {
         consumerProguardFiles "proguard-rules.pro"
 
         stableAidl {
@@ -101,11 +101,12 @@ android {
 
 androidx {
     name = "Core"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     mavenVersion = LibraryVersions.CORE
     inceptionYear = "2015"
     description = "Provides backward-compatible implementations of Android platform APIs and " +
             "features."
     failOnDeprecationWarnings = false
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

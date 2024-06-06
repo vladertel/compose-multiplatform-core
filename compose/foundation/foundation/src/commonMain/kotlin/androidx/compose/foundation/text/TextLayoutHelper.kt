@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.LayoutDirection
  * @param layoutDirection a layout direction to be used for computing text layout.
  * @param constraints a constraint to be used for computing text layout.
  */
-@OptIn(InternalFoundationTextApi::class)
 internal fun TextLayoutResult.canReuse(
     text: AnnotatedString,
     style: TextStyle,
@@ -62,8 +61,8 @@ internal fun TextLayoutResult.canReuse(
         // measure or display
         return false
     }
-    if (!(
-        layoutInput.text == text &&
+    if (
+        !(layoutInput.text == text &&
             layoutInput.style.hasSameLayoutAffectingAttributes(style) &&
             layoutInput.placeholders == placeholders &&
             layoutInput.maxLines == maxLines &&
@@ -71,8 +70,7 @@ internal fun TextLayoutResult.canReuse(
             layoutInput.overflow == overflow &&
             layoutInput.density == density &&
             layoutInput.layoutDirection == layoutDirection &&
-            layoutInput.fontFamilyResolver == fontFamilyResolver
-        )
+            layoutInput.fontFamilyResolver == fontFamilyResolver)
     ) {
         return false
     }

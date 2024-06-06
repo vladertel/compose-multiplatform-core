@@ -16,127 +16,99 @@
 
 package androidx.wear.compose.material3.demos
 
+import android.content.Context
+import android.widget.Toast
 import androidx.wear.compose.integration.demos.common.Centralize
 import androidx.wear.compose.integration.demos.common.ComposableDemo
 import androidx.wear.compose.integration.demos.common.DemoCategory
 import androidx.wear.compose.material3.samples.EdgeSwipeForSwipeToDismiss
 import androidx.wear.compose.material3.samples.FixedFontSize
 import androidx.wear.compose.material3.samples.HorizontalPageIndicatorSample
+import androidx.wear.compose.material3.samples.HorizontalPageIndicatorWithPagerSample
 import androidx.wear.compose.material3.samples.SimpleSwipeToDismissBox
 import androidx.wear.compose.material3.samples.StatefulSwipeToDismissBox
 import androidx.wear.compose.material3.samples.StepperSample
 import androidx.wear.compose.material3.samples.StepperWithIntegerSample
 import androidx.wear.compose.material3.samples.StepperWithRangeSemanticsSample
 
-val WearMaterial3Demos = DemoCategory(
-    "Material 3",
-    listOf(
-        DemoCategory(
-            "Button",
-            listOf(
-                ComposableDemo("Button") {
-                    ButtonDemo()
-                },
-                ComposableDemo("Filled Tonal Button") {
-                    FilledTonalButtonDemo()
-                },
-                ComposableDemo("Outlined Button") {
-                    OutlinedButtonDemo()
-                },
-                ComposableDemo("Child Button") {
-                    ChildButtonDemo()
-                },
-                ComposableDemo("Compact Button") {
-                    CompactButtonDemo()
-                },
-                ComposableDemo("Multiline Button") {
-                    MultilineButtonDemo()
-                },
-                ComposableDemo("Avatar Button") {
-                    AvatarButtonDemo()
-                },
-            )
-        ),
-        ComposableDemo("List Header") {
-            Centralize {
-                ListHeaderDemo()
-            }
-        },
-        ComposableDemo("Card") {
-            CardDemo()
-        },
-        ComposableDemo("Text Button") {
-            TextButtonDemo()
-        },
-        ComposableDemo("Icon Button") {
-            IconButtonDemo()
-        },
-        ComposableDemo("Text Toggle Button") {
-            TextToggleButtonDemo()
-        },
-        ComposableDemo("Icon Toggle Button") {
-            IconToggleButtonDemo()
-        },
-        ComposableDemo("Checkbox") {
-            CheckboxDemos()
-        },
-        ComposableDemo("Switch") {
-            SwitchDemos()
-        },
-        ComposableDemo("Radio") {
-            RadioDemos()
-        },
-        ComposableDemo("Radio Button") {
-            RadioButtonDemo()
-        },
-        ComposableDemo("Split Radio Button") {
-            SplitRadioButtonDemo()
-        },
-        ComposableDemo("Toggle Button") {
-            ToggleButtonDemo()
-        },
-        ComposableDemo("Split Toggle Button") {
-            SplitToggleButtonDemo()
-        },
-        DemoCategory(
-            "Stepper",
-            listOf(
-                DemoCategory(
-                    "Samples",
-                    listOf(
-                        ComposableDemo("Stepper") {
-                            Centralize { StepperSample() }
-                        },
-                        ComposableDemo("Integer Stepper") {
-                            Centralize { StepperWithIntegerSample() }
-                        },
-                        ComposableDemo("Stepper with rangeSemantics") {
-                            Centralize { StepperWithRangeSemanticsSample() }
-                        }
+val WearMaterial3Demos =
+    DemoCategory(
+        "Material 3",
+        listOf(
+            DemoCategory(
+                "Button",
+                listOf(
+                    ComposableDemo("Button") { ButtonDemo() },
+                    ComposableDemo("Filled Tonal Button") { FilledTonalButtonDemo() },
+                    ComposableDemo("Outlined Button") { OutlinedButtonDemo() },
+                    ComposableDemo("Child Button") { ChildButtonDemo() },
+                    ComposableDemo("Compact Button") { CompactButtonDemo() },
+                    ComposableDemo("Multiline Button") { MultilineButtonDemo() },
+                    ComposableDemo("Avatar Button") { AvatarButtonDemo() },
+                )
+            ),
+            ComposableDemo("List Header") { Centralize { ListHeaderDemo() } },
+            DemoCategory("Time Text", TimeTextDemos),
+            ComposableDemo("Card") { CardDemo() },
+            ComposableDemo("Text Button") { TextButtonDemo() },
+            ComposableDemo("Icon Button") { IconButtonDemo() },
+            ComposableDemo("Text Toggle Button") { TextToggleButtonDemo() },
+            ComposableDemo("Icon Toggle Button") { IconToggleButtonDemo() },
+            ComposableDemo("Checkbox") { CheckboxDemos() },
+            ComposableDemo("Switch") { SwitchDemos() },
+            ComposableDemo("Radio Button") { RadioButtonDemo() },
+            ComposableDemo("Selectable Button") { SelectableButtonDemo() },
+            ComposableDemo("Split Selectable Button") { SplitSelectableButtonDemo() },
+            ComposableDemo("Toggle Button") { ToggleButtonDemo() },
+            ComposableDemo("Split Toggle Button") { SplitToggleButtonDemo() },
+            DemoCategory(
+                "Stepper",
+                listOf(
+                    DemoCategory(
+                        "Samples",
+                        listOf(
+                            ComposableDemo("Stepper") { Centralize { StepperSample() } },
+                            ComposableDemo("Integer Stepper") {
+                                Centralize { StepperWithIntegerSample() }
+                            },
+                            ComposableDemo("Stepper with rangeSemantics") {
+                                Centralize { StepperWithRangeSemanticsSample() }
+                            }
+                        )
                     )
                 )
-            )
-        ),
-        DemoCategory(
-            "Slider",
-            SliderDemos
-        ),
-        ComposableDemo(
-            title = "Fixed Font Size"
-        ) {
-            Centralize { FixedFontSize() }
-        },
-        DemoCategory(
-            title = "Swipe To Dismiss",
-            listOf(
-                ComposableDemo("Simple") { SimpleSwipeToDismissBox(it.navigateBack) },
-                ComposableDemo("Stateful") { StatefulSwipeToDismissBox() },
-                ComposableDemo("Edge swipe") { EdgeSwipeForSwipeToDismiss(it.navigateBack) },
-            )
-        ),
-        ComposableDemo("HorizontalPageIndicator") {
-            Centralize { HorizontalPageIndicatorSample() }
-        },
-        ComposableDemo("Settings Demo") { SettingsDemo() }
+            ),
+            DemoCategory("Slider", SliderDemos),
+            DemoCategory("Progress Indicator", ProgressIndicatorDemos),
+            DemoCategory("Scroll Indicator", ScrollIndicatorDemos),
+            ComposableDemo(title = "Fixed Font Size") { Centralize { FixedFontSize() } },
+            DemoCategory(
+                title = "Swipe To Dismiss",
+                listOf(
+                    ComposableDemo("Simple") { SimpleSwipeToDismissBox(it.navigateBack) },
+                    ComposableDemo("Stateful") { StatefulSwipeToDismissBox() },
+                    ComposableDemo("Edge swipe") { EdgeSwipeForSwipeToDismiss(it.navigateBack) },
+                )
+            ),
+            DemoCategory(
+                title = "Horizontal Page Indicator",
+                listOf(
+                    ComposableDemo("Simple HorizontalPageIndicator") {
+                        HorizontalPageIndicatorSample()
+                    },
+                    ComposableDemo("HorizontalPageIndicator with Pager") {
+                        HorizontalPageIndicatorWithPagerSample(it.swipeToDismissBoxState)
+                    },
+                )
+            ),
+            ComposableDemo("Settings Demo") { SettingsDemo() }
+        )
     )
-)
+
+internal fun showOnClickToast(context: Context) {
+    Toast.makeText(context, "Clicked", Toast.LENGTH_SHORT).show()
+}
+
+internal fun showOnLongClickToast(context: Context) {
+    Toast.makeText(context, "Long clicked", Toast.LENGTH_SHORT).show()
+}

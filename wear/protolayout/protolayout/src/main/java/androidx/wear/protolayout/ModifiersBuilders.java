@@ -16,6 +16,7 @@
 
 package androidx.wear.protolayout;
 
+import static androidx.wear.protolayout.DimensionBuilders.dp;
 import static androidx.wear.protolayout.expression.Preconditions.checkNotNull;
 
 import android.annotation.SuppressLint;
@@ -29,8 +30,11 @@ import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.wear.protolayout.ActionBuilders.Action;
 import androidx.wear.protolayout.ColorBuilders.ColorProp;
+import androidx.wear.protolayout.DimensionBuilders.DegreesProp;
 import androidx.wear.protolayout.DimensionBuilders.DpProp;
+import androidx.wear.protolayout.DimensionBuilders.PivotDimension;
 import androidx.wear.protolayout.TypeBuilders.BoolProp;
+import androidx.wear.protolayout.TypeBuilders.FloatProp;
 import androidx.wear.protolayout.TypeBuilders.StringProp;
 import androidx.wear.protolayout.expression.AnimationParameterBuilders.AnimationSpec;
 import androidx.wear.protolayout.expression.Fingerprint;
@@ -362,6 +366,18 @@ public final class ModifiersBuilders {
             }
         }
 
+        /**
+         * Gets whether the click visual feedback (such as a ripple) should be enabled. Defaults to
+         * true.
+         */
+        public boolean isVisualFeedbackEnabled() {
+            if (mImpl.hasVisualFeedbackEnabled()) {
+                return mImpl.getVisualFeedbackEnabled();
+            } else {
+                return true;
+            }
+        }
+
         /** Get the fingerprint for this object, or null if unknown. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Nullable
@@ -392,7 +408,18 @@ public final class ModifiersBuilders {
         @Override
         @NonNull
         public String toString() {
-            return "Clickable{" + "id=" + getId() + ", onClick=" + getOnClick() + "}";
+            return "Clickable{"
+                    + "id="
+                    + getId()
+                    + ", onClick="
+                    + getOnClick()
+                    + ", minimumClickableWidth="
+                    + getMinimumClickableWidth()
+                    + ", minimumClickableHeight="
+                    + getMinimumClickableHeight()
+                    + ", disableVisualFeedback="
+                    + isVisualFeedbackEnabled()
+                    + "}";
         }
 
         /** Builder for {@link Clickable} */
@@ -473,6 +500,18 @@ public final class ModifiersBuilders {
                         4,
                         checkNotNull(minimumClickableHeight.getFingerprint())
                                 .aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets whether the click visual feedback (such as a ripple) should be enabled. Defaults
+             * to true.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setVisualFeedbackEnabled(boolean visualFeedbackEnabled) {
+                mImpl.setVisualFeedbackEnabled(visualFeedbackEnabled);
+                mFingerprint.recordPropertyUpdate(5, Boolean.hashCode(visualFeedbackEnabled));
                 return this;
             }
 
@@ -1021,6 +1060,140 @@ public final class ModifiersBuilders {
         }
     }
 
+    /** A radius for either circular or elliptical shapes. */
+    @RequiresSchemaVersion(major = 1, minor = 400)
+    public static final class CornerRadius {
+        private final ModifiersProto.CornerRadius mImpl;
+        @Nullable
+        private final Fingerprint mFingerprint;
+
+        CornerRadius(ModifiersProto.CornerRadius impl, @Nullable Fingerprint fingerprint) {
+            this.mImpl = impl;
+            this.mFingerprint = fingerprint;
+        }
+
+        /** Gets the radius value in dp on the horizontal axis. */
+        @NonNull
+        public DpProp getX() {
+            return DpProp.fromProto(mImpl.getX());
+        }
+
+        /** Gets the radius value in dp on the vertical axis. */
+        @NonNull
+        public DpProp getY() {
+            return DpProp.fromProto(mImpl.getY());
+        }
+
+        /**
+         * A radius with values on both horizontal and vertical axes set to zero. It can be used
+         * to have right-angle corners.
+         */
+        @RequiresSchemaVersion(major = 1, minor = 400)
+        private static final CornerRadius ZERO =
+                new CornerRadius.Builder(new DpProp.Builder(0f).build(),
+                        new DpProp.Builder(0f).build())
+                        .build();
+
+        /** Get the fingerprint for this object, or null if unknown. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Nullable
+        public Fingerprint getFingerprint() {
+            return mFingerprint;
+        }
+
+        /** Creates a new wrapper instance from the proto. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public static CornerRadius fromProto(
+                @NonNull ModifiersProto.CornerRadius proto, @Nullable Fingerprint fingerprint) {
+            return new CornerRadius(proto, fingerprint);
+        }
+
+        @NonNull
+        static CornerRadius fromProto(@NonNull ModifiersProto.CornerRadius proto) {
+            return fromProto(proto, null);
+        }
+
+        /** Returns the internal proto instance. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public ModifiersProto.CornerRadius toProto() {
+            return mImpl;
+        }
+
+        @Override
+        @NonNull
+        public String toString() {
+            return "CornerRadius{" + "x=" + getX() + ", y=" + getY() + "}";
+        }
+
+        /** Builder for {@link CornerRadius} */
+        public static final class Builder {
+            private final ModifiersProto.CornerRadius.Builder mImpl =
+                    ModifiersProto.CornerRadius.newBuilder();
+            private final Fingerprint mFingerprint = new Fingerprint(-2143429106);
+
+            /**
+             * Creates an instance of {@link Builder}.
+             *
+             * @param x the radius value in dp on the horizontal axis.
+             * @param y the radius value in dp on the vertical axis.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @SuppressLint("CheckResult") // (b/247804720)
+            public Builder(@NonNull DpProp x, @NonNull DpProp y) {
+                setX(x);
+                setY(y);
+            }
+
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            Builder() {
+            }
+
+            /**
+             * Sets the radius value in dp on the horizontal axis.
+             *
+             * <p>Note that this field only supports static values.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            Builder setX(@NonNull DpProp x) {
+                if (x.getDynamicValue() != null) {
+                    throw new IllegalArgumentException(
+                            "CornerRadius.Builder.setX doesn't support dynamic values.");
+                }
+                mImpl.setX(x.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        1, checkNotNull(x.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the radius value in dp on the vertical axis.
+             *
+             * <p>Note that this field only supports static values.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            Builder setY(@NonNull DpProp y) {
+                if (y.getDynamicValue() != null) {
+                    throw new IllegalArgumentException(
+                            "CornerRadius.Builder.setY doesn't support dynamic values.");
+                }
+                mImpl.setY(y.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        2, checkNotNull(y.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /** Builds an instance from accumulated values. */
+            @NonNull
+            public CornerRadius build() {
+                return new CornerRadius(mImpl.build(), mFingerprint);
+            }
+        }
+    }
+
     /** The corner of a {@link androidx.wear.protolayout.LayoutElementBuilders.Box} element. */
     @RequiresSchemaVersion(major = 1, minor = 0)
     public static final class Corner {
@@ -1040,6 +1213,57 @@ public final class ModifiersBuilders {
             } else {
                 return null;
             }
+        }
+
+        /** Gets the radius for the top-left corner of either circular or elliptical shapes. */
+        @NonNull
+        public CornerRadius getTopLeftRadius() {
+            if (mImpl.hasTopLeftRadius()) {
+                return CornerRadius.fromProto(mImpl.getTopLeftRadius());
+            } else {
+                return toCornerRadius(getRadius());
+            }
+        }
+
+        /** Gets the radius for the top-right corner of either circular or elliptical shapes. */
+        @NonNull
+        public CornerRadius getTopRightRadius() {
+            if (mImpl.hasTopRightRadius()) {
+                return CornerRadius.fromProto(mImpl.getTopRightRadius());
+            } else {
+                return toCornerRadius(getRadius());
+            }
+        }
+
+        /** Gets the radius for the bottom-right corner of either circular or elliptical shapes. */
+        @NonNull
+        public CornerRadius getBottomRightRadius() {
+            if (mImpl.hasBottomRightRadius()) {
+                return CornerRadius.fromProto(mImpl.getBottomRightRadius());
+            } else {
+                return toCornerRadius(getRadius());
+            }
+        }
+
+        /** Gets the radius for the bottom-left corner of either circular or elliptical shapes. */
+        @NonNull
+        public CornerRadius getBottomLeftRadius() {
+            if (mImpl.hasBottomLeftRadius()) {
+                return CornerRadius.fromProto(mImpl.getBottomLeftRadius());
+            } else {
+                return toCornerRadius(getRadius());
+            }
+        }
+
+        @SuppressLint("ProtoLayoutMinSchema")
+        @NonNull
+        private CornerRadius toCornerRadius(@Nullable DpProp radius) {
+            return radius == null
+                    ? CornerRadius.ZERO
+                    : new CornerRadius.Builder(
+                            dp(radius.getValue()),
+                            dp(radius.getValue())
+                    ).build();
         }
 
         /** Get the fingerprint for this object, or null if unknown. */
@@ -1072,7 +1296,18 @@ public final class ModifiersBuilders {
         @Override
         @NonNull
         public String toString() {
-            return "Corner{" + "radius=" + getRadius() + "}";
+            return "Corner{"
+                    + "radius="
+                    + getRadius()
+                    + ", topLeftRadius="
+                    + getTopLeftRadius()
+                    + ", topRightRadius="
+                    + getTopRightRadius()
+                    + ", bottomRightRadius="
+                    + getBottomRightRadius()
+                    + ", bottomLeftRadius="
+                    + getBottomLeftRadius()
+                    + "}";
         }
 
         /** Builder for {@link Corner} */
@@ -1085,6 +1320,9 @@ public final class ModifiersBuilders {
 
             /**
              * Sets the radius of the corner in DP.
+             *
+             * <p>The shape for a specific corner can be overridden by setting that corner
+             * separately.
              *
              * <p>Note that this field only supports static values.
              */
@@ -1099,6 +1337,106 @@ public final class ModifiersBuilders {
                 mFingerprint.recordPropertyUpdate(
                         1, checkNotNull(radius.getFingerprint()).aggregateValueAsInt());
                 return this;
+            }
+
+            /**
+             * Sets the radius for the top-left corner of either circular or elliptical shapes. If
+             * not set, defaults to radius for both horizontal and vertical axes when radius is set;
+             * or defaults to zeros when radius is also not set.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setTopLeftRadius(@NonNull CornerRadius topLeftRadius) {
+                mImpl.setTopLeftRadius(topLeftRadius.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        2, checkNotNull(topLeftRadius.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the radius for the top-right corner of either circular or elliptical shapes. If
+             * not set, defaults to radius for both horizontal and vertical axes when radius is set;
+             * or defaults to zeros when radius is also not set.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setTopRightRadius(@NonNull CornerRadius topRightRadius) {
+                mImpl.setTopRightRadius(topRightRadius.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        3, checkNotNull(topRightRadius.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the radius for the bottom-right corner of either circular or elliptical shapes.
+             * If not set, defaults to radius for both horizontal and vertical axes when radius is
+             * set; or defaults to zeros when radius is also not set.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setBottomRightRadius(@NonNull CornerRadius bottomRightRadius) {
+                mImpl.setBottomRightRadius(bottomRightRadius.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        4, checkNotNull(bottomRightRadius.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the radius for the bottom-left corner of either circular or elliptical shapes.
+             * If not set, defaults to radius for both horizontal and vertical axes when radius is
+             * set; or defaults to zeros when radius is also not set.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setBottomLeftRadius(@NonNull CornerRadius bottomLeftRadius) {
+                mImpl.setBottomLeftRadius(bottomLeftRadius.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        5, checkNotNull(bottomLeftRadius.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the radius for the top-left corner of either circular or elliptical shapes. If
+             * not set, defaults to radius for both horizontal and vertical axes when radius is set;
+             * or defaults to zeros when radius is also not set.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setTopLeftRadius(@NonNull DpProp xRadius, @NonNull DpProp yRadius) {
+                return setTopLeftRadius(new CornerRadius.Builder(xRadius, yRadius).build());
+            }
+
+            /**
+             * Sets the radius for the top-right corner of either circular or elliptical shapes. If
+             * not set, defaults to radius for both horizontal and vertical axes when radius is set;
+             * or defaults to zeros when radius is also not set.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setTopRightRadius(@NonNull DpProp xRadius, @NonNull DpProp yRadius) {
+                return setTopRightRadius(new CornerRadius.Builder(xRadius, yRadius).build());
+            }
+
+            /**
+             * Sets the radius for the bottom-right corner of either circular or elliptical shapes.
+             * If not set, defaults to radius for both horizontal and vertical axes when radius is
+             * set; or defaults to zeros when radius is also not set.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setBottomRightRadius(@NonNull DpProp xRadius, @NonNull DpProp yRadius) {
+                return setBottomRightRadius(new CornerRadius.Builder(xRadius, yRadius).build());
+            }
+
+            /**
+             * Sets the radius for the bottom-left corner of either circular or elliptical shapes.
+             * If not set, defaults to radius for both horizontal and vertical axes when radius is
+             * set; or defaults to zeros when radius is also not set.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setBottomLeftRadius(@NonNull DpProp xRadius, @NonNull DpProp yRadius) {
+                return setBottomLeftRadius(new CornerRadius.Builder(xRadius, yRadius).build());
             }
 
             /** Builds an instance from accumulated values. */
@@ -1317,6 +1655,270 @@ public final class ModifiersBuilders {
     }
 
     /**
+     * A modifier to apply transformations to the element. All of these transformations can be
+     * animated by setting dynamic values. This modifier is not layout affecting.
+     */
+    @RequiresSchemaVersion(major = 1, minor = 400)
+    public static final class Transformation {
+        private final ModifiersProto.Transformation mImpl;
+        @Nullable private final Fingerprint mFingerprint;
+
+        Transformation(ModifiersProto.Transformation impl, @Nullable Fingerprint fingerprint) {
+            this.mImpl = impl;
+            this.mFingerprint = fingerprint;
+        }
+
+        /**
+         * Gets the horizontal offset of this element relative to the location where the element's
+         * layout placed it.
+         */
+        @NonNull
+        public DpProp getTranslationX() {
+            if (mImpl.hasTranslationX()) {
+                return DpProp.fromProto(mImpl.getTranslationX());
+            } else {
+                return new DpProp.Builder(0f).build();
+            }
+        }
+
+        /**
+         * Gets the vertical offset of this element in addition to the location where the element's
+         * layout placed it.
+         */
+        @NonNull
+        public DpProp getTranslationY() {
+            if (mImpl.hasTranslationY()) {
+                return DpProp.fromProto(mImpl.getTranslationY());
+            } else {
+                return new DpProp.Builder(0f).build();
+            }
+        }
+
+        /**
+         * Gets the scale of this element in the x direction around the pivot point, as a proportion
+         * of the element's unscaled width.
+         */
+        @NonNull
+        public FloatProp getScaleX() {
+            if (mImpl.hasScaleX()) {
+                return FloatProp.fromProto(mImpl.getScaleX());
+            } else {
+                return new FloatProp.Builder(1f).build();
+            }
+        }
+
+        /**
+         * Gets the scale of this element in the y direction around the pivot point, as a proportion
+         * of the element's unscaled height.
+         */
+        @NonNull
+        public FloatProp getScaleY() {
+            if (mImpl.hasScaleY()) {
+                return FloatProp.fromProto(mImpl.getScaleY());
+            } else {
+                return new FloatProp.Builder(1f).build();
+            }
+        }
+
+        /** Gets the clockwise Degrees that the element is rotated around the pivot point. */
+        @NonNull
+        public DegreesProp getRotation() {
+            if (mImpl.hasRotation()) {
+                return DegreesProp.fromProto(mImpl.getRotation());
+            } else {
+                return new DegreesProp.Builder(0f).build();
+            }
+        }
+
+        /**
+         * Gets the horizontal location of the point around which the element is rotated and scaled.
+         * With type {@link DpProp}, it is the offset from the element center; otherwise with type
+         * {@link BoundingBoxRatio}, it is the location proportional to the bounding box width.
+         */
+        @NonNull
+        public PivotDimension getPivotX() {
+            if (mImpl.hasPivotX()) {
+                return DimensionBuilders.pivotDimensionFromProto(mImpl.getPivotX());
+            } else {
+                return new DpProp.Builder(0f).build();
+            }
+        }
+
+        /**
+         * Gets the vertical location of the point around which the element is rotated and scaled.
+         * With type {@link DpProp}, it is the offset from the element center; otherwise with type
+         * {@link BoundingBoxRatio}, it is the location proportional to the bounding box height.
+         */
+        @NonNull
+        public PivotDimension getPivotY() {
+            if (mImpl.hasPivotY()) {
+                return DimensionBuilders.pivotDimensionFromProto(mImpl.getPivotY());
+            } else {
+                return new DpProp.Builder(0f).build();
+            }
+        }
+
+        /** Get the fingerprint for this object, or null if unknown. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Nullable
+        public Fingerprint getFingerprint() {
+            return mFingerprint;
+        }
+
+        /** Creates a new wrapper instance from the proto. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public static Transformation fromProto(
+                @NonNull ModifiersProto.Transformation proto, @Nullable Fingerprint fingerprint) {
+            return new Transformation(proto, fingerprint);
+        }
+
+        @NonNull
+        static Transformation fromProto(@NonNull ModifiersProto.Transformation proto) {
+            return fromProto(proto, null);
+        }
+
+        /** Returns the internal proto instance. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public ModifiersProto.Transformation toProto() {
+            return mImpl;
+        }
+
+        @Override
+        @NonNull
+        public String toString() {
+            return "Transformation{"
+                    + "translationX="
+                    + getTranslationX()
+                    + ", translationY="
+                    + getTranslationY()
+                    + ", scaleX="
+                    + getScaleX()
+                    + ", scaleY="
+                    + getScaleY()
+                    + ", rotation="
+                    + getRotation()
+                    + ", pivotX="
+                    + getPivotX()
+                    + ", pivotY="
+                    + getPivotY()
+                    + "}";
+        }
+
+        /** Builder for {@link Transformation} */
+        public static final class Builder {
+            private final ModifiersProto.Transformation.Builder mImpl =
+                    ModifiersProto.Transformation.newBuilder();
+            private final Fingerprint mFingerprint = new Fingerprint(369448770);
+
+            /** Creates an instance of {@link Builder}. */
+            public Builder() {}
+
+            /**
+             * Sets the horizontal offset of this element relative to the location where the
+             * element's layout placed it. If not set, defaults to zero.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setTranslationX(@NonNull DpProp translationX) {
+                mImpl.setTranslationX(translationX.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        1, checkNotNull(translationX.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the vertical offset of this element in addition to the location where the
+             * element's layout placed it. If not set, defaults to zero.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setTranslationY(@NonNull DpProp translationY) {
+                mImpl.setTranslationY(translationY.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        2, checkNotNull(translationY.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the scale of this element in the x direction around the pivot point, as a
+             * proportion of the element's unscaled width. If not set, defaults to one.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setScaleX(@NonNull FloatProp scaleX) {
+                mImpl.setScaleX(scaleX.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        3, checkNotNull(scaleX.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the scale of this element in the y direction around the pivot point, as a
+             * proportion of the element's unscaled height. If not set, defaults to one.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setScaleY(@NonNull FloatProp scaleY) {
+                mImpl.setScaleY(scaleY.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        4, checkNotNull(scaleY.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the clockwise degrees that the element is rotated around the pivot point. If not
+             * set, defaults to zero.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setRotation(@NonNull DegreesProp rotation) {
+                mImpl.setRotation(rotation.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        5, checkNotNull(rotation.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the horizontal location of the point around which the element is rotated and
+             * scaled. With type {@link DpProp}, it is the offset from the element center; otherwise
+             * with type {@link BoundingBoxRatio}, it is the location proportional to the bounding
+             * box width. Dynamic value is supported. If not set, defaults to the element center.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setPivotX(@NonNull PivotDimension pivotX) {
+                mImpl.setPivotX(pivotX.toPivotDimensionProto());
+                mFingerprint.recordPropertyUpdate(
+                        6, checkNotNull(pivotX.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the vertical location of the point around which the element is rotated and
+             * scaled. With type {@link DpProp}, it is the offset from the element center; otherwise
+             * with type {@link BoundingBoxRatio}, it is the location proportional to the bounding
+             * box height. Dynamic value is supported. If not set, defaults to the element center.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setPivotY(@NonNull PivotDimension pivotY) {
+                mImpl.setPivotY(pivotY.toPivotDimensionProto());
+                mFingerprint.recordPropertyUpdate(
+                        7, checkNotNull(pivotY.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /** Builds an instance from accumulated values. */
+            @NonNull
+            public Transformation build() {
+                return new Transformation(mImpl.build(), mFingerprint);
+            }
+        }
+    }
+
+    /**
      * {@link Modifiers} for an element. These may change the way they are drawn (e.g. {@link
      * Padding} or {@link Background}), or change their behaviour (e.g. {@link Clickable}, or {@link
      * Semantics}).
@@ -1429,6 +2031,29 @@ public final class ModifiersBuilders {
             }
         }
 
+        /** Gets the transformation applied to the element post-layout. */
+        @Nullable
+        public Transformation getTransformation() {
+            if (mImpl.hasTransformation()) {
+                return Transformation.fromProto(mImpl.getTransformation());
+            } else {
+                return null;
+            }
+        }
+
+        /**
+         * Gets the opacity of the element with a value from 0 to 1, where 0 means the view is the
+         * element is completely transparent and 1 means the element is completely opaque.
+         */
+        @Nullable
+        public FloatProp getOpacity() {
+            if (mImpl.hasOpacity()) {
+                return FloatProp.fromProto(mImpl.getOpacity());
+            } else {
+                return null;
+            }
+        }
+
         /** Get the fingerprint for this object, or null if unknown. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Nullable
@@ -1482,6 +2107,10 @@ public final class ModifiersBuilders {
                     + getContentUpdateAnimation()
                     + ", visible="
                     + isVisible()
+                    + ", transformation="
+                    + getTransformation()
+                    + ", opacity="
+                    + getOpacity()
                     + "}";
         }
 
@@ -1598,6 +2227,30 @@ public final class ModifiersBuilders {
                 mImpl.setVisible(visible.toProto());
                 mFingerprint.recordPropertyUpdate(
                         10, checkNotNull(visible.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /** Sets the transformation applied to the element post-layout. */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setTransformation(@NonNull Transformation transformation) {
+                mImpl.setTransformation(transformation.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        11, checkNotNull(transformation.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
+             * Sets the opacity of the element with a value from 0 to 1, where 0 means the element
+             * is completely transparent and 1 means the element is completely opaque. Dynamic value
+             * is supported.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setOpacity(@NonNull FloatProp opacity) {
+                mImpl.setOpacity(opacity.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        12, checkNotNull(opacity.getFingerprint()).aggregateValueAsInt());
                 return this;
             }
 
@@ -2575,6 +3228,7 @@ public final class ModifiersBuilders {
         }
 
         /** Builder for {@link SlideParentBound}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements SlideBound.Builder {
             private final ModifiersProto.SlideParentBound.Builder mImpl =
                     ModifiersProto.SlideParentBound.newBuilder();
@@ -2644,6 +3298,20 @@ public final class ModifiersBuilders {
             }
         }
 
+        /**
+         * Gets the opacity of the element with a value from 0 to 1, where 0 means the element is
+         * completely transparent and 1 means the element is completely opaque. Dynamic value is
+         * supported.
+         */
+        @Nullable
+        public FloatProp getOpacity() {
+            if (mImpl.hasOpacity()) {
+                return FloatProp.fromProto(mImpl.getOpacity());
+            } else {
+                return null;
+            }
+        }
+
         /** Get the fingerprint for this object, or null if unknown. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @Nullable
@@ -2679,6 +3347,8 @@ public final class ModifiersBuilders {
                     + getClickable()
                     + ", semantics="
                     + getSemantics()
+                    + ", opacity="
+                    + getOpacity()
                     + "}";
         }
 
@@ -2714,6 +3384,16 @@ public final class ModifiersBuilders {
                 mImpl.setSemantics(semantics.toProto());
                 mFingerprint.recordPropertyUpdate(
                         2, checkNotNull(semantics.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /** Sets the opacity of the element. */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setOpacity(@NonNull FloatProp opacity) {
+                mImpl.setOpacity(opacity.toProto());
+                mFingerprint.recordPropertyUpdate(
+                        4, checkNotNull(opacity.getFingerprint()).aggregateValueAsInt());
                 return this;
             }
 

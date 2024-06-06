@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.testutils.assertModifierIsPure
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.node.DelegatingNode
@@ -35,6 +36,7 @@ import androidx.compose.ui.semantics.elementFor
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -45,6 +47,7 @@ import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.map
@@ -65,8 +68,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SuspendingPointerInputFilterTest {
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     @After
     fun after() {
@@ -93,10 +95,11 @@ class SuspendingPointerInputFilterTest {
 
         rule.setContent {
             Box(
-                modifier = elementFor(
-                    key1 = Unit,
-                    instance = suspendingPointerInputModifierNode as Modifier.Node
-                )
+                modifier =
+                    elementFor(
+                        key1 = Unit,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
             )
         }
 
@@ -133,19 +136,21 @@ class SuspendingPointerInputFilterTest {
 
         rule.setContent {
             Box(
-                modifier = elementFor(
-                    key1 = Unit,
-                    instance = suspendingPointerInputModifierNode as Modifier.Node
-                )
+                modifier =
+                    elementFor(
+                        key1 = Unit,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
             )
         }
 
         val emitter = PointerInputChangeEmitter()
-        val expected = listOf(
-            emitter.nextChange(Offset(5f, 5f)),
-            emitter.nextChange(Offset(10f, 5f)),
-            emitter.nextChange(Offset(10f, 10f))
-        )
+        val expected =
+            listOf(
+                emitter.nextChange(Offset(5f, 5f)),
+                emitter.nextChange(Offset(10f, 5f)),
+                emitter.nextChange(Offset(10f, 10f))
+            )
 
         val bounds = IntSize(20, 20)
 
@@ -163,11 +168,8 @@ class SuspendingPointerInputFilterTest {
             assertTrue("Waiting for relaunch timed out", latch.await(200, TimeUnit.MILLISECONDS))
 
             runTest {
-                val received = withTimeout(200) {
-                    results.receiveAsFlow()
-                        .map { it.firstChange }
-                        .toList()
-                }
+                val received =
+                    withTimeout(200) { results.receiveAsFlow().map { it.firstChange }.toList() }
                 assertEquals(expected, received)
             }
         }
@@ -197,59 +199,63 @@ class SuspendingPointerInputFilterTest {
 
         rule.setContent {
             Box(
-                modifier = elementFor(
-                    key1 = Unit,
-                    instance = suspendingPointerInputModifierNode as Modifier.Node
-                )
+                modifier =
+                    elementFor(
+                        key1 = Unit,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
             )
         }
 
         val bounds = IntSize(50, 50)
         val emitter1 = PointerInputChangeEmitter(0)
         val emitter2 = PointerInputChangeEmitter(1)
-        val expectedEvents = listOf(
-            PointerEvent(
-                listOf(
-                    emitter1.nextChange(Offset(5f, 5f)),
-                    emitter2.nextChange(Offset(10f, 10f))
-                )
-            ),
-            PointerEvent(
-                listOf(
-                    emitter1.nextChange(Offset(6f, 6f)),
-                    emitter2.nextChange(Offset(10f, 10f), down = false)
-                )
-            ),
-            // Synthetic cancel should look like this (Note: this specific event isn't ever
-            // triggered directly, it's just for reference so you know what onCancelPointerInput()
-            // triggers).
-            // Both pointers are there, but only the with the pressed = true is changed to false,
-            // and the down change is consumed.
-            PointerEvent(
-                listOf(
-                    PointerInputChange(
-                        PointerId(0),
-                        0,
-                        Offset(6f, 6f),
-                        false,
-                        0,
-                        Offset(6f, 6f),
-                        true,
-                        isInitiallyConsumed = true
-                    ),
-                    PointerInputChange(
-                        PointerId(1),
-                        0,
-                        Offset(10f, 10f),
-                        false,
-                        0,
-                        Offset(10f, 10f),
-                        false,
-                        isInitiallyConsumed = false
+        val expectedEvents =
+            listOf(
+                PointerEvent(
+                    listOf(
+                        emitter1.nextChange(Offset(5f, 5f)),
+                        emitter2.nextChange(Offset(10f, 10f))
+                    )
+                ),
+                PointerEvent(
+                    listOf(
+                        emitter1.nextChange(Offset(6f, 6f)),
+                        emitter2.nextChange(Offset(10f, 10f), down = false)
+                    )
+                ),
+                // Synthetic cancel should look like this (Note: this specific event isn't ever
+                // triggered directly, it's just for reference so you know what
+                // onCancelPointerInput()
+                // triggers).
+                // Both pointers are there, but only the with the pressed = true is changed to
+                // false,
+                // and the down change is consumed.
+                PointerEvent(
+                    listOf(
+                        PointerInputChange(
+                            PointerId(0),
+                            0,
+                            Offset(6f, 6f),
+                            false,
+                            0,
+                            Offset(6f, 6f),
+                            true,
+                            isInitiallyConsumed = true
+                        ),
+                        PointerInputChange(
+                            PointerId(1),
+                            0,
+                            Offset(10f, 10f),
+                            false,
+                            0,
+                            Offset(10f, 10f),
+                            false,
+                            isInitiallyConsumed = false
+                        )
                     )
                 )
             )
-        )
 
         rule.runOnIdle {
             expectedEvents.take(expectedEvents.size - 1).forEach { pointerEvent ->
@@ -284,9 +290,143 @@ class SuspendingPointerInputFilterTest {
             assertTrue("Waiting for relaunch timed out", latch.await(200, TimeUnit.MILLISECONDS))
 
             runTest {
-                val received = withTimeout(200) {
-                    results.receiveAsFlow().toList()
+                val received = withTimeout(200) { results.receiveAsFlow().toList() }
+
+                assertThat(expectedEvents).hasSize(received.size)
+
+                expectedEvents.forEachIndexed { index, expectedEvent ->
+                    val actualEvent = received[index]
+                    PointerEventSubject.assertThat(actualEvent).isStructurallyEqualTo(expectedEvent)
                 }
+                assertThat(currentEventAtEnd).isNotNull()
+                PointerEventSubject.assertThat(currentEventAtEnd!!)
+                    .isStructurallyEqualTo(expectedEvents.last())
+            }
+        }
+    }
+
+    @Test
+    @MediumTest
+    fun testSyntheticMouseCancelEvent() {
+        var currentEventAtEnd: PointerEvent? = null
+        val latch = CountDownLatch(3)
+        val results = Channel<PointerEvent>(Channel.UNLIMITED)
+
+        // Used to manually trigger a PointerEvent(s) created from our PointerInputChange(s).
+        val suspendingPointerInputModifierNode = SuspendingPointerInputModifierNode {
+            awaitPointerEventScope {
+                try {
+                    repeat(3) {
+                        results.trySend(awaitPointerEvent())
+                        latch.countDown()
+                    }
+                    results.close()
+                } finally {
+                    currentEventAtEnd = currentEvent
+                }
+            }
+        }
+
+        rule.setContent {
+            Box(
+                modifier =
+                    elementFor(
+                        key1 = Unit,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
+            )
+        }
+
+        val bounds = IntSize(50, 50)
+        val emitter1 = PointerInputChangeEmitter(0)
+        val emitter2 = PointerInputChangeEmitter(1)
+        val expectedEvents =
+            listOf(
+                PointerEvent(
+                    listOf(
+                        emitter1.nextChange(Offset(5f, 5f), pointerType = PointerType.Mouse),
+                        emitter2.nextChange(Offset(10f, 10f), pointerType = PointerType.Mouse)
+                    )
+                ),
+                PointerEvent(
+                    listOf(
+                        emitter1.nextChange(Offset(6f, 6f), pointerType = PointerType.Mouse),
+                        emitter2.nextChange(
+                            Offset(10f, 10f),
+                            down = false,
+                            pointerType = PointerType.Mouse
+                        )
+                    )
+                ),
+                // Synthetic cancel should look like this (Note: this specific event isn't ever
+                // triggered directly, it's just for reference so you know what
+                // onCancelPointerInput()
+                // triggers).
+                // Both pointers are there, but only the with the pressed = true is changed to
+                // false,
+                // and the down change is consumed.
+                PointerEvent(
+                    listOf(
+                        PointerInputChange(
+                            PointerId(0),
+                            0,
+                            Offset(6f, 6f),
+                            false,
+                            0,
+                            Offset(6f, 6f),
+                            true,
+                            isInitiallyConsumed = true,
+                            PointerType.Mouse
+                        ),
+                        PointerInputChange(
+                            PointerId(1),
+                            0,
+                            Offset(10f, 10f),
+                            false,
+                            0,
+                            Offset(10f, 10f),
+                            false,
+                            isInitiallyConsumed = false,
+                            PointerType.Mouse
+                        )
+                    )
+                )
+            )
+
+        rule.runOnIdle {
+            expectedEvents.take(expectedEvents.size - 1).forEach { pointerEvent ->
+                // Initial
+                suspendingPointerInputModifierNode.onPointerEvent(
+                    pointerEvent,
+                    PointerEventPass.Initial,
+                    bounds
+                )
+
+                // Main
+                suspendingPointerInputModifierNode.onPointerEvent(
+                    pointerEvent,
+                    PointerEventPass.Main,
+                    bounds
+                )
+
+                // Final
+                suspendingPointerInputModifierNode.onPointerEvent(
+                    pointerEvent,
+                    PointerEventPass.Final,
+                    bounds
+                )
+            }
+
+            // Manually cancels the current pointer input event.
+            suspendingPointerInputModifierNode.onCancelPointerInput()
+        }
+
+        // Checks events triggered are the correct ones
+        rule.runOnIdle {
+            assertTrue("Waiting for relaunch timed out", latch.await(200, TimeUnit.MILLISECONDS))
+
+            runTest {
+                val received = withTimeout(200) { results.receiveAsFlow().toList() }
 
                 assertThat(expectedEvents).hasSize(received.size)
 
@@ -317,11 +457,7 @@ class SuspendingPointerInputFilterTest {
                     // trigger a cancel event if the previous event has the down [press] set to
                     // false. In this case, it does, so there are only ever two events, so the
                     // withTimeout() will trigger the timeout (expected).
-                    repeat(3) {
-                        withTimeout(200) {
-                            results.trySend(awaitPointerEvent())
-                        }
-                    }
+                    repeat(3) { withTimeout(200) { results.trySend(awaitPointerEvent()) } }
                 } finally {
                     currentEventAtEnd = currentEvent
                     results.close()
@@ -331,30 +467,32 @@ class SuspendingPointerInputFilterTest {
 
         rule.setContent {
             Box(
-                modifier = elementFor(
-                    key1 = Unit,
-                    instance = suspendingPointerInputModifierNode as Modifier.Node
-                )
+                modifier =
+                    elementFor(
+                        key1 = Unit,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
             )
         }
         val bounds = IntSize(50, 50)
         val emitter1 = PointerInputChangeEmitter(0)
         val emitter2 = PointerInputChangeEmitter(1)
-        val twoExpectedEvents = listOf(
-            PointerEvent(
-                listOf(
-                    emitter1.nextChange(Offset(5f, 5f)),
-                    emitter2.nextChange(Offset(10f, 10f))
-                )
-            ),
-            // Pointer event changes don't have any pressed pointers!
-            PointerEvent(
-                listOf(
-                    emitter1.nextChange(Offset(6f, 6f), down = false),
-                    emitter2.nextChange(Offset(10f, 10f), down = false)
+        val twoExpectedEvents =
+            listOf(
+                PointerEvent(
+                    listOf(
+                        emitter1.nextChange(Offset(5f, 5f)),
+                        emitter2.nextChange(Offset(10f, 10f))
+                    )
+                ),
+                // Pointer event changes don't have any pressed pointers!
+                PointerEvent(
+                    listOf(
+                        emitter1.nextChange(Offset(6f, 6f), down = false),
+                        emitter2.nextChange(Offset(10f, 10f), down = false)
+                    )
                 )
             )
-        )
 
         rule.runOnIdle {
             twoExpectedEvents.forEach { pointerEvent ->
@@ -390,9 +528,7 @@ class SuspendingPointerInputFilterTest {
 
         rule.runOnIdle {
             runTest {
-                val received = withTimeout(400) {
-                    results.receiveAsFlow().toList()
-                }
+                val received = withTimeout(400) { results.receiveAsFlow().toList() }
                 assertThat(received).hasSize(twoExpectedEvents.size)
 
                 twoExpectedEvents.forEachIndexed { index, expectedEvent ->
@@ -409,12 +545,10 @@ class SuspendingPointerInputFilterTest {
     @Test
     @MediumTest
     fun testCancelPointerInput() {
-        val firstEventCheckpointInfo =
-            Pair(3, "First pointer event triggered to create Job.")
+        val firstEventCheckpointInfo = Pair(3, "First pointer event triggered to create Job.")
         val cancelEventCheckpointInfo =
             Pair(5, "Cancel pointer event triggered (shouldn't cancel Job).")
-        val invalidEventCheckpointNumber =
-            Pair(-1, "Should never execute.")
+        val invalidEventCheckpointNumber = Pair(-1, "Should never execute.")
 
         val counter = TestCounter()
 
@@ -430,35 +564,44 @@ class SuspendingPointerInputFilterTest {
                         // test is over.
                         repeat(3) { repeatCount ->
                             awaitPointerEvent()
-                            val checkpointInfo = when (repeatCount) {
-                                0 -> { firstEventCheckpointInfo }
-                                1 -> { cancelEventCheckpointInfo }
-                                else -> {
-                                    fail("Should never be three events.")
-                                    invalidEventCheckpointNumber
+                            val checkpointInfo =
+                                when (repeatCount) {
+                                    0 -> {
+                                        firstEventCheckpointInfo
+                                    }
+                                    1 -> {
+                                        cancelEventCheckpointInfo
+                                    }
+                                    else -> {
+                                        fail("Should never be three events.")
+                                        invalidEventCheckpointNumber
+                                    }
                                 }
-                            }
                             counter.expect(checkpointInfo.first, checkpointInfo.second)
                         }
-                        fail("awaitPointerEvent() run 3+ times in repeat() block, should only " +
-                            "have run twice (one event, one cancel).")
+                        fail(
+                            "awaitPointerEvent() run 3+ times in repeat() block, should only " +
+                                "have run twice (one event, one cancel)."
+                        )
                     } finally {
-                        counter.expect(7, "Inner finally block runs after " +
-                            "teardown.")
+                        counter.expect(7, "Inner finally block runs after " + "teardown.")
                     }
                 }
             } finally {
-                counter.expect(8, "Outer finally block runs; inner finally " +
-                    "block should have already run.")
+                counter.expect(
+                    8,
+                    "Outer finally block runs; inner finally " + "block should have already run."
+                )
             }
         }
 
         rule.setContent {
             Box(
-                modifier = elementFor(
-                    key1 = Unit,
-                    instance = suspendingPointerInputModifierNode as Modifier.Node
-                )
+                modifier =
+                    elementFor(
+                        key1 = Unit,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
             )
         }
 
@@ -482,13 +625,14 @@ class SuspendingPointerInputFilterTest {
                 singleEventBounds
             )
 
-            counter.expect(4, "Before onCancelPointerInput() handler; awaitPointerEvent " +
-                "should be suspended")
+            counter.expect(
+                4,
+                "Before onCancelPointerInput() handler; awaitPointerEvent " + "should be suspended"
+            )
 
             // Manually cancels the current pointer input event.
             suspendingPointerInputModifierNode.onCancelPointerInput()
-            counter.expect(6, "After onCancelPointerInput(), end of test, " +
-                " start teardown.")
+            counter.expect(6, "After onCancelPointerInput(), end of test, " + " start teardown.")
         }
     }
 
@@ -511,10 +655,7 @@ class SuspendingPointerInputFilterTest {
                             awaitPointerEvent()
                             when (repeatCount) {
                                 0 -> {
-                                    counter.expect(
-                                        3,
-                                        "First/only pointer event triggered."
-                                    )
+                                    counter.expect(3, "First/only pointer event triggered.")
                                 }
                                 else -> {
                                     fail("Should never be two or more events.")
@@ -522,26 +663,30 @@ class SuspendingPointerInputFilterTest {
                                 }
                             }
                         }
-                        fail("awaitPointerEvent repeated twice; should have only happened once " +
-                            "and stayed suspended in repeat() waiting for a second event (that " +
-                            "should never arrive).")
+                        fail(
+                            "awaitPointerEvent repeated twice; should have only happened once " +
+                                "and stayed suspended in repeat() waiting for a second event (that " +
+                                "should never arrive)."
+                        )
                     } finally {
-                        fail("inner finally shouldn't call during teardown since coroutine job " +
-                            "was cancelled with resetPointerInputHandler().")
+                        fail(
+                            "inner finally shouldn't call during teardown since coroutine job " +
+                                "was cancelled with resetPointerInputHandler()."
+                        )
                     }
                 }
             } finally {
-                counter.expect(5, "outer finally block runs after " +
-                    "resetPointerInputHandler().")
+                counter.expect(5, "outer finally block runs after " + "resetPointerInputHandler().")
             }
         }
 
         rule.setContent {
             Box(
-                modifier = elementFor(
-                    key1 = Unit,
-                    instance = suspendingPointerInputModifierNode as Modifier.Node
-                )
+                modifier =
+                    elementFor(
+                        key1 = Unit,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
             )
         }
 
@@ -565,8 +710,11 @@ class SuspendingPointerInputFilterTest {
                 singleEventBounds
             )
 
-            counter.expect(4, "before resetPointerInputHandler(), handler should" +
-                "be suspended waiting for a second event (that never comes).")
+            counter.expect(
+                4,
+                "before resetPointerInputHandler(), handler should" +
+                    "be suspended waiting for a second event (that never comes)."
+            )
 
             // Cancels the pointer input handler in SuspendPointerInputModifierNode (and thus the
             // Coroutine Job associated with it).
@@ -587,12 +735,33 @@ class SuspendingPointerInputFilterTest {
 
             assertThat(modifier.nameFallback).isEqualTo("pointerInput")
             assertThat(modifier.valueOverride).isNull()
-            assertThat(modifier.inspectableElements.asIterable()).containsExactly(
-                ValueElement("key1", Unit),
-                ValueElement("key2", null),
-                ValueElement("keys", null),
-                ValueElement("pointerInputHandler", pointerInputHandler)
-            )
+            assertThat(modifier.inspectableElements.asIterable())
+                .containsExactly(
+                    ValueElement("key1", Unit),
+                    ValueElement("key2", null),
+                    ValueElement("keys", null),
+                    ValueElement("pointerInputHandler", pointerInputHandler)
+                )
+        }
+    }
+
+    @Test
+    @SmallTest
+    fun testEquality_key() {
+        val block: suspend PointerInputScope.() -> Unit = {}
+
+        assertModifierIsPure { toggleInput -> Modifier.pointerInput(toggleInput, block = block) }
+    }
+
+    @Test
+    @SmallTest
+    fun testEquality_block() {
+        val block1: suspend PointerInputScope.() -> Unit = {}
+        val block2: suspend PointerInputScope.() -> Unit = {}
+
+        assertModifierIsPure { toggleInput ->
+            val block = if (toggleInput) block1 else block2
+            Modifier.pointerInput(Unit, block = block)
         }
     }
 
@@ -619,10 +788,11 @@ class SuspendingPointerInputFilterTest {
             compositionCount++
 
             Box(
-                modifier = elementFor(
-                    key1 = toCapture,
-                    instance = suspendingPointerInputModifierNode as Modifier.Node
-                )
+                modifier =
+                    elementFor(
+                        key1 = toCapture,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
             )
         }
 
@@ -693,9 +863,7 @@ class SuspendingPointerInputFilterTest {
 
                     // Times out waiting for second event (no second event is triggered in this
                     // test).
-                    withTimeout(10) {
-                        awaitPointerEvent()
-                    }
+                    withTimeout(10) { awaitPointerEvent() }
                 } catch (exception: Exception) {
                     assertThat(exception)
                         .isInstanceOf(PointerEventTimeoutCancellationException::class.java)
@@ -706,10 +874,11 @@ class SuspendingPointerInputFilterTest {
 
         rule.setContent {
             Box(
-                modifier = elementFor(
-                    key1 = Unit,
-                    instance = suspendingPointerInputModifierNode as Modifier.Node
-                )
+                modifier =
+                    elementFor(
+                        key1 = Unit,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
             )
         }
 
@@ -726,9 +895,7 @@ class SuspendingPointerInputFilterTest {
 
         rule.mainClock.advanceTimeBy(1000)
 
-        rule.runOnIdle {
-            assertTrue(latch.await(2, TimeUnit.SECONDS))
-        }
+        rule.runOnIdle { assertTrue(latch.await(2, TimeUnit.SECONDS)) }
     }
 
     @Test
@@ -750,9 +917,7 @@ class SuspendingPointerInputFilterTest {
 
                     // Times out waiting for second event (no second event is triggered in this
                     // test).
-                    resultOfTimeoutOrNull = withTimeoutOrNull(10) {
-                        awaitPointerEvent()
-                    }
+                    resultOfTimeoutOrNull = withTimeoutOrNull(10) { awaitPointerEvent() }
                 } catch (exception: Exception) {
                     // An exception should not be raised in this test, but, just in case one is,
                     // we want to verify it isn't the one withTimeout will usually raise.
@@ -764,10 +929,11 @@ class SuspendingPointerInputFilterTest {
 
         rule.setContent {
             Box(
-                modifier = elementFor(
-                    key1 = Unit,
-                    instance = suspendingPointerInputModifierNode as Modifier.Node
-                )
+                modifier =
+                    elementFor(
+                        key1 = Unit,
+                        instance = suspendingPointerInputModifierNode as Modifier.Node
+                    )
             )
         }
 
@@ -784,9 +950,7 @@ class SuspendingPointerInputFilterTest {
 
         rule.mainClock.advanceTimeBy(1000)
 
-        rule.runOnIdle {
-            assertThat(resultOfTimeoutOrNull).isNull()
-        }
+        rule.runOnIdle { assertThat(resultOfTimeoutOrNull).isNull() }
     }
 
     @Test
@@ -805,14 +969,12 @@ class SuspendingPointerInputFilterTest {
                 latch.countDown()
             }
         }
-        val node = object : DelegatingNode() {
-            @Suppress("unused")
-            val pointer = delegate(suspendingPointerInputModifierNode)
-        }
+        val node =
+            object : DelegatingNode() {
+                @Suppress("unused") val pointer = delegate(suspendingPointerInputModifierNode)
+            }
 
-        rule.setContent {
-            Box(Modifier.elementFor(node))
-        }
+        rule.setContent { Box(Modifier.elementFor(node)) }
 
         rule.runOnIdle {
             suspendingPointerInputModifierNode.onPointerEvent(
@@ -834,34 +996,28 @@ class SuspendingPointerInputFilterTest {
         val events = mutableListOf<PointerEvent>()
         val tag = "input rect"
 
-        val node = object : DelegatingNode() {
-            @Suppress("unused")
-            val piNode1 = delegate(SuspendingPointerInputModifierNode {
-                awaitPointerEventScope {
-                    events += awaitPointerEvent()
-                }
-            })
+        val node =
+            object : DelegatingNode() {
+                @Suppress("unused")
+                val piNode1 =
+                    delegate(
+                        SuspendingPointerInputModifierNode {
+                            awaitPointerEventScope { events += awaitPointerEvent() }
+                        }
+                    )
 
-            @Suppress("unused")
-            val piNode2 = delegate(SuspendingPointerInputModifierNode {
-                awaitPointerEventScope {
-                    events += awaitPointerEvent()
-                }
-            })
-        }
+                @Suppress("unused")
+                val piNode2 =
+                    delegate(
+                        SuspendingPointerInputModifierNode {
+                            awaitPointerEventScope { events += awaitPointerEvent() }
+                        }
+                    )
+            }
 
-        rule.setContent {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .testTag(tag)
-                    .elementFor(node)
-            )
-        }
+        rule.setContent { Box(Modifier.fillMaxSize().testTag(tag).elementFor(node)) }
 
-        rule.onNodeWithTag(tag).performTouchInput {
-            down(Offset.Zero)
-        }
+        rule.onNodeWithTag(tag).performTouchInput { down(Offset.Zero) }
         assertThat(events).hasSize(2)
     }
 
@@ -879,30 +1035,16 @@ class SuspendingPointerInputFilterTest {
             // happens so Modifier.pointerInput() have to update it's lambda to the new one even
             // given that the key (Unit) didn't change.
             val currentKey by rememberUpdatedState(key)
-            Box(
-                Modifier
-                    .testTag(tag)
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        events.add(currentKey)
-                    })
+            Box(Modifier.testTag(tag).fillMaxSize().pointerInput(Unit) { events.add(currentKey) })
         }
 
         var key by mutableStateOf(0)
 
-        rule.setContent {
-            ReusableContent(key = key) {
-                BoxWithKey(key)
-            }
-        }
+        rule.setContent { ReusableContent(key = key) { BoxWithKey(key) } }
 
-        rule.runOnIdle {
-            key++
-        }
+        rule.runOnIdle { key++ }
 
-        rule.onNodeWithTag(tag).performTouchInput {
-            down(Offset.Zero)
-        }
+        rule.onNodeWithTag(tag).performTouchInput { down(Offset.Zero) }
         assertThat(events).isEqualTo(listOf(key))
     }
 
@@ -913,21 +1055,135 @@ class SuspendingPointerInputFilterTest {
 
         rule.setContent {
             ReusableContent(key = key) {
-                val modifier = if (key == 0) {
-                    Modifier.pointerInput(Unit) {}
-                } else {
-                    Modifier.size(10.dp)
-                }
+                val modifier =
+                    if (key == 0) {
+                        Modifier.pointerInput(Unit) {}
+                    } else {
+                        Modifier.size(10.dp)
+                    }
                 Box(modifier.testTag(tag))
             }
         }
 
-        rule.runOnIdle {
-            key++
+        rule.runOnIdle { key++ }
+
+        rule.onNodeWithTag(tag).assertHeightIsEqualTo(10.dp)
+    }
+
+    @Test
+    @MediumTest
+    fun testUpdatingKey1RestartsPointerInput() {
+        val tag = "box"
+        var key1 by mutableStateOf(false)
+        var cancelled = false
+
+        rule.setContent {
+            Box(
+                Modifier.testTag(tag).fillMaxSize().pointerInput(key1 = key1) {
+                    try {
+                        suspendCancellableCoroutine<Unit> {}
+                    } catch (e: CancellationException) {
+                        cancelled = true
+                    }
+                }
+            )
         }
 
-        rule.onNodeWithTag(tag)
-            .assertHeightIsEqualTo(10.dp)
+        rule.onNodeWithTag(tag).performClick()
+
+        rule.runOnIdle { assertThat(cancelled).isFalse() }
+
+        key1 = true
+
+        rule.runOnIdle { assertThat(cancelled).isTrue() }
+    }
+
+    @Test
+    @MediumTest
+    fun testUpdatingKey2RestartsPointerInput() {
+        val tag = "box"
+        var key2 by mutableStateOf(false)
+        var cancelled = false
+
+        rule.setContent {
+            Box(
+                Modifier.testTag(tag).fillMaxSize().pointerInput(key1 = Unit, key2 = key2) {
+                    try {
+                        suspendCancellableCoroutine<Unit> {}
+                    } catch (e: CancellationException) {
+                        cancelled = true
+                    }
+                }
+            )
+        }
+
+        rule.onNodeWithTag(tag).performClick()
+
+        rule.runOnIdle { assertThat(cancelled).isFalse() }
+
+        key2 = true
+
+        rule.runOnIdle { assertThat(cancelled).isTrue() }
+    }
+
+    @Test
+    @MediumTest
+    fun testUpdatingKeysRestartsPointerInput() {
+        val tag = "box"
+        var keys by mutableStateOf(arrayOf(false))
+        var cancelled = false
+
+        rule.setContent {
+            Box(
+                Modifier.testTag(tag).fillMaxSize().pointerInput(keys = keys) {
+                    try {
+                        suspendCancellableCoroutine<Unit> {}
+                    } catch (e: CancellationException) {
+                        cancelled = true
+                    }
+                }
+            )
+        }
+
+        rule.onNodeWithTag(tag).performClick()
+
+        rule.runOnIdle { assertThat(cancelled).isFalse() }
+
+        keys = arrayOf(true)
+
+        rule.runOnIdle { assertThat(cancelled).isTrue() }
+    }
+
+    @Test
+    @MediumTest
+    fun testUpdatingBlockDoesNotRestartPointerInput() {
+        val tag = "box"
+        var cancelled = false
+        val lambda1: suspend PointerInputScope.() -> Unit = {
+            try {
+                suspendCancellableCoroutine<Unit> {}
+            } catch (e: CancellationException) {
+                cancelled = true
+            }
+        }
+        val lambda2: suspend PointerInputScope.() -> Unit = {}
+        var block by mutableStateOf(lambda1)
+
+        rule.setContent {
+            Box(
+                Modifier.testTag(tag)
+                    .fillMaxSize()
+                    .pointerInput(key1 = Unit, key2 = Unit, block = block)
+            )
+        }
+
+        rule.onNodeWithTag(tag).performClick()
+
+        rule.runOnIdle { assertThat(cancelled).isFalse() }
+
+        block = lambda2
+
+        rule.runOnIdle { assertThat(cancelled).isFalse() }
     }
 
     // Tests pointerInput with bad pointer data
@@ -937,16 +1193,14 @@ class SuspendingPointerInputFilterTest {
         val tag = "input rect"
         rule.setContent {
             Box(
-                Modifier.fillMaxSize()
-                    .testTag(tag)
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                events += event.type
-                            }
+                Modifier.fillMaxSize().testTag(tag).pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            events += event.type
                         }
                     }
+                }
             )
         }
 
@@ -969,16 +1223,14 @@ class SuspendingPointerInputFilterTest {
         val tag = "input rect"
         rule.setContent {
             Box(
-                Modifier.fillMaxSize()
-                    .testTag(tag)
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                events += event.type
-                            }
+                Modifier.fillMaxSize().testTag(tag).pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            events += event.type
                         }
                     }
+                }
             )
         }
 
@@ -998,11 +1250,12 @@ class SuspendingPointerInputFilterTest {
             up()
         }
         assertThat(events).hasSize(3)
-        assertThat(events).containsExactly(
-            PointerEventType.Press,
-            PointerEventType.Move,
-            PointerEventType.Release
-        )
+        assertThat(events)
+            .containsExactly(
+                PointerEventType.Press,
+                PointerEventType.Move,
+                PointerEventType.Release
+            )
     }
 
     @Test
@@ -1011,16 +1264,14 @@ class SuspendingPointerInputFilterTest {
         val tag = "input rect"
         rule.setContent {
             Box(
-                Modifier.fillMaxSize()
-                    .testTag(tag)
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                events += event.type
-                            }
+                Modifier.fillMaxSize().testTag(tag).pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            events += event.type
                         }
                     }
+                }
             )
         }
 
@@ -1047,12 +1298,13 @@ class SuspendingPointerInputFilterTest {
             up(3)
         }
         assertThat(events).hasSize(5)
-        assertThat(events).containsExactly(
-            PointerEventType.Press,
-            PointerEventType.Move,
-            PointerEventType.Move,
-            PointerEventType.Release,
-            PointerEventType.Release
-        )
+        assertThat(events)
+            .containsExactly(
+                PointerEventType.Press,
+                PointerEventType.Move,
+                PointerEventType.Move,
+                PointerEventType.Release,
+                PointerEventType.Release
+            )
     }
 }

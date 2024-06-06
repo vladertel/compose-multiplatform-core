@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-
 package androidx.camera.camera2.pipe.integration.adapter
 
 import android.hardware.camera2.CameraDevice
 import android.media.MediaCodec
-import androidx.annotation.RequiresApi
 import androidx.annotation.VisibleForTesting
 import androidx.camera.camera2.pipe.OutputStream
 import androidx.camera.camera2.pipe.core.Log
@@ -102,9 +99,12 @@ class SessionConfigAdapter(
 
         // Only report error to one SessionConfig, CameraInternal#onUseCaseReset()
         // will handle the other failed Surfaces if there are any.
-        val sessionConfig = useCases.firstOrNull { useCase ->
-            useCase.sessionConfig.surfaces.contains(deferrableSurface)
-        }?.sessionConfig
+        val sessionConfig =
+            useCases
+                .firstOrNull { useCase ->
+                    useCase.sessionConfig.surfaces.contains(deferrableSurface)
+                }
+                ?.sessionConfig
 
         CoroutineScope(Dispatchers.Main.immediate).launch {
             // The error listener is used to notify the UseCase to recreate the pipeline,
@@ -160,13 +160,14 @@ class SessionConfigAdapter(
         val mapping = mutableMapOf<DeferrableSurface, Long>()
         for (sessionConfig in sessionConfigs) {
             for (surface in sessionConfig.surfaces) {
-                if (sessionConfig.implementationOptions.containsOption(STREAM_USE_HINT_OPTION) &&
-                    sessionConfig.implementationOptions.retrieveOption(STREAM_USE_HINT_OPTION)
-                    != null
+                if (
+                    sessionConfig.implementationOptions.containsOption(STREAM_USE_HINT_OPTION) &&
+                        sessionConfig.implementationOptions.retrieveOption(
+                            STREAM_USE_HINT_OPTION
+                        ) != null
                 ) {
                     mapping[surface] =
-                        sessionConfig.implementationOptions
-                            .retrieveOption(STREAM_USE_HINT_OPTION)!!
+                        sessionConfig.implementationOptions.retrieveOption(STREAM_USE_HINT_OPTION)!!
                     continue
                 }
             }

@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-
 package androidx.camera.camera2.pipe
 
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
-import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 
 /**
@@ -28,9 +25,7 @@ import androidx.annotation.RestrictTo
  * increase within a specific CameraCaptureSession, and are not created until the HAL begins
  * processing a request.
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-@JvmInline
-value class FrameNumber(val value: Long)
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) @JvmInline value class FrameNumber(val value: Long)
 
 /** [FrameInfo] is a wrapper around [TotalCaptureResult]. */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -52,6 +47,7 @@ interface FrameInfo : UnsafeWrapper {
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 interface FrameMetadata : Metadata, UnsafeWrapper {
     operator fun <T> get(key: CaptureResult.Key<T>): T?
+
     fun <T> getOrDefault(key: CaptureResult.Key<T>, default: T): T
 
     val camera: CameraId

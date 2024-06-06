@@ -16,6 +16,8 @@
 
 package androidx.sqlite.driver.bundled
 
+import androidx.annotation.RestrictTo
 import androidx.sqlite.SQLiteStatement
 
-expect class BundledSQLiteStatement : SQLiteStatement
+// Restricted instead of internal due to KT-37316
+@RestrictTo(RestrictTo.Scope.LIBRARY) expect class BundledSQLiteStatement : SQLiteStatement

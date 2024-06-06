@@ -45,7 +45,7 @@ import java.util.concurrent.Executor;
  */
 @SuppressWarnings("JavadocReference") // WebViewProvider is hidden.
 public class WebViewProviderAdapter {
-    WebViewProviderBoundaryInterface mImpl;
+    final WebViewProviderBoundaryInterface mImpl;
 
     public WebViewProviderAdapter(@NonNull WebViewProviderBoundaryInterface impl) {
         mImpl = impl;
@@ -85,7 +85,7 @@ public class WebViewProviderAdapter {
 
     /**
      * Adapter method for {@link WebViewCompat#addWebMessageListener(android.webkit.WebView,
-     * String, List<String>, androidx.webkit.WebViewCompat.WebMessageListener)}.
+     * String, java.util.List, androidx.webkit.WebViewCompat.WebMessageListener)}.
      */
     public void addWebMessageListener(@NonNull String jsObjectName,
             @NonNull String[] allowedOriginRules,
@@ -179,5 +179,19 @@ public class WebViewProviderAdapter {
                 ProfileBoundaryInterface.class, mImpl.getProfile());
 
         return new ProfileImpl(profile);
+    }
+
+    /**
+     * Adapter method for {@link WebViewCompat#isAudioMuted(WebView)}.
+     */
+    public boolean isAudioMuted() {
+        return mImpl.isAudioMuted();
+    }
+
+    /**
+     * Adapter method for {@link WebViewCompat#setAudioMuted(WebView, boolean)}.
+     */
+    public void setAudioMuted(boolean mute) {
+        mImpl.setAudioMuted(mute);
     }
 }

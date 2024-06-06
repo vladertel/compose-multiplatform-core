@@ -21,7 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -51,6 +51,7 @@ dependencies {
     testImplementation("androidx.lifecycle:lifecycle-runtime-testing:2.3.1")
     testImplementation(project(":camera:camera-video"))
     testImplementation(project(":camera:camera-testing"))
+    testImplementation(project(":internal-testutils-truth"))
     testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation(libs.junit) // Needed for Assert.assertThrows
     testImplementation("org.codehaus.plexus:plexus-utils:3.4.1")
@@ -83,7 +84,7 @@ android {
         multiDexEnabled = true
     }
 
-    buildTypes.all {
+    buildTypes.configureEach {
         consumerProguardFiles "proguard-rules.pro"
     }
 
@@ -102,10 +103,11 @@ tasks.withType(Test).configureEach { test ->
 
 androidx {
     name = "Camera2"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2019"
     description = "Camera2 implementation and extensions for the Jetpack Camera Library, a " +
             "library providing a consistent and reliable camera foundation that enables great " +
             "camera driven experiences across all of Android."
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

@@ -16,7 +16,6 @@
 
 package androidx.camera.camera2.pipe
 
-import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 
 /**
@@ -27,7 +26,6 @@ import androidx.annotation.RestrictTo
  * it in.
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @JvmInline
 value class StreamFormat(val value: Int) {
     companion object {
@@ -134,6 +132,6 @@ value class StreamFormat(val value: Int) {
                 YUY2 -> return "YUY2"
                 YV12 -> return "YV12"
             }
-            return "UNKNOWN-${this.value.toString(16)}"
+            return "UNKNOWN(${this.value.toString(16)})"
         }
 }

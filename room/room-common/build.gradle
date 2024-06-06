@@ -23,13 +23,14 @@
  */
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
-import androidx.build.Publish
 
 plugins {
     id("AndroidXPlugin")
 }
 
 androidXMultiplatform {
+    enableBinaryCompatibilityValidator = true
+
     jvm() {
         withJava()
     }
@@ -43,7 +44,7 @@ androidXMultiplatform {
         commonMain {
             dependencies {
                 api(libs.kotlinStdlib)
-                api(projectOrArtifact(":annotation:annotation"))
+                api("androidx.annotation:annotation:1.8.0")
 
             }
         }
@@ -72,9 +73,7 @@ androidXMultiplatform {
 androidx {
     name = "Room-Common"
     type = LibraryType.PUBLISHED_LIBRARY
-    publish = Publish.SNAPSHOT_AND_RELEASE
     inceptionYear = "2017"
     description = "Android Room-Common"
     legacyDisableKotlinStrictApiMode = true
-    metalavaK2UastEnabled = true
 }

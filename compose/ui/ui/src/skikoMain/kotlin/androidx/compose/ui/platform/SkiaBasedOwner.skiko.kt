@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.PrimaryPressedPointerButtons
 import androidx.compose.ui.autofill.Autofill
 import androidx.compose.ui.autofill.AutofillTree
+import androidx.compose.ui.autofill.SemanticAutofill
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusDirection.Companion.Enter
@@ -39,8 +40,11 @@ import androidx.compose.ui.focus.FocusOwner
 import androidx.compose.ui.focus.FocusOwnerImpl
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.GraphicsContext
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.asComposeCanvas
+import androidx.compose.ui.graphics.layer.GraphicsContext
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.input.InputMode.Companion.Keyboard
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.InputModeManagerImpl
@@ -75,6 +79,7 @@ import androidx.compose.ui.node.Owner
 import androidx.compose.ui.node.OwnerSnapshotObserver
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.semantics.EmptySemanticsElement
+import androidx.compose.ui.semantics.EmptySemanticsModifier
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.input.TextInputService
@@ -85,15 +90,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.viewinterop.InteropView
 import kotlin.coroutines.CoroutineContext
 
 private typealias Command = () -> Unit
 
-@OptIn(
-    ExperimentalComposeUiApi::class,
-    InternalCoreApi::class,
-    InternalComposeUiApi::class
-)
+@OptIn(ExperimentalComposeUiApi::class, InternalCoreApi::class, InternalComposeUiApi::class)
 internal class SkiaBasedOwner(
     private val platformInputService: PlatformInput,
     private val component: PlatformComponent,
@@ -122,24 +124,29 @@ internal class SkiaBasedOwner(
 
     override val sharedDrawScope = LayoutNodeDrawScope()
 
-    private val semanticsModifier = EmptySemanticsElement
+    private val rootSemanticsNode = EmptySemanticsModifier()
+    private val semanticsModifier = EmptySemanticsElement(rootSemanticsNode)
 
-    override val focusOwner: FocusOwner = FocusOwnerImpl(
-        onRequestApplyChangesListener = ::registerOnEndApplyChangesListener,
-        onRequestFocusForOwner = { _, _ -> true }, // TODO request focus from framework.
-        onClearFocusForOwner = {}, // TODO clear focus from framework.
-        layoutDirection = { layoutDirection } // TODO(demin): support RTL [onRtlPropertiesChanged].
-    )
+    override val focusOwner: FocusOwner =
+        FocusOwnerImpl(
+            onRequestApplyChangesListener = ::registerOnEndApplyChangesListener,
+            onRequestFocusForOwner = { _, _ -> true }, // TODO request focus from framework.
+            onMoveFocusInterop = { _ -> true },
+            onClearFocusForOwner = {}, // TODO clear focus from framework.
+            onFocusRectInterop = { null },
+            onLayoutDirection = { layoutDirection } // TODO(demin): RTL [onRtlPropertiesChanged].
+        )
 
     // TODO: Set the input mode. For now we don't support touch mode, (always in Key mode).
-    private val _inputModeManager = InputModeManagerImpl(
-        initialInputMode = Keyboard,
-        onRequestInputModeChange = {
-            // TODO: Change the input mode programmatically. For now we just return true if the
-            //  requested input mode is Keyboard mode.
-            it == Keyboard
-        }
-    )
+    private val _inputModeManager =
+        InputModeManagerImpl(
+            initialInputMode = Keyboard,
+            onRequestInputModeChange = {
+                // TODO: Change the input mode programmatically. For now we just return true if the
+                //  requested input mode is Keyboard mode.
+                it == Keyboard
+            }
+        )
     override val inputModeManager: InputModeManager
         get() = _inputModeManager
 
@@ -152,13 +159,14 @@ internal class SkiaBasedOwner(
 
     // TODO(b/177931787) : Consider creating a KeyInputManager like we have for FocusManager so
     //  that this common logic can be used by all owners.
-    private val keyInputModifier = Modifier.onKeyEvent {
-        val focusDirection = getFocusDirection(it)
-        if (focusDirection == null || it.type != KeyDown) return@onKeyEvent false
+    private val keyInputModifier =
+        Modifier.onKeyEvent {
+            val focusDirection = getFocusDirection(it)
+            if (focusDirection == null || it.type != KeyDown) return@onKeyEvent false
 
-        // Consume the key event if we moved focus.
-        focusOwner.moveFocus(focusDirection)
-    }
+            // Consume the key event if we moved focus.
+            focusOwner.moveFocus(focusDirection)
+        }
 
     @Suppress("unused") // to be used in JB fork (not all prerequisite changes added yet)
     internal fun setCurrentKeyboardModifiers(modifiers: PointerKeyboardModifiers) {
@@ -170,21 +178,24 @@ internal class SkiaBasedOwner(
             field = value
 
             if (!isPopup) {
-                this.bounds = IntRect(
-                    IntOffset(bounds.left, bounds.top),
-                    IntSize(constraints.maxWidth, constraints.maxHeight)
-                )
+                this.bounds =
+                    IntRect(
+                        IntOffset(bounds.left, bounds.top),
+                        IntSize(constraints.maxWidth, constraints.maxHeight)
+                    )
             }
         }
 
-    override val root = LayoutNode().also {
-        it.measurePolicy = RootMeasurePolicy
-        it.modifier = semanticsModifier
-            .then(focusOwner.modifier)
-            .then(keyInputModifier)
-            .onPreviewKeyEvent(onPreviewKeyEvent)
-            .onKeyEvent(onKeyEvent)
-    }
+    override val root =
+        LayoutNode().also {
+            it.measurePolicy = RootMeasurePolicy
+            it.modifier =
+                semanticsModifier
+                    .then(focusOwner.modifier)
+                    .then(keyInputModifier)
+                    .onPreviewKeyEvent(onPreviewKeyEvent)
+                    .onKeyEvent(onKeyEvent)
+        }
 
     override val rootForTest = this
 
@@ -199,10 +210,8 @@ internal class SkiaBasedOwner(
     init {
         snapshotObserver.startObserving()
         root.attach(this)
-        focusOwner.focusTransactionManager.withNewTransaction {
-            // TODO instead of taking focus here, call this when the owner gets focused.
-            focusOwner.takeFocus(Enter, previouslyFocusedRect = null)
-        }
+        // TODO instead of taking focus here, call this when the owner gets focused.
+        focusOwner.takeFocus(Enter, previouslyFocusedRect = null)
     }
 
     fun dispose() {
@@ -228,26 +237,27 @@ internal class SkiaBasedOwner(
     override val clipboardManager = PlatformClipboardManager()
 
     override val accessibilityManager = DefaultAccessibilityManager()
+    override val graphicsContext: GraphicsContext = GraphicsContext()
 
     override val textToolbar = DefaultTextToolbar()
 
-    override val semanticsOwner: SemanticsOwner = SemanticsOwner(root)
+    override val semanticsOwner: SemanticsOwner = SemanticsOwner(root, rootSemanticsNode)
 
-    override val dragAndDropManager: DragAndDropManager get() = TODO("Not yet implemented")
+    override val dragAndDropManager: DragAndDropManager
+        get() = TODO("Not yet implemented")
 
     override val autofillTree = AutofillTree()
 
-    override val autofill: Autofill? get() = null
+    override val autofill: Autofill?
+        get() = null
+
+    override val semanticAutofill: SemanticAutofill?
+        get() = null
 
     override val viewConfiguration: ViewConfiguration = DefaultViewConfiguration(density)
 
     override fun sendKeyEvent(keyEvent: KeyEvent): Boolean =
         sendKeyEvent(platformInputService, focusOwner, keyEvent)
-
-    override fun forceAccessibilityForTesting() = TODO("Not yet implemented")
-
-    override fun setAccessibilityEventBatchIntervalMillis(accessibilityInterval: Long) =
-        TODO("Not yet implemented")
 
     override var showLayoutBounds = false
 
@@ -261,12 +271,15 @@ internal class SkiaBasedOwner(
         needClearObservations = true
     }
 
-    override val measureIteration: Long get() = measureAndLayoutDelegate.measureIteration
+    override val measureIteration: Long
+        get() = measureAndLayoutDelegate.measureIteration
 
     private var needLayout = true
     private var needDraw = true
 
-    val needRender get() = needLayout || needDraw || needSendSyntheticEvents
+    val needRender
+        get() = needLayout || needDraw || needSendSyntheticEvents
+
     var onNeedRender: (() -> Unit)? = null
     var onDispatchCommand: ((Command) -> Unit)? = null
 
@@ -316,10 +329,11 @@ internal class SkiaBasedOwner(
         measureAndLayoutDelegate.dispatchOnPositionedCallbacks()
 
         // Don't use mainOwner.root.width here, as it strictly coerced by [constraints]
-        contentSize = IntSize(
-            root.children.maxOfOrNull { it.outerCoordinator.measuredWidth } ?: 0,
-            root.children.maxOfOrNull { it.outerCoordinator.measuredHeight } ?: 0,
-        )
+        contentSize =
+            IntSize(
+                root.children.maxOfOrNull { it.outerCoordinator.measuredWidth } ?: 0,
+                root.children.maxOfOrNull { it.outerCoordinator.measuredHeight } ?: 0,
+            )
     }
 
     override fun measureAndLayout(layoutNode: LayoutNode, constraints: Constraints) {
@@ -338,13 +352,15 @@ internal class SkiaBasedOwner(
         scheduleMeasureAndLayout: Boolean
     ) {
         if (affectsLookahead) {
-            if (measureAndLayoutDelegate.requestLookaheadRemeasure(layoutNode, forceRequest) &&
-                scheduleMeasureAndLayout
+            if (
+                measureAndLayoutDelegate.requestLookaheadRemeasure(layoutNode, forceRequest) &&
+                    scheduleMeasureAndLayout
             ) {
                 requestLayout()
             }
-        } else if (measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest) &&
-            scheduleMeasureAndLayout
+        } else if (
+            measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest) &&
+                scheduleMeasureAndLayout
         ) {
             requestLayout()
         }
@@ -370,17 +386,19 @@ internal class SkiaBasedOwner(
     }
 
     override fun createLayer(
-        drawBlock: (Canvas) -> Unit,
-        invalidateParentLayer: () -> Unit
-    ) = SkiaLayer(
-        density,
-        invalidateParentLayer = {
-            invalidateParentLayer()
-            requestDraw()
-        },
-        drawBlock = drawBlock,
-        onDestroy = { needClearObservations = true }
-    )
+        drawBlock: (Canvas, GraphicsLayer?) -> Unit,
+        invalidateParentLayer: () -> Unit,
+        explicitLayer: GraphicsLayer?
+    ) =
+        SkiaLayer(
+            density,
+            invalidateParentLayer = {
+                invalidateParentLayer()
+                requestDraw()
+            },
+            drawBlock = drawBlock,
+            onDestroy = { needClearObservations = true }
+        )
 
     override fun onSemanticsChange() {
         accessibilityController?.onSemanticsChange()
@@ -388,6 +406,10 @@ internal class SkiaBasedOwner(
 
     override fun onLayoutChange(layoutNode: LayoutNode) {
         accessibilityController?.onLayoutChange(layoutNode)
+    }
+
+    override fun onInteropViewLayoutChange(view: InteropView) {
+        // Do nothing. We don't have interop views.
     }
 
     override fun getFocusDirection(keyEvent: KeyEvent): FocusDirection? {
@@ -410,7 +432,7 @@ internal class SkiaBasedOwner(
     override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
 
     fun draw(canvas: org.jetbrains.skia.Canvas) {
-        root.draw(canvas.asComposeCanvas())
+        root.draw(canvas.asComposeCanvas(), null)
     }
 
     private var desiredPointerIcon: PointerIcon? = null
@@ -460,18 +482,21 @@ internal class SkiaBasedOwner(
     }
 
     private fun doProcessPointerInput(event: PointerInputEvent): ProcessResult {
-        return pointerInputEventProcessor.process(
-            event,
-            this,
-            isInBounds = event.pointers.all {
-                it.position.x in 0f..root.width.toFloat() &&
-                    it.position.y in 0f..root.height.toFloat()
+        return pointerInputEventProcessor
+            .process(
+                event,
+                this,
+                isInBounds =
+                    event.pointers.all {
+                        it.position.x in 0f..root.width.toFloat() &&
+                            it.position.y in 0f..root.height.toFloat()
+                    }
+            )
+            .also {
+                if (it.dispatchedToAPointerInputModifier) {
+                    setPointerIcon(component, desiredPointerIcon)
+                }
             }
-        ).also {
-            if (it.dispatchedToAPointerInputModifier) {
-                setPointerIcon(component, desiredPointerIcon)
-            }
-        }
     }
 
     override fun processPointerInput(timeMillis: Long, pointers: List<TestPointerInputEventData>) {

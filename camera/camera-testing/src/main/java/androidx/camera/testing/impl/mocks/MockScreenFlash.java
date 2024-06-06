@@ -16,11 +16,12 @@
 
 package androidx.camera.testing.impl.mocks;
 
+import android.os.Looper;
+
 import androidx.annotation.GuardedBy;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCapture.ScreenFlash;
 import androidx.camera.core.ImageCapture.ScreenFlashListener;
@@ -37,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * A mock implementations of {@link ScreenFlash} for testing purpose.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public class MockScreenFlash implements ScreenFlash {
     /**
      * Represents {@link ImageCapture.ScreenFlash#apply} event.
@@ -64,8 +64,19 @@ public class MockScreenFlash implements ScreenFlash {
     private boolean mIsApplyCompletedInstantly = true;
 
     @GuardedBy("mLock")
+    private long mLastApplyExpirationTimeMillis;
+
+    @GuardedBy("mLock")
+    @Nullable
+    private Looper mLastApplyThreadLooper;
+
+    @GuardedBy("mLock")
     @Nullable
     private ScreenFlashListener mLastApplyListener;
+
+    @GuardedBy("mLock")
+    @Nullable
+    private Looper mLastClearThreadLooper;
 
     /**
      * Returns a list of {@link ScreenFlashEvent} in the same order as invoked.
@@ -100,6 +111,29 @@ public class MockScreenFlash implements ScreenFlash {
     }
 
     /**
+     * Gets the expiration time argument of the last
+     * {@link ScreenFlash#apply(long, ScreenFlashListener)} invocation, or zero in case of no
+     * invocation.f<
+     */
+    public long getLastApplyExpirationTimeMillis() {
+        synchronized (mLock) {
+            return mLastApplyExpirationTimeMillis;
+        }
+    }
+
+    /**
+     * Gets the {@link Looper} of calling thread for
+     * {@link ScreenFlash#apply(long, ScreenFlashListener)} invocation, or null in case of no
+     * invocation.
+     */
+    @Nullable
+    public Looper getLastApplyThreadLooper() {
+        synchronized (mLock) {
+            return mLastApplyThreadLooper;
+        }
+    }
+
+    /**
      * Gets the {@link ScreenFlashListener} instance of the last
      * {@link ScreenFlash#apply(long, ScreenFlashListener)} invocation, or null in case of no
      * invocation.
@@ -111,13 +145,26 @@ public class MockScreenFlash implements ScreenFlash {
         }
     }
 
+    /**
+     * Gets the {@link Looper} of calling thread for {@link ScreenFlash#clear()} invocation, or
+     * null in case of no invocation.
+     */
+    @Nullable
+    public Looper getLastClearThreadLooper() {
+        synchronized (mLock) {
+            return mLastClearThreadLooper;
+        }
+    }
+
     /** {@inheritDoc} */
     @Override
     public void apply(long expirationTimeMillis,
             @NonNull ScreenFlashListener screenFlashListener) {
         synchronized (mLock) {
             mEventList.add(APPLY);
+            mLastApplyExpirationTimeMillis = expirationTimeMillis;
             mLastApplyListener = screenFlashListener;
+            mLastApplyThreadLooper = Looper.myLooper();
             if (mIsApplyCompletedInstantly) {
                 screenFlashListener.onCompleted();
             }
@@ -130,6 +177,7 @@ public class MockScreenFlash implements ScreenFlash {
         synchronized (mLock) {
             mEventList.add(CLEAR);
             mClearLatch.countDown();
+            mLastClearThreadLooper = Looper.myLooper();
         }
     }
 }

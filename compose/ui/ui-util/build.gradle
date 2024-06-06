@@ -21,7 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.KmpPlatformsKt
+
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 
@@ -51,6 +51,7 @@ androidXMultiplatform {
         }
 
         jvmMain {
+            dependsOn(commonMain)
             dependencies {
                 implementation(libs.kotlinStdlib)
             }
@@ -70,6 +71,7 @@ androidXMultiplatform {
         }
 
         jvmTest {
+            dependsOn(commonTest)
             dependencies {
             }
         }
@@ -95,7 +97,7 @@ androidXMultiplatform {
 
 androidx {
     name = "Compose Util"
-    type = LibraryType.PUBLISHED_LIBRARY
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2020"
     description = "Internal Compose utilities used by other modules"
     legacyDisableKotlinStrictApiMode = true

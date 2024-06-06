@@ -17,78 +17,86 @@
 package androidx.compose.foundation.content
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.content.internal.DynamicReceiveContentConfiguration
+import androidx.compose.foundation.content.internal.ModifierLocalReceiveContent
+import androidx.compose.foundation.content.internal.ReceiveContentConfiguration
+import androidx.compose.foundation.content.internal.ReceiveContentDragAndDropNode
+import androidx.compose.foundation.content.internal.dragAndDropRequestPermission
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.modifier.ModifierLocalMap
+import androidx.compose.ui.modifier.ModifierLocalModifierNode
+import androidx.compose.ui.modifier.modifierLocalMapOf
+import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.ModifierNodeElement
-import androidx.compose.ui.node.TraversableNode
 import androidx.compose.ui.platform.InspectorInfo
 
 /**
  * Configures the current node and any children nodes as a Content Receiver.
  *
- * Content in this context refers to a [TransferableContent] that could be received from another
- * app through Drag-and-Drop, Copy/Paste, or from the Software Keyboard.
+ * Content in this context refers to a [TransferableContent] that could be received from another app
+ * through Drag-and-Drop, Copy/Paste, or from the Software Keyboard.
  *
- * @param acceptedMediaTypes A list of media types that are expected by this receiver. This list
- * gets passed to the Software Keyboard to send information about what type of content the editor
- * supports. It's possible that this modifier receives other type of content that's not listed in
- * this list. Please make sure to check again whether the received [TransferableContent] carries a
- * supported [MediaType].
- * @param onReceive Callback that's triggered when a content is successfully committed. Return
- * an optional [TransferableContent] that contains the unprocessed or unaccepted parts of the
- * received [TransferableContent]. The remaining [TransferableContent] first will be sent to to the
- * closest ancestor [receiveContent] modifier. This chain will continue until there's no ancestor
- * modifier left, or [TransferableContent] is fully consumed. After, the source subsystem that
- * created the original [TransferableContent] and initiated the chain will receive any remaining
- * items to execute its default behavior. For example a text editor that receives content should
- * insert any remaining text to the drop position.
+ * There is no pre-filtering for the received content by media type, e.g. software Keyboard would
+ * assume that the app can handle any content that's sent to it. Therefore, it's crucial to check
+ * the received content's type and other related information before reading and processing it.
+ * Please refer to [TransferableContent.hasMediaType] and [TransferableContent.clipMetadata] to
+ * learn more about how to do proper checks on the received item.
  *
- * @sample androidx.compose.foundation.samples.ReceiveContentBasicSample
+ * @param receiveContentListener Listener to respond to the receive event. This interface also
+ *   includes a set of callbacks for certain Drag-and-Drop state changes. Please checkout
+ *   [ReceiveContentListener] docs for an explanation of each callback.
+ * @see TransferableContent
+ * @see hasMediaType
+ *
+ * @sample androidx.compose.foundation.samples.ReceiveContentFullSample
  */
+@Suppress("ExecutorRegistration")
 @ExperimentalFoundationApi
-fun Modifier.receiveContent(
-    vararg acceptedMediaTypes: MediaType,
-    onReceive: (TransferableContent) -> TransferableContent?
-): Modifier = then(ReceiveContentElement(acceptedMediaTypes.toSet(), onReceive))
+fun Modifier.contentReceiver(receiveContentListener: ReceiveContentListener): Modifier =
+    then(ReceiveContentElement(receiveContentListener = receiveContentListener))
 
 @OptIn(ExperimentalFoundationApi::class)
-internal data class ReceiveContentElement(
-    val acceptedMediaTypes: Set<MediaType>,
-    val onReceive: (TransferableContent) -> TransferableContent?
-) : ModifierNodeElement<ReceiveContentNode>() {
+internal data class ReceiveContentElement(val receiveContentListener: ReceiveContentListener) :
+    ModifierNodeElement<ReceiveContentNode>() {
     override fun create(): ReceiveContentNode {
-        return ReceiveContentNode(acceptedMediaTypes, onReceive)
+        return ReceiveContentNode(receiveContentListener)
     }
 
     override fun update(node: ReceiveContentNode) {
-        node.updateNode(acceptedMediaTypes, onReceive)
+        node.updateNode(receiveContentListener)
     }
 
     override fun InspectorInfo.inspectableProperties() {
         name = "receiveContent"
-        properties["acceptedMediaType"] = acceptedMediaTypes
     }
 }
 
+// This node uses ModifierLocals instead of TraversableNode to find ancestor due to b/311181532.
+// Since the usage of modifier locals are minimal and exactly correspond to how we would use
+// TraversableNode if it was available, the switch should be fairly easy when the bug is fixed.
 @OptIn(ExperimentalFoundationApi::class)
-internal class ReceiveContentNode(
-    var acceptedMediaTypes: Set<MediaType>,
-    var onReceive: (TransferableContent) -> TransferableContent?
-) : DelegatingNode(), DelegatableNode, TraversableNode {
+internal class ReceiveContentNode(var receiveContentListener: ReceiveContentListener) :
+    DelegatingNode(), ModifierLocalModifierNode, CompositionLocalConsumerModifierNode {
 
-    /**
-     * The key to find this type of node while traversing a node chain.
-     */
-    internal object ReceiveContentTraversableKey
+    private val receiveContentConfiguration: ReceiveContentConfiguration =
+        DynamicReceiveContentConfiguration(this)
 
-    override val traverseKey: Any = ReceiveContentTraversableKey
+    // The default provided configuration is the one supplied to this node. Once the node is
+    // attached, it should provide a delegating version to ancestor nodes.
+    override val providedValues: ModifierLocalMap =
+        modifierLocalMapOf(ModifierLocalReceiveContent to receiveContentConfiguration)
 
-    fun updateNode(
-        acceptedMediaTypes: Set<MediaType>,
-        onReceive: (TransferableContent) -> TransferableContent?
-    ) {
-        this.acceptedMediaTypes = acceptedMediaTypes
-        this.onReceive = onReceive
+    init {
+        delegate(
+            ReceiveContentDragAndDropNode(
+                receiveContentConfiguration = receiveContentConfiguration,
+                dragAndDropRequestPermission = { dragAndDropRequestPermission(it) }
+            )
+        )
+    }
+
+    fun updateNode(receiveContentListener: ReceiveContentListener) {
+        this.receiveContentListener = receiveContentListener
     }
 }

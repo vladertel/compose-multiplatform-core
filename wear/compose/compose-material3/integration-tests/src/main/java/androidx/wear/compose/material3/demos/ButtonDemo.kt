@@ -25,8 +25,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.integration.demos.common.ScalingLazyColumnWithRSB
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonColors
 import androidx.wear.compose.material3.ButtonDefaults
@@ -38,11 +39,16 @@ import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.samples.ButtonSample
+import androidx.wear.compose.material3.samples.ButtonWithOnLongClickSample
 import androidx.wear.compose.material3.samples.ChildButtonSample
+import androidx.wear.compose.material3.samples.ChildButtonWithOnLongClickSample
 import androidx.wear.compose.material3.samples.CompactButtonSample
+import androidx.wear.compose.material3.samples.CompactButtonWithOnLongClickSample
 import androidx.wear.compose.material3.samples.FilledTonalButtonSample
+import androidx.wear.compose.material3.samples.FilledTonalButtonWithOnLongClickSample
 import androidx.wear.compose.material3.samples.FilledTonalCompactButtonSample
 import androidx.wear.compose.material3.samples.OutlinedButtonSample
+import androidx.wear.compose.material3.samples.OutlinedButtonWithOnLongClickSample
 import androidx.wear.compose.material3.samples.OutlinedCompactButtonSample
 import androidx.wear.compose.material3.samples.SimpleButtonSample
 import androidx.wear.compose.material3.samples.SimpleChildButtonSample
@@ -51,33 +57,23 @@ import androidx.wear.compose.material3.samples.SimpleOutlinedButtonSample
 
 @Composable
 fun ButtonDemo() {
-    ScalingLazyColumnWithRSB(
+    val context = LocalContext.current
+    ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        item { ListHeader { Text("1 slot button") } }
+        item { SimpleButtonSample() }
         item {
-            ListHeader {
-                Text("1 slot button")
+            ButtonWithOnLongClickSample({ showOnClickToast(context) }) {
+                showOnLongClickToast(context)
             }
         }
         item {
-            SimpleButtonSample()
+            Button(onClick = { /* Do something */ }, label = { Text("Button") }, enabled = false)
         }
-        item {
-            Button(
-                onClick = { /* Do something */ },
-                label = { Text("Button") },
-                enabled = false
-            )
-        }
-        item {
-            ListHeader {
-                Text("3 slot button")
-            }
-        }
-        item {
-            ButtonSample()
-        }
+        item { ListHeader { Text("3 slot button") } }
+        item { ButtonSample() }
         item {
             Button(
                 onClick = { /* Do something */ },
@@ -98,17 +94,17 @@ fun ButtonDemo() {
 
 @Composable
 fun FilledTonalButtonDemo() {
-    ScalingLazyColumnWithRSB(
+    val context = LocalContext.current
+    ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        item { ListHeader { Text("1 slot button") } }
+        item { SimpleFilledTonalButtonSample() }
         item {
-            ListHeader {
-                Text("1 slot button")
+            FilledTonalButtonWithOnLongClickSample({ showOnClickToast(context) }) {
+                showOnLongClickToast(context)
             }
-        }
-        item {
-            SimpleFilledTonalButtonSample()
         }
         item {
             FilledTonalButton(
@@ -117,14 +113,8 @@ fun FilledTonalButtonDemo() {
                 enabled = false
             )
         }
-        item {
-            ListHeader {
-                Text("3 slot button")
-            }
-        }
-        item {
-            FilledTonalButtonSample()
-        }
+        item { ListHeader { Text("3 slot button") } }
+        item { FilledTonalButtonSample() }
         item {
             FilledTonalButton(
                 onClick = { /* Do something */ },
@@ -145,17 +135,17 @@ fun FilledTonalButtonDemo() {
 
 @Composable
 fun OutlinedButtonDemo() {
-    ScalingLazyColumnWithRSB(
+    val context = LocalContext.current
+    ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        item { ListHeader { Text("1 slot button") } }
+        item { SimpleOutlinedButtonSample() }
         item {
-            ListHeader {
-                Text("1 slot button")
+            OutlinedButtonWithOnLongClickSample({ showOnClickToast(context) }) {
+                showOnLongClickToast(context)
             }
-        }
-        item {
-            SimpleOutlinedButtonSample()
         }
         item {
             OutlinedButton(
@@ -164,14 +154,8 @@ fun OutlinedButtonDemo() {
                 enabled = false
             )
         }
-        item {
-            ListHeader {
-                Text("3 slot button")
-            }
-        }
-        item {
-            OutlinedButtonSample()
-        }
+        item { ListHeader { Text("3 slot button") } }
+        item { OutlinedButtonSample() }
         item {
             OutlinedButton(
                 onClick = { /* Do something */ },
@@ -192,17 +176,17 @@ fun OutlinedButtonDemo() {
 
 @Composable
 fun ChildButtonDemo() {
-    ScalingLazyColumnWithRSB(
+    val context = LocalContext.current
+    ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        item { ListHeader { Text("1 slot button") } }
+        item { SimpleChildButtonSample() }
         item {
-            ListHeader {
-                Text("1 slot button")
+            ChildButtonWithOnLongClickSample({ showOnClickToast(context) }) {
+                showOnLongClickToast(context)
             }
-        }
-        item {
-            SimpleChildButtonSample()
         }
         item {
             ChildButton(
@@ -211,14 +195,8 @@ fun ChildButtonDemo() {
                 enabled = false
             )
         }
-        item {
-            ListHeader {
-                Text("3 slot button")
-            }
-        }
-        item {
-            ChildButtonSample()
-        }
+        item { ListHeader { Text("3 slot button") } }
+        item { ChildButtonSample() }
         item {
             ChildButton(
                 onClick = { /* Do something */ },
@@ -239,24 +217,20 @@ fun ChildButtonDemo() {
 
 @Composable
 fun CompactButtonDemo() {
-    ScalingLazyColumnWithRSB(
+    val context = LocalContext.current
+    ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        item { ListHeader { Text("2 slot compact button") } }
+        item { CompactButtonSample() }
         item {
-            ListHeader {
-                Text("2 slot compact button")
+            CompactButtonWithOnLongClickSample({ showOnClickToast(context) }) {
+                showOnLongClickToast(context)
             }
         }
-        item {
-            CompactButtonSample()
-        }
-        item {
-            FilledTonalCompactButtonSample()
-        }
-        item {
-            OutlinedCompactButtonSample()
-        }
+        item { FilledTonalCompactButtonSample() }
+        item { OutlinedCompactButtonSample() }
         item {
             CompactButton(
                 onClick = { /* Do something */ },
@@ -266,11 +240,7 @@ fun CompactButtonDemo() {
                 Text("Child Compact Button", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        item {
-            ListHeader {
-                Text("Icon only compact button")
-            }
-        }
+        item { ListHeader { Text("Icon only compact button") } }
         item {
             CompactButton(
                 onClick = { /* Do something */ },
@@ -299,11 +269,7 @@ fun CompactButtonDemo() {
                 colors = ButtonDefaults.childButtonColors()
             )
         }
-        item {
-            ListHeader {
-                Text("Text only compact button")
-            }
-        }
+        item { ListHeader { Text("Text only compact button") } }
         item {
             CompactButton(
                 onClick = { /* Do something */ },
@@ -341,38 +307,18 @@ fun CompactButtonDemo() {
 
 @Composable
 fun MultilineButtonDemo() {
-    ScalingLazyColumnWithRSB(
+    ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item {
-            ListHeader {
-                Text("3 line label")
-            }
-        }
-        item {
-            MultilineButton(enabled = true)
-        }
-        item {
-            MultilineButton(enabled = false)
-        }
-        item {
-            MultilineButton(enabled = true, icon = { StandardIcon(ButtonDefaults.IconSize) })
-        }
-        item {
-            MultilineButton(enabled = false, icon = { StandardIcon(ButtonDefaults.IconSize) })
-        }
-        item {
-            ListHeader {
-                Text("5 line button")
-            }
-        }
-        item {
-            Multiline3SlotButton(enabled = true)
-        }
-        item {
-            Multiline3SlotButton(enabled = false)
-        }
+        item { ListHeader { Text("3 line label") } }
+        item { MultilineButton(enabled = true) }
+        item { MultilineButton(enabled = false) }
+        item { MultilineButton(enabled = true, icon = { StandardIcon(ButtonDefaults.IconSize) }) }
+        item { MultilineButton(enabled = false, icon = { StandardIcon(ButtonDefaults.IconSize) }) }
+        item { ListHeader { Text("5 line button") } }
+        item { Multiline3SlotButton(enabled = true) }
+        item { Multiline3SlotButton(enabled = false) }
         item {
             Multiline3SlotButton(enabled = true, icon = { StandardIcon(ButtonDefaults.IconSize) })
         }
@@ -384,32 +330,16 @@ fun MultilineButtonDemo() {
 
 @Composable
 fun AvatarButtonDemo() {
-    ScalingLazyColumnWithRSB(
+    ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item {
-            ListHeader {
-                Text("Label + Avatar")
-            }
-        }
-        item {
-            AvatarButton(enabled = true)
-        }
-        item {
-            AvatarButton(enabled = false)
-        }
-        item {
-            ListHeader {
-                Text("Primary/Secondary + Avatar")
-            }
-        }
-        item {
-            Avatar3SlotButton(enabled = true)
-        }
-        item {
-            Avatar3SlotButton(enabled = false)
-        }
+        item { ListHeader { Text("Label + Avatar") } }
+        item { AvatarButton(enabled = true) }
+        item { AvatarButton(enabled = false) }
+        item { ListHeader { Text("Primary/Secondary + Avatar") } }
+        item { Avatar3SlotButton(enabled = true) }
+        item { Avatar3SlotButton(enabled = false) }
     }
 }
 
@@ -435,7 +365,7 @@ private fun Avatar3SlotButton(enabled: Boolean) =
 @Composable
 private fun MultilineButton(
     enabled: Boolean,
-    colors: ButtonColors = ButtonDefaults.filledButtonColors(),
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
     icon: (@Composable BoxScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit = {
         Text(
@@ -457,7 +387,7 @@ private fun MultilineButton(
 @Composable
 private fun Multiline3SlotButton(
     enabled: Boolean,
-    colors: ButtonColors = ButtonDefaults.filledButtonColors(),
+    colors: ButtonColors = ButtonDefaults.buttonColors(),
     icon: (@Composable BoxScope.() -> Unit)? = null,
     label: @Composable RowScope.() -> Unit = {
         Text(

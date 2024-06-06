@@ -32,13 +32,13 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.UiThread;
 import androidx.camera.viewfinder.internal.utils.Logger;
+import androidx.camera.viewfinder.surface.ViewfinderSurfaceRequest;
 import androidx.core.content.ContextCompat;
 import androidx.core.util.Preconditions;
 
 /**
  * The SurfaceView implementation for {@link CameraViewfinder}.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 final class SurfaceViewImplementation extends ViewfinderImplementation {
 
     private static final String TAG = "SurfaceViewImpl";
@@ -133,7 +133,6 @@ final class SurfaceViewImplementation extends ViewfinderImplementation {
      * <p> SurfaceView creates Surface on its own before we can do anything. This class makes
      * sure only the Surface with correct size will be returned to viewfinder.
      */
-    @RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
     class SurfaceRequestCallback implements SurfaceHolder.Callback {
 
         // Target Surface size. Only complete the SurfaceRequest when the size of the Surface
@@ -254,7 +253,9 @@ final class SurfaceViewImplementation extends ViewfinderImplementation {
         private void invalidateSurface() {
             if (mSurfaceRequest != null) {
                 Logger.d(TAG, "Surface invalidated " + mSurfaceRequest);
-                mSurfaceRequest.getViewfinderSurface().close();
+                // TODO(b/323226220): Differentiate between surface being released by consumer
+                //  vs producer
+                mSurfaceRequest.markSurfaceSafeToRelease();
             }
         }
     }

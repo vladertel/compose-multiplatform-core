@@ -22,10 +22,6 @@ import androidx.compose.testutils.assertContainsColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.captureToImage
@@ -36,16 +32,13 @@ import org.junit.Rule
 import org.junit.Test
 
 class SelectionControlsTest {
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     @Test
     fun radio_control_supports_testtag() {
         rule.setContentWithTheme {
             with(SelectionControlScope(isEnabled = true, isSelected = true)) {
-                Radio(
-                    Modifier.testTag(TEST_TAG)
-                )
+                RadioButton(Modifier.testTag(TEST_TAG))
             }
         }
 
@@ -57,9 +50,7 @@ class SelectionControlsTest {
         rule
             .setContentWithThemeForSizeAssertions {
                 with(SelectionControlScope(isEnabled = true, isSelected = true)) {
-                    Radio(
-                        modifier = Modifier.testTag(TEST_TAG)
-                    )
+                    RadioButton(modifier = Modifier.testTag(TEST_TAG))
                 }
             }
             .assertHeightIsEqualTo(SELECTION_CONTROL_HEIGHT)
@@ -67,31 +58,10 @@ class SelectionControlsTest {
     }
 
     @Test
-    fun radio_control_has_role_radiobutton() {
-        rule.setContentWithTheme {
-            with(SelectionControlScope(isEnabled = true, isSelected = true)) {
-                Radio(
-                    modifier = Modifier.testTag(TEST_TAG)
-                )
-            }
-        }
-
-        rule.onNodeWithTag(TEST_TAG)
-            .assert(
-                SemanticsMatcher.expectValue(
-                    SemanticsProperties.Role,
-                    Role.RadioButton
-                )
-            )
-    }
-
-    @Test
     fun radio_control_is_correctly_enabled() {
         rule.setContentWithTheme {
             with(SelectionControlScope(isEnabled = true, isSelected = true)) {
-                Radio(
-                    modifier = Modifier.testTag(TEST_TAG)
-                )
+                RadioButton(modifier = Modifier.testTag(TEST_TAG))
             }
         }
 
@@ -104,10 +74,8 @@ class SelectionControlsTest {
         val color = Color.Green
         rule.setContentWithTheme {
             with(SelectionControlScope(isEnabled = true, isSelected = true)) {
-                Radio(
-                    colors = RadioDefaults.colors(
-                        selectedColor = color
-                    ),
+                RadioButton(
+                    colors = RadioButtonDefaults.colors(selectedColor = color),
                     modifier = Modifier.testTag(TEST_TAG)
                 )
             }
@@ -125,10 +93,11 @@ class SelectionControlsTest {
         val color = Color.Green
         rule.setContentWithTheme {
             with(SelectionControlScope(isEnabled = true, isSelected = false)) {
-                Radio(
-                    colors = RadioDefaults.colors(
-                        unselectedColor = color,
-                    ),
+                RadioButton(
+                    colors =
+                        RadioButtonDefaults.colors(
+                            unselectedColor = color,
+                        ),
                     modifier = Modifier.testTag(TEST_TAG)
                 )
             }

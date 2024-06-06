@@ -209,6 +209,15 @@ package androidx.wear.protolayout {
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=200) public androidx.wear.protolayout.DimensionBuilders.AngularLayoutConstraint.Builder setAngularAlignment(int);
   }
 
+  @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static final class DimensionBuilders.BoundingBoxRatio implements androidx.wear.protolayout.DimensionBuilders.PivotDimension {
+    method public androidx.wear.protolayout.TypeBuilders.FloatProp getRatio();
+  }
+
+  public static final class DimensionBuilders.BoundingBoxRatio.Builder {
+    ctor @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public DimensionBuilders.BoundingBoxRatio.Builder(androidx.wear.protolayout.TypeBuilders.FloatProp);
+    method public androidx.wear.protolayout.DimensionBuilders.BoundingBoxRatio build();
+  }
+
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static interface DimensionBuilders.ContainerDimension {
   }
 
@@ -225,7 +234,7 @@ package androidx.wear.protolayout {
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.DimensionBuilders.DegreesProp.Builder setValue(float);
   }
 
-  @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class DimensionBuilders.DpProp implements androidx.wear.protolayout.DimensionBuilders.ContainerDimension androidx.wear.protolayout.DimensionBuilders.ExtensionDimension androidx.wear.protolayout.DimensionBuilders.ImageDimension androidx.wear.protolayout.DimensionBuilders.SpacerDimension {
+  @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class DimensionBuilders.DpProp implements androidx.wear.protolayout.DimensionBuilders.ContainerDimension androidx.wear.protolayout.DimensionBuilders.ExtensionDimension androidx.wear.protolayout.DimensionBuilders.ImageDimension androidx.wear.protolayout.DimensionBuilders.PivotDimension androidx.wear.protolayout.DimensionBuilders.SpacerDimension {
     method public androidx.wear.protolayout.expression.DynamicBuilders.DynamicFloat? getDynamicValue();
     method @Dimension(unit=androidx.annotation.Dimension.DP) public float getValue();
   }
@@ -273,6 +282,9 @@ package androidx.wear.protolayout {
   }
 
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static interface DimensionBuilders.ImageDimension {
+  }
+
+  @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static interface DimensionBuilders.PivotDimension {
   }
 
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class DimensionBuilders.ProportionalDimensionProp implements androidx.wear.protolayout.DimensionBuilders.ImageDimension {
@@ -372,6 +384,7 @@ package androidx.wear.protolayout {
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class LayoutElementBuilders.Arc implements androidx.wear.protolayout.LayoutElementBuilders.LayoutElement {
     method public androidx.wear.protolayout.DimensionBuilders.DegreesProp? getAnchorAngle();
     method public androidx.wear.protolayout.LayoutElementBuilders.ArcAnchorTypeProp? getAnchorType();
+    method public androidx.wear.protolayout.LayoutElementBuilders.ArcDirectionProp? getArcDirection();
     method public java.util.List<androidx.wear.protolayout.LayoutElementBuilders.ArcLayoutElement!> getContents();
     method public androidx.wear.protolayout.ModifiersBuilders.Modifiers? getModifiers();
     method public androidx.wear.protolayout.LayoutElementBuilders.VerticalAlignmentProp? getVerticalAlign();
@@ -384,6 +397,8 @@ package androidx.wear.protolayout {
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder setAnchorAngle(androidx.wear.protolayout.DimensionBuilders.DegreesProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder setAnchorType(androidx.wear.protolayout.LayoutElementBuilders.ArcAnchorTypeProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder setAnchorType(int);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder setArcDirection(androidx.wear.protolayout.LayoutElementBuilders.ArcDirectionProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder setArcDirection(int);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder setModifiers(androidx.wear.protolayout.ModifiersBuilders.Modifiers);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder setVerticalAlign(androidx.wear.protolayout.LayoutElementBuilders.VerticalAlignmentProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.Arc.Builder setVerticalAlign(int);
@@ -412,10 +427,20 @@ package androidx.wear.protolayout {
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.ArcAnchorTypeProp.Builder setValue(int);
   }
 
+  @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public static final class LayoutElementBuilders.ArcDirectionProp {
+    method public int getValue();
+  }
+
+  public static final class LayoutElementBuilders.ArcDirectionProp.Builder {
+    ctor @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public LayoutElementBuilders.ArcDirectionProp.Builder(int);
+    method public androidx.wear.protolayout.LayoutElementBuilders.ArcDirectionProp build();
+  }
+
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static interface LayoutElementBuilders.ArcLayoutElement {
   }
 
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class LayoutElementBuilders.ArcLine implements androidx.wear.protolayout.LayoutElementBuilders.ArcLayoutElement {
+    method public androidx.wear.protolayout.LayoutElementBuilders.ArcDirectionProp? getArcDirection();
     method public androidx.wear.protolayout.ColorBuilders.Brush? getBrush();
     method public androidx.wear.protolayout.ColorBuilders.ColorProp? getColor();
     method public androidx.wear.protolayout.DimensionBuilders.AngularLayoutConstraint? getLayoutConstraintsForDynamicLength();
@@ -428,6 +453,8 @@ package androidx.wear.protolayout {
   public static final class LayoutElementBuilders.ArcLine.Builder {
     ctor public LayoutElementBuilders.ArcLine.Builder();
     method public androidx.wear.protolayout.LayoutElementBuilders.ArcLine build();
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.LayoutElementBuilders.ArcLine.Builder setArcDirection(androidx.wear.protolayout.LayoutElementBuilders.ArcDirectionProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.LayoutElementBuilders.ArcLine.Builder setArcDirection(int);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.LayoutElementBuilders.ArcLine.Builder setBrush(androidx.wear.protolayout.ColorBuilders.Brush);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.ArcLine.Builder setColor(androidx.wear.protolayout.ColorBuilders.ColorProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=200) public androidx.wear.protolayout.LayoutElementBuilders.ArcLine.Builder setLayoutConstraintsForDynamicLength(androidx.wear.protolayout.DimensionBuilders.AngularLayoutConstraint);
@@ -453,6 +480,7 @@ package androidx.wear.protolayout {
   }
 
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class LayoutElementBuilders.ArcText implements androidx.wear.protolayout.LayoutElementBuilders.ArcLayoutElement {
+    method public androidx.wear.protolayout.LayoutElementBuilders.ArcDirectionProp? getArcDirection();
     method public androidx.wear.protolayout.LayoutElementBuilders.FontStyle? getFontStyle();
     method public androidx.wear.protolayout.ModifiersBuilders.ArcModifiers? getModifiers();
     method public androidx.wear.protolayout.TypeBuilders.StringProp? getText();
@@ -461,6 +489,8 @@ package androidx.wear.protolayout {
   public static final class LayoutElementBuilders.ArcText.Builder {
     ctor public LayoutElementBuilders.ArcText.Builder();
     method public androidx.wear.protolayout.LayoutElementBuilders.ArcText build();
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.LayoutElementBuilders.ArcText.Builder setArcDirection(androidx.wear.protolayout.LayoutElementBuilders.ArcDirectionProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.LayoutElementBuilders.ArcText.Builder setArcDirection(int);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.ArcText.Builder setFontStyle(androidx.wear.protolayout.LayoutElementBuilders.FontStyle);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.ArcText.Builder setModifiers(androidx.wear.protolayout.ModifiersBuilders.ArcModifiers);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.ArcText.Builder setText(androidx.wear.protolayout.TypeBuilders.StringProp);
@@ -544,10 +574,18 @@ package androidx.wear.protolayout {
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=200) public androidx.wear.protolayout.LayoutElementBuilders.ExtensionLayoutElement.Builder setWidth(androidx.wear.protolayout.DimensionBuilders.ExtensionDimension);
   }
 
+  @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static interface LayoutElementBuilders.FontSetting {
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static androidx.wear.protolayout.LayoutElementBuilders.FontSetting tabularNum();
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static androidx.wear.protolayout.LayoutElementBuilders.FontSetting weight(float);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static androidx.wear.protolayout.LayoutElementBuilders.FontSetting width(float);
+  }
+
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class LayoutElementBuilders.FontStyle {
     method public androidx.wear.protolayout.ColorBuilders.ColorProp? getColor();
     method public androidx.wear.protolayout.TypeBuilders.BoolProp? getItalic();
     method public androidx.wear.protolayout.DimensionBuilders.EmProp? getLetterSpacing();
+    method public java.util.List<java.lang.String!> getPreferredFontFamilies();
+    method public java.util.List<androidx.wear.protolayout.LayoutElementBuilders.FontSetting!> getSettings();
     method public androidx.wear.protolayout.DimensionBuilders.SpProp? getSize();
     method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental public java.util.List<androidx.wear.protolayout.DimensionBuilders.SpProp!> getSizes();
     method public androidx.wear.protolayout.TypeBuilders.BoolProp? getUnderline();
@@ -562,6 +600,8 @@ package androidx.wear.protolayout {
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setItalic(androidx.wear.protolayout.TypeBuilders.BoolProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setItalic(boolean);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setLetterSpacing(androidx.wear.protolayout.DimensionBuilders.EmProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setPreferredFontFamilies(String, java.lang.String!...);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setSettings(androidx.wear.protolayout.LayoutElementBuilders.FontSetting!...);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setSize(androidx.wear.protolayout.DimensionBuilders.SpProp);
     method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setSizes(@Dimension(unit=androidx.annotation.Dimension.SP) @IntRange(from=1) int...);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setUnderline(androidx.wear.protolayout.TypeBuilders.BoolProp);
@@ -570,6 +610,9 @@ package androidx.wear.protolayout {
     method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setVariant(int);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setWeight(androidx.wear.protolayout.LayoutElementBuilders.FontWeightProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.LayoutElementBuilders.FontStyle.Builder setWeight(int);
+    field @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static final String DEFAULT_SYSTEM_FONT = "default";
+    field @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static final String ROBOTO_FLEX_FONT = "roboto-flex";
+    field @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static final String ROBOTO_FONT = "roboto";
   }
 
   @Deprecated public static final class LayoutElementBuilders.FontStyles {
@@ -867,6 +910,7 @@ package androidx.wear.protolayout {
 
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class ModifiersBuilders.ArcModifiers {
     method public androidx.wear.protolayout.ModifiersBuilders.Clickable? getClickable();
+    method public androidx.wear.protolayout.TypeBuilders.FloatProp? getOpacity();
     method public androidx.wear.protolayout.ModifiersBuilders.Semantics? getSemantics();
   }
 
@@ -874,6 +918,7 @@ package androidx.wear.protolayout {
     ctor public ModifiersBuilders.ArcModifiers.Builder();
     method public androidx.wear.protolayout.ModifiersBuilders.ArcModifiers build();
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.ModifiersBuilders.ArcModifiers.Builder setClickable(androidx.wear.protolayout.ModifiersBuilders.Clickable);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.ArcModifiers.Builder setOpacity(androidx.wear.protolayout.TypeBuilders.FloatProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.ModifiersBuilders.ArcModifiers.Builder setSemantics(androidx.wear.protolayout.ModifiersBuilders.Semantics);
   }
 
@@ -906,6 +951,7 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.DimensionBuilders.DpProp getMinimumClickableHeight();
     method public androidx.wear.protolayout.DimensionBuilders.DpProp getMinimumClickableWidth();
     method public androidx.wear.protolayout.ActionBuilders.Action? getOnClick();
+    method public boolean isVisualFeedbackEnabled();
   }
 
   public static final class ModifiersBuilders.Clickable.Builder {
@@ -915,16 +961,39 @@ package androidx.wear.protolayout {
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.ModifiersBuilders.Clickable.Builder setMinimumClickableHeight(androidx.wear.protolayout.DimensionBuilders.DpProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.ModifiersBuilders.Clickable.Builder setMinimumClickableWidth(androidx.wear.protolayout.DimensionBuilders.DpProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.ModifiersBuilders.Clickable.Builder setOnClick(androidx.wear.protolayout.ActionBuilders.Action);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Clickable.Builder setVisualFeedbackEnabled(boolean);
   }
 
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class ModifiersBuilders.Corner {
+    method public androidx.wear.protolayout.ModifiersBuilders.CornerRadius getBottomLeftRadius();
+    method public androidx.wear.protolayout.ModifiersBuilders.CornerRadius getBottomRightRadius();
     method public androidx.wear.protolayout.DimensionBuilders.DpProp? getRadius();
+    method public androidx.wear.protolayout.ModifiersBuilders.CornerRadius getTopLeftRadius();
+    method public androidx.wear.protolayout.ModifiersBuilders.CornerRadius getTopRightRadius();
   }
 
   public static final class ModifiersBuilders.Corner.Builder {
     ctor public ModifiersBuilders.Corner.Builder();
     method public androidx.wear.protolayout.ModifiersBuilders.Corner build();
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setBottomLeftRadius(androidx.wear.protolayout.DimensionBuilders.DpProp, androidx.wear.protolayout.DimensionBuilders.DpProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setBottomLeftRadius(androidx.wear.protolayout.ModifiersBuilders.CornerRadius);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setBottomRightRadius(androidx.wear.protolayout.DimensionBuilders.DpProp, androidx.wear.protolayout.DimensionBuilders.DpProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setBottomRightRadius(androidx.wear.protolayout.ModifiersBuilders.CornerRadius);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setRadius(androidx.wear.protolayout.DimensionBuilders.DpProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setTopLeftRadius(androidx.wear.protolayout.DimensionBuilders.DpProp, androidx.wear.protolayout.DimensionBuilders.DpProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setTopLeftRadius(androidx.wear.protolayout.ModifiersBuilders.CornerRadius);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setTopRightRadius(androidx.wear.protolayout.DimensionBuilders.DpProp, androidx.wear.protolayout.DimensionBuilders.DpProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Corner.Builder setTopRightRadius(androidx.wear.protolayout.ModifiersBuilders.CornerRadius);
+  }
+
+  @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static final class ModifiersBuilders.CornerRadius {
+    method public androidx.wear.protolayout.DimensionBuilders.DpProp getX();
+    method public androidx.wear.protolayout.DimensionBuilders.DpProp getY();
+  }
+
+  public static final class ModifiersBuilders.CornerRadius.Builder {
+    ctor @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public ModifiersBuilders.CornerRadius.Builder(androidx.wear.protolayout.DimensionBuilders.DpProp, androidx.wear.protolayout.DimensionBuilders.DpProp);
+    method public androidx.wear.protolayout.ModifiersBuilders.CornerRadius build();
   }
 
   @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental public static final class ModifiersBuilders.DefaultContentTransitions {
@@ -1000,8 +1069,10 @@ package androidx.wear.protolayout {
     method public androidx.wear.protolayout.ModifiersBuilders.Clickable? getClickable();
     method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental public androidx.wear.protolayout.ModifiersBuilders.AnimatedVisibility? getContentUpdateAnimation();
     method public androidx.wear.protolayout.ModifiersBuilders.ElementMetadata? getMetadata();
+    method public androidx.wear.protolayout.TypeBuilders.FloatProp? getOpacity();
     method public androidx.wear.protolayout.ModifiersBuilders.Padding? getPadding();
     method public androidx.wear.protolayout.ModifiersBuilders.Semantics? getSemantics();
+    method public androidx.wear.protolayout.ModifiersBuilders.Transformation? getTransformation();
     method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental public androidx.wear.protolayout.TypeBuilders.BoolProp isVisible();
   }
 
@@ -1013,8 +1084,10 @@ package androidx.wear.protolayout {
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setClickable(androidx.wear.protolayout.ModifiersBuilders.Clickable);
     method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=200) public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setContentUpdateAnimation(androidx.wear.protolayout.ModifiersBuilders.AnimatedVisibility);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setMetadata(androidx.wear.protolayout.ModifiersBuilders.ElementMetadata);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setOpacity(androidx.wear.protolayout.TypeBuilders.FloatProp);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setPadding(androidx.wear.protolayout.ModifiersBuilders.Padding);
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setSemantics(androidx.wear.protolayout.ModifiersBuilders.Semantics);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setTransformation(androidx.wear.protolayout.ModifiersBuilders.Transformation);
     method @SuppressCompatibility @androidx.wear.protolayout.expression.ProtoLayoutExperimental @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) public androidx.wear.protolayout.ModifiersBuilders.Modifiers.Builder setVisible(androidx.wear.protolayout.TypeBuilders.BoolProp);
   }
 
@@ -1116,6 +1189,28 @@ package androidx.wear.protolayout {
     method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public androidx.wear.protolayout.ModifiersBuilders.SpanModifiers.Builder setClickable(androidx.wear.protolayout.ModifiersBuilders.Clickable);
   }
 
+  @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public static final class ModifiersBuilders.Transformation {
+    method public androidx.wear.protolayout.DimensionBuilders.PivotDimension getPivotX();
+    method public androidx.wear.protolayout.DimensionBuilders.PivotDimension getPivotY();
+    method public androidx.wear.protolayout.DimensionBuilders.DegreesProp getRotation();
+    method public androidx.wear.protolayout.TypeBuilders.FloatProp getScaleX();
+    method public androidx.wear.protolayout.TypeBuilders.FloatProp getScaleY();
+    method public androidx.wear.protolayout.DimensionBuilders.DpProp getTranslationX();
+    method public androidx.wear.protolayout.DimensionBuilders.DpProp getTranslationY();
+  }
+
+  public static final class ModifiersBuilders.Transformation.Builder {
+    ctor public ModifiersBuilders.Transformation.Builder();
+    method public androidx.wear.protolayout.ModifiersBuilders.Transformation build();
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Transformation.Builder setPivotX(androidx.wear.protolayout.DimensionBuilders.PivotDimension);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Transformation.Builder setPivotY(androidx.wear.protolayout.DimensionBuilders.PivotDimension);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Transformation.Builder setRotation(androidx.wear.protolayout.DimensionBuilders.DegreesProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Transformation.Builder setScaleX(androidx.wear.protolayout.TypeBuilders.FloatProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Transformation.Builder setScaleY(androidx.wear.protolayout.TypeBuilders.FloatProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Transformation.Builder setTranslationX(androidx.wear.protolayout.DimensionBuilders.DpProp);
+    method @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) public androidx.wear.protolayout.ModifiersBuilders.Transformation.Builder setTranslationY(androidx.wear.protolayout.DimensionBuilders.DpProp);
+  }
+
   public final class ResourceBuilders {
     field @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=200) public static final int ANIMATED_IMAGE_FORMAT_AVD = 1; // 0x1
     field @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=200) public static final int ANIMATED_IMAGE_FORMAT_UNDEFINED = 0; // 0x0
@@ -1210,7 +1305,7 @@ package androidx.wear.protolayout {
   }
 
   @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=0) public static final class StateBuilders.State {
-    method public java.util.Map<androidx.wear.protolayout.expression.AppDataKey<?>!,androidx.wear.protolayout.expression.DynamicDataBuilders.DynamicDataValue<?>!> getKeyToValueMapping();
+    method public java.util.Map<androidx.wear.protolayout.expression.AppDataKey<? extends java.lang.Object!>!,androidx.wear.protolayout.expression.DynamicDataBuilders.DynamicDataValue<? extends java.lang.Object!>!> getKeyToValueMapping();
     method public String getLastClickableId();
     method public static int getMaxStateEntryCount();
   }

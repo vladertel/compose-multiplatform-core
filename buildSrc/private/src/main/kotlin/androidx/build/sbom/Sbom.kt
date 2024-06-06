@@ -83,7 +83,11 @@ private val excludeTaskNames =
         "bundleDebugLocalLintAar",
         "bundleReleaseLocalLintAar",
         "bundleDebugAar",
-        "bundleReleaseAar"
+        "bundleReleaseAar",
+        "bundleAndroidMainAar",
+        "bundleAndroidMainLocalLintAar",
+        "repackageAndroidMainAar",
+        "repackageAarWithResourceApiAndroidMain"
     )
 
 /**
@@ -131,7 +135,6 @@ fun Project.listSbomConfigurationNamesForArchive(task: AbstractArchiveTask): Lis
         return listOf() // we don't publish integration tests
     if (taskName.startsWith("zip") && taskName.contains("ResultsOf") && taskName.contains("Test"))
         return listOf() // we don't publish test results
-    if (projectPath == ":compose:compiler:compiler" && taskName == "embeddedPlugin") return listOf()
 
     // ShadowJar tasks have a `configurations` property that lists the configurations that
     // are inputs to the task, but they don't also list file inputs
@@ -140,7 +143,7 @@ fun Project.listSbomConfigurationNamesForArchive(task: AbstractArchiveTask): Lis
     // its configurations.
     // If a project has multiple shadowJar tasks, we ask the developer to provide
     // this metadata somehow by failing below
-    if (taskName == "shadowJar") {
+    if (taskName == "shadowJar" || taskName == "shadowLibraryJar") {
         // If the task is a ShadowJar task, we can just ask it which configurations it intends to
         // embed
         // We separately validate that this list is correct in
@@ -345,6 +348,7 @@ fun Project.getSbomPublishDir(): File {
 
 private const val MAVEN_CENTRAL_REPO_URL = "https://repo.maven.apache.org/maven2"
 private const val GMAVEN_REPO_URL = "https://dl.google.com/android/maven2"
+
 /** Returns a mapping from local repo url to public repo url */
 private fun Project.getRepoPublicUrls(): Map<String, String> {
     return if (ProjectLayoutType.isPlayground(this)) {

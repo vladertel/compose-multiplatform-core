@@ -38,7 +38,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.internal.annotation.CameraExecutor;
@@ -78,7 +77,6 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Implementation detail of the submitStillCaptures method.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class Camera2CapturePipeline {
 
     private static final String TAG = "Camera2CapturePipeline";
@@ -145,6 +143,17 @@ class Camera2CapturePipeline {
             @NonNull List<CaptureConfig> captureConfigs, @CaptureMode int captureMode,
             @FlashMode int flashMode, @FlashType int flashType) {
 
+        Pipeline pipeline = createPipeline(captureMode, flashMode, flashType);
+        return Futures.nonCancellationPropagating(
+                pipeline.executeCapture(captureConfigs, flashMode));
+    }
+
+    /**
+     * Creates a {@link Pipeline} for the current capture request based on the parameters.
+     */
+    @VisibleForTesting
+    Pipeline createPipeline(@CaptureMode int captureMode, @FlashMode int flashMode,
+            @FlashType int flashType) {
         OverrideAeModeForStillCapture aeQuirk = new OverrideAeModeForStillCapture(mCameraQuirk);
         Pipeline pipeline = new Pipeline(mTemplate, mExecutor, mScheduler, mCameraControl,
                 mIsLegacyDevice, aeQuirk);
@@ -169,8 +178,7 @@ class Camera2CapturePipeline {
             // pipeline.
         }
 
-        return Futures.nonCancellationPropagating(
-                pipeline.executeCapture(captureConfigs, flashMode));
+        return pipeline;
     }
 
     /**

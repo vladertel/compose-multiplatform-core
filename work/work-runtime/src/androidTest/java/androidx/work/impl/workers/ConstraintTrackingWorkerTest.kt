@@ -19,19 +19,17 @@ package androidx.work.impl.workers
 import android.content.Context
 import android.os.Looper
 import android.util.Log
-import androidx.concurrent.futures.CallbackToFutureAdapter.Completer
 import androidx.concurrent.futures.CallbackToFutureAdapter.getFuture
+import androidx.concurrent.futures.await
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.work.Configuration
 import androidx.work.Constraints
 import androidx.work.ListenableWorker
 import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkInfo
 import androidx.work.WorkInfo.State
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import androidx.work.await
 import androidx.work.impl.DoWorkAwareWorker
 import androidx.work.impl.NoOpForegroundProcessor
 import androidx.work.impl.WorkManagerImpl
@@ -52,10 +50,12 @@ import com.google.common.util.concurrent.ListenableFuture
 import java.util.UUID
 import java.util.concurrent.Executors
 import kotlin.reflect.KClass
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -64,17 +64,20 @@ import org.junit.runner.RunWith
 class ConstraintTrackingWorkerTest {
     val workerFactory = TrackingWorkerFactory()
     val configuration =
-        Configuration.Builder().setWorkerFactory(workerFactory)
+        Configuration.Builder()
+            .setWorkerFactory(workerFactory)
             .setMinimumLoggingLevel(Log.DEBUG)
-            .setTaskExecutor(Executors.newSingleThreadExecutor()).build()
+            .setTaskExecutor(Executors.newSingleThreadExecutor())
+            .build()
     val env = TestEnv(configuration)
     val taskExecutor = env.taskExecutor
     val fakeChargingTracker = TestConstraintTracker(true, env.context, env.taskExecutor)
-    val trackers = Trackers(
-        context = env.context,
-        taskExecutor = env.taskExecutor,
-        batteryChargingTracker = fakeChargingTracker
-    )
+    val trackers =
+        Trackers(
+            context = env.context,
+            taskExecutor = env.taskExecutor,
+            batteryChargingTracker = fakeChargingTracker
+        )
     val greedyScheduler = GreedyScheduler(env, trackers)
     val workManager = WorkManager(env, listOf(greedyScheduler), trackers)
 
@@ -85,7 +88,7 @@ class ConstraintTrackingWorkerTest {
     @Test
     fun testFailingWorker() = runBlocking {
         val workerWrapper = create(ExceptionWorker::class)
-        taskExecutor.serialTaskExecutor.execute(workerWrapper)
+        workerWrapper.launch()
         workerFactory.await(workerWrapper.workSpecId)
         assertThat(workManager.awaitNotRunning(workerWrapper)).isEqualTo(State.FAILED)
     }
@@ -93,9 +96,9 @@ class ConstraintTrackingWorkerTest {
     @Test
     fun testSelfCancellingWorker() = runBlocking {
         val workerWrapper = create(SelfCancellingWorker::class)
-        taskExecutor.serialTaskExecutor.execute(workerWrapper)
+        val future = workerWrapper.launch()
         val worker = awaitWorker<SelfCancellingWorker>(workerWrapper)
-        workerWrapper.future.await()
+        future.await()
         assertThat(workManager.awaitNotRunning(workerWrapper)).isEqualTo(State.FAILED)
         assertThat(worker.stopCounter).isEqualTo(0)
     }
@@ -105,30 +108,30 @@ class ConstraintTrackingWorkerTest {
         // charging constraint isn't satisfied
         fakeChargingTracker.constraintState = false
         val workerWrapper = create(TestWorker::class)
-        taskExecutor.serialTaskExecutor.execute(workerWrapper)
+        val future = workerWrapper.launch()
         workerFactory.await(workerWrapper.workSpecId)
-        workerWrapper.future.await()
+        future.await()
         assertThat(workManager.awaitNotRunning(workerWrapper)).isEqualTo(State.ENQUEUED)
     }
 
     @Test
     fun testConstraintTrackingWorker_onConstraintsMet() = runBlocking {
         val workerWrapper = create(EchoingWorker::class)
-        taskExecutor.serialTaskExecutor.execute(workerWrapper)
+        val future = workerWrapper.launch()
         workerFactory.await(workerWrapper.workSpecId)
-        workerWrapper.future.await()
+        future.await()
         assertThat(workManager.awaitNotRunning(workerWrapper)).isEqualTo(State.SUCCEEDED)
-        val outputData = workManager.getWorkInfoById(workerWrapper.workSpecId).await().outputData
+        val outputData = workManager.getWorkInfoById(workerWrapper.workSpecId).await()!!.outputData
         assertThat(outputData.getBoolean(TEST_ARGUMENT_NAME, false)).isTrue()
     }
 
     @Test
     fun testConstraintTrackingWorker_onConstraintsChanged() = runBlocking {
         val workerWrapper = create(CompletableWorker::class)
-        taskExecutor.serialTaskExecutor.execute(workerWrapper)
+        val future = workerWrapper.launch()
         workerFactory.await(workerWrapper.workSpecId)
         fakeChargingTracker.constraintState = false
-        workerWrapper.future.await()
+        future.await()
         val state = workManager.awaitNotRunning(workerWrapper)
         assertThat(state).isEqualTo(State.ENQUEUED)
     }
@@ -136,49 +139,45 @@ class ConstraintTrackingWorkerTest {
     @Test
     fun testConstraintTrackingWorker_stopPropagated() = runBlocking {
         val workerWrapper = create(DoWorkAwareWorker::class)
-        taskExecutor.serialTaskExecutor.execute(workerWrapper)
-
+        val future = workerWrapper.launch()
         val worker = awaitWorker<DoWorkAwareWorker>(workerWrapper)
-        worker.doWork.await()
+        worker.doWorkEvent.await()
         launch { workerWrapper.interrupt(0) }
 
-        workerWrapper.future.await()
+        future.await()
         assertThat(workManager.awaitNotRunning(workerWrapper)).isEqualTo(State.ENQUEUED)
-        assertThat(worker.isStopped).isTrue()
+        // WorkerWrapper future is resolved before cancellation is fully propagated in coroutines
+        withTimeoutOrNull(300) { worker.onStopEvent.await() }
+            ?: throw AssertionError("onStopEventDidHappened")
     }
 
     @Test
     fun test_runOnMain() = runBlocking {
         val workerWrapper = create(ThreadAssertingWorker::class)
-        taskExecutor.serialTaskExecutor.execute(workerWrapper)
-        workerWrapper.future.await()
+        val future = workerWrapper.launch()
+        future.await()
         assertThat(workManager.awaitNotRunning(workerWrapper)).isEqualTo(State.SUCCEEDED)
-    }
-
-    @Test
-    fun test_delegatesInterruption_once() = runBlocking {
-        val workerWrapper = create(StopCountingWorker::class)
-        taskExecutor.serialTaskExecutor.execute(workerWrapper)
-        val worker = awaitWorker<StopCountingWorker>(workerWrapper)
-        workerWrapper.interrupt(WorkInfo.STOP_REASON_UNKNOWN)
-        workerWrapper.interrupt(WorkInfo.STOP_REASON_UNKNOWN)
-        workerWrapper.future.await()
-        assertThat(workManager.awaitNotRunning(workerWrapper)).isEqualTo(State.ENQUEUED)
-        assertThat(worker.stopCounter).isEqualTo(1)
     }
 
     private fun create(delegate: KClass<*>): WorkerWrapper {
         val input =
             workDataOf(ARGUMENT_CLASS_NAME to delegate.qualifiedName!!, TEST_ARGUMENT_NAME to true)
-        val request = OneTimeWorkRequest.Builder(ConstraintTrackingWorker::class.java)
-            .setConstraints(Constraints(requiresCharging = true))
-            .setInputData(input)
-            .build()
+        val request =
+            OneTimeWorkRequest.Builder(ConstraintTrackingWorker::class.java)
+                .setConstraints(Constraints(requiresCharging = true))
+                .setInputData(input)
+                .build()
         workManager.workDatabase.workSpecDao().insertWorkSpec(request.workSpec)
         return WorkerWrapper.Builder(
-            env.context, env.configuration, env.taskExecutor,
-            NoOpForegroundProcessor, workManager.workDatabase, request.workSpec, emptyList()
-        ).build()
+                env.context,
+                env.configuration,
+                env.taskExecutor,
+                NoOpForegroundProcessor,
+                workManager.workDatabase,
+                request.workSpec,
+                emptyList()
+            )
+            .build()
     }
 
     // It correctly handles the fact that at first is created ConstraintTrackingWorker
@@ -189,10 +188,8 @@ class ConstraintTrackingWorkerTest {
 
 private const val TEST_ARGUMENT_NAME = "test"
 
-class ThreadAssertingWorker(
-    appContext: Context,
-    workerParams: WorkerParameters
-) : ListenableWorker(appContext, workerParams) {
+class ThreadAssertingWorker(appContext: Context, workerParams: WorkerParameters) :
+    ListenableWorker(appContext, workerParams) {
     override fun startWork(): ListenableFuture<Result> = getFuture {
         if (Looper.getMainLooper() != Looper.myLooper())
             throw AssertionError("start work must be called on main thread")
@@ -201,40 +198,22 @@ class ThreadAssertingWorker(
     }
 }
 
-class StopCountingWorker(
-    appContext: Context,
-    workerParams: WorkerParameters
-) : ListenableWorker(appContext, workerParams) {
-    var stopCounter: Int = 0
-    // not used but keeping a reference so it is gc-ed. if it is gc-ed, then ListenableFuture
-    // is completed with exception.
-    private var completer: Completer<*>? = null
-    override fun startWork(): ListenableFuture<Result> = getFuture {
-        completer = it
-        "DoStopCountingWorker"
-    }
-
-    override fun onStopped() {
-        stopCounter++
-    }
-}
-
-class SelfCancellingWorker(
-    appContext: Context,
-    workerParams: WorkerParameters
-) : ListenableWorker(appContext, workerParams) {
+class SelfCancellingWorker(appContext: Context, workerParams: WorkerParameters) :
+    ListenableWorker(appContext, workerParams) {
     var stopCounter: Int = 0
 
-    override fun startWork(): ListenableFuture<Result> = getFuture {
-        it.setCancelled()
-    }
+    override fun startWork(): ListenableFuture<Result> = getFuture { it.setCancelled() }
+
     override fun onStopped() {
         stopCounter++
     }
 }
 
 private suspend fun WorkManager.awaitNotRunning(workerWrapper: WorkerWrapper) =
-    getWorkInfoByIdFlow(workerWrapper.workSpecId).first { it.state != State.RUNNING }.state
+    getWorkInfoByIdFlow(workerWrapper.workSpecId)
+        .filterNotNull()
+        .first { it.state != State.RUNNING }
+        .state
 
 private val WorkerWrapper.workSpecId
     get() = UUID.fromString(workGenerationalId.workSpecId)

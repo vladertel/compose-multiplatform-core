@@ -41,7 +41,7 @@ import androidx.compose.ui.node.NodeKind
 import androidx.compose.ui.node.Nodes
 import androidx.compose.ui.node.ancestors
 import androidx.compose.ui.node.dispatchForKind
-import androidx.compose.ui.node.nearestAncestor
+import androidx.compose.ui.node.visitAncestors
 import androidx.compose.ui.node.visitLocalDescendants
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.LayoutDirection
@@ -49,57 +49,62 @@ import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastForEachReversed
 
 /**
- * The focus manager is used by different [Owner][androidx.compose.ui.node.Owner] implementations
- * to control focus.
+ * The focus manager is used by different [Owner][androidx.compose.ui.node.Owner] implementations to
+ * control focus.
  */
 internal class FocusOwnerImpl(
     onRequestApplyChangesListener: (() -> Unit) -> Unit,
     private val onRequestFocusForOwner:
         (focusDirection: FocusDirection?, previouslyFocusedRect: Rect?) -> Boolean,
+    private val onMoveFocusInterop: (focusDirection: FocusDirection) -> Boolean,
     private val onClearFocusForOwner: () -> Unit,
-    private val layoutDirection: (() -> LayoutDirection)
+    private val onFocusRectInterop: () -> Rect?,
+    private val onLayoutDirection: (() -> LayoutDirection)
 ) : FocusOwner {
 
     internal var rootFocusNode = FocusTargetNode()
 
-    private val focusInvalidationManager = FocusInvalidationManager(
-        onRequestApplyChangesListener,
-        ::invalidateOwnerFocusState
-    )
+    private val focusInvalidationManager =
+        FocusInvalidationManager(onRequestApplyChangesListener, ::invalidateOwnerFocusState)
 
     override val focusTransactionManager: FocusTransactionManager = FocusTransactionManager()
 
     /**
-     * A [Modifier] that can be added to the [Owners][androidx.compose.ui.node.Owner] modifier
-     * list that contains the modifiers required by the focus system. (Eg, a root focus modifier).
+     * A [Modifier] that can be added to the [Owners][androidx.compose.ui.node.Owner] modifier list
+     * that contains the modifiers required by the focus system. (Eg, a root focus modifier).
      */
     // TODO(b/168831247): return an empty Modifier when there are no focusable children.
-    override val modifier: Modifier = Modifier
-        // The root focus target is not focusable, and acts like a focus group.
-        //  We could save an allocation here by making FocusTargetNode implement
-        //  FocusPropertiesModifierNode but to do that we would have to allocate
-        //  a focus properties object. This way only the root node has this extra allocation.
-        .focusProperties { canFocus = false }
-        .then(
-            object : ModifierNodeElement<FocusTargetNode>() {
-                override fun create() = rootFocusNode
-                override fun update(node: FocusTargetNode) {}
-                override fun InspectorInfo.inspectableProperties() { name = "RootFocusTarget" }
-                override fun hashCode(): Int = rootFocusNode.hashCode()
-                override fun equals(other: Any?) = other === this
-            }
-        )
+    override val modifier: Modifier =
+        Modifier
+            // The root focus target is not focusable, and acts like a focus group.
+            //  We could save an allocation here by making FocusTargetNode implement
+            //  FocusPropertiesModifierNode but to do that we would have to allocate
+            //  a focus properties object. This way only the root node has this extra allocation.
+            .focusProperties { canFocus = false }
+            .then(
+                object : ModifierNodeElement<FocusTargetNode>() {
+                    override fun create() = rootFocusNode
+
+                    override fun update(node: FocusTargetNode) {}
+
+                    override fun InspectorInfo.inspectableProperties() {
+                        name = "RootFocusTarget"
+                    }
+
+                    override fun hashCode(): Int = rootFocusNode.hashCode()
+
+                    override fun equals(other: Any?) = other === this
+                }
+            )
 
     /**
-     * This function is called to ask the owner to request focus from the framework.
-     * eg. If a composable calls requestFocus and the root view does not have focus, this function
-     * can be used to request focus for the view.
+     * This function is called to ask the owner to request focus from the framework. eg. If a
+     * composable calls requestFocus and the root view does not have focus, this function can be
+     * used to request focus for the view.
      *
      * @param focusDirection If this focus request was triggered by a call to moveFocus or using the
-     * keyboard, provide the owner with the direction of focus change.
-     *
+     *   keyboard, provide the owner with the direction of focus change.
      * @param previouslyFocusedRect The bounds of the currently focused item.
-     *
      * @return true if the owner successfully requested focus from the framework. False otherwise.
      */
     override fun requestFocusForOwner(
@@ -118,30 +123,26 @@ internal class FocusOwnerImpl(
 
     /**
      * The [Owner][androidx.compose.ui.node.Owner] calls this function when it gains focus. This
-     * informs the [focus manager][FocusOwnerImpl] that the
-     * [Owner][androidx.compose.ui.node.Owner] gained focus, and that it should propagate this
-     * focus to one of the focus modifiers in the component hierarchy.
+     * informs the [focus manager][FocusOwnerImpl] that the [Owner][androidx.compose.ui.node.Owner]
+     * gained focus, and that it should propagate this focus to one of the focus modifiers in the
+     * component hierarchy.
      *
      * @param focusDirection the direction to search for the focus target.
-     *
      * @param previouslyFocusedRect the bounds of the currently focused item.
-     *
      * @return true, if a suitable [FocusTargetNode] was found and it took focus, false if no
-     * [FocusTargetNode] was found or if the focus search was cancelled.
+     *   [FocusTargetNode] was found or if the focus search was cancelled.
      */
     override fun takeFocus(focusDirection: FocusDirection, previouslyFocusedRect: Rect?): Boolean {
-        return focusTransactionManager.withExistingTransaction {
-            focusSearch(focusDirection, previouslyFocusedRect) {
-                it.requestFocus(focusDirection) ?: false
-            } ?: false
-        }
+        return focusSearch(focusDirection, previouslyFocusedRect) {
+            it.requestFocus(focusDirection) ?: false
+        } ?: false
     }
 
     /**
      * The [Owner][androidx.compose.ui.node.Owner] calls this function when it loses focus. This
-     * informs the [focus manager][FocusOwnerImpl] that the
-     * [Owner][androidx.compose.ui.node.Owner] lost focus, and that it should clear focus from
-     * all the focus modifiers in the component hierarchy.
+     * informs the [focus manager][FocusOwnerImpl] that the [Owner][androidx.compose.ui.node.Owner]
+     * lost focus, and that it should clear focus from all the focus modifiers in the component
+     * hierarchy.
      */
     override fun releaseFocus() {
         focusTransactionManager.withExistingTransaction {
@@ -152,34 +153,51 @@ internal class FocusOwnerImpl(
     /**
      * Call this function to set the focus to the root focus modifier.
      *
-     * @param force: Whether we should forcefully clear focus regardless of whether we have
-     * any components that have captured focus.
+     * @param force: Whether we should forcefully clear focus regardless of whether we have any
+     *   components that have captured focus.
      *
      * This could be used to clear focus when a user clicks on empty space outside a focusable
      * component.
      */
     override fun clearFocus(force: Boolean) {
-        clearFocus(force, refreshFocusEvents = true, clearOwnerFocus = true)
+        clearFocus(
+            force,
+            refreshFocusEvents = true,
+            clearOwnerFocus = true,
+            focusDirection = @OptIn(ExperimentalComposeUiApi::class) Exit
+        )
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
-    override fun clearFocus(force: Boolean, refreshFocusEvents: Boolean, clearOwnerFocus: Boolean) {
-        val clearedFocusSuccessfully = focusTransactionManager.withNewTransaction(
-            onCancelled = { return@withNewTransaction }
-        ) {
-            // Don't clear focus if an item on the focused path has a custom exit specified.
-            if (!force) {
-                when (rootFocusNode.performCustomClearFocus(Exit)) {
-                    Redirected, Cancelled, RedirectCancelled -> return@withNewTransaction false
-                    None -> { /* Do nothing. */ }
+    override fun clearFocus(
+        force: Boolean,
+        refreshFocusEvents: Boolean,
+        clearOwnerFocus: Boolean,
+        focusDirection: FocusDirection
+    ): Boolean {
+        val clearedFocusSuccessfully =
+            focusTransactionManager.withNewTransaction(
+                onCancelled = {
+                    return@withNewTransaction
                 }
+            ) {
+                if (!force) {
+                    // Don't clear focus if an item on the focused path has a custom exit specified.
+                    when (rootFocusNode.performCustomClearFocus(focusDirection)) {
+                        Redirected,
+                        Cancelled,
+                        RedirectCancelled -> return@withNewTransaction false
+                        None -> {
+                            /* Do nothing. */
+                        }
+                    }
+                }
+                return@withNewTransaction rootFocusNode.clearFocus(force, refreshFocusEvents)
             }
-            return@withNewTransaction rootFocusNode.clearFocus(force, refreshFocusEvents)
-        }
 
         if (clearedFocusSuccessfully && clearOwnerFocus) {
             onClearFocusForOwner.invoke()
         }
+        return clearedFocusSuccessfully
     }
 
     /**
@@ -188,20 +206,36 @@ internal class FocusOwnerImpl(
      * @return true if focus was moved successfully. false if the focused item is unchanged.
      */
     override fun moveFocus(focusDirection: FocusDirection): Boolean {
-        // moveFocus is an API that was added to compose, but isn't available in the classic view
-        // system, so for now we only search among compose items and don't support moveFocus for
-        // interop scenarios.
-        val movedFocus = focusSearch(focusDirection, null) {
-            it.requestFocus(focusDirection) ?: false
-        } ?: return false
+        var requestFocusSuccess: Boolean? = false
+        val focusSearchSuccess =
+            focusSearch(focusDirection, onFocusRectInterop()) {
+                requestFocusSuccess = it.requestFocus(focusDirection)
+                requestFocusSuccess ?: false
+            }
+
+        // If focus search was cancelled, or if focus search succeeded but request focus was
+        // cancelled, it implies that moveFocus() failed.
+        if (focusSearchSuccess == null || requestFocusSuccess == null) return false
+
+        // If focus search and request focus succeeded, move focus succeeded.
+        if (focusSearchSuccess == true && requestFocusSuccess == true) return true
 
         // To wrap focus around, we clear focus and request initial focus.
-        if (!movedFocus && focusDirection.supportsWrapAroundFocus()) {
-            clearFocus(force = false, refreshFocusEvents = true, clearOwnerFocus = false)
-            return takeFocus(focusDirection, previouslyFocusedRect = null)
+        if (focusDirection.is1dFocusSearch()) {
+            val clearFocus =
+                clearFocus(
+                    force = false,
+                    refreshFocusEvents = true,
+                    clearOwnerFocus = false,
+                    focusDirection = focusDirection
+                )
+            return clearFocus && takeFocus(focusDirection, previouslyFocusedRect = null)
         }
 
-        return movedFocus
+        // If we couldn't move focus within compose, we attempt to move focus within embedded views.
+        // We don't need this for 1D focus search because the wrap-around logic triggers a
+        // focus exit which will perform a focus search among the subviews.
+        return onMoveFocusInterop(focusDirection)
     }
 
     override fun focusSearch(
@@ -209,17 +243,19 @@ internal class FocusOwnerImpl(
         focusedRect: Rect?,
         onFound: (FocusTargetNode) -> Boolean
     ): Boolean? {
-        val source = rootFocusNode.findActiveFocusNode()?.also {
-            // Check if a custom focus traversal order is specified.
-            when (val customDestination = it.customFocusSearch(focusDirection, layoutDirection())) {
-                @OptIn(ExperimentalComposeUiApi::class)
-                Cancel -> return null
-                Default -> { /* Do Nothing */ }
-                else -> return customDestination.findFocusTargetNode(onFound)
+        val source =
+            rootFocusNode.findActiveFocusNode()?.also {
+                // Check if a custom focus traversal order is specified.
+                when (val customDest = it.customFocusSearch(focusDirection, onLayoutDirection())) {
+                    @OptIn(ExperimentalComposeUiApi::class) Cancel -> return null
+                    Default -> {
+                        /* Do Nothing */
+                    }
+                    else -> return customDest.findFocusTargetNode(onFound)
+                }
             }
-        }
 
-        return rootFocusNode.focusSearch(focusDirection, layoutDirection(), focusedRect) {
+        return rootFocusNode.focusSearch(focusDirection, onLayoutDirection(), focusedRect) {
             when (it) {
                 source -> false
                 rootFocusNode -> error("Focus search landed at the root.")
@@ -228,10 +264,8 @@ internal class FocusOwnerImpl(
         }
     }
 
-    /**
-     * Dispatches a key event through the compose hierarchy.
-     */
-    override fun dispatchKeyEvent(keyEvent: KeyEvent): Boolean {
+    /** Dispatches a key event through the compose hierarchy. */
+    override fun dispatchKeyEvent(keyEvent: KeyEvent, onFocusedItem: () -> Boolean): Boolean {
         check(!focusInvalidationManager.hasPendingInvalidation()) {
             "Dispatching key event while focus system is invalidated."
         }
@@ -239,14 +273,15 @@ internal class FocusOwnerImpl(
         if (!validateKeyEvent(keyEvent)) return false
 
         val activeFocusTarget = rootFocusNode.findActiveFocusNode()
-        val focusedKeyInputNode = activeFocusTarget?.lastLocalKeyInputNode()
-            ?: activeFocusTarget?.nearestAncestor(Nodes.KeyInput)?.node
-            ?: rootFocusNode.nearestAncestor(Nodes.KeyInput)?.node
+        val focusedKeyInputNode =
+            activeFocusTarget?.lastLocalKeyInputNode()
+                ?: activeFocusTarget?.nearestAncestorIncludingSelf(Nodes.KeyInput)?.node
 
-        focusedKeyInputNode?.traverseAncestors(
+        focusedKeyInputNode?.traverseAncestorsIncludingSelf(
             type = Nodes.KeyInput,
             onPreVisit = { if (it.onPreKeyEvent(keyEvent)) return true },
-            onVisit = { if (it.onKeyEvent(keyEvent)) return true }
+            onVisit = { if (onFocusedItem.invoke()) return true },
+            onPostVisit = { if (it.onKeyEvent(keyEvent)) return true }
         )
         return false
     }
@@ -257,32 +292,34 @@ internal class FocusOwnerImpl(
             "Dispatching intercepted soft keyboard event while focus system is invalidated."
         }
 
-        val focusedSoftKeyboardInterceptionNode = rootFocusNode.findActiveFocusNode()
-            ?.nearestAncestor(Nodes.SoftKeyboardKeyInput)
+        val focusedSoftKeyboardInterceptionNode =
+            rootFocusNode
+                .findActiveFocusNode()
+                ?.nearestAncestorIncludingSelf(Nodes.SoftKeyboardKeyInput)
 
-        focusedSoftKeyboardInterceptionNode?.traverseAncestors(
+        focusedSoftKeyboardInterceptionNode?.traverseAncestorsIncludingSelf(
             type = Nodes.SoftKeyboardKeyInput,
             onPreVisit = { if (it.onPreInterceptKeyBeforeSoftKeyboard(keyEvent)) return true },
-            onVisit = { if (it.onInterceptKeyBeforeSoftKeyboard(keyEvent)) return true }
+            onVisit = { /* TODO(b/320510084): dispatch soft keyboard events to embedded views. */ },
+            onPostVisit = { if (it.onInterceptKeyBeforeSoftKeyboard(keyEvent)) return true }
         )
         return false
     }
 
-    /**
-     * Dispatches a rotary scroll event through the compose hierarchy.
-     */
+    /** Dispatches a rotary scroll event through the compose hierarchy. */
     override fun dispatchRotaryEvent(event: RotaryScrollEvent): Boolean {
         check(!focusInvalidationManager.hasPendingInvalidation()) {
             "Dispatching rotary event while focus system is invalidated."
         }
 
-        val focusedRotaryInputNode = rootFocusNode.findActiveFocusNode()
-            ?.nearestAncestor(Nodes.RotaryInput)
+        val focusedRotaryInputNode =
+            rootFocusNode.findActiveFocusNode()?.nearestAncestorIncludingSelf(Nodes.RotaryInput)
 
-        focusedRotaryInputNode?.traverseAncestors(
+        focusedRotaryInputNode?.traverseAncestorsIncludingSelf(
             type = Nodes.RotaryInput,
             onPreVisit = { if (it.onPreRotaryScrollEvent(event)) return true },
-            onVisit = { if (it.onRotaryScrollEvent(event)) return true }
+            onVisit = { /* TODO(b/320510084): dispatch rotary events to embedded views. */ },
+            onPostVisit = { if (it.onRotaryScrollEvent(event)) return true }
         )
 
         return false
@@ -312,21 +349,30 @@ internal class FocusOwnerImpl(
         }
     }
 
-    private inline fun <reified T : DelegatableNode> DelegatableNode.traverseAncestors(
+    private inline fun <reified T : DelegatableNode> DelegatableNode.traverseAncestorsIncludingSelf(
         type: NodeKind<T>,
         onPreVisit: (T) -> Unit,
-        onVisit: (T) -> Unit
+        onVisit: () -> Unit,
+        onPostVisit: (T) -> Unit
     ) {
         val ancestors = ancestors(type)
         ancestors?.fastForEachReversed(onPreVisit)
         node.dispatchForKind(type, onPreVisit)
-        node.dispatchForKind(type, onVisit)
-        ancestors?.fastForEach(onVisit)
+        onVisit.invoke()
+        node.dispatchForKind(type, onPostVisit)
+        ancestors?.fastForEach(onPostVisit)
     }
 
-    /**
-     * Searches for the currently focused item, and returns its coordinates as a rect.
-     */
+    private inline fun <reified T : Any> DelegatableNode.nearestAncestorIncludingSelf(
+        type: NodeKind<T>
+    ): T? {
+        visitAncestors(type, includeSelf = true) {
+            return it
+        }
+        return null
+    }
+
+    /** Searches for the currently focused item, and returns its coordinates as a rect. */
     override fun getFocusRect(): Rect? {
         return rootFocusNode.findActiveFocusNode()?.focusRect()
     }
@@ -344,26 +390,17 @@ internal class FocusOwnerImpl(
         return focusedKeyInputNode
     }
 
-    /**
-     * focus search in the Android framework wraps around for 1D focus search, but not for 2D focus
-     * search. This is a helper function that can be used to determine whether we should wrap around.
-     */
-    private fun FocusDirection.supportsWrapAroundFocus(): Boolean = when (this) {
-        Next, Previous -> true
-        else -> false
-    }
-
     // TODO(b/307580000) Factor this out into a class to manage key inputs.
     private fun validateKeyEvent(keyEvent: KeyEvent): Boolean {
         val keyCode = keyEvent.key.keyCode
         when (keyEvent.type) {
             KeyDown -> {
                 // It's probably rare for more than 3 hardware keys to be pressed simultaneously.
-                val keysCurrentlyDown = keysCurrentlyDown ?: MutableLongSet(initialCapacity = 3)
-                    .also { keysCurrentlyDown = it }
+                val keysCurrentlyDown =
+                    keysCurrentlyDown
+                        ?: MutableLongSet(initialCapacity = 3).also { keysCurrentlyDown = it }
                 keysCurrentlyDown += keyCode
             }
-
             KeyUp -> {
                 if (keysCurrentlyDown?.contains(keyCode) != true) {
                     // An UP event for a key that was never DOWN is invalid, ignore it.
@@ -371,8 +408,20 @@ internal class FocusOwnerImpl(
                 }
                 keysCurrentlyDown?.remove(keyCode)
             }
-            // Always process Unknown event types.
+        // Always process Unknown event types.
         }
         return true
     }
 }
+
+/**
+ * focus search in the Android framework wraps around for 1D focus search, but not for 2D focus
+ * search. This is a helper function that can be used to determine whether we should wrap around or
+ * not.
+ */
+internal fun FocusDirection.is1dFocusSearch(): Boolean =
+    when (this) {
+        Next,
+        Previous -> true
+        else -> false
+    }

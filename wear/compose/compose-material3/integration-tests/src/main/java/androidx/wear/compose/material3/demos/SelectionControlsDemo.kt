@@ -26,58 +26,45 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.integration.demos.common.ScalingLazyColumnWithRSB
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material3.ListHeader
-import androidx.wear.compose.material3.RadioButton
+import androidx.wear.compose.material3.SelectableButton
 import androidx.wear.compose.material3.Text
 
 @Composable
-fun RadioDemos() {
+fun RadioButtonDemo() {
     var selectedIndex by remember { mutableIntStateOf(0) }
-    ScalingLazyColumnWithRSB(
-        modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
+    ScalingLazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        item { ListHeader { Text(text = "Radio Button") } }
         item {
-            ListHeader { Text(text = "Radio control") }
-        }
-        item {
-            RadioDemo(
+            RadioButtonDemo(
                 selected = selectedIndex == 0,
                 onSelected = { selectedIndex = 0 },
                 enabled = true
             )
         }
         item {
-            RadioDemo(
+            RadioButtonDemo(
                 selected = selectedIndex == 1,
                 onSelected = { selectedIndex = 1 },
                 enabled = true
             )
         }
-        item {
-            ListHeader { Text(text = "Disabled Radio control", textAlign = TextAlign.Center) }
-        }
-        item {
-            RadioDemo(selected = false, enabled = false)
-        }
-        item {
-            RadioDemo(selected = true, enabled = false)
-        }
+        item { ListHeader { Text(text = "Disabled Radio Button", textAlign = TextAlign.Center) } }
+        item { RadioButtonDemo(selected = false, enabled = false) }
+        item { RadioButtonDemo(selected = true, enabled = false) }
     }
 }
 
 @Composable
-private fun RadioDemo(
-    selected: Boolean,
-    enabled: Boolean,
-    onSelected: () -> Unit = {}
-) {
-    RadioButton(
-        label = {
-            Text("Primary label", maxLines = 1, overflow = TextOverflow.Ellipsis)
-        },
+private fun RadioButtonDemo(selected: Boolean, enabled: Boolean, onSelected: () -> Unit = {}) {
+    SelectableButton(
+        label = { Text("Primary label", maxLines = 1, overflow = TextOverflow.Ellipsis) },
         selected = selected,
-        onSelected = onSelected,
+        onSelect = onSelected,
         enabled = enabled,
     )
 }

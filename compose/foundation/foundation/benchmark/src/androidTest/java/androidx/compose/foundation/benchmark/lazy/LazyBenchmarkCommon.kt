@@ -40,81 +40,80 @@ internal object NoFlingBehavior : FlingBehavior {
 
 data class LazyItem(val index: Int)
 
-/**
- * Helper for dispatching simple [MotionEvent]s to a [view] for use in scrolling benchmarks.
- */
+/** Helper for dispatching simple [MotionEvent]s to a [view] for use in scrolling benchmarks. */
 class MotionEventHelper(private val view: View) {
     private var time = 0L
     private var lastCoord: Offset? = null
 
-    fun sendEvent(
-        action: Int,
-        delta: Offset,
-        timeDelta: Long = 10L
-    ) {
+    fun sendEvent(action: Int, delta: Offset, timeDelta: Long = 10L) {
         time += timeDelta
 
         val coord = delta + (lastCoord ?: Offset.Zero)
 
-        lastCoord = if (action == MotionEvent.ACTION_UP) {
-            null
-        } else {
-            coord
-        }
+        lastCoord =
+            if (action == MotionEvent.ACTION_UP) {
+                null
+            } else {
+                coord
+            }
 
         val locationOnScreen = IntArray(2) { 0 }
         view.getLocationOnScreen(locationOnScreen)
 
-        val motionEvent = MotionEvent.obtain(
-            0,
-            time,
-            action,
-            1,
-            arrayOf(MotionEvent.PointerProperties()),
-            arrayOf(
-                MotionEvent.PointerCoords().apply {
-                    x = locationOnScreen[0] + coord.x.coerceAtLeast(1f)
-                    y = locationOnScreen[1] + coord.y.coerceAtLeast(1f)
+        val motionEvent =
+            MotionEvent.obtain(
+                    0,
+                    time,
+                    action,
+                    1,
+                    arrayOf(MotionEvent.PointerProperties()),
+                    arrayOf(
+                        MotionEvent.PointerCoords().apply {
+                            x = locationOnScreen[0] + coord.x.coerceAtLeast(1f)
+                            y = locationOnScreen[1] + coord.y.coerceAtLeast(1f)
+                        }
+                    ),
+                    0,
+                    0,
+                    0f,
+                    0f,
+                    0,
+                    0,
+                    0,
+                    0
+                )
+                .apply {
+                    offsetLocation(-locationOnScreen[0].toFloat(), -locationOnScreen[1].toFloat())
                 }
-            ),
-            0,
-            0,
-            0f,
-            0f,
-            0,
-            0,
-            0,
-            0
-        ).apply {
-            offsetLocation(-locationOnScreen[0].toFloat(), -locationOnScreen[1].toFloat())
-        }
 
         view.dispatchTouchEvent(motionEvent)
     }
 }
 
 // TODO(b/169852102 use existing public constructs instead)
-internal fun ComposeBenchmarkRule.toggleStateBenchmark(
-    caseFactory: () -> LazyBenchmarkTestCase
-) {
+internal fun ComposeBenchmarkRule.toggleStateBenchmark(caseFactory: () -> LazyBenchmarkTestCase) {
     runBenchmarkFor(caseFactory) {
-        runOnUiThread {
-            doFramesUntilNoChangesPending()
-        }
+        runOnUiThread { doFramesUntilNoChangesPending() }
 
         measureRepeatedOnUiThread {
             runWithTimingDisabled {
                 assertNoPendingRecompositionMeasureOrLayout()
-                getTestCase().beforeToggle()
+                getTestCase().setUp()
+            }
+
+            runWithTimingDisabled {
                 if (hasPendingChanges() || hasPendingMeasureOrLayout()) {
                     doFrame()
                 }
                 assertNoPendingRecompositionMeasureOrLayout()
+                getTestCase().beforeToggleCheck()
             }
-            performToggle(getTestCase())
+
+            performToggle(getTestCase()) // move
+
             runWithTimingDisabled {
-                assertNoPendingRecompositionMeasureOrLayout()
-                getTestCase().afterToggle()
+                getTestCase().afterToggleCheck()
+                getTestCase().tearDown()
                 assertNoPendingRecompositionMeasureOrLayout()
             }
         }
@@ -140,10 +139,6 @@ private fun ComposeExecutionControl.assertNoPendingRecompositionMeasureOrLayout(
     }
 }
 
-private fun ComposeExecutionControl.hasPendingMeasureOrLayout(): Boolean {
-    return getViewRoot().hasPendingMeasureOrLayout
-}
-
 private fun ComposeExecutionControl.getViewRoot(): ViewRootForTest =
     getHostView() as ViewRootForTest
 
@@ -152,14 +147,13 @@ internal fun ComposeBenchmarkRule.toggleStateBenchmarkDraw(
     caseFactory: () -> LazyBenchmarkTestCase
 ) {
     runBenchmarkFor(caseFactory) {
-        runOnUiThread {
-            doFrame()
-        }
+        runOnUiThread { doFrame() }
 
         measureRepeatedOnUiThread {
             runWithTimingDisabled {
                 // reset the state and draw
-                getTestCase().beforeToggle()
+                getTestCase().setUp()
+                getTestCase().beforeToggleCheck()
                 measure()
                 layout()
                 drawPrepare()
@@ -173,7 +167,8 @@ internal fun ComposeBenchmarkRule.toggleStateBenchmarkDraw(
             }
             draw()
             runWithTimingDisabled {
-                getTestCase().afterToggle()
+                getTestCase().afterToggleCheck()
+                getTestCase().tearDown()
                 drawFinish()
             }
         }
@@ -187,20 +182,8 @@ abstract class LazyBenchmarkTestCase(
 
     lateinit var scrollingHelper: ScrollingHelper
 
-    fun beforeToggle() {
-        setUp()
-        scrollingHelper.onBeforeScroll()
-        beforeToggleCheck()
-    }
-
     fun toggle() {
         scrollingHelper.onScroll()
-    }
-
-    fun afterToggle() {
-        afterToggleCheck()
-        scrollingHelper.onAfterScroll()
-        tearDown()
     }
 
     @Composable
@@ -208,18 +191,21 @@ abstract class LazyBenchmarkTestCase(
         val view = LocalView.current
         val touchSlop = LocalViewConfiguration.current.touchSlop
 
-        if (!::scrollingHelper.isInitialized) scrollingHelper = ScrollingHelper(
-            view,
-            MotionEventHelper(view),
-            touchSlop,
-            scrollAmount,
-            isVertical,
-            usePointerInput,
-            ::programmaticScroll
-        )
+        if (!::scrollingHelper.isInitialized)
+            scrollingHelper =
+                ScrollingHelper(
+                    view,
+                    MotionEventHelper(view),
+                    touchSlop,
+                    scrollAmount,
+                    isVertical,
+                    usePointerInput,
+                    ::programmaticScroll
+                )
     }
 
     abstract fun beforeToggleCheck()
+
     abstract fun afterToggleCheck()
 
     abstract suspend fun programmaticScroll(amount: Int)
@@ -241,25 +227,20 @@ class ScrollingHelper(
     private val programmaticScroll: suspend (scrollAmount: Int) -> Unit
 ) {
 
-    fun onBeforeScroll() {
-        if (!usePointerInput) return
-        val size = if (isVertical) view.measuredHeight else view.measuredWidth
-        motionEventHelper.sendEvent(MotionEvent.ACTION_DOWN, (size / 2f).toSingleAxisOffset())
-        motionEventHelper.sendEvent(MotionEvent.ACTION_MOVE, touchSlop.toSingleAxisOffset())
-    }
-
     fun onScroll() {
         if (usePointerInput) {
-            motionEventHelper
-                .sendEvent(MotionEvent.ACTION_MOVE, -scrollAmount.toFloat().toSingleAxisOffset())
+            // perform complete scroll movement
+            val size = if (isVertical) view.measuredHeight else view.measuredWidth
+            motionEventHelper.sendEvent(MotionEvent.ACTION_DOWN, (size / 2f).toSingleAxisOffset())
+            motionEventHelper.sendEvent(MotionEvent.ACTION_MOVE, touchSlop.toSingleAxisOffset())
+            motionEventHelper.sendEvent(
+                MotionEvent.ACTION_MOVE,
+                -scrollAmount.toFloat().toSingleAxisOffset()
+            )
+            motionEventHelper.sendEvent(MotionEvent.ACTION_UP, Offset.Zero)
         } else {
             runBlocking { programmaticScroll.invoke(scrollAmount) }
         }
-    }
-
-    fun onAfterScroll() {
-        if (!usePointerInput) return
-        motionEventHelper.sendEvent(MotionEvent.ACTION_UP, Offset.Zero)
     }
 
     private fun Float.toSingleAxisOffset(): Offset =

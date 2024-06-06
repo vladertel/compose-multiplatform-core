@@ -24,13 +24,11 @@ import android.hardware.camera2.CameraAccessException.CAMERA_IN_USE
 import android.hardware.camera2.CameraAccessException.MAX_CAMERAS_IN_USE
 import android.hardware.camera2.CameraDevice.StateCallback
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 import androidx.camera.camera2.pipe.core.Log
 
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @JvmInline
-@RequiresApi(21)
 value class CameraError private constructor(val value: Int) {
     companion object {
         /**
@@ -98,8 +96,8 @@ value class CameraError private constructor(val value: Int) {
         val ERROR_GRAPH_CONFIG = CameraError(9)
 
         /**
-         * The camera cannot be opened because Do Not Disturb (DND) mode is on. This is actually
-         * a quirk for legacy devices on P, where we encounter RuntimeExceptions while opening the
+         * The camera cannot be opened because Do Not Disturb (DND) mode is on. This is actually a
+         * quirk for legacy devices on P, where we encounter RuntimeExceptions while opening the
          * camera when it tries to enable shutter sound.
          */
         val ERROR_DO_NOT_DISTURB_ENABLED = CameraError(10)
@@ -166,16 +164,15 @@ value class CameraError private constructor(val value: Int) {
         /**
          * The full stack trace of the Do Not Disturb exception on API level 28 is as follows:
          *
-         * java.lang.RuntimeException: Camera is being used after Camera.release() was called
-         *  at android.hardware.Camera._enableShutterSound(Native Method)
-         *  at android.hardware.Camera.updateAppOpsPlayAudio(Camera.java:1770)
-         *  at android.hardware.Camera.initAppOps(Camera.java:582)
-         *  at android.hardware.Camera.<init>(Camera.java:575)
-         *  at android.hardware.Camera.getEmptyParameters(Camera.java:2130)
-         *  at android.hardware.camera2.legacy.LegacyMetadataMapper.createCharacteristics
-         *  (LegacyMetadataMapper.java:151)
-         *  at android.hardware.camera2.CameraManager.getCameraCharacteristics
-         *  (CameraManager.java:274)
+         * java.lang.RuntimeException: Camera is being used after Camera.release() was called at
+         * android.hardware.Camera._enableShutterSound(Native Method) at
+         * android.hardware.Camera.updateAppOpsPlayAudio(Camera.java:1770) at
+         * android.hardware.Camera.initAppOps(Camera.java:582) at
+         * android.hardware.Camera.<init>(Camera.java:575) at
+         * android.hardware.Camera.getEmptyParameters(Camera.java:2130) at
+         * android.hardware.camera2.legacy.LegacyMetadataMapper.createCharacteristics
+         * (LegacyMetadataMapper.java:151) at
+         * android.hardware.camera2.CameraManager.getCameraCharacteristics (CameraManager.java:274)
          *
          * This function checks whether the method name of the top element is "_enableShutterSound".
          */
@@ -186,6 +183,8 @@ value class CameraError private constructor(val value: Int) {
             return topMethodName == "_enableShutterSound"
         }
     }
+
+    override fun toString(): String = "CameraError($value)"
 }
 
 // TODO(b/276918807): When we have CameraProperties, handle the exception on a more granular level.

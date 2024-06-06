@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-
 package androidx.camera.camera2.pipe.integration.impl
 
 import android.graphics.Point
 import android.util.Size
-import androidx.annotation.RequiresApi
 
 fun Size.area(): Int = this.width * this.height
+
 fun Size.asLandscape(): Size =
     if (this.width >= this.height) this else Size(this.height, this.width)
-fun Size.asPortrait(): Size =
-    if (this.width <= this.height) this else Size(this.height, this.width)
+
+fun Size.asPortrait(): Size = if (this.width <= this.height) this else Size(this.height, this.width)
 
 fun minByArea(left: Size, right: Size) = if (left.area() < right.area()) left else right
+
 fun maxByArea(left: Size, right: Size) = if (left.area() > right.area()) left else right
 
 fun Point.area(): Int = this.x * this.y
+
 fun Point.toSize() = Size(this.x, this.y)

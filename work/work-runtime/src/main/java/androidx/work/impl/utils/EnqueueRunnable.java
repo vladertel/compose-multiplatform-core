@@ -26,9 +26,8 @@ import static androidx.work.WorkInfo.State.FAILED;
 import static androidx.work.WorkInfo.State.RUNNING;
 import static androidx.work.WorkInfo.State.SUCCEEDED;
 import static androidx.work.impl.utils.EnqueueUtilsKt.checkContentUriTriggerWorkerLimits;
-import static androidx.work.impl.utils.EnqueueUtilsKt.wrapInConstraintTrackingWorkerIfNeeded;
+import static androidx.work.impl.utils.EnqueueUtilsKt.wrapWorkSpecIfNeeded;
 
-import android.content.Context;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
@@ -42,7 +41,6 @@ import androidx.work.impl.Schedulers;
 import androidx.work.impl.WorkContinuationImpl;
 import androidx.work.impl.WorkDatabase;
 import androidx.work.impl.WorkManagerImpl;
-import androidx.work.impl.background.systemalarm.RescheduleReceiver;
 import androidx.work.impl.model.Dependency;
 import androidx.work.impl.model.DependencyDao;
 import androidx.work.impl.model.WorkName;
@@ -75,9 +73,6 @@ public class EnqueueRunnable {
         }
         boolean needsScheduling = addToDatabase(workContinuation);
         if (needsScheduling) {
-            // Enable RescheduleReceiver, only when there are Worker's that need scheduling.
-            final Context context = workContinuation.getWorkManagerImpl().getApplicationContext();
-            PackageManagerHelper.setComponentEnabled(context, RescheduleReceiver.class, true);
             scheduleWorkInBackground(workContinuation);
         }
     }
@@ -290,7 +285,7 @@ public class EnqueueRunnable {
             }
 
             workDatabase.workSpecDao().insertWorkSpec(
-                    wrapInConstraintTrackingWorkerIfNeeded(
+                    wrapWorkSpecIfNeeded(
                             workManagerImpl.getSchedulers(),
                             workSpec
                     )

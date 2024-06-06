@@ -21,7 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -58,7 +58,6 @@ dependencies {
     // Includes the wear-sdk jar
     compileOnly files("../../wear/wear_sdk/wear-sdk.jar")
     testImplementation(files("../../wear/wear_sdk/wear-sdk.jar"))
-    samples(project(":wear:wear-remote-interactions-samples"))
 }
 
 android {
@@ -73,9 +72,11 @@ android {
 
 androidx {
     name = "Android Wear Remote Interactions"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     mavenVersion = LibraryVersions.WEAR_REMOTE_INTERACTIONS
     inceptionYear = "2020"
     description = "Android Wear Remote Interactions"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
+    samples(project(":wear:wear-remote-interactions-samples"))
 }

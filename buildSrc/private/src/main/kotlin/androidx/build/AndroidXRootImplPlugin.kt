@@ -27,6 +27,7 @@ import androidx.build.license.CheckExternalDependencyLicensesTask
 import androidx.build.playground.VerifyPlaygroundGradleConfigurationTask
 import androidx.build.studio.StudioTask.Companion.registerStudioTask
 import androidx.build.testConfiguration.registerOwnersServiceTasks
+import androidx.build.uptodatedness.TaskUpToDateValidator
 import androidx.build.uptodatedness.cacheEvenIfNoOutputs
 import com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
 import java.io.File
@@ -36,21 +37,19 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.component.ModuleComponentSelector
 import org.gradle.api.file.RelativePath
-import org.gradle.api.plugins.JvmEcosystemPlugin
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.bundling.ZipEntryCompression
+import org.gradle.build.event.BuildEventsListenerRegistry
 import org.gradle.kotlin.dsl.extra
 
 abstract class AndroidXRootImplPlugin : Plugin<Project> {
+    @get:javax.inject.Inject abstract val registry: BuildEventsListenerRegistry
+
     override fun apply(project: Project) {
         if (!project.isRoot) {
             throw Exception("This plugin should only be applied to root project")
         }
-        // workaround for https://github.com/gradle/gradle/issues/20145
-        // note that a future KMP plugin(1.8+) will apply this and then we can remove the following
-        // line.
-        project.plugins.apply(JvmEcosystemPlugin::class.java)
         project.configureRootProject()
     }
 
@@ -58,7 +57,7 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
         project.validateAllAndroidxArgumentsAreRecognized()
         tasks.register("listAndroidXProperties", ListAndroidXPropertiesTask::class.java)
         setDependencyVersions()
-        configureKtlintCheckFile()
+        configureKtfmtCheckFile()
         tasks.register(CheckExternalDependencyLicensesTask.TASK_NAME)
 
         maybeRegisterFilterableTask()
@@ -98,12 +97,12 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
         extra.set("projects", ConcurrentHashMap<String, String>())
 
         /**
-         * Copy PrivacySandbox related APKs into [getTestConfigDirectory] before zipping.
-         * Flatten directory hierarchy as both TradeFed and FTL work with flat hierarchy.
+         * Copy PrivacySandbox related APKs into [getTestConfigDirectory] before zipping. Flatten
+         * directory hierarchy as both TradeFed and FTL work with flat hierarchy.
          */
         val finalizeConfigsTask =
             project.tasks.register(FINALIZE_TEST_CONFIGS_WITH_APKS_TASK, Copy::class.java) {
-                it.from(project.getPrivacySandboxApksDirectory())
+                it.from(project.getPrivacySandboxFilesDirectory())
                 it.into(project.getTestConfigDirectory())
                 it.eachFile { f -> f.relativePath = RelativePath(true, f.name) }
                 it.includeEmptyDirs = false
@@ -145,21 +144,19 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
                         subproject.name != "docs-public" &&
                         subproject.name != "docs-tip-of-tree" &&
                         subproject.name != "camera-testapp-timing" &&
-                        subproject.name != "room-testapp" &&
-                        !(subproject.path.contains(
-                            "media2:media2-session:version-compat-tests:client-previous"
-                        )) &&
-                        !(subproject.path.contains(
-                            "media2:media2-session:version-compat-tests:service-previous"
-                        ))
+                        subproject.name != "room-testapp"
                 ) {
-                    subproject.configurations.all { configuration ->
+                    subproject.configurations.configureEach { configuration ->
                         configuration.resolutionStrategy.dependencySubstitution.apply {
                             all { dep ->
                                 val requested = dep.requested
                                 if (requested is ModuleComponentSelector) {
                                     val module = requested.group + ":" + requested.module
-                                    if (projectModules.containsKey(module)) {
+                                    if (
+                                        // todo(b/331800231): remove compiler exception.
+                                        requested.group != "androidx.compose.compiler" &&
+                                            projectModules.containsKey(module)
+                                    ) {
                                         dep.useTarget(project(projectModules[module]!!))
                                     }
                                 }
@@ -179,7 +176,20 @@ abstract class AndroidXRootImplPlugin : Plugin<Project> {
 
         project.zipComposeCompilerMetrics()
         project.zipComposeCompilerReports()
-        project.configureRootProjectForKmpLink()
+
+        TaskUpToDateValidator.setup(project, registry)
+
+        /**
+         * Add dependency analysis plugin and add buildHealth task to buildOnServer when
+         * maxDepVersions is not enabled
+         */
+        if (!project.usingMaxDepVersions()) {
+            project.plugins.apply("com.autonomousapps.dependency-analysis")
+            project.tasks
+                .withType(com.autonomousapps.tasks.BuildHealthTask::class.java)
+                .configureEach { it.cacheEvenIfNoOutputs() }
+            buildOnServerTask.dependsOn("buildHealth")
+        }
     }
 
     private fun Project.setDependencyVersions() {

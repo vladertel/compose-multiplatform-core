@@ -27,15 +27,16 @@ import android.telecom.DisconnectCause
 import android.util.Log
 import androidx.annotation.DoNotInline
 import androidx.annotation.RequiresApi
+import androidx.annotation.VisibleForTesting
+import androidx.core.telecom.CallAttributesCompat
 import androidx.core.telecom.CallControlResult
 import androidx.core.telecom.CallControlScope
 import androidx.core.telecom.CallEndpointCompat
 import androidx.core.telecom.CallException
-import androidx.core.telecom.CallsManager
-import androidx.core.telecom.extensions.Capability
-import androidx.core.telecom.extensions.voip.VoipExtensionManager
 import androidx.core.telecom.internal.utils.EndpointUtils
-import androidx.core.telecom.util.ExperimentalAppActions
+import androidx.core.telecom.internal.utils.EndpointUtils.Companion.getSpeakerEndpoint
+import androidx.core.telecom.internal.utils.EndpointUtils.Companion.isEarpieceEndpoint
+import androidx.core.telecom.internal.utils.EndpointUtils.Companion.isWiredHeadsetOrBtEndpoint
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -46,26 +47,26 @@ import kotlinx.coroutines.launch
 @RequiresApi(VERSION_CODES.O)
 internal class CallSessionLegacy(
     private val id: ParcelUuid,
+    private val attributes: CallAttributesCompat,
     private val callChannels: CallChannels,
     private val coroutineContext: CoroutineContext,
     val onAnswerCallback: suspend (callType: Int) -> Unit,
     val onDisconnectCallback: suspend (disconnectCause: DisconnectCause) -> Unit,
     val onSetActiveCallback: suspend () -> Unit,
     val onSetInactiveCallback: suspend () -> Unit,
-    private val blockingSessionExecution: CompletableDeferred<Unit>,
-    private val voipExtensionManager: VoipExtensionManager
+    val onEventCallback: suspend (event: String, extras: Bundle) -> Unit,
+    private val blockingSessionExecution: CompletableDeferred<Unit>
 ) : android.telecom.Connection() {
     // instance vars
     private val TAG: String = CallSessionLegacy::class.java.simpleName
     private var mCachedBluetoothDevices: ArrayList<BluetoothDevice> = ArrayList()
-
-    /**
-     * Stubbed supported capabilities for legacy connections.
-     */
-    @ExperimentalAppActions
-    private val supportedCapabilities = mutableListOf(Capability())
+    private var mAlreadyRequestedSpeaker: Boolean = false
+    private var mCurrentCallEndpoint: CallEndpointCompat? = null
+    private var mLastClientRequestedEndpoint: CallEndpointCompat? = null
 
     companion object {
+        private val TAG: String = CallSessionLegacy::class.java.simpleName
+
         // CallStates. All these states mirror the values in the platform.
         const val STATE_INITIALIZING = 0
         const val STATE_NEW = 1
@@ -78,7 +79,7 @@ internal class CallSessionLegacy(
 
     /**
      * =========================================================================================
-     *                Call State Updates
+     * Call State Updates
      * =========================================================================================
      */
     override fun onStateChanged(state: Int) {
@@ -100,51 +101,112 @@ internal class CallSessionLegacy(
 
     /**
      * =========================================================================================
-     *                Audio Updates
+     * Audio Updates
      * =========================================================================================
      */
     override fun onCallAudioStateChanged(state: CallAudioState) {
         if (Build.VERSION.SDK_INT >= VERSION_CODES.P) {
             Api28PlusImpl.refreshBluetoothDeviceCache(mCachedBluetoothDevices, state)
         }
-        callChannels.currentEndpointChannel.trySend(
-            EndpointUtils.toCallEndpointCompat(state)
-        ).getOrThrow()
+        val previousCallEndpoint = mCurrentCallEndpoint
+        mCurrentCallEndpoint = EndpointUtils.toCallEndpointCompat(state)
+        callChannels.currentEndpointChannel.trySend(mCurrentCallEndpoint!!).getOrThrow()
 
-        callChannels.availableEndpointChannel.trySend(
-            EndpointUtils.toCallEndpointsCompat(state)
-        ).getOrThrow()
+        val availableEndpoints = EndpointUtils.toCallEndpointsCompat(state)
+        callChannels.availableEndpointChannel.trySend(availableEndpoints).getOrThrow()
 
         callChannels.isMutedChannel.trySend(state.isMuted).getOrThrow()
+
+        maybeSwitchToSpeakerOnCallStart(mCurrentCallEndpoint!!, availableEndpoints)
+        maybeSwitchToSpeakerOnHeadsetDisconnect(
+            mCurrentCallEndpoint!!,
+            previousCallEndpoint,
+            availableEndpoints
+        )
+        // clear out the last user requested CallEndpoint. It's only used to determine if the
+        // change in current endpoints was intentional.
+        mLastClientRequestedEndpoint = null
     }
 
     /**
-     * =========================================================================================
-     *                Call Event Updates
-     * =========================================================================================
+     * Due to the fact that OEMs may diverge from AOSP telecom platform behavior, Core-Telecom needs
+     * to ensure that video calls start with speaker phone if the earpiece is the initial audio
+     * route.
      */
-    @ExperimentalAppActions
-    override fun onCallEvent(event: String?, extras: Bundle?) {
-        super.onCallEvent(event, extras)
-        // Call events are sent via Call#sendCallEvent(event, extras). Begin initial capability
-        // exchange procedure once we know that the ICS supports it.
-        if (event == CallsManager.EVENT_JETPACK_CAPABILITY_EXCHANGE) {
-            Log.i(TAG, "onCallEvent: EVENT_JETPACK_CAPABILITY_EXCHANGE: " +
-                "beginning capability exchange.")
-            // Launch a new coroutine from the context of the current coroutine
-            CoroutineScope(coroutineContext).launch {
-                voipExtensionManager.initiateVoipAppCapabilityExchange(
-                    extras!!, supportedCapabilities, TAG)
+    private fun maybeSwitchToSpeakerOnCallStart(
+        currentEndpoint: CallEndpointCompat,
+        availableEndpoints: List<CallEndpointCompat>
+    ) {
+        if (!mAlreadyRequestedSpeaker && attributes.isVideoCall()) {
+            try {
+                val speakerEndpoint = getSpeakerEndpoint(availableEndpoints)
+                if (isEarpieceEndpoint(currentEndpoint) && speakerEndpoint != null) {
+                    Log.i(
+                        TAG,
+                        "maybeSwitchToSpeaker: detected a video call that started" +
+                            " with the earpiece audio route. requesting switch to speaker."
+                    )
+                    requestEndpointChange(speakerEndpoint)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "maybeSwitchToSpeaker: hit exception=[$e]")
             }
+            mAlreadyRequestedSpeaker = true
+        }
+    }
+
+    /**
+     * Due to the fact that OEMs may diverge from AOSP telecom platform behavior, Core-Telecom needs
+     * to ensure that if a video calls headset disconnects, the speakerphone is defaulted instead of
+     * the earpiece route.
+     */
+    @VisibleForTesting
+    fun maybeSwitchToSpeakerOnHeadsetDisconnect(
+        newEndpoint: CallEndpointCompat,
+        previousEndpoint: CallEndpointCompat?,
+        availableEndpoints: List<CallEndpointCompat>
+    ) {
+        try {
+            if (
+                attributes.isVideoCall() &&
+                    /* Only switch if the users headset disconnects & earpiece is defaulted */
+                    isEarpieceEndpoint(newEndpoint) &&
+                    isWiredHeadsetOrBtEndpoint(previousEndpoint) &&
+                    /* Do not switch request a switch to speaker if the client specifically requested
+                     * to switch from the headset from an earpiece */
+                    !isEarpieceEndpoint(mLastClientRequestedEndpoint)
+            ) {
+                val speakerCompat = getSpeakerEndpoint(availableEndpoints)
+                if (speakerCompat != null) {
+                    Log.i(
+                        TAG,
+                        "maybeSwitchToSpeakerOnHeadsetDisconnect: headset disconnected while" +
+                            " in a video call. requesting switch to speaker."
+                    )
+                    requestEndpointChange(speakerCompat)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "maybeSwitchToSpeakerOnHeadsetDisconnect: exception=[$e]")
         }
     }
 
     /**
      * =========================================================================================
-     *                CallControl
+     * Call Event Updates
      * =========================================================================================
      */
+    override fun onCallEvent(event: String?, extras: Bundle?) {
+        super.onCallEvent(event, extras)
+        if (event == null) return
+        CoroutineScope(coroutineContext).launch { onEventCallback(event, extras ?: Bundle.EMPTY) }
+    }
 
+    /**
+     * =========================================================================================
+     * CallControl
+     * =========================================================================================
+     */
     fun getCallId(): ParcelUuid {
         return id
     }
@@ -161,8 +223,9 @@ internal class CallSessionLegacy(
     }
 
     fun setConnectionInactive(): CallControlResult {
-        return if (this.connectionCapabilities.and(CAPABILITY_SUPPORT_HOLD)
-            == CAPABILITY_SUPPORT_HOLD) {
+        return if (
+            this.connectionCapabilities.and(CAPABILITY_SUPPORT_HOLD) == CAPABILITY_SUPPORT_HOLD
+        ) {
             setOnHold()
             CallControlResult.Success()
         } else {
@@ -179,6 +242,8 @@ internal class CallSessionLegacy(
     // TODO:: verify the CallEndpoint change was successful. tracking bug: b/283324578
     @Suppress("deprecation")
     fun requestEndpointChange(callEndpoint: CallEndpointCompat): CallControlResult {
+        // cache the last CallEndpoint the user requested to reference in audio callbacks
+        mLastClientRequestedEndpoint = callEndpoint
         return if (Build.VERSION.SDK_INT < VERSION_CODES.P) {
             Api26PlusImpl.setAudio(callEndpoint, this)
             CallControlResult.Success()
@@ -254,7 +319,7 @@ internal class CallSessionLegacy(
 
     /**
      * =========================================================================================
-     *                           CallControlCallbacks
+     * CallControlCallbacks
      * =========================================================================================
      */
     override fun onAnswer(videoState: Int) {
@@ -302,9 +367,7 @@ internal class CallSessionLegacy(
     override fun onDisconnect() {
         CoroutineScope(coroutineContext).launch {
             try {
-                onDisconnectCallback(
-                    DisconnectCause(DisconnectCause.LOCAL)
-                )
+                onDisconnectCallback(DisconnectCause(DisconnectCause.LOCAL))
             } catch (e: Exception) {
                 throw e
             } finally {
@@ -318,9 +381,7 @@ internal class CallSessionLegacy(
         CoroutineScope(coroutineContext).launch {
             try {
                 if (state == Call.STATE_RINGING) {
-                    onDisconnectCallback(
-                        DisconnectCause(DisconnectCause.REJECTED)
-                    )
+                    onDisconnectCallback(DisconnectCause(DisconnectCause.REJECTED))
                 }
             } catch (e: Exception) {
                 throw e
@@ -335,9 +396,7 @@ internal class CallSessionLegacy(
         CoroutineScope(coroutineContext).launch {
             try {
                 if (state == Call.STATE_RINGING) {
-                    onDisconnectCallback(
-                        DisconnectCause(DisconnectCause.REJECTED)
-                    )
+                    onDisconnectCallback(DisconnectCause(DisconnectCause.REJECTED))
                 }
             } catch (e: Exception) {
                 throw e
@@ -352,9 +411,7 @@ internal class CallSessionLegacy(
         CoroutineScope(coroutineContext).launch {
             try {
                 if (state == Call.STATE_RINGING) {
-                    onDisconnectCallback(
-                        DisconnectCause(DisconnectCause.REJECTED)
-                    )
+                    onDisconnectCallback(DisconnectCause(DisconnectCause.REJECTED))
                 }
             } catch (e: Exception) {
                 throw e
@@ -367,7 +424,7 @@ internal class CallSessionLegacy(
 
     /**
      * =========================================================================================
-     *  Simple implementation of [CallControlScope] with a [CallSessionLegacy] as the session.
+     * Simple implementation of [CallControlScope] with a [CallSessionLegacy] as the session.
      * =========================================================================================
      */
     class CallControlScopeImpl(
@@ -400,8 +457,9 @@ internal class CallSessionLegacy(
             return result
         }
 
-        override suspend fun requestEndpointChange(endpoint: CallEndpointCompat):
-            CallControlResult {
+        override suspend fun requestEndpointChange(
+            endpoint: CallEndpointCompat
+        ): CallControlResult {
             return session.requestEndpointChange(endpoint)
         }
 

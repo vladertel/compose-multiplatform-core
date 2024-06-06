@@ -52,23 +52,24 @@ fun SwipeToRevealChipSample(swipeToDismissBoxState: SwipeToDismissBoxState) {
     val revealState = rememberRevealState()
     SwipeToRevealChip(
         revealState = revealState,
-        modifier = Modifier
-            .fillMaxWidth()
-            // Use edgeSwipeToDismiss to allow SwipeToDismissBox to capture swipe events
-            .edgeSwipeToDismiss(swipeToDismissBoxState)
-            .semantics {
-                // Use custom actions to make the primary and secondary actions accessible
-                customActions = listOf(
-                    CustomAccessibilityAction("Delete") {
-                        /* Add the primary action click handler here */
-                        true
-                    },
-                    CustomAccessibilityAction("More Options") {
-                        /* Add the secondary click handler here */
-                        true
-                    }
-                )
-            },
+        modifier =
+            Modifier.fillMaxWidth()
+                // Use edgeSwipeToDismiss to allow SwipeToDismissBox to capture swipe events
+                .edgeSwipeToDismiss(swipeToDismissBoxState)
+                .semantics {
+                    // Use custom actions to make the primary and secondary actions accessible
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction("Delete") {
+                                /* Add the primary action click handler here */
+                                true
+                            },
+                            CustomAccessibilityAction("More Options") {
+                                /* Add the secondary click handler here */
+                                true
+                            }
+                        )
+                },
         primaryAction = {
             SwipeToRevealPrimaryAction(
                 revealState = revealState,
@@ -105,10 +106,9 @@ fun SwipeToRevealChipSample(swipeToDismissBoxState: SwipeToDismissBoxState) {
             modifier = Modifier.fillMaxWidth(),
             onClick = { /* Add the chip click handler here */ },
             colors = ChipDefaults.primaryChipColors(),
-            border = ChipDefaults.outlinedChipBorder()
-        ) {
-            Text("SwipeToReveal Chip")
-        }
+            border = ChipDefaults.outlinedChipBorder(),
+            label = { Text("SwipeToReveal Chip", maxLines = 3) }
+        )
     }
 }
 
@@ -119,23 +119,24 @@ fun SwipeToRevealCardSample(swipeToDismissBoxState: SwipeToDismissBoxState) {
     val revealState = rememberRevealState()
     SwipeToRevealCard(
         revealState = revealState,
-        modifier = Modifier
-            .fillMaxWidth()
-            // Use edgeSwipeToDismiss to allow SwipeToDismissBox to capture swipe events
-            .edgeSwipeToDismiss(swipeToDismissBoxState)
-            .semantics {
-                // Use custom actions to make the primary and secondary actions accessible
-                customActions = listOf(
-                    CustomAccessibilityAction("Delete") {
-                        /* Add the primary action click handler here */
-                        true
-                    },
-                    CustomAccessibilityAction("More Options") {
-                        /* Add the secondary click handler here */
-                        true
-                    }
-                )
-            },
+        modifier =
+            Modifier.fillMaxWidth()
+                // Use edgeSwipeToDismiss to allow SwipeToDismissBox to capture swipe events
+                .edgeSwipeToDismiss(swipeToDismissBoxState)
+                .semantics {
+                    // Use custom actions to make the primary and secondary actions accessible
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction("Delete") {
+                                /* Add the primary action click handler here */
+                                true
+                            },
+                            CustomAccessibilityAction("More Options") {
+                                /* Add the secondary click handler here */
+                                true
+                            }
+                        )
+                },
         primaryAction = {
             SwipeToRevealPrimaryAction(
                 revealState = revealState,
@@ -175,8 +176,9 @@ fun SwipeToRevealCardSample(swipeToDismissBoxState: SwipeToDismissBoxState) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_airplanemode_active_24px),
                     contentDescription = "airplane",
-                    modifier = Modifier.size(CardDefaults.AppImageSize)
-                        .wrapContentSize(align = Alignment.Center),
+                    modifier =
+                        Modifier.size(CardDefaults.AppImageSize)
+                            .wrapContentSize(align = Alignment.Center),
                 )
             },
             title = { Text("AppCard") },

@@ -18,7 +18,6 @@ package androidx.camera.camera2.pipe
 
 import android.view.Surface
 import androidx.annotation.GuardedBy
-import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 import androidx.camera.camera2.pipe.CameraSurfaceManager.SurfaceListener
 import androidx.camera.camera2.pipe.CameraSurfaceManager.SurfaceToken
@@ -43,16 +42,13 @@ import kotlinx.atomicfu.atomic
  * Essentially each token means a single use on a [Surface].
  */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class CameraSurfaceManager {
 
     private val lock = Any()
 
-    @GuardedBy("lock")
-    private val useCountMap: MutableMap<Surface, Int> = mutableMapOf()
+    @GuardedBy("lock") private val useCountMap: MutableMap<Surface, Int> = mutableMapOf()
 
-    @GuardedBy("lock")
-    private val listeners: MutableSet<SurfaceListener> = mutableSetOf()
+    @GuardedBy("lock") private val listeners: MutableSet<SurfaceListener> = mutableSetOf()
 
     /**
      * A new [SurfaceToken] is issued when a [Surface] is registered in CameraSurfaceManager. When
@@ -61,6 +57,7 @@ class CameraSurfaceManager {
     inner class SurfaceToken(internal val surface: Surface) : AutoCloseable {
         private val debugId = surfaceTokenDebugIds.incrementAndGet()
         private val closed = atomic(false)
+
         override fun close() {
             if (closed.compareAndSet(expect = false, update = true)) {
                 Log.debug { "SurfaceToken $this closed" }
@@ -123,13 +120,16 @@ class CameraSurfaceManager {
             surfaceToken = SurfaceToken(surface)
             val newUseCount = (useCountMap[surface] ?: 0) + 1
             useCountMap[surface] = newUseCount
-            Log.debug {
-                "registerSurface: surface=$surface, " +
-                    "surfaceToken=$surfaceToken, newUseCount=$newUseCount" +
-                    (if (DEBUG) " from ${Log.readStackTrace()}" else "")
+            if (DEBUG) {
+                Log.debug {
+                    "registerSurface: surface=$surface, " +
+                        "surfaceToken=$surfaceToken, newUseCount=$newUseCount" +
+                        (if (DEBUG) " from ${Log.readStackTrace()}" else "")
+                }
             }
+
             if (newUseCount == 1) {
-                Log.debug { "Surface $surface has become active" }
+                Log.debug { "$surface for $surfaceToken is active" }
                 listenersToInvoke = listeners.toList()
             }
         }
@@ -148,13 +148,16 @@ class CameraSurfaceManager {
             checkNotNull(useCount) { "Surface $surface ($surfaceToken) has no use count" }
             val newUseCount = useCount - 1
             useCountMap[surface] = newUseCount
-            Log.debug {
-                "onTokenClosed: surface=$surface, " +
-                    "surfaceToken=$surfaceToken, newUseCount=$newUseCount" +
-                    (if (DEBUG) " from ${Log.readStackTrace()}" else "")
+
+            if (DEBUG) {
+                Log.debug {
+                    "onTokenClosed: surface=$surface, " +
+                        "surfaceToken=$surfaceToken, newUseCount=$newUseCount" +
+                        (if (DEBUG) " from ${Log.readStackTrace()}" else "")
+                }
             }
             if (newUseCount == 0) {
-                Log.debug { "Surface $surface has become inactive" }
+                Log.debug { "$surface for $surfaceToken is inactive" }
                 listenersToInvoke = listeners.toList()
                 useCountMap.remove(surface)
             }

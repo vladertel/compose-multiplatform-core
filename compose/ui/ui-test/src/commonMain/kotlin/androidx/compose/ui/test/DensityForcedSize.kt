@@ -21,6 +21,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -44,73 +45,68 @@ internal fun DensityForcedSize(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    SubcomposeLayout(
-        modifier = modifier
-            .then(
-                if (size.isSpecified) {
-                    Modifier.size(size)
-                } else {
-                    Modifier
-                }
-            )
-    ) { constraints ->
-        val measurables = subcompose(Unit) {
-            val maxWidth = constraints.maxWidth.toDp()
-            val maxHeight = constraints.maxHeight.toDp()
-            val requiredWidth = if (size.isSpecified) {
-                max(maxWidth, size.width)
-            } else {
-                maxWidth
-            }
-            val requiredHeight = if (size.isSpecified) {
-                max(maxWidth, size.height)
-            } else {
-                maxHeight
-            }
-            // Compute the minimum density required so that both the requested width and height both
-            // fit
-            val density = LocalDensity.current.density * min(
-                maxWidth / requiredWidth,
-                maxHeight / requiredHeight,
-            )
-
-            CompositionLocalProvider(
-                LocalDensity provides Density(
-                    // Override the density with the factor needed to meet both the minimum width and
-                    // height requirements, and the platform density requirements.
-                    density = coerceDensity(density),
-                    // Pass through the font scale
-                    fontScale = LocalDensity.current.fontScale
-                )
-            ) {
-                Layout(
-                    content = content,
-                    // This size will now be guaranteed to be able to match the constraints
-                    modifier = Modifier
-                        .then(
-                            if (size.isSpecified) {
-                                Modifier.size(size)
-                            } else {
-                                Modifier
-                            }
+    SubcomposeLayout(modifier = modifier) { constraints ->
+        val measurables =
+            subcompose(Unit) {
+                val maxWidth = constraints.maxWidth.toDp()
+                val maxHeight = constraints.maxHeight.toDp()
+                val requiredWidth =
+                    if (size.isSpecified) {
+                        max(maxWidth, size.width)
+                    } else {
+                        maxWidth
+                    }
+                val requiredHeight =
+                    if (size.isSpecified) {
+                        max(maxHeight, size.height)
+                    } else {
+                        maxHeight
+                    }
+                // Compute the minimum density required so that both the requested width and height
+                // both
+                // fit
+                val density =
+                    LocalDensity.current.density *
+                        min(
+                            maxWidth / requiredWidth,
+                            maxHeight / requiredHeight,
                         )
-                ) { measurables, constraints ->
-                    val placeables = measurables.map { it.measure(constraints) }
-                    layout(constraints.maxWidth, constraints.maxHeight) {
-                        placeables.forEach {
-                            it.placeRelative(0, 0)
+
+                CompositionLocalProvider(
+                    LocalDensity provides
+                        Density(
+                            // Override the density with the factor needed to meet both the minimum
+                            // width and
+                            // height requirements, and the platform density requirements.
+                            density = coerceDensity(density),
+                            // Pass through the font scale
+                            fontScale = LocalDensity.current.fontScale
+                        )
+                ) {
+                    Layout(
+                        content = content,
+                        // This size will now be guaranteed to be able to match the constraints
+                        modifier =
+                            Modifier.then(
+                                if (size.isSpecified) {
+                                    Modifier.size(size)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                    ) { measurables, constraints ->
+                        val placeables = measurables.map { it.measure(constraints) }
+                        layout(constraints.maxWidth, constraints.maxHeight) {
+                            placeables.forEach { it.placeRelative(0, 0) }
                         }
                     }
                 }
             }
-        }
 
         val placeables = measurables.map { it.measure(constraints) }
 
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            placeables.forEach {
-                it.placeRelative(0, 0)
-            }
+        layout(placeables.maxOf(Placeable::width), placeables.maxOf(Placeable::height)) {
+            placeables.forEach { it.placeRelative(0, 0) }
         }
     }
 }
@@ -124,21 +120,15 @@ internal fun DensityForcedSize(
  */
 internal expect fun coerceDensity(density: Float): Float
 
-/**
- * A very simplified size [Modifier].
- */
+/** A very simplified size [Modifier]. */
 @Stable
 private fun Modifier.size(size: DpSize) = layout { measurable, constraints ->
-    val placeable = measurable.measure(
-        constraints.constrain(
-            Constraints.fixed(
-                size.width.roundToPx(),
-                size.height.roundToPx()
+    val placeable =
+        measurable.measure(
+            constraints.constrain(
+                Constraints.fixed(size.width.roundToPx(), size.height.roundToPx())
             )
         )
-    )
 
-    layout(placeable.width, placeable.height) {
-        placeable.placeRelative(0, 0)
-    }
+    layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
 }

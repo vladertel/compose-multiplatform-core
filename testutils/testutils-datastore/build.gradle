@@ -28,7 +28,7 @@ plugins {
 }
 
 androidXMultiplatform {
-    jvm {}
+    jvm()
     mac()
     linux()
     ios()
@@ -45,7 +45,9 @@ androidXMultiplatform {
                 api(libs.okio)
             }
         }
-
+        nativeMain {
+            dependsOn(commonMain)
+        }
         jvmMain {
             dependencies {
                 api(libs.kotlinStdlib)
@@ -62,6 +64,13 @@ androidXMultiplatform {
             dependsOn(commonTest)
             dependencies {
                 implementation(libs.kotlinTest)
+            }
+        }
+        targets.configureEach { target ->
+            if (target.platformType == org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native) {
+                target.compilations["main"].defaultSourceSet {
+                    dependsOn(nativeMain)
+                }
             }
         }
     }

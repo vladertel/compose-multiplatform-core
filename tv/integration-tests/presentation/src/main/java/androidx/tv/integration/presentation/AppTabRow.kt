@@ -39,35 +39,32 @@ fun AppTabRow(
     onSelectedTabIndexChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val focusRestorerModifiers = createCustomInitialFocusRestorerModifiers()
-
     AlignmentCenter(horizontalAxis = true) {
         TabRow(
             selectedTabIndex = selectedTabIndex,
             separator = { Spacer(modifier = Modifier.width(4.dp)) },
-            modifier = modifier
-                .padding(top = 20.dp)
-                .then(focusRestorerModifiers.parentModifier),
-//                indicator = @Composable { tabPositions ->
-//                    tabPositions.getOrNull(selectedTabIndex)?.let {
-//                        TabRowDefaults.PillIndicator(
-//                            currentTabPosition = it,
-//                            inactiveColor = Color(0xFFE5E1E6),
-//                        )
-//                    }
-//                }
+            modifier = modifier.padding(top = 20.dp),
+            //                indicator = @Composable { tabPositions ->
+            //                    tabPositions.getOrNull(selectedTabIndex)?.let {
+            //                        TabRowDefaults.PillIndicator(
+            //                            currentTabPosition = it,
+            //                            inactiveColor = Color(0xFFE5E1E6),
+            //                        )
+            //                    }
+            //                }
         ) {
             tabs.forEachIndexed { index, tabLabel ->
                 key(index) {
                     Tab(
                         selected = selectedTabIndex == index,
                         onFocus = { onSelectedTabIndexChange(index) },
-                        colors = TabDefaults.pillIndicatorTabColors(
-                            inactiveContentColor = LocalContentColor.current,
-//                            selectedContentColor = Color(0xFF313033),
-                        ),
-                        modifier = Modifier
-                            .ifElse(index == 0, focusRestorerModifiers.childModifier),
+                        colors =
+                            TabDefaults.pillIndicatorTabColors(
+                                inactiveContentColor = LocalContentColor.current,
+                                //                            selectedContentColor =
+                                // Color(0xFF313033),
+                            ),
+                        modifier = Modifier,
                     ) {
                         Text(
                             text = tabLabel,

@@ -24,7 +24,11 @@ import androidx.test.filters.LargeTest
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.testutils.createCompilationParams
+import androidx.wear.compose.integration.macrobenchmark.test.disableChargingExperience
+import androidx.wear.compose.integration.macrobenchmark.test.enableChargingExperience
 import java.lang.Thread.sleep
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,19 +36,24 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
-class PositionIndicatorBenchmark(
-    private val compilationMode: CompilationMode
-) {
-    @get:Rule
-    val benchmarkRule = MacrobenchmarkRule()
+class PositionIndicatorBenchmark(private val compilationMode: CompilationMode) {
+    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+
+    @Before
+    fun setUp() {
+        disableChargingExperience()
+    }
+
+    @After
+    fun destroy() {
+        enableChargingExperience()
+    }
 
     @Test
     fun start() {
         benchmarkRule.measureRepeated(
             packageName = PACKAGE_NAME,
-            metrics = listOf(
-                FrameTimingMetric()
-            ),
+            metrics = listOf(FrameTimingMetric()),
             compilationMode = compilationMode,
             iterations = 5,
             setupBlock = {

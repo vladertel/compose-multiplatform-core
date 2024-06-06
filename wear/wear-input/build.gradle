@@ -21,7 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -43,8 +43,6 @@ dependencies {
 
     compileOnly(fileTree(dir: "../wear_stubs", include: ["com.google.android.wearable-stubs.jar"]))
     compileOnly(project(":annotation:annotation-sampled"))
-
-    samples(project(":wear:wear-input-samples"))
 }
 
 android {
@@ -59,9 +57,11 @@ android {
 
 androidx {
     name = "Android Wear Input"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     mavenVersion = LibraryVersions.WEAR_INPUT
     inceptionYear = "2020"
     description = "Android Wear Support Input"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
+    samples(project(":wear:wear-input-samples"))
 }

@@ -18,12 +18,10 @@ package androidx.camera.camera2.internal;
 
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.CaptureResult;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-import androidx.annotation.RequiresApi;
 import androidx.camera.camera2.impl.Camera2ImplConfig;
 import androidx.camera.camera2.internal.compat.params.DynamicRangesCompat;
 import androidx.camera.camera2.interop.CaptureRequestOptions;
@@ -44,6 +42,7 @@ import androidx.camera.core.impl.OutputSurfaceConfiguration;
 import androidx.camera.core.impl.SessionConfig;
 import androidx.camera.core.impl.SessionProcessor;
 import androidx.camera.core.impl.SessionProcessorSurface;
+import androidx.camera.core.impl.TagBundle;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.impl.utils.futures.FutureCallback;
 import androidx.camera.core.impl.utils.futures.FutureChain;
@@ -80,7 +79,6 @@ import java.util.concurrent.ScheduledExecutorService;
  * </pre>
  * <p>This class is not thread-safe. All methods must be executed sequentially.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @OptIn(markerClass = ExperimentalCamera2Interop.class)
 final class ProcessingCaptureSession implements CaptureSessionInterface {
     private static final String TAG = "ProcessingCaptureSession";
@@ -197,19 +195,27 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
                                 }
                             }
 
+                            DeferrableSurface postviewDeferrableSurface;
                             if (sessionConfig.getPostviewOutputConfig() != null) {
-                                DeferrableSurface postviewDeferrableSurface =
+                                postviewDeferrableSurface =
                                         sessionConfig.getPostviewOutputConfig().getSurface();
                                 postviewOutputSurface = OutputSurface.create(
                                         postviewDeferrableSurface.getSurface().get(),
                                         postviewDeferrableSurface.getPrescribedSize(),
                                         postviewDeferrableSurface.getPrescribedStreamFormat()
                                 );
+                            } else {
+                                postviewDeferrableSurface = null;
                             }
 
                             mProcessorState = ProcessorState.SESSION_INITIALIZED;
                             try {
-                                DeferrableSurfaces.incrementAll(mOutputSurfaces);
+                                List<DeferrableSurface> surfacesToIncrement =
+                                        new ArrayList<>(mOutputSurfaces);
+                                if (postviewDeferrableSurface != null) {
+                                    surfacesToIncrement.add(postviewDeferrableSurface);
+                                }
+                                DeferrableSurfaces.incrementAll(surfacesToIncrement);
                             } catch (DeferrableSurface.SurfaceClosedException e) {
                                 return Futures.immediateFailedFuture(e);
                             }
@@ -228,6 +234,9 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
                                 Logger.e(TAG, "initSession failed", e);
                                 // Ensure we decrement the output surfaces if initSession failed.
                                 DeferrableSurfaces.decrementAll(mOutputSurfaces);
+                                if (postviewDeferrableSurface != null) {
+                                    postviewDeferrableSurface.decrementUseCount();
+                                }
                                 throw e;
                             }
 
@@ -236,6 +245,9 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
                             mProcessorSessionConfig.getSurfaces().get(0).getTerminationFuture()
                                     .addListener(() -> {
                                         DeferrableSurfaces.decrementAll(mOutputSurfaces);
+                                        if (postviewDeferrableSurface != null) {
+                                            postviewDeferrableSurface.decrementUseCount();
+                                        }
                                     }, CameraXExecutors.directExecutor());
 
                             // Holding the Processor surfaces in case they are GCed
@@ -322,7 +334,7 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
             cancelRequests(Arrays.asList(captureConfig));
             return;
         }
-        mSessionProcessor.startTrigger(options,
+        mSessionProcessor.startTrigger(options, captureConfig.getTagBundle(),
                 new CaptureCallbackAdapter(captureConfig.getId(),
                         captureConfig.getCameraCaptureCallbacks()));
     }
@@ -361,6 +373,11 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         switch (mProcessorState) {
             case UNINITIALIZED:
             case SESSION_INITIALIZED:
+                if (mPendingCaptureConfigs != null) {
+                    cancelRequests(captureConfigs);
+                    Logger.d(TAG, "cancel the request because are pending un-submitted request");
+                    break;
+                }
                 mPendingCaptureConfigs = captureConfigs;
                 break;
             case ON_CAPTURE_SESSION_STARTED:
@@ -402,13 +419,15 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         mStillCaptureOptions = builder.build();
         updateParameters(mSessionOptions, mStillCaptureOptions);
         mSessionProcessor.startCapture(captureConfig.isPostviewEnabled(),
-                  new CaptureCallbackAdapter(captureConfig.getId(),
+                captureConfig.getTagBundle(),
+                new CaptureCallbackAdapter(captureConfig.getId(),
                           captureConfig.getCameraCaptureCallbacks()));
     }
 
     private static class CaptureCallbackAdapter implements SessionProcessor.CaptureCallback {
         private List<CameraCaptureCallback> mCameraCaptureCallbacks;
         private final int mCaptureConfigId;
+        private CameraCaptureResult mCaptureResult = null;
 
         private CaptureCallbackAdapter(int captureConfigId,
                 List<CameraCaptureCallback> cameraCaptureCallbacks) {
@@ -433,10 +452,17 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
         }
 
         @Override
+        public void onCaptureCompleted(long timestamp, int captureSequenceId,
+                @NonNull CameraCaptureResult captureResult) {
+            mCaptureResult = captureResult;
+        }
+
+        @Override
         public void onCaptureSequenceCompleted(int captureSequenceId) {
+            CameraCaptureResult cameraCaptureResult = mCaptureResult != null
+                    ? mCaptureResult : new CameraCaptureResult.EmptyCameraCaptureResult();
             for (CameraCaptureCallback cameraCaptureCallback : mCameraCaptureCallbacks) {
-                cameraCaptureCallback.onCaptureCompleted(mCaptureConfigId,
-                        new CameraCaptureResult.EmptyCameraCaptureResult());
+                cameraCaptureCallback.onCaptureCompleted(mCaptureConfigId, cameraCaptureResult);
             }
         }
 
@@ -567,9 +593,9 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
      * surface of repeating request is determined by {@link SessionProcessor}.
      * {@link SessionProcessor#setParameters(Config)} will be called to update the request
      * parameters retrieved from {@link SessionConfig#getImplementationOptions()}. It will also
-     * invoke {@link SessionProcessor#startRepeating(SessionProcessor.CaptureCallback)} if it is not
-     * started yet. {@link SessionConfig#getRepeatingCameraCaptureCallbacks()} will be invoked
-     * but it is unable to invoke callbacks of {@link CaptureCallbackContainer} type.
+     * invoke {@link SessionProcessor#startRepeating(TagBundle, SessionProcessor.CaptureCallback)}
+     * if it is not started yet. {@link SessionConfig#getRepeatingCameraCaptureCallbacks()} will be
+     * invoked but it is unable to invoke callbacks of {@link CaptureCallbackContainer} type.
      *
      * @param sessionConfig has the configuration that will currently active in issuing capture
      *                      request.
@@ -600,9 +626,16 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
             if (!hasPreviewSurface(sessionConfig.getRepeatingCaptureConfig())) {
                 mSessionProcessor.stopRepeating();
             } else {
-                mSessionProcessor.startRepeating(mSessionProcessorCaptureCallback);
+                mSessionProcessor.startRepeating(
+                        sessionConfig.getRepeatingCaptureConfig().getTagBundle(),
+                        mSessionProcessorCaptureCallback);
             }
         }
+    }
+
+    @Override
+    public boolean isInOpenState() {
+        return mCaptureSession.isInOpenState();
     }
 
     /**
@@ -677,7 +710,7 @@ final class ProcessingCaptureSession implements CaptureSessionInterface {
 
         @Override
         public void onCaptureCompleted(long timestamp, int captureSequenceId,
-                @NonNull Map<CaptureResult.Key, Object> result) {
+                @NonNull CameraCaptureResult result) {
 
         }
     }

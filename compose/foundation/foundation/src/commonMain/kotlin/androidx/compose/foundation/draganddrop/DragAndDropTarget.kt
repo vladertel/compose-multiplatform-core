@@ -33,11 +33,9 @@ import androidx.compose.ui.platform.InspectorInfo
  *
  * @sample androidx.compose.foundation.samples.TextDragAndDropTargetSample
  *
- * @param shouldStartDragAndDrop Allows the Composable to decide if it wants to receive from
- * a given drag and drop session by inspecting the [DragAndDropEvent] that started the session.
- *
- * @param target The [DragAndDropTarget] that will receive events for a given drag and drop
- * session.
+ * @param shouldStartDragAndDrop Allows the Composable to decide if it wants to receive from a given
+ *   drag and drop session by inspecting the [DragAndDropEvent] that started the session.
+ * @param target The [DragAndDropTarget] that will receive events for a given drag and drop session.
  *
  * All drag and drop target modifiers in the hierarchy will be given an opportunity to participate
  * in a given drag and drop session via [shouldStartDragAndDrop].
@@ -48,25 +46,26 @@ import androidx.compose.ui.platform.InspectorInfo
 fun Modifier.dragAndDropTarget(
     shouldStartDragAndDrop: (startEvent: DragAndDropEvent) -> Boolean,
     target: DragAndDropTarget,
-): Modifier = this then DropTargetElement(
-    target = target,
-    shouldStartDragAndDrop = shouldStartDragAndDrop,
-)
+): Modifier =
+    this then
+        DropTargetElement(
+            target = target,
+            shouldStartDragAndDrop = shouldStartDragAndDrop,
+        )
 
 @ExperimentalFoundationApi
 private class DropTargetElement(
     val shouldStartDragAndDrop: (event: DragAndDropEvent) -> Boolean,
     val target: DragAndDropTarget,
 ) : ModifierNodeElement<DragAndDropTargetNode>() {
-    override fun create() = DragAndDropTargetNode(
-        target = target,
-        shouldStartDragAndDrop = shouldStartDragAndDrop,
-    )
+    override fun create() =
+        DragAndDropTargetNode(
+            target = target,
+            shouldStartDragAndDrop = shouldStartDragAndDrop,
+        )
 
-    override fun update(node: DragAndDropTargetNode) = with(node) {
-        target = this@DropTargetElement.target
-        shouldStartDragAndDrop = this@DropTargetElement.shouldStartDragAndDrop
-    }
+    override fun update(node: DragAndDropTargetNode) =
+        node.update(target = target, shouldStartDragAndDrop = shouldStartDragAndDrop)
 
     override fun InspectorInfo.inspectableProperties() {
         name = "dropTarget"
@@ -79,7 +78,7 @@ private class DropTargetElement(
         if (other !is DropTargetElement) return false
         if (target != other.target) return false
 
-        return shouldStartDragAndDrop == other.shouldStartDragAndDrop
+        return shouldStartDragAndDrop === other.shouldStartDragAndDrop
     }
 
     override fun hashCode(): Int {
@@ -91,15 +90,42 @@ private class DropTargetElement(
 
 @ExperimentalFoundationApi
 private class DragAndDropTargetNode(
-    var shouldStartDragAndDrop: (event: DragAndDropEvent) -> Boolean,
-    var target: DragAndDropTarget
+    private var shouldStartDragAndDrop: (event: DragAndDropEvent) -> Boolean,
+    private var target: DragAndDropTarget
 ) : DelegatingNode() {
-    init {
-        delegate(
-            DragAndDropModifierNode(
-                shouldStartDragAndDrop = shouldStartDragAndDrop,
-                target = target
+
+    private var dragAndDropNode: DragAndDropModifierNode? = null
+
+    override fun onAttach() {
+        createAndAttachDragAndDropModifierNode()
+    }
+
+    fun update(
+        shouldStartDragAndDrop: (event: DragAndDropEvent) -> Boolean,
+        target: DragAndDropTarget
+    ) {
+        this.shouldStartDragAndDrop = shouldStartDragAndDrop
+        if (target != this.target) {
+            dragAndDropNode?.let { undelegate(it) }
+            this.target = target
+            createAndAttachDragAndDropModifierNode()
+        }
+    }
+
+    override fun onDetach() {
+        undelegate(dragAndDropNode!!)
+    }
+
+    private fun createAndAttachDragAndDropModifierNode() {
+        dragAndDropNode =
+            delegate(
+                DragAndDropModifierNode(
+                    // We wrap the this.shouldStartDragAndDrop invocation in a lambda as it might
+                    // change over
+                    // time, and updates to shouldStartDragAndDrop are not destructive.
+                    shouldStartDragAndDrop = { this.shouldStartDragAndDrop(it) },
+                    target = this.target
+                )
             )
-        )
     }
 }

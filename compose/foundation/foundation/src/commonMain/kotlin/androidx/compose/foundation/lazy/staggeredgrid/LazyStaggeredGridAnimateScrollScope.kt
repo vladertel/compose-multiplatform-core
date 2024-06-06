@@ -20,64 +20,63 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.lazy.layout.LazyLayoutAnimateScrollScope
+import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastSumBy
-import kotlin.math.abs
 
 @ExperimentalFoundationApi
-internal class LazyStaggeredGridAnimateScrollScope(
-    private val state: LazyStaggeredGridState
-) : LazyLayoutAnimateScrollScope {
+internal class LazyStaggeredGridAnimateScrollScope(private val state: LazyStaggeredGridState) :
+    LazyLayoutAnimateScrollScope {
 
-    override val firstVisibleItemIndex: Int get() = state.firstVisibleItemIndex
+    override val firstVisibleItemIndex: Int
+        get() = state.firstVisibleItemIndex
 
-    override val firstVisibleItemScrollOffset: Int get() = state.firstVisibleItemScrollOffset
+    override val firstVisibleItemScrollOffset: Int
+        get() = state.firstVisibleItemScrollOffset
 
     override val lastVisibleItemIndex: Int
         get() = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-    override val itemCount: Int get() = state.layoutInfo.totalItemsCount
-
-    override fun getVisibleItemScrollOffset(index: Int): Int {
-        val layoutInfo = state.layoutInfo
-        val searchedIndex = layoutInfo.visibleItemsInfo.binarySearch { it.index - index }
-        val item = layoutInfo.visibleItemsInfo[searchedIndex]
-        return item.offset.let {
-            if (layoutInfo.orientation == Orientation.Vertical) it.y else it.x
-        }
-    }
+    override val itemCount: Int
+        get() = state.layoutInfo.totalItemsCount
 
     override fun ScrollScope.snapToItem(index: Int, scrollOffset: Int) {
-        with(state) {
-            snapToItemInternal(index, scrollOffset)
-        }
+        with(state) { snapToItemInternal(index, scrollOffset, forceRemeasure = true) }
     }
 
-    override fun calculateDistanceTo(targetIndex: Int, targetItemOffset: Int): Float {
-        val averageMainAxisItemSize = visibleItemsAverageSize
+    override fun calculateDistanceTo(targetIndex: Int): Float {
+        val layoutInfo = state.layoutInfo
+        if (layoutInfo.visibleItemsInfo.isEmpty()) return 0f
+        val visibleItem = layoutInfo.visibleItemsInfo.fastFirstOrNull { it.index == targetIndex }
+        return if (visibleItem == null) {
+            val averageMainAxisItemSize = calculateVisibleItemsAverageSize(layoutInfo)
 
-        val laneCount = state.laneCount
-        val lineDiff = targetIndex / laneCount - firstVisibleItemIndex / laneCount
-        var coercedOffset = minOf(abs(targetItemOffset), averageMainAxisItemSize)
-        if (targetItemOffset < 0) coercedOffset *= -1
-        return averageMainAxisItemSize * lineDiff.toFloat() +
-            coercedOffset - firstVisibleItemScrollOffset
+            val laneCount = state.laneCount
+            val lineDiff = targetIndex / laneCount - firstVisibleItemIndex / laneCount
+            averageMainAxisItemSize * lineDiff.toFloat() - firstVisibleItemScrollOffset
+        } else {
+            if (layoutInfo.orientation == Orientation.Vertical) {
+                    visibleItem.offset.y
+                } else {
+                    visibleItem.offset.x
+                }
+                .toFloat()
+        }
     }
 
     override suspend fun scroll(block: suspend ScrollScope.() -> Unit) {
         state.scroll(block = block)
     }
 
-    override val visibleItemsAverageSize: Int
-        get() {
-            val layoutInfo = state.layoutInfo
-            val visibleItems = layoutInfo.visibleItemsInfo
-            val itemSizeSum = visibleItems.fastSumBy {
+    private fun calculateVisibleItemsAverageSize(layoutInfo: LazyStaggeredGridLayoutInfo): Int {
+        val visibleItems = layoutInfo.visibleItemsInfo
+        val itemSizeSum =
+            visibleItems.fastSumBy {
                 if (layoutInfo.orientation == Orientation.Vertical) {
                     it.size.height
                 } else {
                     it.size.width
                 }
             }
-            return itemSizeSum / visibleItems.size + layoutInfo.mainAxisItemSpacing
-        }
+        return itemSizeSum / visibleItems.size + layoutInfo.mainAxisItemSpacing
+    }
 }

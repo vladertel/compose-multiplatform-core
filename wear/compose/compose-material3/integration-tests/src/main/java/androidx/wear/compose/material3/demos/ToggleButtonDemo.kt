@@ -30,7 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.wear.compose.integration.demos.common.ScalingLazyColumnWithRSB
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material3.Checkbox
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListHeader
@@ -40,49 +40,23 @@ import androidx.wear.compose.material3.ToggleButton
 
 @Composable
 fun ToggleButtonDemo() {
-    ScalingLazyColumnWithRSB(
+    ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item {
-            ListHeader { Text("Checkbox") }
-        }
-        item {
-            DemoToggleCheckbox(enabled = true, initiallyChecked = true)
-        }
-        item {
-            DemoToggleCheckbox(enabled = true, initiallyChecked = false)
-        }
-        item {
-            ListHeader { Text("Disabled Checkbox") }
-        }
-        item {
-            DemoToggleCheckbox(enabled = false, initiallyChecked = true)
-        }
-        item {
-            DemoToggleCheckbox(enabled = false, initiallyChecked = false)
-        }
-        item {
-            ListHeader { Text("Switch") }
-        }
-        item {
-            DemoToggleSwitch(enabled = true, initiallyChecked = true)
-        }
-        item {
-            DemoToggleSwitch(enabled = true, initiallyChecked = false)
-        }
-        item {
-            ListHeader { Text("Disabled Switch") }
-        }
-        item {
-            DemoToggleSwitch(enabled = false, initiallyChecked = true)
-        }
-        item {
-            DemoToggleSwitch(enabled = false, initiallyChecked = false)
-        }
-        item {
-            ListHeader { Text("Icon") }
-        }
+        item { ListHeader { Text("Checkbox") } }
+        item { DemoToggleCheckbox(enabled = true, initiallyChecked = true) }
+        item { DemoToggleCheckbox(enabled = true, initiallyChecked = false) }
+        item { ListHeader { Text("Disabled Checkbox") } }
+        item { DemoToggleCheckbox(enabled = false, initiallyChecked = true) }
+        item { DemoToggleCheckbox(enabled = false, initiallyChecked = false) }
+        item { ListHeader { Text("Switch") } }
+        item { DemoToggleSwitch(enabled = true, initiallyChecked = true) }
+        item { DemoToggleSwitch(enabled = true, initiallyChecked = false) }
+        item { ListHeader { Text("Disabled Switch") } }
+        item { DemoToggleSwitch(enabled = false, initiallyChecked = true) }
+        item { DemoToggleSwitch(enabled = false, initiallyChecked = false) }
+        item { ListHeader { Text("Icon") } }
         item {
             DemoToggleCheckbox(
                 enabled = true,
@@ -102,9 +76,7 @@ fun ToggleButtonDemo() {
                 Icon(imageVector = Icons.Filled.Favorite, contentDescription = "Favorite icon")
             }
         }
-        item {
-            ListHeader { Text("Multi-line") }
-        }
+        item { ListHeader { Text("Multi-line") } }
         item {
             DemoToggleCheckbox(
                 enabled = true,

@@ -50,12 +50,14 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -74,6 +76,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -85,8 +88,7 @@ import org.junit.runner.RunWith
 @LargeTest
 class AnimatedContentTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     @OptIn(InternalAnimationApi::class)
     @Test
@@ -105,19 +107,23 @@ class AnimatedContentTest {
                     testModifier,
                     transitionSpec = {
                         if (true isTransitioningTo false) {
-                            fadeIn() togetherWith fadeOut() using
+                            fadeIn() togetherWith
+                                fadeOut() using
                                 SizeTransform { initialSize, targetSize ->
                                     keyframes {
                                         durationMillis = 320
-                                        IntSize(targetSize.width, initialSize.height) at 160 using
+                                        IntSize(targetSize.width, initialSize.height) at
+                                            160 using
                                             LinearEasing
                                         targetSize at 320 using LinearEasing
                                     }
                                 }
                         } else {
-                            fadeIn() togetherWith fadeOut() using SizeTransform { _, _ ->
-                                tween(durationMillis = 80, easing = LinearEasing)
-                            }
+                            fadeIn() togetherWith
+                                fadeOut() using
+                                SizeTransform { _, _ ->
+                                    tween(durationMillis = 80, easing = LinearEasing)
+                                }
                         }
                     }
                 ) {
@@ -184,7 +190,8 @@ class AnimatedContentTest {
                 transition.AnimatedContent(
                     testModifier,
                     transitionSpec = {
-                        EnterTransition.None togetherWith ExitTransition.None using
+                        EnterTransition.None togetherWith
+                            ExitTransition.None using
                             SizeTransform { _, _ ->
                                 tween(durationMillis = 160, easing = LinearEasing)
                             }
@@ -241,10 +248,14 @@ class AnimatedContentTest {
         var offset2 by mutableStateOf(Offset.Zero)
         var playTimeMillis by mutableStateOf(0)
         val transitionState = MutableTransitionState(true)
-        val alignment = listOf(
-            Alignment.TopStart, Alignment.BottomStart, Alignment.Center,
-            Alignment.BottomEnd, Alignment.TopEnd
-        )
+        val alignment =
+            listOf(
+                Alignment.TopStart,
+                Alignment.BottomStart,
+                Alignment.Center,
+                Alignment.BottomEnd,
+                Alignment.TopEnd
+            )
         var contentAlignment by mutableStateOf(Alignment.TopStart)
         rule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {
@@ -254,28 +265,24 @@ class AnimatedContentTest {
                     testModifier,
                     contentAlignment = contentAlignment,
                     transitionSpec = {
-                        fadeIn(animationSpec = tween(durationMillis = 80)) togetherWith fadeOut(
-                            animationSpec = tween(durationMillis = 80)
-                        ) using SizeTransform { _, _ ->
-                            tween(durationMillis = 80, easing = LinearEasing)
-                        }
+                        fadeIn(animationSpec = tween(durationMillis = 80)) togetherWith
+                            fadeOut(animationSpec = tween(durationMillis = 80)) using
+                            SizeTransform { _, _ ->
+                                tween(durationMillis = 80, easing = LinearEasing)
+                            }
                     }
                 ) {
                     if (it) {
                         Box(
-                            modifier = Modifier
-                                .onGloballyPositioned {
-                                    offset1 = it.positionInRoot()
-                                }
-                                .size(size1.width.dp, size1.height.dp)
+                            modifier =
+                                Modifier.onGloballyPositioned { offset1 = it.positionInRoot() }
+                                    .size(size1.width.dp, size1.height.dp)
                         )
                     } else {
                         Box(
-                            modifier = Modifier
-                                .onGloballyPositioned {
-                                    offset2 = it.positionInRoot()
-                                }
-                                .size(size2.width.dp, size2.height.dp)
+                            modifier =
+                                Modifier.onGloballyPositioned { offset2 = it.positionInRoot() }
+                                    .size(size2.width.dp, size2.height.dp)
                         )
                     }
                 }
@@ -377,14 +384,17 @@ class AnimatedContentTest {
                     transitionSpec = {
                         if (true isTransitioningTo false) {
                             slideIntoContainer(
-                                AnimatedContentTransitionScope.SlideDirection.Start, animSpec
+                                AnimatedContentTransitionScope.SlideDirection.Start,
+                                animSpec
                             ) togetherWith
                                 slideOutOfContainer(
-                                    AnimatedContentTransitionScope.SlideDirection.Start, animSpec
+                                    AnimatedContentTransitionScope.SlideDirection.Start,
+                                    animSpec
                                 )
                         } else {
                             slideIntoContainer(
-                                AnimatedContentTransitionScope.SlideDirection.End, animSpec
+                                AnimatedContentTransitionScope.SlideDirection.End,
+                                animSpec
                             ) togetherWith
                                 slideOutOfContainer(
                                     towards = AnimatedContentTransitionScope.SlideDirection.End,
@@ -398,11 +408,7 @@ class AnimatedContentTest {
                     } else {
                         falseTransition = transition
                     }
-                    Box(
-                        Modifier
-                            .requiredSize(200.dp)
-                            .testTag(target.toString())
-                    )
+                    Box(Modifier.requiredSize(200.dp).testTag(target.toString()))
                 }
             }
         }
@@ -462,25 +468,24 @@ class AnimatedContentTest {
         var targetPosition: Offset? = null
         rule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(1f)) {
-                AnimatedContent(targetState,
-                    Modifier.onGloballyPositioned {
-                        targetPosition = it.positionInRoot()
-                    },
+                AnimatedContent(
+                    targetState,
+                    Modifier.onGloballyPositioned { targetPosition = it.positionInRoot() },
                     transitionSpec = {
                         slideInHorizontally { -200 } togetherWith
                             slideOutHorizontally(snap()) { 200 } + fadeOut(tween(200))
                     },
-                    contentKey = { it > 3 }) { target ->
+                    contentKey = { it > 3 }
+                ) { target ->
                     Box(
-                        Modifier
-                            .requiredSize(200.dp)
-                            .onGloballyPositioned {
-                                if (target == targetState) {
-                                    actualIncomingPosition = it.localToRoot(Offset.Zero)
-                                } else {
-                                    actualOutgoingPosition = it.localToRoot(Offset.Zero)
-                                }
-                            })
+                        Modifier.requiredSize(200.dp).onGloballyPositioned {
+                            if (target == targetState) {
+                                actualIncomingPosition = it.localToRoot(Offset.Zero)
+                            } else {
+                                actualOutgoingPosition = it.localToRoot(Offset.Zero)
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -512,46 +517,46 @@ class AnimatedContentTest {
         rule.setContent {
             LookaheadScope {
                 Scaffold(
-                    Modifier
-                        .fillMaxSize()
-                        .testTag(""),
+                    Modifier.fillMaxSize().testTag(""),
                     topBar = {},
                     floatingActionButton = {}
                 ) {
                     Surface() {
                         SubcomposeLayout(Modifier.fillMaxWidth()) { constraints ->
                             val tabRowWidth = constraints.maxWidth
-                            val tabMeasurables = subcompose("Tabs") {
-                                repeat(15) {
-                                    Text(it.toString(), Modifier.width(100.dp))
+                            val tabMeasurables =
+                                subcompose("Tabs") {
+                                    repeat(15) { Text(it.toString(), Modifier.width(100.dp)) }
                                 }
-                            }
                             val tabCount = tabMeasurables.size
                             var tabWidth = 0
                             if (tabCount > 0) {
                                 tabWidth = (tabRowWidth / tabCount)
                             }
-                            val tabRowHeight = tabMeasurables.fold(initial = 0) { max, curr ->
-                                maxOf(curr.maxIntrinsicHeight(tabWidth), max)
-                            }
+                            val tabRowHeight =
+                                tabMeasurables.fold(initial = 0) { max, curr ->
+                                    maxOf(curr.maxIntrinsicHeight(tabWidth), max)
+                                }
 
-                            val tabPlaceables = tabMeasurables.map {
-                                it.measure(
-                                    constraints.copy(
-                                        minWidth = tabWidth,
-                                        maxWidth = tabWidth,
-                                        minHeight = tabRowHeight,
-                                        maxHeight = tabRowHeight,
+                            val tabPlaceables =
+                                tabMeasurables.map {
+                                    it.measure(
+                                        constraints.copy(
+                                            minWidth = tabWidth,
+                                            maxWidth = tabWidth,
+                                            minHeight = tabRowHeight,
+                                            maxHeight = tabRowHeight,
+                                        )
                                     )
-                                )
-                            }
+                                }
 
                             repeat(tabCount) { index ->
                                 var contentWidth =
                                     minOf(
-                                        tabMeasurables[index].maxIntrinsicWidth(tabRowHeight),
-                                        tabWidth
-                                    ).toDp()
+                                            tabMeasurables[index].maxIntrinsicWidth(tabRowHeight),
+                                            tabWidth
+                                        )
+                                        .toDp()
                                 contentWidth -= 32.dp
                             }
 
@@ -563,13 +568,7 @@ class AnimatedContentTest {
                         }
                     }
                 }
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color.Blue)
-                ) {
-                    Text(text = "test")
-                }
+                Box(Modifier.fillMaxSize().background(Color.Blue)) { Text(text = "test") }
             }
         }
         rule.waitForIdle()
@@ -585,38 +584,24 @@ class AnimatedContentTest {
             AnimatedContent(target) {
                 if (it) {
                     Scaffold(
-                        Modifier
-                            .fillMaxSize()
-                            .testTag(""),
+                        Modifier.fillMaxSize().testTag(""),
                         topBar = {},
                         floatingActionButton = {}
                     ) {
                         TabRow(selectedTabIndex = 0) {
-                            repeat(15) {
-                                Text(it.toString(), Modifier.width(100.dp))
-                            }
+                            repeat(15) { Text(it.toString(), Modifier.width(100.dp)) }
                         }
                     }
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .background(Color.Blue)
-                    ) {
-                        Text(text = "test")
-                    }
+                    Box(Modifier.fillMaxSize().background(Color.Blue)) { Text(text = "test") }
                 } else {
                     Box(Modifier.size(200.dp))
                 }
             }
         }
 
-        rule.runOnIdle {
-            target = !target
-        }
+        rule.runOnIdle { target = !target }
         rule.waitForIdle()
-        rule.runOnIdle {
-            target = !target
-        }
+        rule.runOnIdle { target = !target }
         rule.waitForIdle()
     }
 
@@ -631,9 +616,7 @@ class AnimatedContentTest {
                 if (it <= 2) {
                     holder.SaveableStateProvider(11) {
                         var count by rememberSaveable { mutableStateOf(0) }
-                        LaunchedEffect(Unit) {
-                            list.add(++count)
-                        }
+                        LaunchedEffect(Unit) { list.add(++count) }
                     }
                 }
                 Box(Modifier.requiredSize(200.dp))
@@ -649,9 +632,7 @@ class AnimatedContentTest {
                     // This state change should now cause an animation
                     targetState = 3
                 }
-                withFrameMillis {
-                    assertTrue(transition.isRunning)
-                }
+                withFrameMillis { assertTrue(transition.isRunning) }
             }
         }
         rule.waitForIdle()
@@ -675,31 +656,31 @@ class AnimatedContentTest {
         var flag by mutableStateOf(true)
         var rootCoords: LayoutCoordinates? = null
         rule.setContent {
-            AnimatedContent(targetState = flag,
+            AnimatedContent(
+                targetState = flag,
                 modifier = Modifier.onGloballyPositioned { rootCoords = it },
                 transitionSpec = {
                     if (targetState) {
-                        fadeIn(tween(2000)) togetherWith slideOut(
-                            tween(2000)
-                        ) { fullSize ->
-                            IntOffset(0, fullSize.height / 2)
-                        } + fadeOut(
-                            tween(2000)
-                        )
+                        fadeIn(tween(2000)) togetherWith
+                            slideOut(tween(2000)) { fullSize ->
+                                IntOffset(0, fullSize.height / 2)
+                            } + fadeOut(tween(2000))
                     } else {
                         fadeIn(tween(2000)) togetherWith fadeOut(tween(2000))
                     }
-                }) { state ->
+                }
+            ) { state ->
                 if (state) {
-                    Box(modifier = Modifier
-                        .onGloballyPositioned {
-                            assertEquals(
-                                Offset.Zero,
-                                rootCoords!!.localPositionOf(it, Offset.Zero)
-                            )
-                        }
-                        .fillMaxSize()
-                        .background(Color.Green)
+                    Box(
+                        modifier =
+                            Modifier.onGloballyPositioned {
+                                    assertEquals(
+                                        Offset.Zero,
+                                        rootCoords!!.localPositionOf(it, Offset.Zero)
+                                    )
+                                }
+                                .fillMaxSize()
+                                .background(Color.Green)
                     )
                 } else {
                     LaunchedEffect(key1 = Unit) {
@@ -709,22 +690,21 @@ class AnimatedContentTest {
                         // Interrupt
                         flag = true
                     }
-                    Box(modifier = Modifier
-                        .onGloballyPositioned {
-                            assertEquals(
-                                Offset.Zero,
-                                rootCoords!!.localPositionOf(it, Offset.Zero)
-                            )
-                        }
-                        .fillMaxSize()
-                        .background(Color.Red)
+                    Box(
+                        modifier =
+                            Modifier.onGloballyPositioned {
+                                    assertEquals(
+                                        Offset.Zero,
+                                        rootCoords!!.localPositionOf(it, Offset.Zero)
+                                    )
+                                }
+                                .fillMaxSize()
+                                .background(Color.Red)
                     )
                 }
             }
         }
-        rule.runOnIdle {
-            flag = false
-        }
+        rule.runOnIdle { flag = false }
     }
 
     @OptIn(ExperimentalAnimationApi::class)
@@ -743,11 +723,7 @@ class AnimatedContentTest {
             ) {
                 if (it) {
                     Box(Modifier.size(200.dp)) {
-                        DisposableEffect(key1 = Unit) {
-                            onDispose {
-                                box1Disposed = true
-                            }
-                        }
+                        DisposableEffect(key1 = Unit) { onDispose { box1Disposed = true } }
                     }
                 } else {
                     Box(Modifier.size(200.dp)) {
@@ -761,9 +737,7 @@ class AnimatedContentTest {
 
         rule.waitForIdle()
         rule.mainClock.autoAdvance = false
-        rule.runOnIdle {
-            target = !target
-        }
+        rule.runOnIdle { target = !target }
 
         rule.waitForIdle()
         repeat(10) {
@@ -795,18 +769,20 @@ class AnimatedContentTest {
                     if (false isTransitioningTo true) {
                         ContentTransform(
                             targetContentEnter = EnterTransition.None,
-                            initialContentExit = slideOutOfContainer(
-                                AnimatedContentTransitionScope.SlideDirection.Start,
-                                animationSpec = tween(durationMillis = 500)
-                            ),
+                            initialContentExit =
+                                slideOutOfContainer(
+                                    AnimatedContentTransitionScope.SlideDirection.Start,
+                                    animationSpec = tween(durationMillis = 500)
+                                ),
                             targetContentZIndex = -1.0f,
                             sizeTransform = SizeTransform(clip = false)
                         )
                     } else {
                         ContentTransform(
-                            targetContentEnter = slideIntoContainer(
-                                AnimatedContentTransitionScope.SlideDirection.End
-                            ),
+                            targetContentEnter =
+                                slideIntoContainer(
+                                    AnimatedContentTransitionScope.SlideDirection.End
+                                ),
                             initialContentExit = ExitTransition.KeepUntilTransitionsFinished,
                             targetContentZIndex = 0.0f,
                             sizeTransform = SizeTransform(clip = false)
@@ -816,23 +792,21 @@ class AnimatedContentTest {
                 modifier = Modifier.fillMaxSize()
             ) { flag ->
                 Spacer(
-                    modifier = Modifier
-                        .wrapContentSize(Alignment.Center)
-                        .size(256.dp)
-                        .onGloballyPositioned {
-                            if (flag) {
-                                fixedPosition = it.positionInRoot()
-                            } else {
-                                slidePosition = it.positionInRoot()
+                    modifier =
+                        Modifier.wrapContentSize(Alignment.Center)
+                            .size(256.dp)
+                            .onGloballyPositioned {
+                                if (flag) {
+                                    fixedPosition = it.positionInRoot()
+                                } else {
+                                    slidePosition = it.positionInRoot()
+                                }
                             }
-                        }
                 )
             }
         }
 
-        rule.runOnIdle {
-            flag = true
-        }
+        rule.runOnIdle { flag = true }
         rule.waitUntil { fixedPosition != null }
         val initialFixedPosition = fixedPosition
         // Advance 10 frames
@@ -867,18 +841,12 @@ class AnimatedContentTest {
                 transitionSpec = {
                     fadeIn(tween(160)) togetherWith
                         fadeOut(tween(5)) + ExitTransition.KeepUntilTransitionsFinished using
-                        SizeTransform { _, _ ->
-                            tween(300)
-                        }
+                        SizeTransform { _, _ -> tween(300) }
                 }
             ) {
                 if (it) {
                     Box(Modifier.size(200.dp)) {
-                        DisposableEffect(key1 = Unit) {
-                            onDispose {
-                                box1Disposed = true
-                            }
-                        }
+                        DisposableEffect(key1 = Unit) { onDispose { box1Disposed = true } }
                     }
                 } else {
                     Box(Modifier.size(400.dp)) {
@@ -892,9 +860,7 @@ class AnimatedContentTest {
 
         rule.waitForIdle()
         rule.mainClock.autoAdvance = false
-        rule.runOnIdle {
-            target = !target
-        }
+        rule.runOnIdle { target = !target }
 
         rule.waitForIdle()
         rule.mainClock.advanceTimeByFrame()
@@ -927,6 +893,200 @@ class AnimatedContentTest {
         assertTrue(box2EnterFinished)
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Test
+    fun AnimatedContentLookaheadTest() {
+        // Test that AnimatedContent's lookahead size is its target content's lookahead size.
+        // Also test that the lookahead placement for content is correct.
+        val size1 = 400
+        val size2 = 20
+        val transitionState = MutableTransitionState(true)
+        var playTimeMillis by mutableStateOf(0)
+        val testModifier = TestModifier()
+        var lookaheadPosition: Offset? = null
+        var approachPosition: Offset? = null
+        rule.mainClock.autoAdvance = false
+        rule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(1f)) {
+                LookaheadScope {
+                    Box(testModifier) {
+                        val transition = rememberTransition(transitionState)
+                        playTimeMillis = (transition.playTimeNanos / 1_000_000L).toInt()
+                        transition.AnimatedContent(
+                            transitionSpec = {
+                                if (true isTransitioningTo false) {
+                                    fadeIn() togetherWith
+                                        fadeOut() using
+                                        SizeTransform { _, _ ->
+                                            tween(durationMillis = 80, easing = LinearEasing)
+                                        }
+                                } else {
+                                    fadeIn() togetherWith
+                                        fadeOut() using
+                                        SizeTransform { _, _ ->
+                                            tween(durationMillis = 80, easing = LinearEasing)
+                                        }
+                                }
+                            },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (it) {
+                                Box(modifier = Modifier.size(size = size1.dp))
+                            } else {
+                                Box(
+                                    modifier =
+                                        Modifier.layout { m, c ->
+                                                m.measure(c).run {
+                                                    layout(width, height) {
+                                                        if (isLookingAhead) {
+                                                            with(this@LookaheadScope) {
+                                                                lookaheadPosition =
+                                                                    lookaheadScopeCoordinates
+                                                                        .localLookaheadPositionOf(
+                                                                            coordinates!!
+                                                                        )
+                                                            }
+                                                        } else {
+                                                            approachPosition =
+                                                                lookaheadScopeCoordinates
+                                                                    .localPositionOf(
+                                                                        coordinates!!,
+                                                                        Offset.Zero
+                                                                    )
+                                                        }
+                                                        place(0, 0)
+                                                    }
+                                                }
+                                            }
+                                            .size(size = size2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        rule.runOnIdle {
+            assertTrue(transitionState.targetState)
+            assertEquals(IntSize(size1, size1), testModifier.lookaheadSize)
+            transitionState.targetState = false
+        }
+        rule.waitForIdle()
+        rule.mainClock.advanceTimeByFrame()
+
+        // Transition from item1 to item2 in 320ms, animating to full width in the first 160ms
+        // then full height in the next 160ms
+        while (transitionState.currentState != transitionState.targetState) {
+            rule.runOnIdle {
+                assertEquals(IntSize(size2, size2), testModifier.lookaheadSize)
+                assertNotNull(approachPosition)
+                assertNotNull(lookaheadPosition)
+                assertOffsetEquals(Offset(0f, 0f), lookaheadPosition!!)
+            }
+            rule.mainClock.advanceTimeByFrame()
+        }
+        rule.waitForIdle()
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Test
+    fun testTargetChangeLookaheadPlacement() {
+        var lookaheadPosition1: Offset? = null
+        var lookaheadPosition2: Offset? = null
+        val transitionState = MutableTransitionState(true)
+        var playTimeMillis by mutableStateOf(0)
+        rule.setContent {
+            LookaheadScope {
+                val transition = rememberTransition(transitionState)
+                playTimeMillis = (transition.playTimeNanos / 1_000_000L).toInt()
+                transition.AnimatedContent(
+                    contentAlignment = Alignment.Center,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() using null }
+                ) {
+                    if (it) {
+                        Box(
+                            Modifier.layout { measurable, constraints ->
+                                    measurable.measure(constraints).run {
+                                        layout(width, height) {
+                                            if (isLookingAhead) {
+                                                lookaheadPosition1 =
+                                                    lookaheadScopeCoordinates
+                                                        .localLookaheadPositionOf(coordinates!!)
+                                            }
+                                        }
+                                    }
+                                }
+                                .fillMaxSize()
+                                .background(Color.Blue)
+                        )
+                    } else {
+                        Box(
+                            Modifier.layout { measurable, constraints ->
+                                    measurable.measure(constraints).run {
+                                        layout(width, height) {
+                                            if (isLookingAhead) {
+                                                lookaheadPosition2 =
+                                                    lookaheadScopeCoordinates
+                                                        .localLookaheadPositionOf(coordinates!!)
+                                            }
+                                        }
+                                    }
+                                }
+                                .size(100.dp)
+                                .background(Color.Red)
+                        )
+                    }
+                }
+            }
+        }
+        rule.runOnIdle {
+            assertTrue(transitionState.targetState)
+            assertTrue(transitionState.currentState)
+            transitionState.targetState = false
+        }
+        rule.mainClock.autoAdvance = false
+        rule.runOnIdle {
+            assertNotNull(lookaheadPosition1)
+            assertOffsetEquals(Offset(0f, 0f), lookaheadPosition1!!)
+            transitionState.targetState = false
+        }
+        rule.waitForIdle()
+        rule.mainClock.advanceTimeByFrame()
+
+        // Transition from item1 to item2 in 320ms, animating to full width in the first 160ms
+        // then full height in the next 160ms
+        repeat(3) {
+            assertNotEquals(transitionState.currentState, transitionState.targetState)
+            rule.runOnIdle {
+                assertNotNull(lookaheadPosition2)
+                assertOffsetEquals(Offset(0f, 0f), lookaheadPosition2!!)
+            }
+            rule.mainClock.advanceTimeByFrame()
+            rule.waitForIdle()
+        }
+
+        // Check that the lookahead position for the outgoing content changed
+        assertNotEquals(0f, lookaheadPosition1!!.x)
+        assertNotEquals(0f, lookaheadPosition1!!.y)
+        // Interruption during animation
+        transitionState.targetState = true
+        rule.mainClock.advanceTimeByFrame()
+        rule.waitForIdle()
+
+        rule.runOnIdle {
+            assertNotNull(lookaheadPosition1)
+            // Check that after the target state change, the new incoming content has
+            // a 0, 0 lookahead offset.
+            assertOffsetEquals(Offset(0f, 0f), lookaheadPosition1!!)
+        }
+    }
+
+    private fun assertOffsetEquals(expected: Offset, actual: Offset) {
+        assertEquals(expected.x, actual.x, 0.00001f)
+        assertEquals(expected.y, actual.y, 0.00001f)
+    }
+
     @OptIn(InternalAnimationApi::class)
-    private val Transition<*>.playTimeMillis get() = (playTimeNanos / 1_000_000L).toInt()
+    private val Transition<*>.playTimeMillis
+        get() = (playTimeNanos / 1_000_000L).toInt()
 }

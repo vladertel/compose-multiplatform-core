@@ -19,6 +19,8 @@ package androidx.compose.ui.platform
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
+import android.net.Uri
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -34,12 +36,14 @@ import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -51,9 +55,7 @@ class AndroidClipboardManagerTest {
     @Test
     fun annotatedString_singleSpanStyle_convertToCharSequenceAndRecover() {
         val annotatedString = buildAnnotatedString {
-            withStyle(SpanStyle(color = Color.Yellow)) {
-                append("Hello ")
-            }
+            withStyle(SpanStyle(color = Color.Yellow)) { append("Hello ") }
             append("World")
         }
 
@@ -63,13 +65,9 @@ class AndroidClipboardManagerTest {
     @Test
     fun annotatedString_multipleSpanStyle_convertToCharSequenceAndRecover() {
         val annotatedString = buildAnnotatedString {
-            withStyle(SpanStyle(color = Color.Yellow)) {
-                append("Hello")
-            }
+            withStyle(SpanStyle(color = Color.Yellow)) { append("Hello") }
             append("World")
-            withStyle(SpanStyle(letterSpacing = 0.4.sp)) {
-                append("Hello")
-            }
+            withStyle(SpanStyle(letterSpacing = 0.4.sp)) { append("Hello") }
         }
 
         assertEncodeAndDecode(annotatedString)
@@ -79,9 +77,7 @@ class AndroidClipboardManagerTest {
     fun annotatedString_nestedSpanStyle_convertToCharSequenceAndRecover() {
         val annotatedString = buildAnnotatedString {
             withStyle(SpanStyle(letterSpacing = 0.4.sp)) {
-                withStyle(SpanStyle(color = Color.Yellow)) {
-                    append("Hello")
-                }
+                withStyle(SpanStyle(color = Color.Yellow)) { append("Hello") }
                 append("World")
             }
             append("Hello")
@@ -146,12 +142,8 @@ class AndroidClipboardManagerTest {
 
     @Test
     fun spanStyle_withTextGeometricTransform_encodeAndDecode() {
-        val spanStyle = SpanStyle(
-            textGeometricTransform = TextGeometricTransform(
-                scaleX = 1.5f,
-                skewX = 0.3f
-            )
-        )
+        val spanStyle =
+            SpanStyle(textGeometricTransform = TextGeometricTransform(scaleX = 1.5f, skewX = 0.3f))
         assertEncodeAndDecode(spanStyle)
     }
 
@@ -169,38 +161,27 @@ class AndroidClipboardManagerTest {
 
     @Test
     fun spanStyle_withShadow_encodeAndDecode() {
-        val spanStyle = SpanStyle(
-            shadow = Shadow(
-                color = Color.Cyan,
-                offset = Offset(1f, 2f),
-                blurRadius = 3f
-            )
-        )
+        val spanStyle =
+            SpanStyle(shadow = Shadow(color = Color.Cyan, offset = Offset(1f, 2f), blurRadius = 3f))
         assertEncodeAndDecode(spanStyle)
     }
 
     @Test
     fun spanStyle_withEverything_encodeAndDecode() {
-        val spanStyle = SpanStyle(
-            color = Color.Cyan,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.ExtraLight,
-            fontSynthesis = FontSynthesis.Weight,
-            fontFeatureSettings = "smcp",
-            letterSpacing = 0.3.sp,
-            baselineShift = BaselineShift.Superscript,
-            textGeometricTransform = TextGeometricTransform(
-                scaleX = 1.1f,
-                skewX = 0.1f
-            ),
-            background = Color.Yellow,
-            textDecoration = TextDecoration.LineThrough,
-            shadow = Shadow(
+        val spanStyle =
+            SpanStyle(
                 color = Color.Cyan,
-                offset = Offset(1f, 2f),
-                blurRadius = 3f
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraLight,
+                fontSynthesis = FontSynthesis.Weight,
+                fontFeatureSettings = "smcp",
+                letterSpacing = 0.3.sp,
+                baselineShift = BaselineShift.Superscript,
+                textGeometricTransform = TextGeometricTransform(scaleX = 1.1f, skewX = 0.1f),
+                background = Color.Yellow,
+                textDecoration = TextDecoration.LineThrough,
+                shadow = Shadow(color = Color.Cyan, offset = Offset(1f, 2f), blurRadius = 3f)
             )
-        )
         assertEncodeAndDecode(spanStyle)
     }
 
@@ -256,30 +237,16 @@ class AndroidClipboardManagerTest {
     }
 
     @Test
-    fun getPrimaryClipDescription_returnsClipDescription() {
+    fun getPrimaryClipEntry_includesClipMetadata() {
         val clipboardManager = mock<ClipboardManager>()
+        val clipData = mock<ClipData>()
         val clipDescription = mock<ClipDescription>()
-        whenever(clipboardManager.primaryClipDescription).thenReturn(clipDescription)
+        whenever(clipData.description).thenReturn(clipDescription)
+        whenever(clipboardManager.primaryClip).thenReturn(clipData)
         val subject = AndroidClipboardManager(clipboardManager)
 
-        assertThat(subject.getClipMetadata()?.clipDescription).isSameInstanceAs(clipDescription)
-        verify(clipboardManager, never()).primaryClip
-    }
-
-    @Test
-    fun hasPrimaryClipEntry_returnsHasClipData() {
-        val clipboardManager = mock<ClipboardManager>()
-        whenever(clipboardManager.hasPrimaryClip()).thenReturn(true)
-        val subject = AndroidClipboardManager(clipboardManager)
-
-        assertThat(subject.hasClip()).isEqualTo(true)
-
-        whenever(clipboardManager.hasPrimaryClip()).thenReturn(false)
-
-        assertThat(subject.hasClip()).isEqualTo(false)
-
-        verify(clipboardManager, never()).primaryClip
-        verify(clipboardManager, never()).primaryClipDescription
+        assertThat(subject.getClip()?.clipMetadata?.clipDescription)
+            .isSameInstanceAs(clipDescription)
     }
 
     @Test
@@ -288,9 +255,78 @@ class AndroidClipboardManagerTest {
         val clipData = mock<ClipData>()
         val subject = AndroidClipboardManager(clipboardManager)
 
-        subject.setClip(clipData.toClipEntry(), null)
+        subject.setClip(clipData.toClipEntry())
 
         verify(clipboardManager, times(1)).setPrimaryClip(clipData)
+    }
+
+    @SdkSuppress(minSdkVersion = 28)
+    @Test
+    fun setPrimaryClip_callsClearPrimaryClip_ifNull_above28() {
+        val clipboardManager = mock<ClipboardManager>()
+        val subject = AndroidClipboardManager(clipboardManager)
+
+        subject.setClip(null)
+
+        verify(clipboardManager, times(1)).clearPrimaryClip()
+    }
+
+    @SdkSuppress(maxSdkVersion = 27)
+    @Test
+    fun setPrimaryClip_callsClearPrimaryClip_ifNull_below27() {
+        val clipboardManager = mock<ClipboardManager>()
+        val subject = AndroidClipboardManager(clipboardManager)
+
+        subject.setClip(null)
+
+        val argumentCaptor = argumentCaptor<ClipData>()
+        verify(clipboardManager, times(1)).setPrimaryClip(argumentCaptor.capture())
+
+        assertThat(argumentCaptor.lastValue.itemCount).isEqualTo(1)
+        assertThat(argumentCaptor.lastValue.getItemAt(0).uri).isEqualTo(null)
+        assertThat(argumentCaptor.lastValue.getItemAt(0).intent).isEqualTo(null)
+        assertThat(argumentCaptor.lastValue.getItemAt(0).text).isEqualTo("")
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Test
+    fun firstUriOrNull_returnsFirstItem_ifNotNull() {
+        val uri = Uri.parse("http://example.com")
+        val clipData =
+            mock<ClipData> {
+                on { itemCount } doReturn 2
+                on { getItemAt(0) } doReturn ClipData.Item(uri)
+                on { getItemAt(1) } doReturn ClipData.Item("Hello")
+            }
+
+        assertThat(clipData.toClipEntry().firstUriOrNull()).isEqualTo(uri)
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Test
+    fun firstUriOrNull_returnsSecondItem_ifFirstIsNull() {
+        val uri = Uri.parse("http://example.com")
+        val clipData =
+            mock<ClipData> {
+                on { itemCount } doReturn 2
+                on { getItemAt(0) } doReturn ClipData.Item("Hello")
+                on { getItemAt(1) } doReturn ClipData.Item(uri)
+            }
+
+        assertThat(clipData.toClipEntry().firstUriOrNull()).isEqualTo(uri)
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Test
+    fun firstUriOrNull_returnsNull_ifNoUri() {
+        val clipData =
+            mock<ClipData> {
+                on { itemCount } doReturn 2
+                on { getItemAt(0) } doReturn ClipData.Item("Hello")
+                on { getItemAt(1) } doReturn ClipData.Item("World")
+            }
+
+        assertThat(clipData.toClipEntry().firstUriOrNull()).isNull()
     }
 
     private fun assertEncodeAndDecode(spanStyle: SpanStyle) {
