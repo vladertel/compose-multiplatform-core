@@ -34,6 +34,8 @@ android {
 }
 
 androidXMultiplatform {
+    enableBinaryCompatibilityValidator = true
+
     jvm()
     mac()
     ios()
@@ -100,17 +102,6 @@ androidXMultiplatform {
                 implementation(libs.testCore)
             }
 
-        }
-
-        targets.all { target ->
-            if (target.platformType == org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native) {
-                target.compilations["main"].defaultSourceSet {
-                    dependsOn(nativeMain)
-                }
-                target.compilations["test"].defaultSourceSet {
-                    dependsOn(nativeTest)
-                }
-            }
         }
     }
 }

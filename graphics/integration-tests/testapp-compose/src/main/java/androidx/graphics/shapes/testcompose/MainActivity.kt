@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("NOTHING_TO_INLINE")
+
 package androidx.graphics.shapes.testcompose
 
 import android.content.Intent
@@ -54,6 +56,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
@@ -65,96 +69,119 @@ import kotlin.math.min
 import kotlinx.coroutines.launch
 
 @Composable
-fun PolygonComposable(polygon: RoundedPolygon, modifier: Modifier = Modifier) =
-    PolygonComposableImpl(polygon, modifier)
+fun PolygonComposable(
+    polygon: RoundedPolygon,
+    modifier: Modifier = Modifier,
+    stroked: Boolean = false
+) = PolygonComposableImpl(polygon, modifier, stroked = stroked)
 
 @Composable
 private fun MorphComposable(
     morph: Morph,
     progress: Float,
     modifier: Modifier = Modifier,
-    isDebug: Boolean = false
-) = MorphComposableImpl(morph, modifier, isDebug, progress)
+    isDebug: Boolean = false,
+    stroked: Boolean = false
+) = MorphComposableImpl(morph, modifier, isDebug, progress, stroked = stroked)
 
 @Composable
 private fun MorphComposableImpl(
     morph: Morph,
     modifier: Modifier = Modifier,
     isDebug: Boolean = false,
-    progress: Float
+    progress: Float,
+    stroked: Boolean = false
 ) {
     Box(
-        modifier
-            .fillMaxSize()
-            .drawWithContent {
-                drawContent()
+        modifier.fillMaxSize().drawWithContent {
+            drawContent()
+            val path = morph.toPath(progress)
+            fitToViewport(path, morph.getBounds(), size)
+            if (isDebug) {
                 val scale = min(size.width, size.height)
-                val path = morph.toPath(progress, scale)
-                if (isDebug) {
-                    drawPath(path, Color.Green, style = Stroke(2f))
-                    morph.forEachCubic(progress) { cubic ->
-                        cubic.transform { x, y -> TransformResult(x * scale, y * scale) }
-                        debugDraw(cubic)
-                    }
-                } else {
-                    drawPath(path, Color.White)
+                drawPath(path, Color.Green, style = Stroke(2f))
+                morph.forEachCubic(progress) { cubic ->
+                    cubic.transform { x, y -> TransformResult(x * scale, y * scale) }
+                    debugDraw(cubic)
                 }
-            })
+            } else {
+                val style = if (stroked) Stroke(size.width / 10f) else Fill
+                drawPath(path, Color.White, style = style)
+            }
+        }
+    )
 }
 
 @Composable
 internal fun PolygonComposableImpl(
     polygon: RoundedPolygon,
     modifier: Modifier = Modifier,
-    debug: Boolean = false
+    debug: Boolean = false,
+    stroked: Boolean = false
 ) {
     @Suppress("PrimitiveInCollection")
     val sizedShapes = remember(polygon) { mutableMapOf<Size, List<Cubic>>() }
     Box(
-        modifier
-            .fillMaxSize()
-            .drawWithContent {
-                // TODO: Can we use drawWithCache to simplify this?
-                drawContent()
-                val scale = min(size.width, size.height)
+        modifier.fillMaxSize().drawWithContent {
+            // TODO: Can we use drawWithCache to simplify this?
+            drawContent()
+            val scale = min(size.width, size.height)
+            if (debug) {
                 val shape = sizedShapes.getOrPut(size) { polygon.cubics.scaled(scale) }
-                if (debug) {
-                    // Draw bounding boxes
-                    val bounds = FloatArray(4)
-                    polygon.calculateBounds(bounds = bounds)
-                    drawRect(Color.Green, topLeft = Offset(scale * bounds[0], scale * bounds[1]),
-                        size = Size(scale * (bounds[2] - bounds[0]),
-                            scale * (bounds[3] - bounds[1])),
-                        style = Stroke(2f))
-                    polygon.calculateBounds(bounds = bounds, false)
-                    drawRect(Color.Yellow, topLeft = Offset(scale * bounds[0], scale * bounds[1]),
-                        size = Size(scale * (bounds[2] - bounds[0]),
-                            scale * (bounds[3] - bounds[1])),
-                        style = Stroke(2f))
-                    polygon.calculateMaxBounds(bounds = bounds)
-                    drawRect(Color.Magenta, topLeft = Offset(scale * bounds[0], scale * bounds[1]),
-                        size = Size(scale * (bounds[2] - bounds[0]),
-                            scale * (bounds[3] - bounds[1])),
-                        style = Stroke(2f))
+                // Draw bounding boxes
+                val bounds = FloatArray(4)
+                polygon.calculateBounds(bounds = bounds)
+                drawRect(
+                    Color.Green,
+                    topLeft = Offset(scale * bounds[0], scale * bounds[1]),
+                    size = Size(scale * (bounds[2] - bounds[0]), scale * (bounds[3] - bounds[1])),
+                    style = Stroke(2f)
+                )
+                polygon.calculateBounds(bounds = bounds, false)
+                drawRect(
+                    Color.Yellow,
+                    topLeft = Offset(scale * bounds[0], scale * bounds[1]),
+                    size = Size(scale * (bounds[2] - bounds[0]), scale * (bounds[3] - bounds[1])),
+                    style = Stroke(2f)
+                )
+                polygon.calculateMaxBounds(bounds = bounds)
+                drawRect(
+                    Color.Magenta,
+                    topLeft = Offset(scale * bounds[0], scale * bounds[1]),
+                    size = Size(scale * (bounds[2] - bounds[0]), scale * (bounds[3] - bounds[1])),
+                    style = Stroke(2f)
+                )
 
-                    // Center of shape
-                    drawCircle(Color.White, radius = 2f, center = center, style = Stroke(2f))
+                // Center of shape
+                drawCircle(
+                    Color.White,
+                    radius = 2f,
+                    center = Offset(polygon.centerX * scale, polygon.centerY * scale),
+                    style = Stroke(2f)
+                )
 
-                    shape.forEach { cubic -> debugDraw(cubic) }
-                } else {
-                    drawPath(shape.toPath(), Color.White)
-                }
-            })
+                shape.forEach { cubic -> debugDraw(cubic) }
+            } else {
+                val scaledPath = polygon.toPath()
+                val matrix = Matrix()
+                matrix.scale(scale, scale)
+                scaledPath.transform(matrix)
+                val style = if (stroked) Stroke(size.width / 10f) else Fill
+                drawPath(scaledPath, Color.White, style = style)
+            }
+        }
+    )
 }
 
 fun outputShapeInfo(activity: FragmentActivity, info: String) {
     // Output to logcat and also share intent
     println(info)
-    val sendIntent: Intent = Intent().apply {
-        action = Intent.ACTION_SEND
-        putExtra(Intent.EXTRA_TEXT, info)
-        type = "text/plain"
-    }
+    val sendIntent: Intent =
+        Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, info)
+            type = "text/plain"
+        }
     val shareIntent = Intent.createChooser(sendIntent, null)
     activity.startActivity(shareIntent)
 }
@@ -244,10 +271,7 @@ fun MainScreen(activity: MainActivity) {
 
             // Non - material shapes:
             // Rectangle
-            ShapeParameters(
-                sides = 4,
-                shapeId = ShapeParameters.ShapeId.Rectangle
-            ),
+            ShapeParameters(sides = 4, shapeId = ShapeParameters.ShapeId.Rectangle),
 
             // Pentagon
             ShapeParameters(
@@ -256,20 +280,23 @@ fun MainScreen(activity: MainActivity) {
                 shapeId = ShapeParameters.ShapeId.Polygon
             ),
 
-            // 5-Sided Star
+            // Pill
             ShapeParameters(
-                sides = 5,
-                rotation = -360f / 20,
-                innerRadius = .3f,
-                shapeId = ShapeParameters.ShapeId.Star
+                width = 6f,
+                height = 1f,
+                rotation = -360f / 8,
+                shapeId = ShapeParameters.ShapeId.Pill
             ),
 
-            // Round Rect
+            // Pill Star
             ShapeParameters(
-                sides = 4,
+                width = 4f,
+                height = 1f,
+                sides = 20,
                 roundness = .5f,
                 smooth = 1f,
-                shapeId = ShapeParameters.ShapeId.Rectangle
+                innerRadius = .6f,
+                shapeId = ShapeParameters.ShapeId.PillStar
             ),
         )
     }
@@ -288,29 +315,26 @@ fun MorphScreen(
     onEditClicked: () -> Unit
 ) {
     val shapes = remember {
-        shapeParams.map { sp ->
-            sp.genShape().let { poly -> poly.normalized() }
-        }
+        shapeParams.map { sp -> sp.genShape().let { poly -> poly.normalized() } }
     }
     var currShape by remember { mutableIntStateOf(selectedShape.intValue) }
     val progress = remember { Animatable(0f) }
 
     var debug by remember { mutableStateOf(false) }
 
+    var stroked by remember { mutableStateOf(false) }
+
     val morphed by remember {
         derivedStateOf {
             // NOTE: We need to access this variable to ensure we recalculate the morph !
             debugLog("Re-computing morph / $debug")
-            Morph(
-                shapes[currShape],
-                shapes[selectedShape.intValue]
-            )
+            Morph(shapes[currShape], shapes[selectedShape.intValue])
         }
     }
 
     val scope = rememberCoroutineScope()
     val clickFn: (Int) -> Unit = remember {
-            { shapeIx ->
+        { shapeIx ->
             scope.launch {
                 currShape = selectedShape.intValue
                 selectedShape.intValue = shapeIx
@@ -318,71 +342,68 @@ fun MorphScreen(
             }
         }
     }
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
+    Column(Modifier.fillMaxSize().background(Color.Black)) {
         FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = 5) {
             shapes.forEachIndexed { shapeIx, shape ->
-                val borderAlpha = (
-                    (if (shapeIx == selectedShape.intValue) progress.value else 0f) +
-                    (if (shapeIx == currShape) 1 - progress.value else 0f)
-                ).coerceIn(0f, 1f)
+                val borderAlpha =
+                    ((if (shapeIx == selectedShape.intValue) progress.value else 0f) +
+                            (if (shapeIx == currShape) 1 - progress.value else 0f))
+                        .coerceIn(0f, 1f)
                 Box(
-                    Modifier
-                        .weight(1f)
+                    Modifier.weight(1f)
                         .aspectRatio(1f)
                         .padding(horizontal = 5.dp)
-                        .border(
-                            3.dp,
-                            Color.Red.copy(alpha = borderAlpha)
-                        )
+                        .border(3.dp, Color.Red.copy(alpha = borderAlpha))
                 ) {
                     // draw shape
-                    PolygonComposable(shape, Modifier.clickable { clickFn(shapeIx) })
+                    PolygonComposable(
+                        shape,
+                        Modifier.clickable { clickFn(shapeIx) },
+                        stroked = stroked
+                    )
                 }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            Button(onClick = { debug = !debug }) {
-                Text(if (debug) "Debug" else "Shape")
-            }
-            Button(onClick = onEditClicked) {
-                Text("Edit")
-            }
+            Button(onClick = onEditClicked) { Text("Edit") }
+            Button(onClick = { debug = !debug }) { Text(if (debug) "Debug" else "Shape") }
+            Button(onClick = { stroked = !stroked }) { Text(if (stroked) "Fill" else "Stroke") }
         }
-        Slider(value = progress.value.coerceIn(0f, 1f), onValueChange = {
-            scope.launch { progress.snapTo(it) }
-        })
-        MorphComposable(morphed, progress.value,
-            Modifier
-                .fillMaxSize()
-                .clickable(
-                    indication = null, // Eliminate the ripple effect.
-                    interactionSource = remember { MutableInteractionSource() }
-                ) {
-                    scope.launch { doAnimation(progress) }
-                }, debug)
+        Slider(
+            value = progress.value.coerceIn(0f, 1f),
+            onValueChange = { scope.launch { progress.snapTo(it) } }
+        )
+        MorphComposable(
+            morphed,
+            progress.value,
+            Modifier.fillMaxSize().clickable(
+                indication = null, // Eliminate the ripple effect.
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                scope.launch { doAnimation(progress) }
+            },
+            debug,
+            stroked
+        )
     }
 }
 
 private suspend fun doAnimation(progress: Animatable<Float, AnimationVector1D>) {
     progress.snapTo(0f)
-    progress.animateTo(
-        1f,
-        animationSpec =
-             spring(0.6f, 50f)
-    )
+    progress.animateTo(1f, animationSpec = spring(0.6f, 50f))
+}
+
+internal const val DEBUG = false
+
+internal inline fun debugLog(message: String) {
+    if (DEBUG) {
+        println(message)
+    }
 }
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent(parent = null) {
-            MaterialTheme {
-                MainScreen(this)
-            }
-        }
+        setContent(parent = null) { MaterialTheme { MainScreen(this) } }
     }
 }

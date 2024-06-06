@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.layout.MutableIntervalList
 import androidx.compose.runtime.Composable
 import androidx.tv.foundation.ExperimentalTvFoundationApi
 
-@Suppress("IllegalExperimentalApiUsage") // TODO (b/233188423): Address before moving to beta
 @OptIn(ExperimentalFoundationApi::class)
 internal class TvLazyListIntervalContent(
     content: TvLazyListScope.() -> Unit,
@@ -30,7 +29,9 @@ internal class TvLazyListIntervalContent(
     override val intervals: MutableIntervalList<TvLazyListInterval> = MutableIntervalList()
 
     private var _headerIndexes: MutableList<Int>? = null
-    val headerIndexes: List<Int> get() = _headerIndexes ?: emptyList()
+    val headerIndexes: List<Int>
+        @SuppressWarnings("PrimitiveInCollection") // List<Int>
+        get() = _headerIndexes ?: emptyList()
 
     init {
         apply(content)
@@ -44,11 +45,7 @@ internal class TvLazyListIntervalContent(
     ) {
         intervals.addInterval(
             count,
-            TvLazyListInterval(
-                key = key,
-                type = contentType,
-                item = itemContent
-            )
+            TvLazyListInterval(key = key, type = contentType, item = itemContent)
         )
     }
 
@@ -67,15 +64,14 @@ internal class TvLazyListIntervalContent(
         )
     }
 
+    @SuppressWarnings("PrimitiveInCollection") // mutableListOf<Int>
     @ExperimentalTvFoundationApi
     override fun stickyHeader(
         key: Any?,
         contentType: Any?,
         content: @Composable TvLazyListItemScope.() -> Unit
     ) {
-        val headersIndexes = _headerIndexes ?: mutableListOf<Int>().also {
-            _headerIndexes = it
-        }
+        val headersIndexes = _headerIndexes ?: mutableListOf<Int>().also { _headerIndexes = it }
         headersIndexes.add(intervals.size)
 
         item(key, contentType, content)

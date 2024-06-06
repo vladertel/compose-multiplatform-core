@@ -26,6 +26,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,13 +41,16 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 @SmallTest
+@OptIn(DelicateCoroutinesApi::class)
 class CoroutineRoomCancellationTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val testScope = TestScope(testDispatcher)
 
-    private val database = TestDatabase().apply {
-        init(
+    private val database = TestDatabase()
+
+    private fun initWithDispatcher(dispatcher: CoroutineDispatcher) {
+        database.init(
             DatabaseConfiguration(
                 context = InstrumentationRegistry.getInstrumentation().targetContext,
                 name = "test",
@@ -68,15 +72,15 @@ class CoroutineRoomCancellationTest {
                 typeConverters = emptyList(),
                 autoMigrationSpecs = emptyList(),
                 allowDestructiveMigrationForAllTables = false,
-                sqliteDriver = null
+                sqliteDriver = null,
+                queryCoroutineContext = dispatcher
             )
         )
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testSuspend_cancellable_duringLongQuery() = runBlocking {
-        database.backingFieldMap["QueryDispatcher"] = Dispatchers.IO
+        initWithDispatcher(Dispatchers.IO)
 
         val inQueryLatch = CountDownLatch(1)
         val cancelledLatch = CountDownLatch(1)
@@ -87,19 +91,22 @@ class CoroutineRoomCancellationTest {
             cancelledLatch.countDown()
         }
 
-        val job = GlobalScope.launch(Dispatchers.IO) {
-            CoroutinesRoom.execute(
-                db = database,
-                inTransaction = false,
-                cancellationSignal = cancellationSignal,
-                callable = Callable {
-                    // we're triggering our fake query
-                    inQueryLatch.countDown()
-                    // fake a long query so we can cancel
-                    cancelledLatch.await()
-                }
-            )
-        }
+        val job =
+            GlobalScope.launch(Dispatchers.IO) {
+                @Suppress("DEPRECATION")
+                CoroutinesRoom.execute(
+                    db = database,
+                    inTransaction = false,
+                    cancellationSignal = cancellationSignal,
+                    callable =
+                        Callable {
+                            // we're triggering our fake query
+                            inQueryLatch.countDown()
+                            // fake a long query so we can cancel
+                            cancelledLatch.await()
+                        }
+                )
+            }
         inQueryLatch.await()
         // we're in the query so we can cancel
         job.cancelAndJoin()
@@ -107,10 +114,9 @@ class CoroutineRoomCancellationTest {
         assertThat(cancellationSignal.isCanceled).isTrue()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
     @Test
     fun testSuspend_cancellable_beforeQueryStarts() = runBlocking {
-        database.backingFieldMap["QueryDispatcher"] = testDispatcher
+        initWithDispatcher(testDispatcher)
 
         val inCoroutineLatch = CountDownLatch(1)
         val cancelledLatch = CountDownLatch(1)
@@ -121,20 +127,23 @@ class CoroutineRoomCancellationTest {
             cancelledLatch.countDown()
         }
 
-        val job = GlobalScope.launch(Dispatchers.IO) {
-            // Coroutine started so now we can cancel it
-            inCoroutineLatch.countDown()
+        val job =
+            GlobalScope.launch(Dispatchers.IO) {
+                // Coroutine started so now we can cancel it
+                inCoroutineLatch.countDown()
 
-            CoroutinesRoom.execute(
-                db = database,
-                inTransaction = false,
-                cancellationSignal = cancellationSignal,
-                callable = Callable {
-                    // this should never execute
-                    fail("Blocking query triggered")
-                }
-            )
-        }
+                @Suppress("DEPRECATION")
+                CoroutinesRoom.execute(
+                    db = database,
+                    inTransaction = false,
+                    cancellationSignal = cancellationSignal,
+                    callable =
+                        Callable {
+                            // this should never execute
+                            fail("Blocking query triggered")
+                        }
+                )
+            }
         inCoroutineLatch.await()
         job.cancelAndJoin()
         testDispatcher.scheduler.runCurrent()
@@ -142,21 +151,19 @@ class CoroutineRoomCancellationTest {
         assertThat(cancellationSignal.isCanceled).isTrue()
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     @Test
     fun testSuspend_exception_in_query() = runBlocking {
-        database.backingFieldMap["QueryDispatcher"] = Dispatchers.IO
+        initWithDispatcher(Dispatchers.IO)
         val cancellationSignal = CancellationSignal()
 
         GlobalScope.launch(Dispatchers.IO) {
             try {
+                @Suppress("DEPRECATION")
                 CoroutinesRoom.execute(
                     db = database,
                     inTransaction = false,
                     cancellationSignal = cancellationSignal,
-                    callable = Callable {
-                        throw SQLiteException("stuff happened")
-                    }
+                    callable = Callable { throw SQLiteException("stuff happened") }
                 )
             } catch (exception: Throwable) {
                 assertThat(exception).isInstanceOf<SQLiteException>()
@@ -166,21 +173,23 @@ class CoroutineRoomCancellationTest {
         assertThat(cancellationSignal.isCanceled).isFalse()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun testSuspend_notCancelled() = runBlocking {
-        database.backingFieldMap["QueryDispatcher"] = testDispatcher
+        initWithDispatcher(testDispatcher)
 
         val cancellationSignal = CancellationSignal()
 
-        val job = testScope.launch {
-            CoroutinesRoom.execute(
-                db = database,
-                inTransaction = false,
-                cancellationSignal = cancellationSignal,
-                callable = Callable { /* nothing to do */ }
-            )
-        }
+        val job =
+            testScope.launch {
+                @Suppress("DEPRECATION")
+                CoroutinesRoom.execute(
+                    db = database,
+                    inTransaction = false,
+                    cancellationSignal = cancellationSignal,
+                    callable = Callable { /* nothing to do */ }
+                )
+            }
         testScope.runCurrent()
         // wait for the job to be finished
         job.join()
@@ -191,15 +200,21 @@ class CoroutineRoomCancellationTest {
     private class TestDatabase : RoomDatabase() {
 
         override fun createOpenDelegate(): RoomOpenDelegate {
-            return object : RoomOpenDelegate(1, "") {
+            return object : RoomOpenDelegate(1, "", "") {
                 override fun onCreate(connection: SQLiteConnection) {}
+
                 override fun onPreMigrate(connection: SQLiteConnection) {}
+
                 override fun onValidateSchema(connection: SQLiteConnection): ValidationResult {
                     return ValidationResult(true, null)
                 }
+
                 override fun onPostMigrate(connection: SQLiteConnection) {}
+
                 override fun onOpen(connection: SQLiteConnection) {}
+
                 override fun createAllTables(connection: SQLiteConnection) {}
+
                 override fun dropAllTables(connection: SQLiteConnection) {}
             }
         }
@@ -213,7 +228,8 @@ class CoroutineRoomCancellationTest {
         }
     }
 
-    private class TestInvalidationTracker(db: RoomDatabase) : InvalidationTracker(db, "") {
+    private class TestInvalidationTracker(db: RoomDatabase) :
+        InvalidationTracker(db, emptyMap(), emptyMap(), "") {
         val observers = mutableListOf<Observer>()
 
         override fun addObserver(observer: Observer) {

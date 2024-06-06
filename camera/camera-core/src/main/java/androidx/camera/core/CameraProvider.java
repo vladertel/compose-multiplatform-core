@@ -17,7 +17,7 @@
 package androidx.camera.core;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
+import androidx.annotation.RestrictTo;
 
 import java.util.List;
 
@@ -30,7 +30,6 @@ import java.util.List;
  * allows the applications to check whether any camera exists to fulfill the requirements or to
  * get {@link CameraInfo} instances of all cameras to retrieve the camera information.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public interface CameraProvider {
 
     /**
@@ -59,4 +58,24 @@ public interface CameraProvider {
      */
     @NonNull
     List<CameraInfo> getAvailableCameraInfos();
+
+    /**
+     * Returns the {@link CameraInfo} instance of the camera resulted from the
+     * specified {@link CameraSelector}.
+     *
+     * <p>The returned {@link CameraInfo} is corresponded to the camera that will be bound
+     * when calling {@code bindToLifecycle} with the specified {@link CameraSelector}.
+     *
+     * @param cameraSelector the {@link CameraSelector} to get the {@link CameraInfo} that is
+     *                       corresponded to.
+     * @return the corresponding {@link CameraInfo}.
+     * @throws UnsupportedOperationException if the camera provider is not implemented properly.
+     * @throws IllegalArgumentException if the given {@link CameraSelector} can't result in a
+     * valid camera to provide the {@link CameraInfo}.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+    @NonNull
+    default CameraInfo getCameraInfo(@NonNull CameraSelector cameraSelector) {
+        throw new UnsupportedOperationException("The camera provider is not implemented properly.");
+    }
 }

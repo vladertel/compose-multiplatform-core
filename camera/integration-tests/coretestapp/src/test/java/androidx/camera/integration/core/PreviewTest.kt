@@ -17,7 +17,11 @@
 package androidx.camera.integration.core
 
 import android.content.Context
+import android.graphics.SurfaceTexture
 import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
+import android.view.Surface
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
@@ -51,10 +55,11 @@ class PreviewTest(
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "LensFacing = {0}")
-        fun data() = listOf(
-            arrayOf(CameraSelector.LENS_FACING_BACK),
-            arrayOf(CameraSelector.LENS_FACING_FRONT),
-        )
+        fun data() =
+            listOf(
+                arrayOf(CameraSelector.LENS_FACING_BACK),
+                arrayOf(CameraSelector.LENS_FACING_FRONT),
+            )
     }
 
     @After
@@ -73,7 +78,33 @@ class PreviewTest(
         assertThat(countDownLatch.await(3, TimeUnit.SECONDS)).isTrue()
     }
 
-    // TODO(b/318364991): Add tests for Preview receiving frames after binding
+    @Test
+    fun bindPreview_surfaceUpdatedWithCaptureFrames_afterCaptureSessionConfigured() {
+        val countDownLatch = CountDownLatch(5)
+
+        preview = bindPreview { request ->
+            val surfaceTexture = SurfaceTexture(0)
+            surfaceTexture.setDefaultBufferSize(request.resolution.width, request.resolution.height)
+            surfaceTexture.detachFromGLContext()
+            val frameUpdateThread = HandlerThread("frameUpdateThread").apply { start() }
+
+            surfaceTexture.setOnFrameAvailableListener(
+                { countDownLatch.countDown() },
+                Handler(frameUpdateThread.getLooper())
+            )
+
+            val surface = Surface(surfaceTexture)
+            request.provideSurface(surface, CameraXExecutors.directExecutor()) {
+                surface.release()
+                surfaceTexture.release()
+                frameUpdateThread.quitSafely()
+            }
+        }
+
+        repeat(5) { camera.simulateCaptureFrameAsync().get(3, TimeUnit.SECONDS) }
+
+        assertThat(countDownLatch.await(3, TimeUnit.SECONDS)).isTrue()
+    }
 
     private fun bindPreview(surfaceProvider: Preview.SurfaceProvider): Preview {
         cameraProvider = getFakeConfigCameraProvider(context)
@@ -87,11 +118,12 @@ class PreviewTest(
             CameraSelector.Builder().requireLensFacing(lensFacing).build(),
             preview
         )
-        camera = when (lensFacing) {
-            CameraSelector.LENS_FACING_BACK -> FakeAppConfig.getBackCamera()
-            CameraSelector.LENS_FACING_FRONT -> FakeAppConfig.getFrontCamera()
-            else -> throw AssertionError("Unsupported lens facing: $lensFacing")
-        }
+        camera =
+            when (lensFacing) {
+                CameraSelector.LENS_FACING_BACK -> FakeAppConfig.getBackCamera()
+                CameraSelector.LENS_FACING_FRONT -> FakeAppConfig.getFrontCamera()
+                else -> throw AssertionError("Unsupported lens facing: $lensFacing")
+            }
 
         return preview
     }

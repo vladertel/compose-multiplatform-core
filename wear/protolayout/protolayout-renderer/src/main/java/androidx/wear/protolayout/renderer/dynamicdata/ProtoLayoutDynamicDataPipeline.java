@@ -40,7 +40,7 @@ import androidx.annotation.UiThread;
 import androidx.annotation.VisibleForTesting;
 import androidx.collection.ArrayMap;
 import androidx.collection.ArraySet;
-import androidx.wear.protolayout.renderer.common.SeekableAnimatedVectorDrawable;
+import androidx.vectordrawable.graphics.drawable.SeekableAnimatedVectorDrawable;
 import androidx.wear.protolayout.expression.PlatformDataKey;
 import androidx.wear.protolayout.expression.pipeline.BoundDynamicType;
 import androidx.wear.protolayout.expression.pipeline.DynamicTypeBindingRequest;
@@ -534,22 +534,6 @@ public class ProtoLayoutDynamicDataPipeline {
         @NonNull
         public PipelineMaker addPipelineFor(
                 @NonNull DynamicInt32 int32Source,
-                int invalidData,
-                @NonNull String posId,
-                @NonNull Consumer<Integer> consumer) {
-            return addPipelineFor(
-                    int32Source, posId, buildStateUpdateCallback(invalidData, consumer));
-        }
-
-        /**
-         * Add the given source to the pipeline for future evaluation. Evaluation will start when
-         * {@link PipelineMaker} is committed with {@link PipelineMaker#commit}.
-         */
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @SuppressWarnings("RestrictTo")
-        @NonNull
-        public PipelineMaker addPipelineFor(
-                @NonNull DynamicInt32 int32Source,
                 @NonNull String posId,
                 @NonNull DynamicTypeValueReceiver<Integer> consumer) {
             DynamicTypeBindingRequest bindingRequest =
@@ -623,22 +607,6 @@ public class ProtoLayoutDynamicDataPipeline {
                     DynamicTypeBindingRequest.forDynamicColorInternal(colorSource, consumer);
             tryBindRequest(posId, bindingRequest, consumer::onInvalidated);
             return this;
-        }
-
-        /**
-         * Add the given source to the pipeline for future evaluation. Evaluation will start when
-         * {@link PipelineMaker} is committed with {@link PipelineMaker#commit}.
-         */
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @SuppressWarnings("RestrictTo")
-        @NonNull
-        public PipelineMaker addPipelineFor(
-                @NonNull DynamicColor colorSource,
-                int invalidData,
-                @NonNull String posId,
-                @NonNull Consumer<Integer> consumer) {
-            return addPipelineFor(
-                    colorSource, posId, buildStateUpdateCallback(invalidData, consumer));
         }
 
         /**
@@ -1161,11 +1129,11 @@ public class ProtoLayoutDynamicDataPipeline {
                         .sum();
     }
 
-    /** Returns How many dynamic data nodes exist in the pipeline. */
+    /** Returns the cost of nodes existing in the pipeline. */
     @VisibleForTesting
-    public int getDynamicExpressionsNodesCount() {
+    public int getDynamicExpressionsNodesCost() {
         return mPositionIdTree.getAllNodes().stream()
-                .mapToInt(NodeInfo::getExpressionNodesCount)
+                .mapToInt(NodeInfo::getExpressionDynamicNodesCost)
                 .sum();
     }
 

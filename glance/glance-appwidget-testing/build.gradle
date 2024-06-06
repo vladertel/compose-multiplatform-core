@@ -45,8 +45,6 @@ dependencies {
     testImplementation(libs.testCore)
     testImplementation(libs.testRunner)
     testImplementation(libs.truth)
-
-    samples(projectOrArtifact(":glance:glance-appwidget-testing:glance-appwidget-testing-samples"))
 }
 
 android {
@@ -64,8 +62,9 @@ android {
 
 androidx {
     name = "androidx.glance:glance-appwidget-testing"
-    type = LibraryType.PUBLISHED_LIBRARY
-    targetsJavaConsumers = false
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2023"
     description = "This library provides APIs for developers to use for testing their appWidget specific Glance composables."
+    legacyDisableKotlinStrictApiMode = true
+    samples(projectOrArtifact(":glance:glance-appwidget-testing:glance-appwidget-testing-samples"))
 }

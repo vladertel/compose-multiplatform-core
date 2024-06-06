@@ -40,23 +40,26 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.window.rememberCursorPositionProvider
 
 // Design of basic represenation is from Material specs:
 // https://material.io/design/interaction/states.html#hover
 // https://material.io/components/menus#specs
 
-val LightDefaultContextMenuRepresentation = DefaultContextMenuRepresentation(
-    backgroundColor = Color.White,
-    textColor = Color.Black,
-    itemHoverColor = Color.Black.copy(alpha = 0.04f)
-)
+val LightDefaultContextMenuRepresentation =
+    DefaultContextMenuRepresentation(
+        backgroundColor = Color.White,
+        textColor = Color.Black,
+        itemHoverColor = Color.Black.copy(alpha = 0.04f)
+    )
 
-val DarkDefaultContextMenuRepresentation = DefaultContextMenuRepresentation(
-    backgroundColor = Color(0xFF121212), // like surface in darkColors
-    textColor = Color.White,
-    itemHoverColor = Color.White.copy(alpha = 0.04f)
-)
+val DarkDefaultContextMenuRepresentation =
+    DefaultContextMenuRepresentation(
+        backgroundColor = Color(0xFF121212), // like surface in darkColors
+        textColor = Color.White,
+        itemHoverColor = Color.White.copy(alpha = 0.04f)
+    )
 
 class DefaultContextMenuRepresentation(
     private val backgroundColor: Color,
@@ -68,30 +71,31 @@ class DefaultContextMenuRepresentation(
         val isOpen = state.status is ContextMenuState.Status.Open
         if (isOpen) {
             Popup(
-                focusable = true,
+                popupPositionProvider = rememberCursorPositionProvider(),
                 onDismissRequest = { state.status = ContextMenuState.Status.Closed },
-                popupPositionProvider = rememberCursorPositionProvider()
+                properties = PopupProperties(focusable = true)
             ) {
                 Column(
-                    modifier = Modifier
-                        .shadow(8.dp)
-                        .background(backgroundColor)
-                        .padding(vertical = 4.dp)
-                        .width(IntrinsicSize.Max)
-                        .verticalScroll(rememberScrollState())
-
+                    modifier =
+                        Modifier.shadow(8.dp)
+                            .background(backgroundColor)
+                            .padding(vertical = 4.dp)
+                            .width(IntrinsicSize.Max)
+                            .verticalScroll(rememberScrollState())
                 ) {
-                    items.distinctBy { it.label }.forEach { item ->
-                        MenuItemContent(
-                            itemHoverColor = itemHoverColor,
-                            onClick = {
-                                state.status = ContextMenuState.Status.Closed
-                                item.onClick()
+                    items
+                        .distinctBy { it.label }
+                        .forEach { item ->
+                            MenuItemContent(
+                                itemHoverColor = itemHoverColor,
+                                onClick = {
+                                    state.status = ContextMenuState.Status.Closed
+                                    item.onClick()
+                                }
+                            ) {
+                                BasicText(text = item.label, style = TextStyle(color = textColor))
                             }
-                        ) {
-                            BasicText(text = item.label, style = TextStyle(color = textColor))
                         }
-                    }
                 }
             }
         }
@@ -106,39 +110,31 @@ private fun MenuItemContent(
 ) {
     var hovered by remember { mutableStateOf(false) }
     Row(
-        modifier = Modifier
-            .clickable(
-                onClick = onClick,
-            )
-            .onHover { hovered = it }
-            .background(if (hovered) itemHoverColor else Color.Transparent)
-            .fillMaxWidth()
-            // Preferred min and max width used during the intrinsic measurement.
-            .sizeIn(
-                minWidth = 112.dp,
-                maxWidth = 280.dp,
-                minHeight = 32.dp
-            )
-            .padding(
-                PaddingValues(
-                    horizontal = 16.dp,
-                    vertical = 0.dp
+        modifier =
+            Modifier.clickable(
+                    onClick = onClick,
                 )
-            ),
+                .onHover { hovered = it }
+                .background(if (hovered) itemHoverColor else Color.Transparent)
+                .fillMaxWidth()
+                // Preferred min and max width used during the intrinsic measurement.
+                .sizeIn(minWidth = 112.dp, maxWidth = 280.dp, minHeight = 32.dp)
+                .padding(PaddingValues(horizontal = 16.dp, vertical = 0.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         content()
     }
 }
 
-private fun Modifier.onHover(onHover: (Boolean) -> Unit) = pointerInput(Unit) {
-    awaitPointerEventScope {
-        while (true) {
-            val event = awaitPointerEvent()
-            when (event.type) {
-                PointerEventType.Enter -> onHover(true)
-                PointerEventType.Exit -> onHover(false)
+private fun Modifier.onHover(onHover: (Boolean) -> Unit) =
+    pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                when (event.type) {
+                    PointerEventType.Enter -> onHover(true)
+                    PointerEventType.Exit -> onHover(false)
+                }
             }
         }
     }
-}

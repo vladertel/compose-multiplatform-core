@@ -21,7 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -42,14 +42,17 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockitoCore4)
     testImplementation(libs.mockitoKotlin4)
+
+    lintPublish(project(":lifecycle:lifecycle-livedata-core-lint"))
 }
 
 androidx {
     name = "Lifecycle LiveData Core"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2017"
     description = "Android Lifecycle LiveData Core"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }
 
 android {

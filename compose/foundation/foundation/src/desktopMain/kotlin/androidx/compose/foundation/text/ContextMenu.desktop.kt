@@ -20,6 +20,7 @@ import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ContextMenuState
 import androidx.compose.foundation.DesktopPlatform
+import androidx.compose.foundation.text.input.internal.selection.TextFieldSelectionState
 import androidx.compose.foundation.text.selection.SelectionManager
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
 import androidx.compose.runtime.Composable
@@ -29,7 +30,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalLocalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import kotlinx.coroutines.flow.collect
 
 @Composable
 internal actual fun ContextMenuArea(
@@ -43,11 +43,18 @@ internal actual fun ContextMenuArea(
     ContextMenuArea(manager.contextMenuItems(), state, content = content)
 }
 
+// todo implement
 @Composable
-internal actual fun ContextMenuArea(
-    manager: SelectionManager,
+internal actual inline fun ContextMenuArea(
+    selectionState: TextFieldSelectionState,
+    enabled: Boolean,
     content: @Composable () -> Unit
 ) {
+    content()
+}
+
+@Composable
+internal actual fun ContextMenuArea(manager: SelectionManager, content: @Composable () -> Unit) {
     val state = remember { ContextMenuState() }
     if (DesktopPlatform.Current == DesktopPlatform.MacOS) {
         OpenMenuAdjuster(state) { manager.contextMenuOpenAdjustment(it) }
@@ -58,11 +65,12 @@ internal actual fun ContextMenuArea(
 @Composable
 internal fun OpenMenuAdjuster(state: ContextMenuState, adjustAction: (Offset) -> Unit) {
     LaunchedEffect(state) {
-        snapshotFlow { state.status }.collect { status ->
-            if (status is ContextMenuState.Status.Open) {
-                adjustAction(status.rect.center)
+        snapshotFlow { state.status }
+            .collect { status ->
+                if (status is ContextMenuState.Status.Open) {
+                    adjustAction(status.rect.center)
+                }
             }
-        }
     }
 }
 
@@ -114,11 +122,5 @@ internal fun TextFieldSelectionManager.contextMenuItems(): () -> List<ContextMen
 @Composable
 internal fun SelectionManager.contextMenuItems(): () -> List<ContextMenuItem> {
     val localization = LocalLocalization.current
-    return {
-        listOf(
-            ContextMenuItem(localization.copy) {
-                copy()
-            }
-        )
-    }
+    return { listOf(ContextMenuItem(localization.copy) { copy() }) }
 }

@@ -43,9 +43,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import java.util.concurrent.Executor
 
-/**
- * [PassiveMonitoringClient] implementation that is backed by Health Services.
- */
+/** [PassiveMonitoringClient] implementation that is backed by Health Services. */
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public class ServiceBackedPassiveMonitoringClient(
     private val applicationContext: Context,
@@ -70,18 +68,14 @@ public class ServiceBackedPassiveMonitoringClient(
             return Futures.immediateFailedFuture(
                 HealthServicesException(
                     "Service registration failed: DataType for the requested " +
-                    "passive goal must be tracked"
+                        "passive goal must be tracked"
                 )
             )
         }
         return executeWithVersionCheck(
             { remoteService, resultFuture ->
                 remoteService.registerPassiveListenerService(
-                    PassiveListenerServiceRegistrationRequest(
-                        packageName,
-                        service.name,
-                        config
-                    ),
+                    PassiveListenerServiceRegistrationRequest(packageName, service.name, config),
                     StatusCallback(resultFuture)
                 )
             },
@@ -109,13 +103,13 @@ public class ServiceBackedPassiveMonitoringClient(
             callback.onRegistrationFailed(
                 HealthServicesException(
                     "Callback registration failed: DataType for the " +
-                    "requested passive goal must be tracked"
+                        "requested passive goal must be tracked"
                 )
             )
             return
         }
         val callbackStub =
-            PassiveListenerCallbackCache.INSTANCE.getOrCreate(packageName, executor, callback)
+            PassiveListenerCallbackCache.INSTANCE.create(packageName, executor, callback)
         val future =
             registerListener(callbackStub.listenerKey) { service, result: SettableFuture<Void?> ->
                 service.registerPassiveListenerCallback(
@@ -148,19 +142,14 @@ public class ServiceBackedPassiveMonitoringClient(
         )
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun clearPassiveListenerCallbackAsync(): ListenableFuture<Void> {
-        val callbackStub = PassiveListenerCallbackCache.INSTANCE.remove(packageName)
-        if (callbackStub != null) {
-            return unregisterListener(callbackStub.listenerKey) { service, resultFuture ->
-                service.unregisterPassiveListenerCallback(packageName, StatusCallback(resultFuture))
-            }
+        val callbackStub =
+            PassiveListenerCallbackCache.INSTANCE.clear()
+                ?: return Futures.immediateFuture(null) as ListenableFuture<Void>
+        return unregisterListener(callbackStub.listenerKey) { service, resultFuture ->
+            service.unregisterPassiveListenerCallback(packageName, StatusCallback(resultFuture))
         }
-        return executeWithVersionCheck(
-            { service, resultFuture ->
-                service.unregisterPassiveListenerCallback(packageName, StatusCallback(resultFuture))
-            },
-            /* minApiVersion= */ 4
-        )
     }
 
     override fun flushAsync(): ListenableFuture<Void> {

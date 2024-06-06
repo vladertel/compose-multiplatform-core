@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-
 package androidx.camera.camera2.pipe
 
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
-import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 
 /**
@@ -36,6 +33,7 @@ import androidx.annotation.RestrictTo
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 interface CameraMetadata : Metadata, UnsafeWrapper {
     operator fun <T> get(key: CameraCharacteristics.Key<T>): T?
+
     fun <T> getOrDefault(key: CameraCharacteristics.Key<T>, default: T): T
 
     val camera: CameraId
@@ -51,8 +49,11 @@ interface CameraMetadata : Metadata, UnsafeWrapper {
     val supportedExtensions: Set<Int>
 
     suspend fun getPhysicalMetadata(cameraId: CameraId): CameraMetadata
+
     fun awaitPhysicalMetadata(cameraId: CameraId): CameraMetadata
+
     suspend fun getExtensionMetadata(extension: Int): CameraExtensionMetadata
+
     fun awaitExtensionMetadata(extension: Int): CameraExtensionMetadata
 
     companion object {

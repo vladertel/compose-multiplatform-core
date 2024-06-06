@@ -29,7 +29,6 @@ import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.UiThread;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCapture.ScreenFlash;
@@ -62,7 +61,6 @@ import androidx.fragment.app.Fragment;
  * @see ImageCapture#FLASH_MODE_SCREEN
  * @see PreviewView#getScreenFlash
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class ScreenFlashView extends View {
     private static final String TAG = "ScreenFlashView";
     private CameraController mCameraController;
@@ -96,9 +94,9 @@ public final class ScreenFlashView extends View {
     }
 
     /**
-     * Sets {@link ScreenFlashUiInfo} to a {@link CameraController}.
+     * Sets the {@link CameraController}.
      *
-     * <p> Once set, the controller will use {@link ScreenFlashView} for screen flash related UI
+     * <p> Once set, the controller will use the {@code ScreenFlashView} for screen flash related UI
      * operations.
      *
      * @throws IllegalStateException If {@link ImageCapture#FLASH_MODE_SCREEN} is set to the
@@ -141,7 +139,7 @@ public final class ScreenFlashView extends View {
 
     /**
      * Sets a {@link Window} instance for subsequent photo capture requests with
-     * {@link ImageCapture} use case when{@link ImageCapture#FLASH_MODE_SCREEN} is set.
+     * {@link ImageCapture} use case when {@link ImageCapture#FLASH_MODE_SCREEN} is set.
      *
      * <p>The calling of this API will take effect for {@code ImageCapture#FLASH_MODE_SCREEN} only
      * and the {@code Window} will be ignored for other flash modes. During screen flash photo

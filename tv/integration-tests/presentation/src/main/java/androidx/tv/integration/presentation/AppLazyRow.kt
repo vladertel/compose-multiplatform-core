@@ -45,8 +45,6 @@ fun AppLazyRow(
     val paddingLeft = 58.dp
     var hasFocus by remember { mutableStateOf(false) }
 
-    val focusRestorerModifiers = createCustomInitialFocusRestorerModifiers()
-
     Column(modifier = modifier.onFocusChanged { hasFocus = it.hasFocus }) {
         Text(
             text = title,
@@ -60,17 +58,8 @@ fun AppLazyRow(
         TvLazyRow(
             contentPadding = PaddingValues(horizontal = paddingLeft),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
-            modifier = focusRestorerModifiers.parentModifier,
         ) {
-            items.forEachIndexed { index, movie ->
-                item {
-                    drawItem(
-                        movie,
-                        index,
-                        Modifier.ifElse(index == 0, focusRestorerModifiers.childModifier)
-                    )
-                }
-            }
+            items.forEachIndexed { index, movie -> item { drawItem(movie, index, Modifier) } }
         }
     }
 }

@@ -16,6 +16,8 @@
 
 package androidx.wear.protolayout.expression;
 
+import static androidx.wear.protolayout.expression.Preconditions.checkNotNull;
+
 import android.annotation.SuppressLint;
 
 import androidx.annotation.ColorInt;
@@ -76,7 +78,6 @@ final class FixedValueBuilders {
         }
 
         /** Returns the internal proto instance. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         FixedProto.FixedInt32 toProto() {
             return mImpl;
@@ -87,6 +88,19 @@ final class FixedValueBuilders {
         @NonNull
         public DynamicProto.DynamicInt32 toDynamicInt32Proto() {
             return DynamicProto.DynamicInt32.newBuilder().setFixed(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInt32Proto();
         }
 
         @Override
@@ -129,6 +143,7 @@ final class FixedValueBuilders {
             private final FixedProto.FixedInt32.Builder mImpl = FixedProto.FixedInt32.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(974881783);
 
+            @RequiresSchemaVersion(major = 1, minor = 200)
             public Builder() {}
 
             /** Sets the value. */
@@ -188,7 +203,6 @@ final class FixedValueBuilders {
         }
 
         /** Returns the internal proto instance. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         FixedProto.FixedString toProto() {
             return mImpl;
@@ -199,6 +213,19 @@ final class FixedValueBuilders {
         @NonNull
         public DynamicProto.DynamicString toDynamicStringProto() {
             return DynamicProto.DynamicString.newBuilder().setFixed(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicString toDynamicStringProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicString.newBuilder()
+                        .setFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicStringProto();
         }
 
         @Override
@@ -243,6 +270,7 @@ final class FixedValueBuilders {
                     FixedProto.FixedString.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(1963352072);
 
+            @RequiresSchemaVersion(major = 1, minor = 200)
             public Builder() {}
 
             /** Sets the value. */
@@ -305,7 +333,6 @@ final class FixedValueBuilders {
         }
 
         /** Returns the internal proto instance. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         FixedProto.FixedFloat toProto() {
             return mImpl;
@@ -316,6 +343,19 @@ final class FixedValueBuilders {
         @NonNull
         public DynamicProto.DynamicFloat toDynamicFloatProto() {
             return DynamicProto.DynamicFloat.newBuilder().setFixed(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicFloat toDynamicFloatProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicFloat.newBuilder()
+                        .setFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicFloatProto();
         }
 
         @Override
@@ -358,6 +398,7 @@ final class FixedValueBuilders {
             private final FixedProto.FixedFloat.Builder mImpl = FixedProto.FixedFloat.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(-144724541);
 
+            @RequiresSchemaVersion(major = 1, minor = 200)
             public Builder() {}
 
             /**
@@ -420,7 +461,6 @@ final class FixedValueBuilders {
         }
 
         /** Returns the internal proto instance. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         FixedProto.FixedBool toProto() {
             return mImpl;
@@ -431,6 +471,19 @@ final class FixedValueBuilders {
         @NonNull
         public DynamicProto.DynamicBool toDynamicBoolProto() {
             return DynamicProto.DynamicBool.newBuilder().setFixed(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicBool toDynamicBoolProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicBool.newBuilder()
+                        .setFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicBoolProto();
         }
 
         @Override
@@ -473,6 +526,7 @@ final class FixedValueBuilders {
             private final FixedProto.FixedBool.Builder mImpl = FixedProto.FixedBool.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(-665116398);
 
+            @RequiresSchemaVersion(major = 1, minor = 200)
             public Builder() {}
 
             /** Sets the value. */
@@ -533,7 +587,6 @@ final class FixedValueBuilders {
         }
 
         /** Returns the internal proto instance. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         FixedProto.FixedColor toProto() {
             return mImpl;
@@ -544,6 +597,19 @@ final class FixedValueBuilders {
         @NonNull
         public DynamicProto.DynamicColor toDynamicColorProto() {
             return DynamicProto.DynamicColor.newBuilder().setFixed(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicColor toDynamicColorProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicColor.newBuilder()
+                        .setFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicColorProto();
         }
 
         @Override
@@ -586,6 +652,7 @@ final class FixedValueBuilders {
             private final FixedProto.FixedColor.Builder mImpl = FixedProto.FixedColor.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(-1895809356);
 
+            @RequiresSchemaVersion(major = 1, minor = 200)
             public Builder() {}
 
             /** Sets the color value, in ARGB format. */
@@ -666,7 +733,6 @@ final class FixedValueBuilders {
         }
 
         /** Returns the internal proto instance. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         FixedProto.FixedInstant toProto() {
             return mImpl;
@@ -677,6 +743,19 @@ final class FixedValueBuilders {
         @NonNull
         public DynamicProto.DynamicInstant toDynamicInstantProto() {
             return DynamicProto.DynamicInstant.newBuilder().setFixed(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInstant toDynamicInstantProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInstant.newBuilder()
+                        .setFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInstantProto();
         }
 
         @Override
@@ -698,6 +777,7 @@ final class FixedValueBuilders {
                     FixedProto.FixedInstant.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(-1986552556);
 
+            @RequiresSchemaVersion(major = 1, minor = 200)
             public Builder() {}
 
             /**
@@ -780,7 +860,6 @@ final class FixedValueBuilders {
         }
 
         /** Returns the internal proto instance. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         FixedProto.FixedDuration toProto() {
             return mImpl;
@@ -791,6 +870,19 @@ final class FixedValueBuilders {
         @NonNull
         public DynamicProto.DynamicDuration toDynamicDurationProto() {
             return DynamicProto.DynamicDuration.newBuilder().setFixed(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicDuration toDynamicDurationProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicDuration.newBuilder()
+                        .setFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicDurationProto();
         }
 
         @Override
@@ -812,6 +904,7 @@ final class FixedValueBuilders {
                     FixedProto.FixedDuration.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(9029504);
 
+            @RequiresSchemaVersion(major = 1, minor = 200)
             public Builder() {}
 
             /** Sets duration in seconds. */

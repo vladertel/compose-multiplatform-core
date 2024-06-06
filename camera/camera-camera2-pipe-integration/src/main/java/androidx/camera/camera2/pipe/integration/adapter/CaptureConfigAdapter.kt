@@ -19,7 +19,9 @@ package androidx.camera.camera2.pipe.integration.adapter
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CaptureRequest
-import androidx.annotation.RequiresApi
+import androidx.annotation.OptIn
+import androidx.camera.camera2.pipe.FrameInfo
+import androidx.camera.camera2.pipe.InputRequest
 import androidx.camera.camera2.pipe.Request
 import androidx.camera.camera2.pipe.RequestTemplate
 import androidx.camera.camera2.pipe.integration.config.UseCaseCameraScope
@@ -30,25 +32,37 @@ import androidx.camera.camera2.pipe.integration.impl.CameraCallbackMap
 import androidx.camera.camera2.pipe.integration.impl.CameraProperties
 import androidx.camera.camera2.pipe.integration.impl.UseCaseThreads
 import androidx.camera.camera2.pipe.integration.impl.toParameters
+import androidx.camera.camera2.pipe.media.AndroidImage
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.impl.CameraCaptureResults
 import androidx.camera.core.impl.CaptureConfig
 import androidx.camera.core.impl.Config
 import javax.inject.Inject
 
 /**
- * Maps a [CaptureConfig] issued by CameraX (e.g. by the image capture use case) to a [Request]
- * that CameraPipe can submit to the camera.
+ * Maps a [CaptureConfig] issued by CameraX (e.g. by the image capture use case) to a [Request] that
+ * CameraPipe can submit to the camera.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @UseCaseCameraScope
-class CaptureConfigAdapter @Inject constructor(
+class CaptureConfigAdapter
+@Inject
+constructor(
     cameraProperties: CameraProperties,
     private val useCaseGraphConfig: UseCaseGraphConfig,
+    private val zslControl: ZslControl,
     private val threads: UseCaseThreads,
 ) {
-    private val isLegacyDevice = cameraProperties.metadata[
-        CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL
-    ] == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY
+    private val isLegacyDevice =
+        cameraProperties.metadata[CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL] ==
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY
 
+    /**
+     * Maps [CaptureConfig] to [Request].
+     *
+     * @throws IllegalStateException When CaptureConfig does not have any surface or a CaptureConfig
+     *   surface is not recognized in [UseCaseGraphConfig.surfaceToStreamMap]
+     */
+    @OptIn(ExperimentalGetImage::class)
     fun mapToRequest(
         captureConfig: CaptureConfig,
         requestTemplate: RequestTemplate,
@@ -60,17 +74,19 @@ class CaptureConfigAdapter @Inject constructor(
             "Attempted to issue a capture without surfaces using $captureConfig"
         }
 
-        val streamIdList = surfaces.map {
-            checkNotNull(useCaseGraphConfig.surfaceToStreamMap[it]) {
-                "Attempted to issue a capture with an unrecognized surface."
+        val streamIdList =
+            surfaces.map {
+                checkNotNull(useCaseGraphConfig.surfaceToStreamMap[it]) {
+                    "Attempted to issue a capture with an unrecognized surface: $it"
+                }
             }
-        }
 
-        val callbacks = CameraCallbackMap().apply {
-            captureConfig.cameraCaptureCallbacks.forEach { callback ->
-                addCaptureCallback(callback, threads.sequentialExecutor)
+        val callbacks =
+            CameraCallbackMap().apply {
+                captureConfig.cameraCaptureCallbacks.forEach { callback ->
+                    addCaptureCallback(callback, threads.sequentialExecutor)
+                }
             }
-        }
 
         val configOptions = captureConfig.implementationOptions
         val optionBuilder = Camera2ImplConfig.Builder()
@@ -95,12 +111,39 @@ class CaptureConfigAdapter @Inject constructor(
             )
         }
 
+        var inputRequest: InputRequest? = null
+        var requestTemplateToSubmit = RequestTemplate(captureConfig.templateType)
+        if (
+            captureConfig.templateType == CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG &&
+                !zslControl.isZslDisabledByUserCaseConfig() &&
+                !zslControl.isZslDisabledByFlashMode()
+        ) {
+            zslControl.dequeueImageFromBuffer()?.let { imageProxy ->
+                CameraCaptureResults.retrieveCameraCaptureResult(imageProxy.imageInfo)?.let {
+                    cameraCaptureResult ->
+                    check(cameraCaptureResult is CaptureResultAdapter) {
+                        "Unexpected capture result type: ${cameraCaptureResult.javaClass}"
+                    }
+                    val imageWrapper = AndroidImage(checkNotNull(imageProxy.image))
+                    val frameInfo = checkNotNull(cameraCaptureResult.unwrapAs(FrameInfo::class))
+                    inputRequest = InputRequest(imageWrapper, frameInfo)
+                }
+            }
+        }
+
+        // Apply still capture template type for regular still capture case
+        if (inputRequest == null) {
+            requestTemplateToSubmit =
+                captureConfig.getStillCaptureTemplate(requestTemplate, isLegacyDevice)
+        }
+
         return Request(
             streams = streamIdList,
             listeners = listOf(callbacks) + additionalListeners,
             parameters = optionBuilder.build().toParameters(),
             extras = mapOf(CAMERAX_TAG_BUNDLE to captureConfig.tagBundle),
-            template = captureConfig.getStillCaptureTemplate(requestTemplate, isLegacyDevice)
+            template = requestTemplateToSubmit,
+            inputRequest = inputRequest,
         )
     }
 
@@ -110,14 +153,17 @@ class CaptureConfigAdapter @Inject constructor(
             isLegacyDevice: Boolean,
         ): RequestTemplate {
             var templateToModify = CaptureConfig.TEMPLATE_TYPE_NONE
-            if (sessionTemplate == RequestTemplate(CameraDevice.TEMPLATE_RECORD) &&
-                !isLegacyDevice
+            if (
+                sessionTemplate == RequestTemplate(CameraDevice.TEMPLATE_RECORD) && !isLegacyDevice
             ) {
                 // Always override template by TEMPLATE_VIDEO_SNAPSHOT when
                 // repeating template is TEMPLATE_RECORD. Note:
                 // TEMPLATE_VIDEO_SNAPSHOT is not supported on legacy device.
                 templateToModify = CameraDevice.TEMPLATE_VIDEO_SNAPSHOT
-            } else if (templateType == CaptureConfig.TEMPLATE_TYPE_NONE) {
+            } else if (
+                templateType == CaptureConfig.TEMPLATE_TYPE_NONE ||
+                    templateType == CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG
+            ) {
                 templateToModify = CameraDevice.TEMPLATE_STILL_CAPTURE
             }
 

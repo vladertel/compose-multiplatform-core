@@ -45,13 +45,12 @@ class SdkResourceGeneratorTest {
 
         project.setSupportRootFolder(File("files/support"))
         val extension = project.rootProject.property("ext") as ExtraPropertiesExtension
-        extension.set("buildSrcOut", project.projectDir.resolve("relative/path"))
         extension.set("prebuiltsRoot", project.projectDir.resolve("relative/prebuilts"))
+        extension.set("androidx.compileSdk", 33)
 
         val taskProvider = SdkResourceGenerator.registerSdkResourceGeneratorTask(project)
         val tasks = project.getTasksByName(SdkResourceGenerator.TASK_NAME, false)
         val generator = tasks.first() as SdkResourceGenerator
-        generator.buildSrcOutRelativePath.check { it == "relative/path" }
         generator.prebuiltsRelativePath.check { it == "relative/prebuilts" }
 
         val task = taskProvider.get()

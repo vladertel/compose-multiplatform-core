@@ -32,12 +32,10 @@ plugins {
 
 dependencies {
     api("androidx.annotation:annotation:1.5.0")
+    api("androidx.compose.ui:ui-tooling-preview:1.7.0-beta02")
 
-    implementation(libs.kotlinStdlibCommon)
-    implementation(project(":compose:ui:ui-tooling-preview"))
+    implementation(libs.kotlinStdlib)
     implementation("androidx.wear:wear-tooling-preview:1.0.0")
-
-    samples(project(":wear:compose:compose-material-samples"))
 }
 
 android {
@@ -46,8 +44,10 @@ android {
 
 androidx {
     name = "Wear Compose Tools"
-    type = LibraryType.PUBLISHED_LIBRARY
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2023"
     description = "Tools for Wear Composable"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
+    samples(project(":wear:compose:compose-material-samples"))
 }

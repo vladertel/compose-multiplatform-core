@@ -21,7 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -30,7 +30,7 @@ plugins {
 }
 
 android {
-    buildTypes.all {
+    buildTypes.configureEach {
         consumerProguardFiles("proguard-rules.pro")
     }
     namespace "androidx.lifecycle.viewmodel.savedstate"
@@ -59,8 +59,9 @@ dependencies {
 
 androidx {
     name = "Lifecycle ViewModel with SavedState"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2018"
     description = "Android Lifecycle ViewModel"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

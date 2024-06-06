@@ -22,36 +22,33 @@
  * modifying its settings.
  */
 import androidx.build.LibraryType
-import androidx.build.PlatformIdentifier
-import androidx.build.Publish
+
 
 plugins {
     id("AndroidXPlugin")
     id("AndroidXComposePlugin")
     id("com.android.library")
+    id("org.jetbrains.kotlin.android")
 }
 
-androidXMultiplatform {
-    android()
+dependencies {
 
-    defaultPlatform(PlatformIdentifier.ANDROID)
+    implementation(libs.kotlinStdlib)
+    api("androidx.core:core-ktx:1.12.0")
+    api(project(":fragment:fragment-ktx"))
+    api("androidx.compose.runtime:runtime:1.5.4")
+    api("androidx.compose.ui:ui:1.5.4")
 
-    sourceSets {
-        androidMain {
-            dependencies {
-                api(project(":fragment:fragment-ktx"))
-            }
-        }
-
-        androidInstrumentedTest {
-            dependencies {
-                implementation(libs.testRules)
-                implementation(libs.testRunner)
-                implementation(libs.junit)
-                implementation(libs.truth)
-            }
-        }
-    }
+    androidTestImplementation("androidx.activity:activity-compose:1.8.2")
+    androidTestImplementation(project(":compose:ui:ui-test-junit4"))
+    androidTestImplementation(project(":compose:material:material"))
+    androidTestImplementation(project(":compose:test-utils"))
+    androidTestImplementation(libs.espressoCore, excludes.espresso)
+    androidTestImplementation(project(":internal-testutils-runtime"))
+    androidTestImplementation(libs.testRules)
+    androidTestImplementation(libs.testRunner)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.truth)
 }
 
 android {
@@ -60,9 +57,10 @@ android {
 
 androidx {
     name = "Fragment Compose"
-    type = LibraryType.PUBLISHED_LIBRARY
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2024"
     description = "Integrate Fragments with Compose to provide helper APIs for using Fragments in" +
             "Compose or Compose inside of Fragments"
+    legacyDisableKotlinStrictApiMode = true
+    samples(project(":fragment:fragment-compose:fragment-compose-samples"))
 }

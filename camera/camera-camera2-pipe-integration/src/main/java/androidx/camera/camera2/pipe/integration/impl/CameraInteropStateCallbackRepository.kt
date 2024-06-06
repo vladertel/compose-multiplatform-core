@@ -27,7 +27,6 @@ import androidx.camera.core.impl.SessionConfig
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
 
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 /**
  * A application-level single-instance repository for Camera Interop callbacks. It supplies
  * camera-pipe with internal callbacks on CameraX initialization. During runtime, before a camera
@@ -61,6 +60,7 @@ class CameraInteropStateCallbackRepository {
     class CameraInteropDeviceStateCallback : CameraDevice.StateCallback() {
 
         private var callbacks: AtomicRef<List<CameraDevice.StateCallback>> = atomic(listOf())
+
         internal fun updateCallbacks(sessionConfig: SessionConfig) {
             callbacks.value = sessionConfig.deviceStateCallbacks.toList()
         }

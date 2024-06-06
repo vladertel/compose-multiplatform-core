@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
-
 package androidx.camera.camera2.pipe.integration.impl
 
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.integration.adapter.EvCompValue
 import androidx.camera.camera2.pipe.integration.compat.EvCompCompat
 import androidx.camera.camera2.pipe.integration.config.CameraScope
@@ -36,14 +33,14 @@ private const val DEFAULT_EXPOSURE_COMPENSATION = 0
  * Implementation of Exposure compensation control, it implements the functionality of
  * [CameraControl.setExposureCompensationIndex].
  *
- * The [CameraControl.setExposureCompensationIndex] can only allow to run one task at the same
- * time, it will cancel the incomplete task if a new task is requested.
- * The task will fail with [CameraControl.OperationCanceledException] if the camera is
- * closed.
+ * The [CameraControl.setExposureCompensationIndex] can only allow to run one task at the same time,
+ * it will cancel the incomplete task if a new task is requested. The task will fail with
+ * [CameraControl.OperationCanceledException] if the camera is closed.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 @CameraScope
-class EvCompControl @Inject constructor(
+class EvCompControl
+@Inject
+constructor(
     private val compat: EvCompCompat,
 ) : UseCaseCameraControl {
     private var evCompIndex = DEFAULT_EXPOSURE_COMPENSATION
@@ -51,12 +48,14 @@ class EvCompControl @Inject constructor(
             field = value
             exposureState = exposureState.updateIndex(value)
         }
-    var exposureState = EvCompValue(
-        compat.supported,
-        evCompIndex,
-        compat.range,
-        compat.step,
-    )
+
+    var exposureState =
+        EvCompValue(
+            compat.supported,
+            evCompIndex,
+            compat.range,
+            compat.step,
+        )
 
     private var _useCaseCamera: UseCaseCamera? = null
     override var useCaseCamera: UseCaseCamera?
@@ -90,17 +89,18 @@ class EvCompControl @Inject constructor(
         return useCaseCamera?.let { camera ->
             evCompIndex = exposureIndex
             compat.applyAsync(exposureIndex, camera, cancelPreviousTask)
-        } ?: run {
-            CameraControl.OperationCanceledException("Camera is not active.").let { cancelResult ->
-                compat.stopRunningTask(cancelResult)
-                createFailureResult(cancelResult)
-            }
         }
+            ?: run {
+                CameraControl.OperationCanceledException("Camera is not active.").let { cancelResult
+                    ->
+                    compat.stopRunningTask(cancelResult)
+                    createFailureResult(cancelResult)
+                }
+            }
     }
 
-    private fun createFailureResult(exception: Exception) = CompletableDeferred<Int>().apply {
-        completeExceptionally(exception)
-    }
+    private fun createFailureResult(exception: Exception) =
+        CompletableDeferred<Int>().apply { completeExceptionally(exception) }
 
     @Module
     abstract class Bindings {

@@ -419,6 +419,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setPlatformSource(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInt32Proto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "PlatformInt32Source{" + "sourceType=" + getSourceType() + "}";
@@ -524,6 +537,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicInt32 toDynamicInt32Proto() {
             return DynamicProto.DynamicInt32.newBuilder().setArithmeticOperation(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setArithmeticOperation(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInt32Proto();
         }
 
         @Override
@@ -642,6 +668,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setStateSource(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInt32Proto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "StateInt32Source{"
@@ -669,7 +708,7 @@ public final class DynamicBuilders {
                 return this;
             }
 
-            /** Sets the name space for the state key. */
+            /** Sets the namespace for the state key. */
             @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setSourceNamespace(@NonNull String sourceNamespace) {
@@ -765,6 +804,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicInt32 toDynamicInt32Proto() {
             return DynamicProto.DynamicInt32.newBuilder().setConditionalOp(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setConditionalOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInt32Proto();
         }
 
         @Override
@@ -909,6 +961,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicFloat toDynamicFloatProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicFloat.newBuilder()
+                        .setConditionalOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicFloatProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "ConditionalFloatOp{"
@@ -1029,6 +1094,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setFloatToInt(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInt32Proto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "FloatToInt32Op{"
@@ -1141,6 +1219,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setAnimatableFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInt32Proto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "AnimatableFixedInt32{"
@@ -1164,7 +1255,7 @@ public final class DynamicBuilders {
             /** Sets the value to start animating from. */
             @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
-            public AnimatableFixedInt32.Builder setFromValue(int fromValue) {
+            public Builder setFromValue(int fromValue) {
                 mImpl.setFromValue(fromValue);
                 mFingerprint.recordPropertyUpdate(1, fromValue);
                 return this;
@@ -1173,7 +1264,7 @@ public final class DynamicBuilders {
             /** Sets the value to animate to. */
             @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
-            public AnimatableFixedInt32.Builder setToValue(int toValue) {
+            public Builder setToValue(int toValue) {
                 mImpl.setToValue(toValue);
                 mFingerprint.recordPropertyUpdate(2, toValue);
                 return this;
@@ -1273,6 +1364,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setAnimatableDynamic(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInt32Proto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "AnimatableDynamicInt32{"
@@ -1294,7 +1398,7 @@ public final class DynamicBuilders {
             /** Sets the value to watch, and animate when it changes. */
             @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
-            public AnimatableDynamicInt32.Builder setInput(@NonNull DynamicInt32 input) {
+            public Builder setInput(@NonNull DynamicInt32 input) {
                 mImpl.setInput(input.toDynamicInt32Proto());
                 mFingerprint.recordPropertyUpdate(
                         1, checkNotNull(input.getFingerprint()).aggregateValueAsInt());
@@ -1342,10 +1446,15 @@ public final class DynamicBuilders {
      */
     @RequiresSchemaVersion(major = 1, minor = 200)
     public interface DynamicInt32 extends DynamicType {
-        /** Get the protocol buffer representation of this object. */
+        /** Get the protocol buffer representation of this object, without fingerprint. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         DynamicProto.DynamicInt32 toDynamicInt32Proto();
+
+        /** Get the protocol buffer representation of this object, with or without fingerprint. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint);
 
         /**
          * Creates a {@link DynamicInt32} from a byte array generated by {@link
@@ -1384,7 +1493,7 @@ public final class DynamicBuilders {
          */
         @NonNull
         default byte[] toDynamicInt32ByteArray() {
-            return toDynamicInt32Proto().toByteArray();
+            return toDynamicInt32Proto(/* withFingerprint= */ true).toByteArray();
         }
 
         /**
@@ -1408,7 +1517,7 @@ public final class DynamicBuilders {
         default int toDynamicInt32ByteArray(@NonNull byte[] byteArray, int offset, int length) {
             CodedOutputStream stream = CodedOutputStream.newInstance(byteArray, offset, length);
             try {
-                toDynamicInt32Proto().writeTo(stream);
+                toDynamicInt32Proto(/* withFingerprint= */ true).writeTo(stream);
             } catch (IOException e) {
                 throw new IllegalArgumentException(
                         "Provided byte array not large enough to contain this DynamicInt32", e);
@@ -2304,7 +2413,7 @@ public final class DynamicBuilders {
 
             /** Returns whether digit grouping is used or not. */
             public boolean isGroupingUsed() {
-                return mInt32FormatOp.getGroupingUsed();
+                return mInt32FormatOp.isGroupingUsed();
             }
 
             /** Builder to create {@link IntFormatter} objects. */
@@ -2431,7 +2540,7 @@ public final class DynamicBuilders {
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
     public static DynamicInt32 dynamicInt32FromProto(@NonNull DynamicProto.DynamicInt32 proto) {
-        return dynamicInt32FromProto(proto, null);
+        return dynamicInt32FromProto(proto, new Fingerprint(proto.getFingerprint()));
     }
 
     /** Simple formatting for dynamic int32. */
@@ -2470,7 +2579,7 @@ public final class DynamicBuilders {
          * locale. If not defined, defaults to false. For example, for locale en_US, using grouping
          * with 1234 would yield "1,234".
          */
-        public boolean getGroupingUsed() {
+        public boolean isGroupingUsed() {
             return mImpl.getGroupingUsed();
         }
 
@@ -2508,6 +2617,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicString toDynamicStringProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicString.newBuilder()
+                        .setInt32FormatOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicStringProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "Int32FormatOp{"
@@ -2516,13 +2638,13 @@ public final class DynamicBuilders {
                     + ", minIntegerDigits="
                     + getMinIntegerDigits()
                     + ", groupingUsed="
-                    + getGroupingUsed()
+                    + isGroupingUsed()
                     + "}";
         }
 
         /** Builder for {@link Int32FormatOp}. */
         public static final class Builder implements DynamicString.Builder {
-            final DynamicProto.Int32FormatOp.Builder mImpl =
+            private final DynamicProto.Int32FormatOp.Builder mImpl =
                     DynamicProto.Int32FormatOp.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(196209833);
 
@@ -2630,6 +2752,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicString toDynamicStringProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicString.newBuilder()
+                        .setStateSource(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicStringProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "StateStringSource{"
@@ -2657,7 +2792,7 @@ public final class DynamicBuilders {
                 return this;
             }
 
-            /** Sets the name space for the state key. */
+            /** Sets the namespace for the state key. */
             @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setSourceNamespace(@NonNull String sourceNamespace) {
@@ -2751,6 +2886,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicString toDynamicStringProto() {
             return DynamicProto.DynamicString.newBuilder().setConditionalOp(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicString toDynamicStringProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicString.newBuilder()
+                        .setConditionalOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicStringProto();
         }
 
         @Override
@@ -2878,6 +3026,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicString toDynamicStringProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicString.newBuilder()
+                        .setConcatOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicStringProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "ConcatStringOp{"
@@ -2982,7 +3143,7 @@ public final class DynamicBuilders {
          * locale. If not defined, defaults to false. For example, for locale en_US, using grouping
          * with 1234.56 would yield "1,234.56".
          */
-        public boolean getGroupingUsed() {
+        public boolean isGroupingUsed() {
             return mImpl.getGroupingUsed();
         }
 
@@ -3020,6 +3181,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicString toDynamicStringProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicString.newBuilder()
+                        .setFloatFormatOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicStringProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "FloatFormatOp{"
@@ -3032,7 +3206,7 @@ public final class DynamicBuilders {
                     + ", minIntegerDigits="
                     + getMinIntegerDigits()
                     + ", groupingUsed="
-                    + getGroupingUsed()
+                    + isGroupingUsed()
                     + "}";
         }
 
@@ -3124,10 +3298,15 @@ public final class DynamicBuilders {
      */
     @RequiresSchemaVersion(major = 1, minor = 200)
     public interface DynamicString extends DynamicType {
-        /** Get the protocol buffer representation of this object. */
+        /** Get the protocol buffer representation of this object, without fingerprint. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         DynamicProto.DynamicString toDynamicStringProto();
+
+        /** Get the protocol buffer representation of this object, with or without fingerprint. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        DynamicProto.DynamicString toDynamicStringProto(boolean withFingerprint);
 
         /**
          * Creates a {@link DynamicString} from a byte array generated by {@link
@@ -3166,7 +3345,7 @@ public final class DynamicBuilders {
          */
         @NonNull
         default byte[] toDynamicStringByteArray() {
-            return toDynamicStringProto().toByteArray();
+            return toDynamicStringProto(/* withFingerprint= */ true).toByteArray();
         }
 
         /**
@@ -3190,7 +3369,7 @@ public final class DynamicBuilders {
         default int toDynamicStringByteArray(@NonNull byte[] byteArray, int offset, int length) {
             CodedOutputStream stream = CodedOutputStream.newInstance(byteArray, offset, length);
             try {
-                toDynamicStringProto().writeTo(stream);
+                toDynamicStringProto(/* withFingerprint= */ true).writeTo(stream);
             } catch (IOException e) {
                 throw new IllegalArgumentException(
                         "Provided byte array not large enough to contain this DynamicString", e);
@@ -3308,7 +3487,7 @@ public final class DynamicBuilders {
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
     public static DynamicString dynamicStringFromProto(@NonNull DynamicProto.DynamicString proto) {
-        return dynamicStringFromProto(proto, null);
+        return dynamicStringFromProto(proto, new Fingerprint(proto.getFingerprint()));
     }
 
     /**
@@ -3386,6 +3565,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicFloat toDynamicFloatProto() {
             return DynamicProto.DynamicFloat.newBuilder().setArithmeticOperation(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicFloat toDynamicFloatProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicFloat.newBuilder()
+                        .setArithmeticOperation(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicFloatProto();
         }
 
         @Override
@@ -3504,6 +3696,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicFloat toDynamicFloatProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicFloat.newBuilder()
+                        .setStateSource(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicFloatProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "StateFloatSource{"
@@ -3531,7 +3736,7 @@ public final class DynamicBuilders {
                 return this;
             }
 
-            /** Sets the name space for the state key. */
+            /** Sets the namespace for the state key. */
             @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setSourceNamespace(@NonNull String sourceNamespace) {
@@ -3600,6 +3805,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicFloat toDynamicFloatProto() {
             return DynamicProto.DynamicFloat.newBuilder().setInt32ToFloatOperation(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicFloat toDynamicFloatProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicFloat.newBuilder()
+                        .setInt32ToFloatOperation(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicFloatProto();
         }
 
         @Override
@@ -3698,6 +3916,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicFloat toDynamicFloatProto() {
             return DynamicProto.DynamicFloat.newBuilder().setAnimatableFixed(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicFloat toDynamicFloatProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicFloat.newBuilder()
+                        .setAnimatableFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicFloatProto();
         }
 
         @Override
@@ -3833,6 +4064,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicFloat toDynamicFloatProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicFloat.newBuilder()
+                        .setAnimatableDynamic(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicFloatProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "AnimatableDynamicFloat{"
@@ -3902,10 +4146,15 @@ public final class DynamicBuilders {
      */
     @RequiresSchemaVersion(major = 1, minor = 200)
     public interface DynamicFloat extends DynamicType {
-        /** Get the protocol buffer representation of this object. */
+        /** Get the protocol buffer representation of this object, without fingerprint. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         DynamicProto.DynamicFloat toDynamicFloatProto();
+
+        /** Get the protocol buffer representation of this object, with or without fingerprint. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        DynamicProto.DynamicFloat toDynamicFloatProto(boolean withFingerprint);
 
         /**
          * Creates a {@link DynamicFloat} from a byte array generated by {@link
@@ -3944,7 +4193,7 @@ public final class DynamicBuilders {
          */
         @NonNull
         default byte[] toDynamicFloatByteArray() {
-            return toDynamicFloatProto().toByteArray();
+            return toDynamicFloatProto(/* withFingerprint= */ true).toByteArray();
         }
 
         /**
@@ -3968,7 +4217,7 @@ public final class DynamicBuilders {
         default int toDynamicFloatByteArray(@NonNull byte[] byteArray, int offset, int length) {
             CodedOutputStream stream = CodedOutputStream.newInstance(byteArray, offset, length);
             try {
-                toDynamicFloatProto().writeTo(stream);
+                toDynamicFloatProto(/* withFingerprint= */ true).writeTo(stream);
             } catch (IOException e) {
                 throw new IllegalArgumentException(
                         "Provided byte array not large enough to contain this DynamicFloat", e);
@@ -4763,7 +5012,7 @@ public final class DynamicBuilders {
 
             /** Returns whether digit grouping is used or not. */
             public boolean isGroupingUsed() {
-                return mFloatFormatOp.getGroupingUsed();
+                return mFloatFormatOp.isGroupingUsed();
             }
 
             /** Builder to create {@link FloatFormatter} objects. */
@@ -4915,7 +5164,7 @@ public final class DynamicBuilders {
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
     public static DynamicFloat dynamicFloatFromProto(@NonNull DynamicProto.DynamicFloat proto) {
-        return dynamicFloatFromProto(proto, null);
+        return dynamicFloatFromProto(proto, new Fingerprint(proto.getFingerprint()));
     }
 
     /** A dynamic boolean type which sources its data from the tile's state. */
@@ -4975,6 +5224,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicBool toDynamicBoolProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicBool.newBuilder()
+                        .setStateSource(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicBoolProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "StateBoolSource{"
@@ -5003,7 +5265,7 @@ public final class DynamicBuilders {
                 return this;
             }
 
-            /** Sets the name space for the state key. */
+            /** Sets the namespace for the state key. */
             @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setSourceNamespace(@NonNull String sourceNamespace) {
@@ -5095,6 +5357,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicBool toDynamicBoolProto() {
             return DynamicProto.DynamicBool.newBuilder().setInt32Comparison(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicBool toDynamicBoolProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicBool.newBuilder()
+                        .setInt32Comparison(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicBoolProto();
         }
 
         @Override
@@ -5234,6 +5509,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicBool toDynamicBoolProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicBool.newBuilder()
+                        .setFloatComparison(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicBoolProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "ComparisonFloatOp{"
@@ -5347,6 +5635,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicBool toDynamicBoolProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicBool.newBuilder()
+                        .setNotOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicBoolProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "NotBoolOp{" + "input=" + getInput() + "}";
@@ -5452,6 +5753,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicBool toDynamicBoolProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicBool.newBuilder()
+                        .setLogicalOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicBoolProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "LogicalBoolOp{"
@@ -5512,10 +5826,15 @@ public final class DynamicBuilders {
     /** Interface defining a dynamic boolean type. */
     @RequiresSchemaVersion(major = 1, minor = 200)
     public interface DynamicBool extends DynamicType {
-        /** Get the protocol buffer representation of this object. */
+        /** Get the protocol buffer representation of this object, without fingerprint. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         DynamicProto.DynamicBool toDynamicBoolProto();
+
+        /** Get the protocol buffer representation of this object, with or without fingerprint. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        DynamicProto.DynamicBool toDynamicBoolProto(boolean withFingerprint);
 
         /**
          * Creates a {@link DynamicBool} from a byte array generated by {@link
@@ -5554,7 +5873,7 @@ public final class DynamicBuilders {
          */
         @NonNull
         default byte[] toDynamicBoolByteArray() {
-            return toDynamicBoolProto().toByteArray();
+            return toDynamicBoolProto(/* withFingerprint= */ true).toByteArray();
         }
 
         /**
@@ -5578,7 +5897,7 @@ public final class DynamicBuilders {
         default int toDynamicBoolByteArray(@NonNull byte[] byteArray, int offset, int length) {
             CodedOutputStream stream = CodedOutputStream.newInstance(byteArray, offset, length);
             try {
-                toDynamicBoolProto().writeTo(stream);
+                toDynamicBoolProto(/* withFingerprint= */ true).writeTo(stream);
             } catch (IOException e) {
                 throw new IllegalArgumentException(
                         "Provided byte array not large enough to contain this DynamicBool", e);
@@ -5725,7 +6044,7 @@ public final class DynamicBuilders {
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
     public static DynamicBool dynamicBoolFromProto(@NonNull DynamicProto.DynamicBool proto) {
-        return dynamicBoolFromProto(proto, null);
+        return dynamicBoolFromProto(proto, new Fingerprint(proto.getFingerprint()));
     }
 
     /** A dynamic Color which sources its data from the tile's state. */
@@ -5785,6 +6104,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicColor toDynamicColorProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicColor.newBuilder()
+                        .setStateSource(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicColorProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "StateColorSource{"
@@ -5812,7 +6144,7 @@ public final class DynamicBuilders {
                 return this;
             }
 
-            /** Sets the name space for the state key. */
+            /** Sets the namespace for the state key. */
             @RequiresSchemaVersion(major = 1, minor = 200)
             @NonNull
             public Builder setSourceNamespace(@NonNull String sourceNamespace) {
@@ -5895,6 +6227,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicColor toDynamicColorProto() {
             return DynamicProto.DynamicColor.newBuilder().setAnimatableFixed(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicColor toDynamicColorProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicColor.newBuilder()
+                        .setAnimatableFixed(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicColorProto();
         }
 
         @Override
@@ -6030,6 +6375,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicColor toDynamicColorProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicColor.newBuilder()
+                        .setAnimatableDynamic(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicColorProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "AnimatableDynamicColor{"
@@ -6159,6 +6517,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicColor toDynamicColorProto(boolean withFringerprint) {
+            if (withFringerprint) {
+                return DynamicProto.DynamicColor.newBuilder()
+                        .setConditionalOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicColorProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "ConditionalColorOp{"
@@ -6220,10 +6591,16 @@ public final class DynamicBuilders {
     /** Interface defining a dynamic color type. */
     @RequiresSchemaVersion(major = 1, minor = 200)
     public interface DynamicColor extends DynamicType {
-        /** Get the protocol buffer representation of this object. */
+        /** Get the protocol buffer representation of this object, without fingerprint. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         DynamicProto.DynamicColor toDynamicColorProto();
+
+        /** Get the protocol buffer representation of this object, with or without fingerprint. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        DynamicProto.DynamicColor toDynamicColorProto(boolean withFingerprint);
+
 
         /**
          * Creates a {@link DynamicColor} from a byte array generated by {@link
@@ -6262,7 +6639,7 @@ public final class DynamicBuilders {
          */
         @NonNull
         default byte[] toDynamicColorByteArray() {
-            return toDynamicColorProto().toByteArray();
+            return toDynamicColorProto(/* withFingerprint= */ true).toByteArray();
         }
 
         /**
@@ -6286,7 +6663,7 @@ public final class DynamicBuilders {
         default int toDynamicColorByteArray(@NonNull byte[] byteArray, int offset, int length) {
             CodedOutputStream stream = CodedOutputStream.newInstance(byteArray, offset, length);
             try {
-                toDynamicColorProto().writeTo(stream);
+                toDynamicColorProto(/* withFingerprint= */ true).writeTo(stream);
             } catch (IOException e) {
                 throw new IllegalArgumentException(
                         "Provided byte array not large enough to contain this DynamicColor", e);
@@ -6470,7 +6847,7 @@ public final class DynamicBuilders {
     @RestrictTo(Scope.LIBRARY_GROUP)
     @NonNull
     public static DynamicColor dynamicColorFromProto(@NonNull DynamicProto.DynamicColor proto) {
-        return dynamicColorFromProto(proto, null);
+        return dynamicColorFromProto(proto, new Fingerprint(proto.getFingerprint()));
     }
 
     /** A dynamic time instant that sources its value from the platform. */
@@ -6516,6 +6893,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicInstant toDynamicInstantProto() {
             return DynamicProto.DynamicInstant.newBuilder().setPlatformSource(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInstant toDynamicInstantProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInstant.newBuilder()
+                        .setPlatformSource(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInstantProto();
         }
 
         @Override
@@ -6624,6 +7014,20 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInstant toDynamicInstantProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInstant.newBuilder()
+                        .setConditionalOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+
+            return toDynamicInstantProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "ConditionalInstantOp{"
@@ -6690,10 +7094,15 @@ public final class DynamicBuilders {
      */
     @RequiresSchemaVersion(major = 1, minor = 200)
     public interface DynamicInstant extends DynamicType {
-        /** Get the protocol buffer representation of this object. */
+        /** Get the protocol buffer representation of this object, without fingerprint. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         DynamicProto.DynamicInstant toDynamicInstantProto();
+
+        /** Get the protocol buffer representation of this object, with or without fingerprint. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        DynamicProto.DynamicInstant toDynamicInstantProto(boolean withFingerprint);
 
         /**
          * Creates a {@link DynamicInstant} from a byte array generated by {@link
@@ -6732,7 +7141,7 @@ public final class DynamicBuilders {
          */
         @NonNull
         default byte[] toDynamicInstantByteArray() {
-            return toDynamicInstantProto().toByteArray();
+            return toDynamicInstantProto(/* withFingerprint= */ true).toByteArray();
         }
 
         /**
@@ -6756,7 +7165,7 @@ public final class DynamicBuilders {
         default int toDynamicInstantByteArray(@NonNull byte[] byteArray, int offset, int length) {
             CodedOutputStream stream = CodedOutputStream.newInstance(byteArray, offset, length);
             try {
-                toDynamicInstantProto().writeTo(stream);
+                toDynamicInstantProto(/* withFingerprint= */ true).writeTo(stream);
             } catch (IOException e) {
                 throw new IllegalArgumentException(
                         "Provided byte array not large enough to contain this DynamicInstant", e);
@@ -7013,7 +7422,7 @@ public final class DynamicBuilders {
     @NonNull
     public static DynamicInstant dynamicInstantFromProto(
             @NonNull DynamicProto.DynamicInstant proto) {
-        return dynamicInstantFromProto(proto, null);
+        return dynamicInstantFromProto(proto, new Fingerprint(proto.getFingerprint()));
     }
 
     /**
@@ -7455,6 +7864,20 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setZonedDateTimePart(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+
+            return toDynamicInt32Proto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "GetZonedDateTimePartOp{"
@@ -7564,6 +7987,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicDuration toDynamicDurationProto() {
             return DynamicProto.DynamicDuration.newBuilder().setBetween(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicDuration toDynamicDurationProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicDuration.newBuilder()
+                        .setBetween(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicDurationProto();
         }
 
         @Override
@@ -7697,6 +8133,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicDuration toDynamicDurationProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicDuration.newBuilder()
+                        .setConditionalOp(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicDurationProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "ConditionalDurationOp{"
@@ -7758,10 +8207,16 @@ public final class DynamicBuilders {
     /** Interface defining a dynamic duration type. */
     @RequiresSchemaVersion(major = 1, minor = 200)
     public interface DynamicDuration extends DynamicType {
-        /** Get the protocol buffer representation of this object. */
+        /** Get the protocol buffer representation of this object, without fingerprint. */
         @RestrictTo(Scope.LIBRARY_GROUP)
         @NonNull
         DynamicProto.DynamicDuration toDynamicDurationProto();
+
+        /** Get the protocol buffer representation of this object, with or without fingerprint. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        DynamicProto.DynamicDuration toDynamicDurationProto(boolean withFingerprint);
+
 
         /**
          * Creates a {@link DynamicDuration} from a byte array generated by {@link
@@ -7800,7 +8255,7 @@ public final class DynamicBuilders {
          */
         @NonNull
         default byte[] toDynamicDurationByteArray() {
-            return toDynamicDurationProto().toByteArray();
+            return toDynamicDurationProto(/* withFingerprint= */ true).toByteArray();
         }
 
         /**
@@ -7824,7 +8279,7 @@ public final class DynamicBuilders {
         default int toDynamicDurationByteArray(@NonNull byte[] byteArray, int offset, int length) {
             CodedOutputStream stream = CodedOutputStream.newInstance(byteArray, offset, length);
             try {
-                toDynamicDurationProto().writeTo(stream);
+                toDynamicDurationProto(/* withFingerprint= */ true).writeTo(stream);
             } catch (IOException e) {
                 throw new IllegalArgumentException(
                         "Provided byte array not large enough to contain this DynamicDuration", e);
@@ -8112,7 +8567,7 @@ public final class DynamicBuilders {
     @NonNull
     public static DynamicDuration dynamicDurationFromProto(
             @NonNull DynamicProto.DynamicDuration proto) {
-        return dynamicDurationFromProto(proto, null);
+        return dynamicDurationFromProto(proto, new Fingerprint(proto.getFingerprint()));
     }
 
     /**
@@ -8176,6 +8631,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicInt32 toDynamicInt32Proto() {
             return DynamicProto.DynamicInt32.newBuilder().setDurationPart(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInt32 toDynamicInt32Proto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInt32.newBuilder()
+                        .setDurationPart(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInt32Proto();
         }
 
         @Override
@@ -8282,6 +8750,19 @@ public final class DynamicBuilders {
         }
 
         @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicInstant toDynamicInstantProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicInstant.newBuilder()
+                        .setStateSource(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicInstantProto();
+        }
+
+        @Override
         @NonNull
         public String toString() {
             return "StateInstantSource{"
@@ -8384,6 +8865,19 @@ public final class DynamicBuilders {
         @NonNull
         public DynamicProto.DynamicDuration toDynamicDurationProto() {
             return DynamicProto.DynamicDuration.newBuilder().setStateSource(mImpl).build();
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public DynamicProto.DynamicDuration toDynamicDurationProto(boolean withFingerprint) {
+            if (withFingerprint) {
+                return DynamicProto.DynamicDuration.newBuilder()
+                        .setStateSource(mImpl)
+                        .setFingerprint(checkNotNull(mFingerprint).toProto())
+                        .build();
+            }
+            return toDynamicDurationProto();
         }
 
         @Override

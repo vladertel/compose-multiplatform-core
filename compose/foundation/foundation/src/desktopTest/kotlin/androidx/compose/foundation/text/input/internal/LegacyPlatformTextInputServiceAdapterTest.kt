@@ -18,16 +18,21 @@
 
 package androidx.compose.foundation.text.input.internal
 
+import androidx.compose.foundation.text.LegacyTextFieldState
 import androidx.compose.foundation.text.input.internal.LegacyPlatformTextInputServiceAdapter.LegacyPlatformTextInputNode
+import androidx.compose.foundation.text.selection.TextFieldSelectionManager
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.platform.DefaultViewConfiguration
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.compose.ui.platform.PlatformTextInputSession
 import androidx.compose.ui.platform.SoftwareKeyboardController
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.EditProcessor
 import androidx.compose.ui.text.input.ImeOptions
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TextInputService
+import androidx.compose.ui.unit.Density
 import java.awt.Component
 import java.awt.event.InputMethodEvent
 import java.text.AttributedString
@@ -53,40 +58,47 @@ class LegacyPlatformTextInputServiceAdapterTest {
         val inputService = TextInputService(adapter)
         var currentRequest: PlatformTextInputMethodRequest? = null
 
-        adapter.registerModifier(object : LegacyPlatformTextInputNode {
-            override val softwareKeyboardController: SoftwareKeyboardController?
-                get() = null
-            override val layoutCoordinates: LayoutCoordinates?
-                get() = null
+        adapter.registerModifier(
+            object : LegacyPlatformTextInputNode {
+                override val softwareKeyboardController: SoftwareKeyboardController?
+                    get() = null
 
-            override fun launchTextInputSession(
-                block: suspend PlatformTextInputSession.() -> Nothing
-            ): Job {
-                val session = object : PlatformTextInputSession {
-                    override suspend fun startInputMethod(
-                        request: PlatformTextInputMethodRequest
-                    ): Nothing {
-                        currentRequest = request
-                        try {
-                            awaitCancellation()
-                        } finally {
-                            currentRequest = null
+                override val layoutCoordinates: LayoutCoordinates?
+                    get() = null
+
+                override val legacyTextFieldState: LegacyTextFieldState?
+                    get() = null
+
+                override val textFieldSelectionManager: TextFieldSelectionManager?
+                    get() = null
+
+                override val viewConfiguration: ViewConfiguration
+                    get() = DefaultViewConfiguration(Density(1f))
+
+                override fun launchTextInputSession(
+                    block: suspend PlatformTextInputSession.() -> Nothing
+                ): Job {
+                    val session =
+                        object : PlatformTextInputSession {
+                            override suspend fun startInputMethod(
+                                request: PlatformTextInputMethodRequest
+                            ): Nothing {
+                                currentRequest = request
+                                try {
+                                    awaitCancellation()
+                                } finally {
+                                    currentRequest = null
+                                }
+                            }
                         }
-                    }
-                }
 
-                return backgroundScope.launch(Dispatchers.Unconfined) {
-                    block(session)
+                    return backgroundScope.launch(Dispatchers.Unconfined) { block(session) }
                 }
             }
-        })
-
-        val session = inputService.startInput(
-            TextFieldValue(),
-            ImeOptions.Default,
-            processor::apply,
-            {}
         )
+
+        val session =
+            inputService.startInput(TextFieldValue(), ImeOptions.Default, processor::apply, {})
 
         processor.reset(TextFieldValue("h"), session)
 
@@ -119,40 +131,47 @@ class LegacyPlatformTextInputServiceAdapterTest {
         val inputService = TextInputService(adapter)
         var currentRequest: PlatformTextInputMethodRequest? = null
 
-        adapter.registerModifier(object : LegacyPlatformTextInputNode {
-            override val softwareKeyboardController: SoftwareKeyboardController?
-                get() = null
-            override val layoutCoordinates: LayoutCoordinates?
-                get() = null
+        adapter.registerModifier(
+            object : LegacyPlatformTextInputNode {
+                override val softwareKeyboardController: SoftwareKeyboardController?
+                    get() = null
 
-            override fun launchTextInputSession(
-                block: suspend PlatformTextInputSession.() -> Nothing
-            ): Job {
-                val session = object : PlatformTextInputSession {
-                    override suspend fun startInputMethod(
-                        request: PlatformTextInputMethodRequest
-                    ): Nothing {
-                        currentRequest = request
-                        try {
-                            awaitCancellation()
-                        } finally {
-                            currentRequest = null
+                override val layoutCoordinates: LayoutCoordinates?
+                    get() = null
+
+                override val legacyTextFieldState: LegacyTextFieldState?
+                    get() = null
+
+                override val textFieldSelectionManager: TextFieldSelectionManager?
+                    get() = null
+
+                override val viewConfiguration: ViewConfiguration
+                    get() = DefaultViewConfiguration(Density(1f))
+
+                override fun launchTextInputSession(
+                    block: suspend PlatformTextInputSession.() -> Nothing
+                ): Job {
+                    val session =
+                        object : PlatformTextInputSession {
+                            override suspend fun startInputMethod(
+                                request: PlatformTextInputMethodRequest
+                            ): Nothing {
+                                currentRequest = request
+                                try {
+                                    awaitCancellation()
+                                } finally {
+                                    currentRequest = null
+                                }
+                            }
                         }
-                    }
-                }
 
-                return backgroundScope.launch(Dispatchers.Unconfined) {
-                    block(session)
+                    return backgroundScope.launch(Dispatchers.Unconfined) { block(session) }
                 }
             }
-        })
-
-        val session = inputService.startInput(
-            TextFieldValue(),
-            ImeOptions.Default,
-            processor::apply,
-            {}
         )
+
+        val session =
+            inputService.startInput(TextFieldValue(), ImeOptions.Default, processor::apply, {})
 
         val request = assertIs<LegacyTextInputMethodRequest>(currentRequest)
         request.charKeyPressed = true

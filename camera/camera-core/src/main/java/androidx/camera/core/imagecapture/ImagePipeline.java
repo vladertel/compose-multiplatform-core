@@ -18,25 +18,24 @@ package androidx.camera.core.imagecapture;
 
 import static androidx.camera.core.CaptureBundles.singleDefaultCaptureBundle;
 import static androidx.camera.core.impl.ImageCaptureConfig.OPTION_BUFFER_FORMAT;
+import static androidx.camera.core.impl.ImageInputConfig.OPTION_INPUT_FORMAT;
 import static androidx.camera.core.impl.utils.Threads.checkMainThread;
 import static androidx.camera.core.impl.utils.TransformUtils.hasCropping;
+import static androidx.camera.core.internal.utils.ImageUtil.isJpegFormats;
 
 import static java.util.Objects.requireNonNull;
 
 import android.graphics.ImageFormat;
 import android.media.ImageReader;
-import android.os.Build;
 import android.util.Size;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.camera.core.CameraEffect;
 import androidx.camera.core.ForwardingImageProxy;
 import androidx.camera.core.ImageCapture;
-import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.MetadataImageReader;
 import androidx.camera.core.impl.CaptureBundle;
 import androidx.camera.core.impl.CaptureConfig;
@@ -59,7 +58,6 @@ import java.util.List;
  * <p>This class is responsible for building the entire pipeline, from creating camera request to
  * post-processing the output.
  */
-@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class ImagePipeline {
 
     static final byte JPEG_QUALITY_MAX_QUALITY = 100;
@@ -78,8 +76,6 @@ public class ImagePipeline {
     // Post-processing pipeline.
     @NonNull
     private final CaptureNode mCaptureNode;
-    @NonNull
-    private final SingleBundlingNode mBundlingNode;
     @NonNull
     private final ProcessingNode mProcessingNode;
     @NonNull
@@ -120,7 +116,6 @@ public class ImagePipeline {
 
         // Create nodes
         mCaptureNode = new CaptureNode();
-        mBundlingNode = new SingleBundlingNode();
         mProcessingNode = new ProcessingNode(
                 requireNonNull(mUseCaseConfig.getIoExecutor(CameraXExecutors.ioExecutor())),
                 cameraEffect != null ? new InternalImageProcessor(cameraEffect) : null);
@@ -134,8 +129,7 @@ public class ImagePipeline {
                 mUseCaseConfig.getImageReaderProxyProvider(),
                 postviewSize,
                 postviewImageFormat);
-        CaptureNode.Out captureOut = mCaptureNode.transform(mPipelineIn);
-        ProcessingNode.In processingIn = mBundlingNode.transform(captureOut);
+        ProcessingNode.In processingIn = mCaptureNode.transform(mPipelineIn);
         mProcessingNode.transform(processingIn);
     }
 
@@ -165,7 +159,6 @@ public class ImagePipeline {
     public void close() {
         checkMainThread();
         mCaptureNode.release();
-        mBundlingNode.release();
         mProcessingNode.release();
     }
 
@@ -235,9 +228,9 @@ public class ImagePipeline {
     }
 
     @MainThread
-    void notifyCaptureError(@NonNull ImageCaptureException e) {
+    void notifyCaptureError(@NonNull TakePictureManager.CaptureError error) {
         checkMainThread();
-        mPipelineIn.getErrorEdge().accept(e);
+        mPipelineIn.getErrorEdge().accept(error);
     }
 
     // ===== private methods =====
@@ -248,6 +241,12 @@ public class ImagePipeline {
         if (bufferFormat != null) {
             return bufferFormat;
         }
+
+        Integer inputFormat = mUseCaseConfig.retrieveOption(OPTION_INPUT_FORMAT, null);
+        if (inputFormat != null && inputFormat == ImageFormat.JPEG_R) {
+            return ImageFormat.JPEG_R;
+        }
+
         // By default, use JPEG format.
         return ImageFormat.JPEG;
     }
@@ -304,9 +303,9 @@ public class ImagePipeline {
             builder.addSurface(mPipelineIn.getSurface());
             builder.setPostviewEnabled(shouldEnablePostview());
 
-            // Only sets the JPEG rotation and quality for JPEG format. Some devices do not
+            // Only sets the JPEG rotation and quality for JPEG formats. Some devices do not
             // handle these configs for non-JPEG images. See b/204375890.
-            if (mPipelineIn.getInputFormat() == ImageFormat.JPEG) {
+            if (isJpegFormats(mPipelineIn.getInputFormat())) {
                 if (EXIF_ROTATION_AVAILABILITY.isRotationOptionSupported()) {
                     builder.addImplementationOption(CaptureConfig.OPTION_ROTATION,
                             takePictureRequest.getRotationDegrees());

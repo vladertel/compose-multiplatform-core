@@ -23,6 +23,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.graphics.Color
@@ -32,7 +33,9 @@ import androidx.test.filters.LargeTest
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertFalse
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,8 +44,7 @@ import org.junit.runner.RunWith
 @LargeTest
 class TransitionTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     private enum class AnimStates {
         From,
@@ -53,109 +55,117 @@ class TransitionTest {
     @Test
     fun transitionTest() {
         val target = mutableStateOf(AnimStates.From)
-        val floatAnim1 = TargetBasedAnimation(
-            spring(dampingRatio = Spring.DampingRatioHighBouncy),
-            Float.VectorConverter,
-            0f,
-            1f
-        )
-        val floatAnim2 = TargetBasedAnimation(
-            spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
-            Float.VectorConverter,
-            1f,
-            0f
-        )
+        val floatAnim1 =
+            TargetBasedAnimation(
+                spring(dampingRatio = Spring.DampingRatioHighBouncy),
+                Float.VectorConverter,
+                0f,
+                1f
+            )
+        val floatAnim2 =
+            TargetBasedAnimation(
+                spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                Float.VectorConverter,
+                1f,
+                0f
+            )
 
-        val colorAnim1 = TargetBasedAnimation(
-            tween(1000),
-            Color.VectorConverter(Color.Red.colorSpace),
-            Color.Red,
-            Color.Green
-        )
-        val colorAnim2 = TargetBasedAnimation(
-            tween(1000),
-            Color.VectorConverter(Color.Red.colorSpace),
-            Color.Green,
-            Color.Red,
-        )
+        val colorAnim1 =
+            TargetBasedAnimation(
+                tween(1000),
+                Color.VectorConverter(Color.Red.colorSpace),
+                Color.Red,
+                Color.Green
+            )
+        val colorAnim2 =
+            TargetBasedAnimation(
+                tween(1000),
+                Color.VectorConverter(Color.Red.colorSpace),
+                Color.Green,
+                Color.Red,
+            )
 
         // Animate from 0f to 0f for 1000ms
-        val keyframes1 = keyframes<Float> {
-            durationMillis = 1000
-            0f at 0
-            200f at 400
-            1000f at 1000
-        }
+        val keyframes1 =
+            keyframes<Float> {
+                durationMillis = 1000
+                0f at 0
+                200f at 400
+                1000f at 1000
+            }
 
-        val keyframes2 = keyframes<Float> {
-            durationMillis = 800
-            0f at 0
-            -500f at 400
-            -1000f at 800
-        }
+        val keyframes2 =
+            keyframes<Float> {
+                durationMillis = 800
+                0f at 0
+                -500f at 400
+                -1000f at 800
+            }
 
-        val keyframesAnim1 = TargetBasedAnimation(
-            keyframes1,
-            Float.VectorConverter,
-            0f,
-            0f
-        )
-        val keyframesAnim2 = TargetBasedAnimation(
-            keyframes2,
-            Float.VectorConverter,
-            0f,
-            0f
-        )
+        val keyframesAnim1 = TargetBasedAnimation(keyframes1, Float.VectorConverter, 0f, 0f)
+        val keyframesAnim2 = TargetBasedAnimation(keyframes2, Float.VectorConverter, 0f, 0f)
         val animFloat = mutableStateOf(-1f)
         val animColor = mutableStateOf(Color.Gray)
         val animFloatWithKeyframes = mutableStateOf(-1f)
         rule.setContent {
             val transition = updateTransition(target.value)
-            animFloat.value = transition.animateFloat(
-                transitionSpec = {
-                    if (AnimStates.From isTransitioningTo AnimStates.To) {
-                        spring(dampingRatio = Spring.DampingRatioHighBouncy)
-                    } else {
-                        spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
+            animFloat.value =
+                transition
+                    .animateFloat(
+                        transitionSpec = {
+                            if (AnimStates.From isTransitioningTo AnimStates.To) {
+                                spring(dampingRatio = Spring.DampingRatioHighBouncy)
+                            } else {
+                                spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            }
+                        }
+                    ) {
+                        when (it) {
+                            AnimStates.From -> 0f
+                            AnimStates.To -> 1f
+                        }
                     }
-                }
-            ) {
-                when (it) {
-                    AnimStates.From -> 0f
-                    AnimStates.To -> 1f
-                }
-            }.value
+                    .value
 
-            animColor.value = transition.animateColor(
-                transitionSpec = { tween(durationMillis = 1000) }
-            ) {
-                when (it) {
-                    AnimStates.From -> Color.Red
-                    AnimStates.To -> Color.Green
-                }
-            }.value
-
-            animFloatWithKeyframes.value = transition.animateFloat(
-                transitionSpec = {
-                    if (AnimStates.From isTransitioningTo AnimStates.To) {
-                        keyframes1
-                    } else {
-                        keyframes2
+            animColor.value =
+                transition
+                    .animateColor(transitionSpec = { tween(durationMillis = 1000) }) {
+                        when (it) {
+                            AnimStates.From -> Color.Red
+                            AnimStates.To -> Color.Green
+                        }
                     }
-                }
-            ) {
-                // Same values for all states, but different transitions from state to state.
-                0f
-            }.value
+                    .value
+
+            animFloatWithKeyframes.value =
+                transition
+                    .animateFloat(
+                        transitionSpec = {
+                            if (AnimStates.From isTransitioningTo AnimStates.To) {
+                                keyframes1
+                            } else {
+                                keyframes2
+                            }
+                        }
+                    ) {
+                        // Same values for all states, but different transitions from state to
+                        // state.
+                        0f
+                    }
+                    .value
 
             if (transition.isRunning) {
                 if (transition.targetState == AnimStates.To) {
                     assertEquals(
                         floatAnim1.getValueFromNanos(transition.playTimeNanos),
-                        animFloat.value, 0.00001f
+                        animFloat.value,
+                        0.00001f
                     )
                     assertEquals(
                         colorAnim1.getValueFromNanos(transition.playTimeNanos),
@@ -163,7 +173,8 @@ class TransitionTest {
                     )
                     assertEquals(
                         keyframesAnim1.getValueFromNanos(transition.playTimeNanos),
-                        animFloatWithKeyframes.value, 0.00001f
+                        animFloatWithKeyframes.value,
+                        0.00001f
                     )
 
                     assertEquals(AnimStates.To, transition.segment.targetState)
@@ -171,7 +182,8 @@ class TransitionTest {
                 } else {
                     assertEquals(
                         floatAnim2.getValueFromNanos(transition.playTimeNanos),
-                        animFloat.value, 0.00001f
+                        animFloat.value,
+                        0.00001f
                     )
                     assertEquals(
                         colorAnim2.getValueFromNanos(transition.playTimeNanos),
@@ -179,7 +191,8 @@ class TransitionTest {
                     )
                     assertEquals(
                         keyframesAnim2.getValueFromNanos(transition.playTimeNanos),
-                        animFloatWithKeyframes.value, 0.00001f
+                        animFloatWithKeyframes.value,
+                        0.00001f
                     )
                     assertEquals(AnimStates.From, transition.segment.targetState)
                     assertEquals(AnimStates.To, transition.segment.initialState)
@@ -189,18 +202,14 @@ class TransitionTest {
 
         assertEquals(0f, animFloat.value)
         assertEquals(Color.Red, animColor.value)
-        rule.runOnIdle {
-            target.value = AnimStates.To
-        }
+        rule.runOnIdle { target.value = AnimStates.To }
         rule.waitForIdle()
 
         assertEquals(1f, animFloat.value)
         assertEquals(Color.Green, animColor.value)
 
         // Animate back to the `from` state
-        rule.runOnIdle {
-            target.value = AnimStates.From
-        }
+        rule.runOnIdle { target.value = AnimStates.From }
         rule.waitForIdle()
 
         assertEquals(0f, animFloat.value)
@@ -213,11 +222,10 @@ class TransitionTest {
         var playTime by mutableStateOf(0L)
         rule.setContent {
             val transition = updateTransition(target.value)
-            val actual = transition.animateFloat(
-                transitionSpec = { tween(200) }
-            ) {
-                if (it == AnimStates.From) 0f else 1000f
-            }
+            val actual =
+                transition.animateFloat(transitionSpec = { tween(200) }) {
+                    if (it == AnimStates.From) 0f else 1000f
+                }
 
             val anim = TargetBasedAnimation(tween(200), Float.VectorConverter, 0f, 1000f)
 
@@ -234,9 +242,7 @@ class TransitionTest {
             }
         }
 
-        rule.runOnIdle {
-            target.value = AnimStates.To
-        }
+        rule.runOnIdle { target.value = AnimStates.To }
         rule.waitForIdle()
         assertTrue(playTime > 200 * MillisToNanos)
     }
@@ -249,28 +255,23 @@ class TransitionTest {
         rule.setContent {
             val transition = updateTransition(target.value)
 
-            transition.animateFloat(
-                transitionSpec = { tween(1000) }
-            ) {
+            transition.animateFloat(transitionSpec = { tween(1000) }) {
                 if (it == AnimStates.From) -100f else 0f
             }
 
             if (transition.playTimeNanos > 0) {
                 val startTime = remember { transition.playTimeNanos }
-                val laterAdded = transition.animateFloat(
-                    transitionSpec = { tween(800) }
-                ) {
-                    if (it == AnimStates.From) 0f else 1000f
-                }
+                val laterAdded =
+                    transition.animateFloat(transitionSpec = { tween(800) }) {
+                        if (it == AnimStates.From) 0f else 1000f
+                    }
                 val anim = TargetBasedAnimation(tween(800), Float.VectorConverter, 0f, 1000f)
                 playTime = transition.playTimeNanos - startTime
                 assertEquals(anim.getValueFromNanos(playTime), laterAdded.value)
             }
         }
 
-        rule.runOnIdle {
-            target.value = AnimStates.To
-        }
+        rule.runOnIdle { target.value = AnimStates.To }
         rule.waitForIdle()
         assertTrue(playTime > 800 * MillisToNanos)
     }
@@ -283,11 +284,10 @@ class TransitionTest {
         var floatAnim: State<Float>? = null
         rule.setContent {
             val transition = rememberTransition(target)
-            floatAnim = transition.animateFloat(
-                transitionSpec = { tween(800) }
-            ) {
-                if (it == AnimStates.From) 0f else 1000f
-            }
+            floatAnim =
+                transition.animateFloat(transitionSpec = { tween(800) }) {
+                    if (it == AnimStates.From) 0f else 1000f
+                }
             // Verify that animation starts right away
             LaunchedEffect(transition) {
                 val startTime = withFrameNanos { it }
@@ -311,11 +311,10 @@ class TransitionTest {
             var target by remember { mutableStateOf(MutableTransitionState(AnimStates.From)) }
             target.targetState = AnimStates.To
             val transition = rememberTransition(target)
-            val floatAnim = transition.animateFloat(
-                transitionSpec = { tween(800) }
-            ) {
-                if (it == AnimStates.From) 0f else 1000f
-            }
+            val floatAnim =
+                transition.animateFloat(transitionSpec = { tween(800) }) {
+                    if (it == AnimStates.From) 0f else 1000f
+                }
             LaunchedEffect(Unit) {
                 delay(100)
                 target = MutableTransitionState(AnimStates.From)
@@ -349,11 +348,10 @@ class TransitionTest {
         val mutableTransitionState = MutableTransitionState(false)
         var transition: Transition<Boolean>? = null
         rule.setContent {
-            transition = rememberTransition(mutableTransitionState).apply {
-                animateFloat {
-                    if (it) 1f else 0f
+            transition =
+                rememberTransition(mutableTransitionState).apply {
+                    animateFloat { if (it) 1f else 0f }
                 }
-            }
         }
         rule.mainClock.autoAdvance = false
         rule.runOnIdle {
@@ -392,19 +390,19 @@ class TransitionTest {
         val childTransitionFloat = mutableStateOf(1f)
         rule.setContent {
             val transition = updateTransition(intState.value)
-            parentTransitionFloat.value = transition.animateFloat({ tween(100) }) {
-                when (it) {
-                    0 -> 0f
-                    1 -> 1f
-                    else -> 2f
-                }
-            }.value
-            val booleanTransition = transition.createChildTransition {
-                it == 1
-            }
-            childTransitionFloat.value = booleanTransition.animateFloat({ tween(500) }) {
-                if (it) 1f else 0f
-            }.value
+            parentTransitionFloat.value =
+                transition
+                    .animateFloat({ tween(100) }) {
+                        when (it) {
+                            0 -> 0f
+                            1 -> 1f
+                            else -> 2f
+                        }
+                    }
+                    .value
+            val booleanTransition = transition.createChildTransition { it == 1 }
+            childTransitionFloat.value =
+                booleanTransition.animateFloat({ tween(500) }) { if (it) 1f else 0f }.value
             LaunchedEffect(intState.value) {
                 while (true) {
                     if (transition.targetState == transition.currentState) {
@@ -444,6 +442,93 @@ class TransitionTest {
         rule.runOnIdle {
             assertEquals(2f, parentTransitionFloat.value)
             assertEquals(0f, childTransitionFloat.value)
+        }
+    }
+
+    @OptIn(ExperimentalTransitionApi::class)
+    @Test
+    fun addAnimationToCompletedChildTransition() {
+        rule.mainClock.autoAdvance = false
+        var value1 = 0f
+        var value2 = 0f
+        var value3 = 0f
+        lateinit var coroutineScope: CoroutineScope
+        val state = MutableTransitionState(false)
+
+        rule.setContent {
+            coroutineScope = rememberCoroutineScope()
+            val parent = rememberTransition(state)
+            value1 =
+                parent
+                    .animateFloat({ tween(1600, easing = LinearEasing) }) { if (it) 1000f else 0f }
+                    .value
+
+            val child = parent.createChildTransition { it }
+            value2 =
+                child
+                    .animateFloat({ tween(160, easing = LinearEasing) }) { if (it) 1000f else 0f }
+                    .value
+
+            value3 =
+                if (!parent.targetState) {
+                    child
+                        .animateFloat({ tween(160, easing = LinearEasing) }) {
+                            if (it) 0f else 1000f
+                        }
+                        .value
+                } else {
+                    0f
+                }
+        }
+        coroutineScope.launch { state.targetState = true }
+        rule.mainClock.advanceTimeByFrame() // wait for composition
+        rule.runOnIdle {
+            assertEquals(0f, value1, 0f)
+            assertEquals(0f, value2, 0f)
+            assertEquals(0f, value3, 0f)
+        }
+        rule.mainClock.advanceTimeByFrame() // latch the animation start value
+        rule.runOnIdle {
+            assertEquals(0f, value1, 0f)
+            assertEquals(0f, value2, 0f)
+            assertEquals(0f, value3, 0f)
+        }
+        rule.mainClock.advanceTimeByFrame() // first frame of animation
+        rule.runOnIdle {
+            assertEquals(10f, value1, 0.1f)
+            assertEquals(100f, value2, 0.1f)
+            assertEquals(0f, value3, 0f) // hasn't started yet
+        }
+        rule.mainClock.advanceTimeBy(160)
+        rule.runOnIdle {
+            assertEquals(110f, value1, 0.1f)
+            assertEquals(1000f, value2, 0f)
+            assertEquals(0f, value3, 0f) // hasn't started yet
+        }
+        coroutineScope.launch { state.targetState = false }
+        rule.mainClock.advanceTimeByFrame() // compose the change
+        rule.runOnIdle {
+            assertEquals(120f, value1, 0.1f)
+            assertEquals(1000f, value2, 0f)
+            assertEquals(0f, value3, 0f)
+        }
+        rule.mainClock.advanceTimeByFrame()
+        var prevValue1 = 120f
+        var prevValue2 = 1000f
+        rule.runOnIdle {
+            // value1 and value2 have spring interrupted values, so we can't
+            // easily know their exact values
+            assertTrue(value1 < prevValue1)
+            prevValue1 = value1
+            assertTrue(value2 < prevValue2)
+            prevValue2 = value2
+            assertEquals(100f, value3, 0.1f)
+        }
+        rule.mainClock.advanceTimeByFrame()
+        rule.runOnIdle {
+            assertTrue(value1 < prevValue1)
+            assertTrue(value2 < prevValue2)
+            assertEquals(200f, value3, 0.1f)
         }
     }
 }

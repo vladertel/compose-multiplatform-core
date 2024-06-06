@@ -37,11 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
@@ -114,21 +114,14 @@ private fun MainContent(
 @Composable
 private fun LightingScreen(modifier: Modifier = Modifier, isOn: Boolean = false) {
     val backgroundColor = if (isOn) LightOn else LightOff
-    Box(
-        modifier = modifier.fillMaxSize().background(color = backgroundColor)
-    )
+    Box(modifier = modifier.fillMaxSize().background(color = backgroundColor))
 }
 
 @Composable
-private fun ControlPanel(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
+private fun ControlPanel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(modifier = modifier.fillMaxSize()) {
         Spacer(modifier = Modifier.weight(2f))
-        Box(modifier = Modifier.weight(1f)) {
-            content()
-        }
+        Box(modifier = Modifier.weight(1f)) { content() }
     }
 }
 

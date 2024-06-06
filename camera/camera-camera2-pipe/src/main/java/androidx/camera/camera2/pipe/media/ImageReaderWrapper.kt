@@ -18,26 +18,23 @@ package androidx.camera.camera2.pipe.media
 
 import android.hardware.camera2.MultiResolutionImageReader
 import android.media.ImageReader
-import android.os.Build
 import android.view.Surface
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.OutputId
 import androidx.camera.camera2.pipe.StreamId
 import androidx.camera.camera2.pipe.UnsafeWrapper
 
-/**
- * Simplified wrapper for [ImageReader]-like classes.
- */
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+/** Simplified wrapper for [ImageReader]-like classes. */
 interface ImageReaderWrapper : UnsafeWrapper, AutoCloseable {
     /**
      * Get a Surface that can be used to produce images for this ImageReader.
+     *
      * @see [ImageReader.getSurface]
      */
     val surface: Surface
 
     /**
      * Get the maximum number of images that can be produced before stalling or throwing exceptions.
+     *
      * @see [ImageReader.acquireNextImage]
      * @see [ImageReader.acquireLatestImage]
      */

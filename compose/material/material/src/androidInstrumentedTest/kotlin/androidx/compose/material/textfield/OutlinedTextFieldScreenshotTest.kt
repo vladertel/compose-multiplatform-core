@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.material.AnimationDuration
 import androidx.compose.material.GOLDEN_MATERIAL
 import androidx.compose.material.Icon
 import androidx.compose.material.LocalContentColor
@@ -33,6 +34,9 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.setMaterialContent
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.testutils.assertAgainstGolden
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,19 +67,18 @@ import org.junit.runner.RunWith
 class OutlinedTextFieldScreenshotTest {
     private val TextFieldTag = "OutlinedTextField"
 
-    private val longText = TextFieldValue(
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do " +
-            "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam," +
-            " quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. " +
-            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu " +
-            "fugiat nulla pariatur."
-    )
+    private val longText =
+        TextFieldValue(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do " +
+                "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam," +
+                " quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. " +
+                "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu " +
+                "fugiat nulla pariatur."
+        )
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
-    @get:Rule
-    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
+    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL)
 
     @Test
     fun outlinedTextField_withInput() {
@@ -142,6 +145,8 @@ class OutlinedTextFieldScreenshotTest {
 
     @Test
     fun outlinedTextField_error_focused() {
+        // stop animation of blinking cursor
+        rule.mainClock.autoAdvance = false
         rule.setMaterialContent {
             val text = "Input"
             OutlinedTextField(
@@ -154,6 +159,7 @@ class OutlinedTextFieldScreenshotTest {
         }
 
         rule.onNodeWithTag(TextFieldTag).focus()
+        rule.mainClock.advanceTimeBy(AnimationDuration.toLong())
 
         assertAgainstGolden("outlined_textField_focused_errorState")
     }
@@ -197,9 +203,8 @@ class OutlinedTextFieldScreenshotTest {
                 value = TextFieldValue(text = text, selection = TextRange(text.length)),
                 onValueChange = {},
                 label = { Text("Label") },
-                modifier = Modifier.requiredHeight(300.dp)
-                    .requiredWidth(280.dp)
-                    .testTag(TextFieldTag)
+                modifier =
+                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
             )
         }
 
@@ -213,9 +218,8 @@ class OutlinedTextFieldScreenshotTest {
             OutlinedTextField(
                 value = TextFieldValue(text = text, selection = TextRange(text.length)),
                 onValueChange = {},
-                modifier = Modifier.requiredHeight(300.dp)
-                    .requiredWidth(280.dp)
-                    .testTag(TextFieldTag)
+                modifier =
+                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
             )
         }
 
@@ -230,9 +234,8 @@ class OutlinedTextFieldScreenshotTest {
                 onValueChange = {},
                 label = { Text("Label") },
                 placeholder = { Text("placeholder") },
-                modifier = Modifier.requiredHeight(300.dp)
-                    .requiredWidth(280.dp)
-                    .testTag(TextFieldTag)
+                modifier =
+                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
             )
         }
 
@@ -248,9 +251,8 @@ class OutlinedTextFieldScreenshotTest {
                 value = "",
                 onValueChange = {},
                 placeholder = { Text("placeholder") },
-                modifier = Modifier.requiredHeight(300.dp)
-                    .requiredWidth(280.dp)
-                    .testTag(TextFieldTag)
+                modifier =
+                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
             )
         }
 
@@ -266,9 +268,8 @@ class OutlinedTextFieldScreenshotTest {
                 value = "",
                 onValueChange = {},
                 label = { Text("Label") },
-                modifier = Modifier.requiredHeight(300.dp)
-                    .requiredWidth(280.dp)
-                    .testTag(TextFieldTag)
+                modifier =
+                    Modifier.requiredHeight(300.dp).requiredWidth(280.dp).testTag(TextFieldTag)
             )
         }
 
@@ -394,7 +395,7 @@ class OutlinedTextFieldScreenshotTest {
         rule.setMaterialContent {
             OutlinedTextField(
                 value = longText,
-                onValueChange = { },
+                onValueChange = {},
                 singleLine = true,
                 modifier = Modifier.testTag(TextFieldTag).requiredWidth(300.dp),
                 enabled = false
@@ -449,7 +450,7 @@ class OutlinedTextFieldScreenshotTest {
         rule.setMaterialContent {
             OutlinedTextField(
                 value = longText,
-                onValueChange = { },
+                onValueChange = {},
                 modifier = Modifier.testTag(TextFieldTag).requiredWidth(300.dp),
                 singleLine = true,
                 enabled = true,
@@ -502,7 +503,11 @@ class OutlinedTextFieldScreenshotTest {
 
     private fun SemanticsNodeInteraction.focus() {
         // split click into (down) and (move, up) to enforce a composition in between
-        this.performTouchInput { down(center) }.performTouchInput { move(); up() }
+        this.performTouchInput { down(center) }
+            .performTouchInput {
+                move()
+                up()
+            }
     }
 
     @Test
@@ -519,6 +524,30 @@ class OutlinedTextFieldScreenshotTest {
         }
 
         assertAgainstGolden("outlinedTextField_customShape")
+    }
+
+    @Test
+    fun outlinedTextField_labelBecomesNull() {
+        lateinit var makeLabelNull: MutableState<Boolean>
+        rule.setMaterialContent {
+            makeLabelNull = remember { mutableStateOf(false) }
+            OutlinedTextField(
+                value = "Text",
+                onValueChange = {},
+                modifier = Modifier.width(300.dp).testTag(TextFieldTag),
+                label =
+                    if (makeLabelNull.value) {
+                        null
+                    } else {
+                        { Text("Label") }
+                    },
+            )
+        }
+
+        rule.onNodeWithTag(TextFieldTag).focus()
+        rule.runOnIdle { makeLabelNull.value = true }
+
+        assertAgainstGolden("outlinedTextField_labelBecomesNull")
     }
 
     @Test
@@ -555,7 +584,8 @@ class OutlinedTextFieldScreenshotTest {
     }
 
     private fun assertAgainstGolden(goldenIdentifier: String) {
-        rule.onNodeWithTag(TextFieldTag)
+        rule
+            .onNodeWithTag(TextFieldTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenIdentifier)
     }

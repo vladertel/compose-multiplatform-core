@@ -25,9 +25,10 @@ import android.util.Range;
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
+import androidx.camera.core.CameraControl;
+import androidx.camera.core.CameraInfo;
 import androidx.camera.core.CameraProvider;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.DynamicRange;
@@ -138,7 +139,6 @@ import java.util.concurrent.ExecutionException;
  * </code> will select the supported sizes for the use cases according to the use cases'
  * configuration and combination.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class ExtensionsManager {
     private static final String TAG = "ExtensionsManager";
 
@@ -510,6 +510,39 @@ public final class ExtensionsManager {
         }
 
         return mExtensionsInfo.isImageAnalysisSupported(cameraSelector, mode);
+    }
+
+    /**
+     * Retrieves a {@link CameraExtensionsControl} object that allows customization of capture
+     * request settings for supported camera extensions.
+     *
+     * @param cameraControl the camera control for a camera with a specific extension mode turned
+     *                     on.
+     * @return a {@link CameraExtensionsControl} object to manage extension-related settings. Or
+     * returns {@code null} if the provided {@link CameraControl} doesn't represent a camera with
+     * enabled extensions.
+     */
+    @Nullable
+    public CameraExtensionsControl getCameraExtensionsControl(
+            @NonNull CameraControl cameraControl) {
+        return CameraExtensionsControls.from(cameraControl);
+    }
+
+    /**
+     * Retrieves a {@link CameraExtensionsInfo} object that allows to observe or monitor capture
+     * request settings and results for supported camera extensions.
+     *
+     * <p>If the provided {@link CameraInfo} doesn't represent a camera with enabled extensions, a
+     * placeholder {@link CameraExtensionsInfo} object will be returned, indicating no extension
+     * type and strength support.
+     *
+     * @param cameraInfo the camera info for a camera with a specific extension mode turned on.
+     * @return a {@link CameraExtensionsInfo} object for observing extension-specific capture
+     * request settings and results.
+     */
+    @NonNull
+    public CameraExtensionsInfo getCameraExtensionsInfo(@NonNull CameraInfo cameraInfo) {
+        return CameraExtensionsInfos.from(cameraInfo);
     }
 
     @VisibleForTesting

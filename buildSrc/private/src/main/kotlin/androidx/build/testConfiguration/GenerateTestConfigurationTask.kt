@@ -36,6 +36,7 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.SkipWhenEmpty
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
@@ -58,16 +59,25 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val appFileCollection: ConfigurableFileCollection
 
+    /** File existence check to determine whether to run this task. */
+    @get:InputFiles
+    @get:SkipWhenEmpty
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val androidTestSourceCodeCollection: ConfigurableFileCollection
+
     @get:Internal abstract val appLoader: Property<BuiltArtifactsLoader>
 
-    /**
-     * Extracted APKs for PrivacySandbox SDKs dependencies.
-     * Produced by AGP.
-     */
+    /** Extracted APKs for PrivacySandbox SDKs dependencies. Produced by AGP. */
     @get:InputFiles
     @get:Optional
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val privacySandboxSdkApks: ConfigurableFileCollection
+
+    /** Extracted split with manifest containing <uses-sdk-library> tag. Produced by AGP. */
+    @get:InputFiles
+    @get:Optional
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val privacySandboxUsesSdkSplit: ConfigurableFileCollection
 
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -75,9 +85,9 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
 
     @get:Internal abstract val testLoader: Property<BuiltArtifactsLoader>
 
-    @get:Input abstract val testProjectPath: Property<String>
-
     @get:Input abstract val minSdk: Property<Int>
+
+    @get:Input abstract val macrobenchmark: Property<Boolean>
 
     @get:Input abstract val hasBenchmarkPlugin: Property<Boolean>
 
@@ -101,18 +111,14 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
     abstract val outputAppApk: RegularFileProperty
 
     /**
-     * Filename prefix for all PrivacySandbox related output files.
-     * Required for producing unique filenames over all projects,
+     * Filename prefix for all PrivacySandbox related output files. Required for producing unique
+     * filenames over all projects,
      */
-    @get:Input
-    @get:Optional
-    abstract val outputPrivacySandboxFilenamesPrefix: Property<String>
+    @get:Input @get:Optional abstract val outputPrivacySandboxFilenamesPrefix: Property<String>
 
-    /**
-     * Output directory for PrivacySandbox SDKs APKs.
-     */
+    /** Output directory for PrivacySandbox files (SDKs APKs, splits, etc). */
     @get:[OutputDirectory Optional]
-    abstract val outputPrivacySandboxSdkApks: DirectoryProperty
+    abstract val outputPrivacySandboxFiles: DirectoryProperty
 
     @TaskAction
     fun generateAndroidTestZip() {
@@ -155,6 +161,7 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
             configBuilder
                 .appApkName(destinationApk.name)
                 .appApkSha256(sha256(File(appApkBuiltArtifact.outputFile)))
+            configurePrivacySandbox(configBuilder)
         }
         configBuilder.additionalApkKeys(additionalApkKeys.get())
         val isPresubmit = presubmit.get()
@@ -173,10 +180,15 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
                 // they run with dryRunMode to check crashes don't happen, without measurement
                 configBuilder.tag("androidx_unit_tests")
             }
-        } else if (testProjectPath.get().endsWith("macrobenchmark")) {
+        } else if (macrobenchmark.get()) {
             // macro benchmarks do not have a dryRunMode, so we don't run them in presubmit
             configBuilder.isMacrobenchmark(true)
             configBuilder.tag("macrobenchmarks")
+            if (additionalTags.get().contains("wear")) {
+                // Wear macrobenchmarks are tagged separately to enable running on wear in CI
+                // standard macrobenchmarks don't currently run well on wear (b/189952249)
+                configBuilder.tag("wear-macrobenchmarks")
+            }
         } else {
             configBuilder.tag("androidx_unit_tests")
         }
@@ -187,8 +199,8 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
         val testApkBuiltArtifact = testApk.elements.single()
         val destinationApk = outputTestApk.get().asFile
         File(testApkBuiltArtifact.outputFile).copyTo(destinationApk, overwrite = true)
-        instrumentationArgs.get().forEach {
-            (key, value) -> configBuilder.instrumentationArgsMap[key] = value
+        instrumentationArgs.get().forEach { (key, value) ->
+            configBuilder.instrumentationArgsMap[key] = value
         }
         configBuilder
             .testApkName(destinationApk.name)
@@ -196,7 +208,6 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
             .minSdk(minSdk.get().toString())
             .testRunner(testRunner.get())
             .testApkSha256(sha256(File(testApkBuiltArtifact.outputFile)))
-        configurePrivacySandbox(configBuilder)
         createOrFail(outputXml).writeText(configBuilder.buildXml())
         if (!outputJson.asFile.get().name.startsWith("_")) {
             // Prefixing json file names with _ allows us to collocate these files
@@ -213,8 +224,8 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
     }
 
     /**
-     * Configure installation of PrivacySandbox SDKs before main and test APKs.
-     * Do nothing if project doesn't have dependencies on PrivacySandbox SDKs.
+     * Configure installation of PrivacySandbox SDKs before main and test APKs. Do nothing if
+     * project doesn't have dependencies on PrivacySandbox SDKs.
      */
     private fun configurePrivacySandbox(configBuilder: ConfigBuilder) {
         if (privacySandboxSdkApks.isEmpty) {
@@ -222,16 +233,26 @@ constructor(private val objects: ObjectFactory) : DefaultTask() {
         }
 
         val prefix = outputPrivacySandboxFilenamesPrefix.get()
-        val sdkApkFileNames = privacySandboxSdkApks.asFileTree.map { sdkApk ->
-            // TODO (b/309610890): Remove after supporting unique filenames on bundletool side.
-            val sdkProjectName = sdkApk.parentFile?.name
-            val outputFileName = "$prefix-$sdkProjectName-${sdkApk.name}"
-            val outputFile = outputPrivacySandboxSdkApks.get().file(outputFileName)
-            sdkApk.copyTo(outputFile.asFile, overwrite = true)
-            outputFileName
-        }
-
+        val sdkApkFileNames =
+            privacySandboxSdkApks.asFileTree.map { sdkApk ->
+                // TODO (b/309610890): Remove after supporting unique filenames on bundletool side.
+                val sdkProjectName = sdkApk.parentFile?.name
+                val outputFileName = "$prefix-$sdkProjectName-${sdkApk.name}"
+                val outputFile = outputPrivacySandboxFiles.get().file(outputFileName)
+                sdkApk.copyTo(outputFile.asFile, overwrite = true)
+                outputFileName
+            }
         configBuilder.initialSetupApks(sdkApkFileNames)
+
+        val usesSdkSplitArtifact =
+            appLoader.get().load(privacySandboxUsesSdkSplit)?.elements?.single()
+        if (usesSdkSplitArtifact != null) {
+            val splitApk = File(usesSdkSplitArtifact.outputFile)
+            val outputFileName = "$prefix-${splitApk.name}"
+            val outputFile = outputPrivacySandboxFiles.get().file(outputFileName)
+            splitApk.copyTo(outputFile.asFile, overwrite = true)
+            configBuilder.appSplits(listOf(outputFileName))
+        }
 
         if (minSdk.get() < PRIVACY_SANDBOX_MIN_API_LEVEL) {
             /*

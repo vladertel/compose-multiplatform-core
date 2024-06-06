@@ -34,11 +34,13 @@ import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.options.Option
 import org.gradle.process.ExecOperations
 import org.gradle.workers.WorkAction
 import org.gradle.workers.WorkParameters
@@ -50,8 +52,7 @@ abstract class DackkaTask
 constructor(private val workerExecutor: WorkerExecutor, private val objects: ObjectFactory) :
     DefaultTask() {
 
-    @get:OutputFile
-    abstract val argsJsonFile: RegularFileProperty
+    @get:OutputFile abstract val argsJsonFile: RegularFileProperty
 
     @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
     abstract val projectStructureMetadataFile: RegularFileProperty
@@ -67,9 +68,18 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
     @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
     abstract val frameworkSamplesDir: DirectoryProperty
 
-    // Directory containing the code samples
+    // Directory containing the code samples derived via the old method. This will be removed
+    // as soon as all libraries have been published with samples. b/329424152
     @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
-    abstract val samplesDir: DirectoryProperty
+    abstract val samplesDeprecatedDir: DirectoryProperty
+
+    // Directory containing the code samples for non-KMP libraries
+    @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
+    abstract val samplesJvmDir: DirectoryProperty
+
+    // Directory containing the code samples for KMP libraries
+    @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
+    abstract val samplesKmpDir: DirectoryProperty
 
     // Directory containing the JVM source code for Dackka to process
     @get:[InputFiles PathSensitive(PathSensitivity.RELATIVE)]
@@ -105,16 +115,40 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
 
     @get:Input abstract val nullabilityAnnotations: ListProperty<String>
 
-    @get:[InputFiles PathSensitive(PathSensitivity.NONE)]
-    abstract val versionMetadataFiles: ConfigurableFileCollection
+    // Version metadata for apiSince, only marked as @InputFiles if includeVersionMetadata is true
+    @get:Internal abstract val versionMetadataFiles: ConfigurableFileCollection
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    fun getOptionalVersionMetadataFiles(): ConfigurableFileCollection {
+        return if (includeVersionMetadata) {
+            versionMetadataFiles
+        } else {
+            objects.fileCollection()
+        }
+    }
 
     // Maps to the system variable LIBRARY_METADATA_FILE containing artifactID and other metadata
     @get:[InputFile PathSensitive(PathSensitivity.NONE)]
     abstract val libraryMetadataFile: RegularFileProperty
 
-    // The base URL to create source links for classes, as a format string with placeholders for the
-    // file path and qualified class name.
+    // The base URLs to create source links for classes, functions, and properties, respectively, as
+    // format strings with placeholders for the file path and qualified class name, function name,
+    // or property name.
     @get:Input abstract val baseSourceLink: Property<String>
+    @get:Input abstract val baseFunctionSourceLink: Property<String>
+    @get:Input abstract val basePropertySourceLink: Property<String>
+
+    /**
+     * Option for whether to include apiSince metadata in the docs. Defaults to including metadata.
+     * Run with `--no-version-metadata` to avoid running `generateApi` before `docs`.
+     */
+    @get:Input
+    @set:Option(
+        option = "version-metadata",
+        description = "Include added-in/deprecated-in API version metadata"
+    )
+    var includeVersionMetadata: Boolean = true
 
     private fun sourceSets(): List<DokkaInputModels.SourceSet> {
         val externalDocs =
@@ -136,16 +170,31 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
                 ?.let { metadataFile ->
                     val metadata =
                         gson.fromJson(metadataFile.readText(), ProjectStructureMetadata::class.java)
-                    metadata.sourceSets.map { sourceSet ->
+                    metadata.sourceSets.mapNotNull { sourceSet ->
+                        val sourceDir = multiplatformSourcesDir.get().asFile.resolve(sourceSet.name)
+                        if (!sourceDir.exists()) return@mapNotNull null
                         val analysisPlatform =
                             DokkaAnalysisPlatform.valueOf(sourceSet.analysisPlatform.uppercase())
-                        val sourceDir = multiplatformSourcesDir.get().asFile.resolve(sourceSet.name)
                         DokkaInputModels.SourceSet(
                             id = sourceSetIdForSourceSet(sourceSet.name),
                             displayName = sourceSet.name,
                             analysisPlatform = analysisPlatform.jsonName,
                             sourceRoots = objects.fileCollection().from(sourceDir),
-                            samples = objects.fileCollection(),
+                            // TODO(b/181224204): KMP samples aren't supported, dackka assumes all
+                            // samples are in common
+                            samples =
+                                if (analysisPlatform == DokkaAnalysisPlatform.COMMON) {
+                                    objects
+                                        .fileCollection()
+                                        .from(
+                                            samplesDeprecatedDir,
+                                            samplesJvmDir,
+                                            samplesKmpDir,
+                                            frameworkSamplesDir.get().asFile
+                                        )
+                                } else {
+                                    objects.fileCollection()
+                                },
                             includes = objects.fileCollection().from(includesFiles(sourceDir)),
                             classpath = dependenciesClasspath,
                             externalDocumentationLinks = externalDocs,
@@ -165,10 +214,15 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
                 displayName = "main",
                 analysisPlatform = "jvm",
                 sourceRoots = objects.fileCollection().from(jvmSourcesDir),
-                samples = objects.fileCollection().from(
-                    samplesDir,
-                    frameworkSamplesDir.get().asFile
-                ),
+                samples =
+                    objects
+                        .fileCollection()
+                        .from(
+                            samplesDeprecatedDir,
+                            samplesJvmDir,
+                            samplesKmpDir,
+                            frameworkSamplesDir.get().asFile
+                        ),
                 includes = objects.fileCollection().from(includesFiles(jvmSourcesDir.get().asFile)),
                 classpath = dependenciesClasspath,
                 externalDocumentationLinks = externalDocs,
@@ -191,7 +245,6 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
         val linksConfiguration = ""
         val jsonMap =
             mapOf(
-                "moduleName" to "",
                 "outputDir" to destinationDir.get().asFile.path,
                 "globalLinks" to linksConfiguration,
                 "sourceSets" to sourceSets(),
@@ -216,13 +269,15 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
                                         "libraryMetadataFilename" to
                                             libraryMetadataFile.get().toString(),
                                         "baseSourceLink" to baseSourceLink.get(),
+                                        "baseFunctionSourceLink" to baseFunctionSourceLink.get(),
+                                        "basePropertySourceLink" to basePropertySourceLink.get(),
                                         "annotationsNotToDisplay" to annotationsNotToDisplay.get(),
                                         "annotationsNotToDisplayJava" to
                                             annotationsNotToDisplayJava.get(),
                                         "annotationsNotToDisplayKotlin" to
                                             annotationsNotToDisplayKotlin.get(),
                                         "hidingAnnotations" to hidingAnnotations.get(),
-                                        "versionMetadataFilenames" to checkVersionMetadataFiles(),
+                                        "versionMetadataFilenames" to getVersionMetadataFiles(),
                                         "validNullabilityAnnotations" to
                                             nullabilityAnnotations.get(),
                                     )
@@ -232,18 +287,18 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
             )
 
         val json = gson.toJson(jsonMap)
-        return argsJsonFile.get().asFile.apply {
-            writeText(json)
-        }
+        return argsJsonFile.get().asFile.apply { writeText(json) }
     }
 
     /**
-     * Return the list of version metadata files after checking if they're all JSON. If version
+     * If version metadata shouldn't be included in the docs, returns an empty list. Otherwise,
+     * returns the list of version metadata files after checking if they're all JSON. If version
      * metadata does not exist for a project, it's possible that a configuration which isn't an
      * exact match of the version metadata attributes to be selected as version metadata.
      */
-    private fun checkVersionMetadataFiles(): List<File> {
-        val (json, nonJson) = versionMetadataFiles.files.partition { it.extension == "json" }
+    private fun getVersionMetadataFiles(): List<File> {
+        val (json, nonJson) =
+            getOptionalVersionMetadataFiles().files.partition { it.extension == "json" }
         if (nonJson.isNotEmpty()) {
             logger.error(
                 "The following were resolved as version metadata files but are not JSON files. " +
@@ -285,6 +340,15 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
                 "play" to "https://developer.android.com/reference/",
                 // From developer.android.com/reference/com/google/android/material/package-list
                 "material" to "https://developer.android.com/reference",
+                "okhttp3" to "https://square.github.io/okhttp/5.x/",
+                "truth" to "https://truth.dev/api/0.41/",
+                // From developer.android.com/reference/android/support/wearable/package-list
+                "wearable" to "https://developer.android.com/reference/",
+                // Filtered to just java.awt and javax packages (base java packages are included in
+                // the android package-list)
+                "javase8" to "https://docs.oracle.com/javase/8/docs/api/",
+                "javaee7" to "https://docs.oracle.com/javaee%2F7%2Fapi%2F%2F",
+                "findbugs" to "https://www.javadoc.io/doc/com.google.code.findbugs/jsr305/latest/",
                 // All package-lists below were created manually
                 "mlkit" to "https://developers.google.com/android/reference/",
                 "dagger" to "https://dagger.dev/api/latest/",
@@ -294,6 +358,15 @@ constructor(private val workerExecutor: WorkerExecutor, private val objects: Obj
                     "https://javadoc.io/doc/org.jetbrains/annotations/latest/",
                 "auto-value" to
                     "https://www.javadoc.io/doc/com.google.auto.value/auto-value/latest/",
+                "robolectric" to "https://robolectric.org/javadoc/4.11/",
+                "interactive-media" to
+                    "https://developers.google.com/interactive-media-ads/docs/sdks/android/" +
+                        "client-side/api/reference/com/google/ads/interactivemedia/v3",
+                "errorprone" to "https://errorprone.info/api/latest/",
+                "gms" to "https://developers.google.com/android/reference",
+                "checkerframework" to "https://checkerframework.org/api/",
+                "chromium" to
+                    "https://developer.android.com/develop/connectivity/cronet/reference/",
             )
     }
 }

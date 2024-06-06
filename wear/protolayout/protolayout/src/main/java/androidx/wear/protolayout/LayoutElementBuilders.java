@@ -31,6 +31,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
+import androidx.annotation.StringDef;
 import androidx.annotation.VisibleForTesting;
 import androidx.wear.protolayout.ColorBuilders.Brush;
 import androidx.wear.protolayout.ColorBuilders.ColorProp;
@@ -70,16 +71,26 @@ import androidx.wear.protolayout.protobuf.InvalidProtocolBufferException;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Builders for composable layout elements that can be combined together to create renderable UI
  * layouts.
  */
 public final class LayoutElementBuilders {
+
+    @VisibleForTesting static final String WEIGHT_AXIS_TAG = "wght";
+    @VisibleForTesting static final String WIDTH_AXIS_TAG = "wdth";
+    @VisibleForTesting static final String TABULAR_OPTION_TAG = "tnum";
+
     private LayoutElementBuilders() {}
 
     /** The weight to be applied to the font. */
@@ -657,6 +668,32 @@ public final class LayoutElementBuilders {
         }
 
         /**
+         * Gets the collection of font settings to be applied.
+         *
+         * <p>Supported settings depend on the font used and renderer version. If this is used with
+         * the variable fonts on renderers supporting 1.4, {@link FontSetting#weight} and
+         * {@link FontSetting#width} setting will be always available.
+         */
+        @NonNull
+        public List<FontSetting> getSettings() {
+            List<FontSetting> list = new ArrayList<>();
+            for (LayoutElementProto.FontSetting item : mImpl.getSettingsList()) {
+                list.add(LayoutElementBuilders.fontSettingFromProto(item));
+            }
+            return Collections.unmodifiableList(list);
+        }
+
+        /**
+         * Gets the original font family name and its fallback values describing which font should
+         * be used for this {@link FontStyle}. For example, default font ProtoLayout, variable
+         * version of default font.
+         */
+        @NonNull
+        public List<String> getPreferredFontFamilies() {
+            return mImpl.getPreferredFontFamiliesList();
+        }
+
+        /**
          * Gets the size of the font, in scaled pixels (sp). If more than one size was originally
          * added, it will return the last one.
          */
@@ -723,12 +760,17 @@ public final class LayoutElementBuilders {
                     + getLetterSpacing()
                     + ", variant="
                     + getVariant()
+                    + ", settings="
+                    + getSettings()
+                    + ", fontFamily="
+                    + getPreferredFontFamilies()
                     + "}";
         }
 
         /** Builder for {@link FontStyle} */
         public static final class Builder {
             @VisibleForTesting static final int TEXT_SIZES_LIMIT = 10;
+
             private final LayoutElementProto.FontStyle.Builder mImpl =
                     LayoutElementProto.FontStyle.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(-374492482);
@@ -879,6 +921,22 @@ public final class LayoutElementBuilders {
             }
 
             /**
+             * Adds one item to the collection of font settings to be applied.
+             *
+             * <p>Supported settings depend on the font used and renderer version. If this is used
+             * with the variable fonts on renderers supporting 1.4, {@link FontSetting#weight} and
+             * {@link FontSetting#width} setting will be always available.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            private Builder addSetting(@NonNull FontSetting setting) {
+                mImpl.addSettings(setting.toFontSettingProto());
+                mFingerprint.recordPropertyUpdate(
+                        8, checkNotNull(setting.getFingerprint()).aggregateValueAsInt());
+                return this;
+            }
+
+            /**
              * Sets the available sizes of the font, in scaled pixels (sp). If not specified,
              * defaults to the size of the system's "body" font.
              *
@@ -951,12 +1009,216 @@ public final class LayoutElementBuilders {
                 return this;
             }
 
+            @VisibleForTesting static final int SETTINGS_LIMIT = 10;
+
+            /**
+             * Sets the collection of font settings to be applied. If more than one Setting with the
+             * same axis tag is added, the first one will be used.
+             *
+             * <p>Any previously added settings will be cleared.
+             *
+             * <p>Supported settings depend on the font used and renderer version. If this is used
+             * with the variable fonts on renderers supporting 1.4, {@link FontSetting#weight} and
+             * {@link FontSetting#width} setting will be always available.
+             *
+             * @throws IllegalArgumentException if the number of the given Setting is larger than
+             *  10.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setSettings(@NonNull FontSetting... settings) {
+                if (settings.length > SETTINGS_LIMIT) {
+                    throw new IllegalArgumentException(
+                            "Number of given FontSetting can't be larger than " + SETTINGS_LIMIT
+                                    + ".");
+                }
+
+                // To make sure we only pass in unique ones.
+                Set<String> axes = new HashSet<>();
+
+                mImpl.clearSettings();
+
+                for (FontSetting setting : settings) {
+                    String settingTag = "";
+
+                    switch (setting.toFontSettingProto().getInnerCase()) {
+                        case VARIATION:
+                            settingTag = ((FontVariationSetting) setting).getAxisTag();
+                            break;
+                        case FEATURE:
+                            settingTag = ((FontFeatureSetting) setting).getTag();
+                            break;
+                        case INNER_NOT_SET:
+                            break;
+                    }
+
+                    if (settingTag.isEmpty() || axes.contains(settingTag)) {
+                        // We don't want to add duplicates and will only include the first one.
+                        continue;
+                    }
+
+                    addSetting(setting);
+
+                    axes.add(settingTag);
+                }
+
+                return this;
+            }
+
+            /**
+             * Adds one item to the font family describing which font should be used for this {@link
+             * FontStyle}. For example, using default font in ProtoLayout or its variable version.
+             * If not set, default font will be used.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            private Builder addPreferredFontFamily(@NonNull String fontFamily) {
+                mImpl.addPreferredFontFamilies(fontFamily);
+                mFingerprint.recordPropertyUpdate(9, fontFamily.hashCode());
+                return this;
+            }
+
+            /** The recommended font family names to be used within {@link FontStyle}. */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @RestrictTo(RestrictTo.Scope.LIBRARY)
+            @Retention(RetentionPolicy.SOURCE)
+            @StringDef(
+                    value = {DEFAULT_SYSTEM_FONT, ROBOTO_FONT, ROBOTO_FLEX_FONT},
+                    open = true)
+            public @interface FontFamilyNames {}
+
+            /**
+             * Font family name that uses default system font. Supported in any renderer version.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            public static final String DEFAULT_SYSTEM_FONT = "default";
+
+            /** Font family name that uses Roboto font. Supported in renderers supporting 1.4. */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            public static final String ROBOTO_FONT = "roboto";
+
+            /**
+             * Font family name that uses Roboto Flex variable font. Supported in renderers
+             * supporting 1.4.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            public static final String ROBOTO_FLEX_FONT = "roboto-flex";
+
+            /**
+             * Sets the preferred font families for this {@link FontStyle}.
+             *
+             * <p>For example, preferring default system variable font with default non variable
+             * system font as a fallback.
+             *
+             * <p>If the given font family is not available on a device, the fallback values will
+             * be attempted to use, in order in which they are given.
+             *
+             * <p>Renderer support for values outside of the given constants (
+             * {@link #DEFAULT_SYSTEM_FONT}, {@link #ROBOTO_FONT} or {@link #ROBOTO_FLEX_FONT}) is
+             * not guaranteed for all devices.
+             *
+             * <p>If not set, default system font will be used.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            public Builder setPreferredFontFamilies(
+                    @NonNull @FontFamilyNames String fontFamily,
+                    @NonNull String... fallbacks) {
+                addPreferredFontFamily(fontFamily);
+                for (String fallback : fallbacks) {
+                    addPreferredFontFamily(fallback);
+                }
+                return this;
+            }
+
             /** Builds an instance from accumulated values. */
             @NonNull
             public FontStyle build() {
                 return new FontStyle(mImpl.build(), mFingerprint);
             }
         }
+    }
+
+    /** Interface defining a single point of customization in a font. */
+    @RequiresSchemaVersion(major = 1, minor = 400)
+    public interface FontSetting {
+        /** Get the protocol buffer representation of this object. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        LayoutElementProto.FontSetting toFontSettingProto();
+
+        /** Get the fingerprint for this object or null if unknown. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Nullable
+        Fingerprint getFingerprint();
+
+        /** Builder to create {@link FontSetting} objects. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        interface Builder {
+
+            /** Builds an instance with values accumulated in this Builder. */
+            @NonNull
+            FontSetting build();
+        }
+
+        /**
+         * {@link FontSetting} option for custom weight for font. Similar to the {@link FontWeightProp} but
+         * it accepts any value. For more information, see
+         * <a href="https://fonts.google.com/knowledge/glossary/weight_axis">here</a>.
+         *
+         * <p>Note that using this {@link FontSetting} will override {@link
+         * FontStyle.Builder#setWeight}.
+         *
+         * @param value weight, usually in 1..1000, but actual range can depend on the font used
+         */
+        @NonNull
+        @RequiresSchemaVersion(major = 1, minor = 400)
+        static FontSetting weight(float value) {
+            return new FontVariationSetting.Builder(WEIGHT_AXIS_TAG, value).build();
+        }
+
+        /**
+         * {@link FontSetting} option for custom width for font. For more information, see
+         * <a href="https://fonts.google.com/knowledge/glossary/width_axis">here</a>.
+         *
+         * @param value width, usually in 25..200, but actual range can depend on the font used
+         */
+        @NonNull
+        @RequiresSchemaVersion(major = 1, minor = 400)
+        static FontSetting width(float value) {
+            return new FontVariationSetting.Builder(WIDTH_AXIS_TAG, value).build();
+        }
+
+        /**
+         * {@link FontSetting} option for enabling displaying tabular figures. In other words,
+         * all numeral characters will have the same width. This corresponds to
+         * {@code tnum} OpenType feature.
+         *
+         * <p>This setting's availability is font dependent and may not have effect on all font
+         * families, some of them like Roboto automatically space out numeral characters to have the
+         * same width, while other characters will have their own width.
+         */
+        @NonNull
+        @RequiresSchemaVersion(major = 1, minor = 400)
+        static FontSetting tabularNum() {
+            return new FontFeatureSetting.Builder(TABULAR_OPTION_TAG).build();
+        }
+    }
+
+    /** Creates a new wrapper instance from the proto. */
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    @NonNull
+    public static FontSetting fontSettingFromProto(
+            @NonNull LayoutElementProto.FontSetting proto, @Nullable Fingerprint fingerprint) {
+        if (proto.hasVariation()) {
+            return FontVariationSetting.fromProto(proto.getVariation(), fingerprint);
+        }
+        throw new IllegalStateException("Proto was not a recognised instance of FontSetting");
+    }
+
+    @NonNull
+    static FontSetting fontSettingFromProto(@NonNull LayoutElementProto.FontSetting proto) {
+        return fontSettingFromProto(proto, null);
     }
 
     /** An extensible {@code TextOverflow} property. */
@@ -1119,98 +1381,6 @@ public final class LayoutElementBuilders {
             @NonNull
             public MarqueeParameters build() {
                 return new MarqueeParameters(mImpl.build(), mFingerprint);
-            }
-        }
-    }
-
-    /**
-     * An Android platform specific text style configuration options for styling and compatibility.
-     */
-    @RequiresSchemaVersion(major = 1, minor = 200)
-    @ProtoLayoutExperimental
-    @RestrictTo(Scope.LIBRARY_GROUP)
-    public static final class AndroidTextStyle {
-        private final LayoutElementProto.AndroidTextStyle mImpl;
-        @Nullable private final Fingerprint mFingerprint;
-
-        AndroidTextStyle(
-                LayoutElementProto.AndroidTextStyle impl, @Nullable Fingerprint fingerprint) {
-            this.mImpl = impl;
-            this.mFingerprint = fingerprint;
-        }
-
-        /**
-         * Gets whether the {@link Text} excludes padding specified by the font, i.e. extra top and
-         * bottom padding above the normal ascent and descent. The default is false.
-         */
-        public boolean getExcludeFontPadding() {
-            return mImpl.getExcludeFontPadding();
-        }
-
-        /** Get the fingerprint for this object, or null if unknown. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @Nullable
-        public Fingerprint getFingerprint() {
-            return mFingerprint;
-        }
-
-        /** Creates a new wrapper instance from the proto. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @NonNull
-        public static AndroidTextStyle fromProto(
-                @NonNull LayoutElementProto.AndroidTextStyle proto,
-                @Nullable Fingerprint fingerprint) {
-            return new AndroidTextStyle(proto, fingerprint);
-        }
-
-        @NonNull
-        static AndroidTextStyle fromProto(@NonNull LayoutElementProto.AndroidTextStyle proto) {
-            return fromProto(proto, null);
-        }
-
-        /** Returns the internal proto instance. */
-        @RestrictTo(Scope.LIBRARY_GROUP)
-        @NonNull
-        public LayoutElementProto.AndroidTextStyle toProto() {
-            return mImpl;
-        }
-
-        @Override
-        @NonNull
-        public String toString() {
-            return "AndroidTextStyle{" + "excludeFontPadding=" + getExcludeFontPadding() + "}";
-        }
-
-        /** Builder for {@link AndroidTextStyle} */
-        public static final class Builder {
-            private final LayoutElementProto.AndroidTextStyle.Builder mImpl =
-                    LayoutElementProto.AndroidTextStyle.newBuilder();
-            private final Fingerprint mFingerprint = new Fingerprint(408674745);
-
-            /** Creates an instance of {@link Builder}. */
-            public Builder() {
-                // Setting this to true before setter is called, so that default behaviour is to
-                // exclude padding.
-                mImpl.setExcludeFontPadding(true);
-            }
-
-            /**
-             * Sets whether the {@link Text} excludes padding specified by the font, i.e. extra top
-             * and bottom padding above the normal ascent and descent. The default is false.
-             */
-            @RequiresSchemaVersion(major = 1, minor = 200)
-            @SuppressLint("MissingGetterMatchingBuilder")
-            @NonNull
-            public Builder setExcludeFontPadding(boolean excludeFontPadding) {
-                mImpl.setExcludeFontPadding(excludeFontPadding);
-                mFingerprint.recordPropertyUpdate(1, Boolean.hashCode(excludeFontPadding));
-                return this;
-            }
-
-            /** Builds an instance from accumulated values. */
-            @NonNull
-            public AndroidTextStyle build() {
-                return new AndroidTextStyle(mImpl.build(), mFingerprint);
             }
         }
     }
@@ -1403,6 +1573,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link Text}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements LayoutElement.Builder {
             private final LayoutElementProto.Text.Builder mImpl =
                     LayoutElementProto.Text.newBuilder();
@@ -1925,6 +2096,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link Image}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements LayoutElement.Builder {
             private final LayoutElementProto.Image.Builder mImpl =
                     LayoutElementProto.Image.newBuilder();
@@ -2165,6 +2337,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link Spacer}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements LayoutElement.Builder {
             private final LayoutElementProto.Spacer.Builder mImpl =
                     LayoutElementProto.Spacer.newBuilder();
@@ -2433,6 +2606,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link Box}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements LayoutElement.Builder {
             private final LayoutElementProto.Box.Builder mImpl =
                     LayoutElementProto.Box.newBuilder();
@@ -2646,6 +2820,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link SpanText}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements Span.Builder {
             private final LayoutElementProto.SpanText.Builder mImpl =
                     LayoutElementProto.SpanText.newBuilder();
@@ -2841,6 +3016,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link SpanImage}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements Span.Builder {
             private final LayoutElementProto.SpanImage.Builder mImpl =
                     LayoutElementProto.SpanImage.newBuilder();
@@ -3164,6 +3340,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link Spannable}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements LayoutElement.Builder {
             private final LayoutElementProto.Spannable.Builder mImpl =
                     LayoutElementProto.Spannable.newBuilder();
@@ -3447,6 +3624,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link Column}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements LayoutElement.Builder {
             private final LayoutElementProto.Column.Builder mImpl =
                     LayoutElementProto.Column.newBuilder();
@@ -3672,6 +3850,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link Row}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements LayoutElement.Builder {
             private final LayoutElementProto.Row.Builder mImpl =
                     LayoutElementProto.Row.newBuilder();
@@ -3844,12 +4023,8 @@ public final class LayoutElementBuilders {
             }
         }
 
-        /**
-         * Gets defines the direction in which child elements are laid out. If not set, defaults to
-         * ARC_DIRECTION_NORMAL.
-         */
+        /** Gets defines the direction in which child elements are laid out. */
         @Nullable
-        @RestrictTo(Scope.LIBRARY_GROUP)
         public ArcDirectionProp getArcDirection() {
             if (mImpl.hasArcDirection()) {
                 return ArcDirectionProp.fromProto(mImpl.getArcDirection());
@@ -3912,6 +4087,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link Arc}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements LayoutElement.Builder {
             private final LayoutElementProto.Arc.Builder mImpl =
                     LayoutElementProto.Arc.newBuilder();
@@ -4019,7 +4195,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@NonNull ArcDirectionProp arcDirection) {
                 mImpl.setArcDirection(arcDirection.toProto());
                 mFingerprint.recordPropertyUpdate(
@@ -4033,7 +4208,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@ArcDirection int arcDirection) {
                 return setArcDirection(
                         new ArcDirectionProp.Builder().setValue(arcDirection).build());
@@ -4092,12 +4266,8 @@ public final class LayoutElementBuilders {
             }
         }
 
-        /**
-         * Gets defines the direction in which text is drawn. If not set, defaults to
-         * ARC_DIRECTION_CLOCKWISE.
-         */
+        /** Gets defines the direction in which text is drawn.*/
         @Nullable
-        @RestrictTo(Scope.LIBRARY_GROUP)
         public ArcDirectionProp getArcDirection() {
             if (mImpl.hasArcDirection()) {
                 return ArcDirectionProp.fromProto(mImpl.getArcDirection());
@@ -4156,6 +4326,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link ArcText}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements ArcLayoutElement.Builder {
             private final LayoutElementProto.ArcText.Builder mImpl =
                     LayoutElementProto.ArcText.newBuilder();
@@ -4219,7 +4390,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@NonNull ArcDirectionProp arcDirection) {
                 mImpl.setArcDirection(arcDirection.toProto());
                 mFingerprint.recordPropertyUpdate(
@@ -4233,7 +4403,6 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@ArcDirection int arcDirection) {
                 return setArcDirection(
                         new ArcDirectionProp.Builder().setValue(arcDirection).build());
@@ -4334,12 +4503,8 @@ public final class LayoutElementBuilders {
             }
         }
 
-        /**
-         * Gets defines the direction in which line drawn. If not set, defaults to
-         * ARC_DIRECTION_CLOCKWISE.
-         */
+        /** Gets defines the direction in which line drawn. */
         @Nullable
-        @RestrictTo(Scope.LIBRARY_GROUP)
         public ArcDirectionProp getArcDirection() {
             if (mImpl.hasArcDirection()) {
                 return ArcDirectionProp.fromProto(mImpl.getArcDirection());
@@ -4417,6 +4582,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link ArcLine}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements ArcLayoutElement.Builder {
             private final LayoutElementProto.ArcLine.Builder mImpl =
                     LayoutElementProto.ArcLine.newBuilder();
@@ -4537,20 +4703,19 @@ public final class LayoutElementBuilders {
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@NonNull ArcDirectionProp arcDirection) {
                 mImpl.setArcDirection(arcDirection.toProto());
                 mFingerprint.recordPropertyUpdate(
                         8, checkNotNull(arcDirection.getFingerprint()).aggregateValueAsInt());
                 return this;
             }
+
             /**
              * Sets the direction in which this line is drawn. If not set, defaults to
              * ARC_DIRECTION_CLOCKWISE.
              */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            @RestrictTo(Scope.LIBRARY_GROUP)
             public Builder setArcDirection(@ArcDirection int arcDirection) {
                 return setArcDirection(
                         new ArcDirectionProp.Builder().setValue(arcDirection).build());
@@ -4793,6 +4958,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link ArcSpacer}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements ArcLayoutElement.Builder {
             private final LayoutElementProto.ArcSpacer.Builder mImpl =
                     LayoutElementProto.ArcSpacer.newBuilder();
@@ -4942,6 +5108,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link ArcAdapter}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements ArcLayoutElement.Builder {
             private final LayoutElementProto.ArcAdapter.Builder mImpl =
                     LayoutElementProto.ArcAdapter.newBuilder();
@@ -4949,15 +5116,6 @@ public final class LayoutElementBuilders {
 
             /** Creates an instance of {@link Builder}. */
             public Builder() {}
-
-            /** Sets the element to adapt to an {@link Arc}. */
-            @RequiresSchemaVersion(major = 1, minor = 0)
-            @NonNull
-            public Builder setContent(@NonNull LayoutElement content) {
-                mImpl.setContent(content.toLayoutElementProto());
-                mFingerprint.addChildNode(checkNotNull(content.getFingerprint()));
-                return this;
-            }
 
             /**
              * Sets whether this adapter's contents should be rotated, according to its position in
@@ -4996,6 +5154,26 @@ public final class LayoutElementBuilders {
                 return setRotateContents(new BoolProp.Builder(rotateContents).build());
             }
 
+            /**
+             * Sets the element to adapt to an {@link Arc}.
+             *
+             * @throws IllegalArgumentException if the provided content has a transformation
+             *     modifier.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 0)
+            @NonNull
+            public Builder setContent(@NonNull LayoutElement content) {
+                LayoutElementProto.LayoutElement contentProto = content.toLayoutElementProto();
+                if (hasTransformation(contentProto)) {
+                    throw new IllegalArgumentException(
+                            "Transformation modifier is not supported for the layout element inside"
+                                    + " an ArcAdapter.");
+                }
+                mImpl.setContent(contentProto);
+                mFingerprint.addChildNode(checkNotNull(content.getFingerprint()));
+                return this;
+            }
+
             /** Builds an instance from accumulated values. */
             @Override
             @NonNull
@@ -5005,9 +5183,11 @@ public final class LayoutElementBuilders {
         }
     }
 
-    /** An extensible {@code StrokeCap} property. */
+    /**
+     * An extensible {@code ArcDirection} property that can be set to any curved element to
+     * control the drawing direction.
+     */
     @RequiresSchemaVersion(major = 1, minor = 300)
-    @RestrictTo(Scope.LIBRARY_GROUP)
     public static final class ArcDirectionProp {
         private final LayoutElementProto.ArcDirectionProp mImpl;
         @Nullable private final Fingerprint mFingerprint;
@@ -5065,13 +5245,19 @@ public final class LayoutElementBuilders {
                     LayoutElementProto.ArcDirectionProp.newBuilder();
             private final Fingerprint mFingerprint = new Fingerprint(-855955608);
 
-            /** Creates an instance of {@link Builder}. */
-            public Builder() {}
+            /** Creates an instance of {@link Builder} from the given value. */
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            public Builder(@ArcDirection int value) {
+                setValue(value);
+            }
+
+            @RequiresSchemaVersion(major = 1, minor = 300)
+            Builder() {}
 
             /** Sets the value. */
             @RequiresSchemaVersion(major = 1, minor = 300)
             @NonNull
-            public Builder setValue(@ArcDirection int value) {
+            Builder setValue(@ArcDirection int value) {
                 mImpl.setValue(LayoutElementProto.ArcDirection.forNumber(value));
                 mFingerprint.recordPropertyUpdate(1, value);
                 return this;
@@ -5197,6 +5383,7 @@ public final class LayoutElementBuilders {
         }
 
         /** Builder for {@link ExtensionLayoutElement}. */
+        @SuppressWarnings("HiddenSuperclass")
         public static final class Builder implements LayoutElement.Builder {
             private final LayoutElementProto.ExtensionLayoutElement.Builder mImpl =
                     LayoutElementProto.ExtensionLayoutElement.newBuilder();
@@ -6168,5 +6355,313 @@ public final class LayoutElementBuilders {
         }
 
         private FontStyles() {}
+    }
+
+  /** Checks whether a layout element has a transformation modifier. */
+  private static boolean hasTransformation(@NonNull LayoutElementProto.LayoutElement content) {
+    switch (content.getInnerCase()) {
+      case IMAGE:
+        return content.getImage().hasModifiers()
+            && content.getImage().getModifiers().hasTransformation();
+      case TEXT:
+        return content.getText().hasModifiers()
+            && content.getText().getModifiers().hasTransformation();
+      case SPACER:
+        return content.getSpacer().hasModifiers()
+            && content.getSpacer().getModifiers().hasTransformation();
+      case BOX:
+        return content.getBox().hasModifiers()
+            && content.getBox().getModifiers().hasTransformation();
+      case ROW:
+        return content.getRow().hasModifiers()
+            && content.getRow().getModifiers().hasTransformation();
+      case COLUMN:
+        return content.getColumn().hasModifiers()
+            && content.getColumn().getModifiers().hasTransformation();
+      case SPANNABLE:
+        return content.getSpannable().hasModifiers()
+            && content.getSpannable().getModifiers().hasTransformation();
+      case ARC:
+        return content.getArc().hasModifiers()
+            && content.getArc().getModifiers().hasTransformation();
+      case EXTENSION:
+        // fall through
+      case INNER_NOT_SET:
+        return false;
+    }
+    return false;
+  }
+
+    /** A single point of customization in a font, with axis tag and a value for it. */
+    @RequiresSchemaVersion(major = 1, minor = 400)
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static final class FontVariationSetting implements FontSetting {
+        private final LayoutElementProto.FontVariationSetting mImpl;
+        @Nullable private final Fingerprint mFingerprint;
+
+        FontVariationSetting(
+                LayoutElementProto.FontVariationSetting impl, @Nullable Fingerprint fingerprint) {
+            this.mImpl = impl;
+            this.mFingerprint = fingerprint;
+        }
+
+        /** Gets the value for this font setting. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public float getValue() {
+            return mImpl.getValue();
+        }
+
+        /** Gets the axis tag for this font setting. This represents a 4 ASCII characters tag. */
+        @NonNull
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public String getAxisTag() {
+            return new String(
+                    ByteBuffer.allocate(4).putInt(mImpl.getAxisTag()).array(),
+                    StandardCharsets.US_ASCII);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            FontVariationSetting that = (FontVariationSetting) o;
+            return Objects.equals(getAxisTag(), that.getAxisTag())
+                    && Objects.equals(getValue(), that.getValue());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(getAxisTag(), getValue());
+        }
+
+        /** Get the fingerprint for this object, or null if unknown. */
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Nullable
+        public Fingerprint getFingerprint() {
+            return mFingerprint;
+        }
+
+        /** Creates a new wrapper instance from the proto. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public static FontVariationSetting fromProto(
+                @NonNull LayoutElementProto.FontVariationSetting proto,
+                @Nullable Fingerprint fingerprint) {
+            return new FontVariationSetting(proto, fingerprint);
+        }
+
+        @NonNull
+        static FontVariationSetting fromProto(
+                @NonNull LayoutElementProto.FontVariationSetting proto) {
+            return fromProto(proto, null);
+        }
+
+        /** Returns the internal proto instance. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public LayoutElementProto.FontVariationSetting toProto() {
+            return mImpl;
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public LayoutElementProto.FontSetting toFontSettingProto() {
+            return LayoutElementProto.FontSetting.newBuilder().setVariation(mImpl).build();
+        }
+
+        @Override
+        @NonNull
+        public String toString() {
+            return "FontVariationSetting{"
+                    + "axisTag="
+                    + getAxisTag()
+                    + ", value="
+                    + getValue()
+                    + "}";
+        }
+
+        /** Builder for {@link FontSetting} */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public static final class Builder implements FontSetting.Builder {
+            private final LayoutElementProto.FontVariationSetting.Builder mImpl =
+                    LayoutElementProto.FontVariationSetting.newBuilder();
+            private final Fingerprint mFingerprint = new Fingerprint(843808384);
+
+            /** Sets the value for this font setting. */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            Builder setValue(float value) {
+                mImpl.setValue(value);
+                mFingerprint.recordPropertyUpdate(2, Float.floatToIntBits(value));
+                return this;
+            }
+
+            /**
+             * Creates an instance of {@link Builder}.
+             *
+             * @param axisTag the axis tag for this font setting. This represents a 4 ASCII
+             *                 characters tag.
+             * @param value the value for this font setting.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @SuppressLint("CheckResult") // (b/247804720)
+            public Builder(@NonNull String axisTag, float value) {
+                setAxisTag(axisTag);
+                setValue(value);
+            }
+
+            /**
+             * Sets the axis tag for this font setting. This represents a 4 ASCII characters tag.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            Builder setAxisTag(@NonNull String axisTag) {
+                int axisTagInt = ByteBuffer.wrap(axisTag.getBytes()).getInt();
+                mImpl.setAxisTag(axisTagInt);
+                mFingerprint.recordPropertyUpdate(1, axisTagInt);
+                return this;
+            }
+
+            /** Builds an instance from accumulated values. */
+            @Override
+            @NonNull
+            public FontVariationSetting build() {
+                return new FontVariationSetting(mImpl.build(), mFingerprint);
+            }
+        }
+    }
+
+    /** A single point of customization in a font feature, with specified tag. */
+    @RequiresSchemaVersion(major = 1, minor = 400)
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static final class FontFeatureSetting implements FontSetting {
+        private final LayoutElementProto.FontFeatureSetting mImpl;
+        @Nullable private final Fingerprint mFingerprint;
+
+        FontFeatureSetting(
+                LayoutElementProto.FontFeatureSetting impl, @Nullable Fingerprint fingerprint) {
+            this.mImpl = impl;
+            this.mFingerprint = fingerprint;
+        }
+
+        /** Gets the feature tag. This represents a 4 ASCII characters tag. */
+        @NonNull
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public String getTag() {
+            return new String(
+                    ByteBuffer.allocate(4).putInt(mImpl.getTag()).array(),
+                    StandardCharsets.US_ASCII);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            FontFeatureSetting that = (FontFeatureSetting) o;
+            return Objects.equals(getTag(), that.getTag());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(getTag());
+        }
+
+        /** Get the fingerprint for this object, or null if unknown. */
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @Nullable
+        public Fingerprint getFingerprint() {
+            return mFingerprint;
+        }
+
+        /** Creates a new wrapper instance from the proto. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public static FontFeatureSetting fromProto(
+                @NonNull LayoutElementProto.FontFeatureSetting proto,
+                @Nullable Fingerprint fingerprint) {
+            return new FontFeatureSetting(proto, fingerprint);
+        }
+
+        @NonNull
+        static FontFeatureSetting fromProto(
+                @NonNull LayoutElementProto.FontFeatureSetting proto) {
+            return fromProto(proto, null);
+        }
+
+        /** Returns the internal proto instance. */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public LayoutElementProto.FontFeatureSetting toProto() {
+            return mImpl;
+        }
+
+        @Override
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        @NonNull
+        public LayoutElementProto.FontSetting toFontSettingProto() {
+            return LayoutElementProto.FontSetting.newBuilder().setFeature(mImpl).build();
+        }
+
+        @Override
+        @NonNull
+        public String toString() {
+            return "FontFeatureSetting{"
+                    + "tag="
+                    + getTag()
+                    + "}";
+        }
+
+        /** Builder for {@link FontFeatureSetting} */
+        @RestrictTo(Scope.LIBRARY_GROUP)
+        public static final class Builder implements FontSetting.Builder {
+            private final LayoutElementProto.FontFeatureSetting.Builder mImpl =
+                    LayoutElementProto.FontFeatureSetting.newBuilder();
+            private final Fingerprint mFingerprint = new Fingerprint(843808384);
+
+            /**
+             * Creates an instance of {@link Builder}.
+             *
+             * @param tag the tag for this font feature. This represents a 4 ASCII characters tag.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @SuppressLint("CheckResult") // (b/247804720)
+            public Builder(@NonNull String tag) {
+                setTag(tag);
+            }
+
+            /**
+             * Sets the feature tag. This represents a 4 ASCII characters tag.
+             */
+            @RequiresSchemaVersion(major = 1, minor = 400)
+            @NonNull
+            Builder setTag(@NonNull String tag) {
+                int tagInt = ByteBuffer.wrap(tag.getBytes()).getInt();
+                mImpl.setTag(tagInt);
+                mFingerprint.recordPropertyUpdate(1, tagInt);
+                return this;
+            }
+
+            /** Builds an instance from accumulated values. */
+            @Override
+            @NonNull
+            public FontFeatureSetting build() {
+                return new FontFeatureSetting(mImpl.build(), mFingerprint);
+            }
+        }
     }
 }

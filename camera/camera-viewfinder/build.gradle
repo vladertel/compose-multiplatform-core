@@ -21,8 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
-import androidx.build.RunApiTasks
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -32,6 +31,7 @@ plugins {
 
 dependencies {
     api("androidx.annotation:annotation:1.2.0")
+    api(project(':camera:camera-viewfinder-core'))
     implementation("androidx.annotation:annotation-experimental:1.4.0")
     implementation(libs.guavaListenableFuture)
     implementation("androidx.core:core:1.7.0")
@@ -42,7 +42,6 @@ dependencies {
     implementation("androidx.test.espresso:espresso-idling-resource:3.1.0")
     implementation(libs.kotlinCoroutinesCore)
     implementation(libs.kotlinCoroutinesAndroid)
-    implementation project(':camera:camera-viewfinder-core')
 
     annotationProcessor(libs.autoValue)
 
@@ -86,9 +85,9 @@ android {
 
 androidx {
     name = "Camera ViewFinder"
-    publish = Publish.SNAPSHOT_AND_RELEASE
-    runApiTasks = new RunApiTasks.Yes("Need to track API surface before moving to publish")
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2022"
     description = "Standalone Viewfinder for Camera2 and CameraX"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

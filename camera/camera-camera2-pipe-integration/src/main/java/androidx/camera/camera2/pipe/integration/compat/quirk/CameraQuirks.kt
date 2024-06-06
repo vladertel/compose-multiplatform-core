@@ -16,8 +16,6 @@
 
 package androidx.camera.camera2.pipe.integration.compat.quirk
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraMetadata
 import androidx.camera.camera2.pipe.core.Log
 import androidx.camera.camera2.pipe.integration.compat.StreamConfigurationMapCompat
@@ -27,9 +25,10 @@ import androidx.camera.core.impl.Quirks
 import javax.inject.Inject
 
 /** Provider of camera specific quirks. */
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 @CameraScope
-class CameraQuirks @Inject constructor(
+class CameraQuirks
+@Inject
+constructor(
     private val cameraMetadata: CameraMetadata?,
     private val streamConfigurationMapCompat: StreamConfigurationMapCompat
 ) {
@@ -98,8 +97,23 @@ class CameraQuirks @Inject constructor(
         if (TextureViewIsClosedQuirk.isEnabled(cameraMetadata)) {
             quirks.add(TextureViewIsClosedQuirk())
         }
+        if (TorchFlashRequiredFor3aUpdateQuirk.isEnabled(cameraMetadata)) {
+            quirks.add(TorchFlashRequiredFor3aUpdateQuirk(cameraMetadata))
+        }
         if (YuvImageOnePixelShiftQuirk.isEnabled()) {
             quirks.add(YuvImageOnePixelShiftQuirk())
+        }
+        if (PreviewStretchWhenVideoCaptureIsBoundQuirk.isEnabled()) {
+            quirks.add(PreviewStretchWhenVideoCaptureIsBoundQuirk())
+        }
+        if (PreviewDelayWhenVideoCaptureIsBoundQuirk.isEnabled()) {
+            quirks.add(PreviewDelayWhenVideoCaptureIsBoundQuirk())
+        }
+        if (ImageCaptureFailedWhenVideoCaptureIsBoundQuirk.isEnabled()) {
+            quirks.add(ImageCaptureFailedWhenVideoCaptureIsBoundQuirk())
+        }
+        if (TemporalNoiseQuirk.isEnabled(cameraMetadata)) {
+            quirks.add(TemporalNoiseQuirk())
         }
 
         Quirks(quirks)

@@ -17,7 +17,6 @@
 package androidx.camera.camera2.pipe.integration.compat.quirk
 
 import android.annotation.SuppressLint
-import androidx.annotation.RequiresApi
 import androidx.camera.core.impl.Quirk
 
 /**
@@ -25,14 +24,13 @@ import androidx.camera.core.impl.Quirk
  * [android.hardware.camera2.CameraCaptureSession.StateCallback.onClosed] callback.
  *
  * QuirkSummary
- * - Bug Id:      144817309
+ * - Bug Id: 144817309
  * - Description: On Android API 22s and lower,
- *                [android.hardware.camera2.CameraCaptureSession.StateCallback.onClosed] callback
- *                will not be triggered under some circumstances.
- * - Device(s):   Devices in Android API version <= 22
+ *   [android.hardware.camera2.CameraCaptureSession.StateCallback.onClosed] callback will not be
+ *   triggered under some circumstances.
+ * - Device(s): Devices in Android API version <= 22
  */
 @SuppressLint("CameraXQuirksClassDetector")
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class CaptureSessionOnClosedNotCalledQuirk : Quirk {
     companion object {
         /**

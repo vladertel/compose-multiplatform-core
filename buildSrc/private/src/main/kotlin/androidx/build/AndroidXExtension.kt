@@ -51,23 +51,12 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
         val tomlFileName = "libraryversions.toml"
         val toml = lazyReadFile(tomlFileName)
 
-        // These parameters are used when building pre-release binaries for androidxdev.
-        // These parameters are only expected to be compatible with :compose:compiler:compiler .
-        // To use them may require specifying specific projects and disabling some checks
-        // like this:
-        // `./gradlew :compose:compiler:compiler:publishToMavenLocal
-        // -Pandroidx.versionExtraCheckEnabled=false`
-        val composeCustomVersion = project.providers.environmentVariable("COMPOSE_CUSTOM_VERSION")
-        val composeCustomGroup = project.providers.environmentVariable("COMPOSE_CUSTOM_GROUP")
-        // service that can compute group/version for a project
         versionService =
             project.gradle.sharedServices
                 .registerIfAbsent("libraryVersionsService", LibraryVersionsService::class.java) {
                     spec ->
                     spec.parameters.tomlFileName = tomlFileName
                     spec.parameters.tomlFileContents = toml
-                    spec.parameters.composeCustomVersion = composeCustomVersion
-                    spec.parameters.composeCustomGroup = composeCustomGroup
                 }
                 .get()
         AllLibraryGroups = versionService.libraryGroups.values.toList()
@@ -202,18 +191,17 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
     }
 
     /**
-     * Sets a group for the project based on its path.
-     * This ensures we always use a known value for the project group instead of what Gradle assigns
-     * by default. Furthermore, it also helps make them consistent between the main build and
-     * the playground builds.
+     * Sets a group for the project based on its path. This ensures we always use a known value for
+     * the project group instead of what Gradle assigns by default. Furthermore, it also helps make
+     * them consistent between the main build and the playground builds.
      */
     private fun setDefaultGroupFromProjectPath() {
-        project.group = project.path
-            .split(":")
-            .filter {
-                it.isNotEmpty()
-            }.dropLast(1)
-            .joinToString(separator = ".", prefix = "androidx.")
+        project.group =
+            project.path
+                .split(":")
+                .filter { it.isNotEmpty() }
+                .dropLast(1)
+                .joinToString(separator = ".", prefix = "androidx.")
     }
 
     private fun chooseProjectVersion() {
@@ -302,29 +290,14 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
     var description: String? = null
     var inceptionYear: String? = null
 
-    /**
-     * targetsJavaConsumers = true, if project is intended to be accessed from Java-language source
-     * code.
-     */
-    var targetsJavaConsumers = true
-        get() {
-            when (project.path) {
-            // add per-project overrides here
-            // for example
-            // the following project is intended to be accessed from Java
-            // ":compose:lint:internal-lint-checks" -> return true
-            // the following project is not intended to be accessed from Java
-            // ":annotation:annotation" -> return false
-            }
-            // TODO: rework this to use LibraryType. Fork Library and KolinOnlyLibrary?
-            if (project.path.contains("-ktx")) return false
-            if (project.path.contains("compose")) return false
-            if (project.path.startsWith(":ui")) return false
-            if (project.path.startsWith(":text:text")) return false
-            return field
+    /* The main license to add when publishing. Default is Apache 2. */
+    var license: License =
+        License().apply {
+            name = "The Apache Software License, Version 2.0"
+            url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
         }
 
-    private var licenses: MutableCollection<License> = ArrayList()
+    private var extraLicenses: MutableCollection<License> = ArrayList()
 
     // Should only be used to override LibraryType.publish, if a library isn't ready to publish yet
     var publish: Publish = Publish.UNSET
@@ -372,6 +345,8 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
     var runApiTasks: RunApiTasks = RunApiTasks.Auto
         get() = if (field == RunApiTasks.Auto && type != LibraryType.UNSET) type.checkApi else field
 
+    var doNotDocumentReason: String? = null
+
     var type: LibraryType = LibraryType.UNSET
     var failOnDeprecationWarnings = true
 
@@ -397,14 +372,14 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
         return !legacyDisableKotlinStrictApiMode && shouldConfigureApiTasks()
     }
 
-    fun license(closure: Closure<Any>): License {
+    fun extraLicense(closure: Closure<Any>): License {
         val license = project.configure(License(), closure) as License
-        licenses.add(license)
+        extraLicenses.add(license)
         return license
     }
 
-    fun getLicenses(): Collection<License> {
-        return licenses
+    fun getExtraLicenses(): Collection<License> {
+        return extraLicenses
     }
 
     fun configureAarAsJarForConfiguration(name: String) {
@@ -449,6 +424,16 @@ abstract class AndroidXExtension(val project: Project) : ExtensionAware, Android
     companion object {
         const val DEFAULT_UNSPECIFIED_VERSION = "unspecified"
     }
+
+    internal var samplesProjects: MutableCollection<Project> = mutableSetOf()
+
+    /**
+     * Used to register a project that will be providing documentation samples for this project. Can
+     * only be called once so only one samples library can exist per library b/318840087.
+     */
+    fun samples(samplesProject: Project) {
+        samplesProjects.add(samplesProject)
+    }
 }
 
 class License {
@@ -470,10 +455,4 @@ abstract class DeviceTests {
     var enabled = true
     var targetAppProject: Project? = null
     var targetAppVariant = "debug"
-
-    /**
-     * Whether to extract and include APKs from PrivacySandbox SDKs dependencies.
-     * TODO (b/309610890): Replace for dependency on AGP artifact.
-     */
-    var includePrivacySandboxSdks = false
 }

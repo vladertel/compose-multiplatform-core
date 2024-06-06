@@ -50,6 +50,8 @@ import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.node.DelegatingNode
+import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.captureToImage
@@ -62,14 +64,14 @@ import androidx.test.filters.LargeTest
 import androidx.test.filters.SdkSuppress
 import com.google.common.truth.Truth
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Test for [createRippleModifierNode].
- */
+/** Test for [createRippleModifierNode]. */
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(
@@ -85,8 +87,7 @@ import org.junit.runner.RunWith
 )
 class RippleModifierNodeTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     private val TestRipple = TestIndicationNodeFactory({ TestRippleColor }, { TestRippleAlpha })
 
@@ -132,22 +133,141 @@ class RippleModifierNodeTest {
         rule.setContent {
             scope = rememberCoroutineScope()
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                RippleBoxWithBackground(
-                    interactionSource,
-                    TestRipple,
-                    bounded = true
-                )
+                RippleBoxWithBackground(interactionSource, TestRipple, bounded = true)
             }
         }
 
-        val expectedColor = calculateResultingRippleColor(
-            TestRippleColor,
-            rippleOpacity = TestRippleAlpha.pressedAlpha
-        )
+        val expectedColor =
+            calculateResultingRippleColor(
+                TestRippleColor,
+                rippleOpacity = TestRippleAlpha.pressedAlpha
+            )
 
         assertRippleMatches(
             scope!!,
             interactionSource,
+            PressInteraction.Press(Offset(10f, 10f)),
+            expectedColor
+        )
+    }
+
+    /** Regression test for b/329693006 */
+    @Test
+    fun pressed_rippleCreatedBeforeDraw() {
+        // Add a static press interaction so that when the ripple is added, it will add a ripple
+        // immediately before the node is drawn
+        val interactionSource =
+            object : MutableInteractionSource {
+                override val interactions: Flow<Interaction> =
+                    flowOf(PressInteraction.Press(Offset.Zero))
+
+                override suspend fun emit(interaction: Interaction) {}
+
+                override fun tryEmit(interaction: Interaction): Boolean {
+                    return true
+                }
+            }
+
+        var scope: CoroutineScope? = null
+
+        rule.setContent {
+            scope = rememberCoroutineScope()
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                RippleBoxWithBackground(interactionSource, TestRipple, bounded = true)
+            }
+        }
+
+        val expectedColor =
+            calculateResultingRippleColor(
+                TestRippleColor,
+                rippleOpacity = TestRippleAlpha.pressedAlpha
+            )
+
+        assertRippleMatches(
+            scope!!,
+            interactionSource,
+            // Unused
+            PressInteraction.Press(Offset(10f, 10f)),
+            expectedColor
+        )
+    }
+
+    /**
+     * Regression test for b/329693006, similar to [pressed_rippleCreatedBeforeDraw], but delegating
+     * to the ripple node later in time to simulate clickable behavior.
+     */
+    @Test
+    fun pressed_rippleLazilyDelegatedTo() {
+        // Add a static press interaction so that when the ripple is added, it will add a ripple
+        // immediately before the node is drawn
+        val interactionSource =
+            object : MutableInteractionSource {
+                override val interactions: Flow<Interaction> =
+                    flowOf(PressInteraction.Press(Offset.Zero))
+
+                override suspend fun emit(interaction: Interaction) {}
+
+                override fun tryEmit(interaction: Interaction): Boolean {
+                    return true
+                }
+            }
+
+        class TestRippleNode : DelegatingNode() {
+            fun attachRipple() {
+                delegate(TestRipple.create(interactionSource))
+            }
+        }
+
+        val node = TestRippleNode()
+
+        val element =
+            object : ModifierNodeElement<TestRippleNode>() {
+                override fun create(): TestRippleNode = node
+
+                override fun update(node: TestRippleNode) {}
+
+                override fun equals(other: Any?): Boolean = other === this
+
+                override fun hashCode(): Int = -1
+            }
+
+        var scope: CoroutineScope? = null
+
+        rule.setContent {
+            scope = rememberCoroutineScope()
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(Modifier.semantics(mergeDescendants = true) {}.testTag(Tag)) {
+                    Box(Modifier.padding(25.dp).background(RippleBoxBackgroundColor)) {
+                        val shape = RoundedCornerShape(20)
+                        val clip = Modifier.clip(shape)
+                        Box(
+                            Modifier.padding(25.dp)
+                                .width(40.dp)
+                                .height(40.dp)
+                                .border(BorderStroke(2.dp, Color.Black), shape)
+                                .background(color = RippleBoxBackgroundColor, shape = shape)
+                                .then(clip)
+                                .then(element)
+                        ) {}
+                    }
+                }
+            }
+        }
+
+        val expectedColor =
+            calculateResultingRippleColor(
+                TestRippleColor,
+                rippleOpacity = TestRippleAlpha.pressedAlpha
+            )
+
+        // Add the ripple node to the hierarchy, which should then create a ripple before the node
+        // has been drawn
+        rule.runOnIdle { node.attachRipple() }
+
+        assertRippleMatches(
+            scope!!,
+            interactionSource,
+            // Unused
             PressInteraction.Press(Offset(10f, 10f)),
             expectedColor
         )
@@ -162,25 +282,17 @@ class RippleModifierNodeTest {
         rule.setContent {
             scope = rememberCoroutineScope()
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                RippleBoxWithBackground(
-                    interactionSource,
-                    TestRipple,
-                    bounded = true
-                )
+                RippleBoxWithBackground(interactionSource, TestRipple, bounded = true)
             }
         }
 
-        val expectedColor = calculateResultingRippleColor(
-            TestRippleColor,
-            rippleOpacity = TestRippleAlpha.hoveredAlpha
-        )
+        val expectedColor =
+            calculateResultingRippleColor(
+                TestRippleColor,
+                rippleOpacity = TestRippleAlpha.hoveredAlpha
+            )
 
-        assertRippleMatches(
-            scope!!,
-            interactionSource,
-            HoverInteraction.Enter(),
-            expectedColor
-        )
+        assertRippleMatches(scope!!, interactionSource, HoverInteraction.Enter(), expectedColor)
     }
 
     @Test
@@ -192,25 +304,17 @@ class RippleModifierNodeTest {
         rule.setContent {
             scope = rememberCoroutineScope()
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                RippleBoxWithBackground(
-                    interactionSource,
-                    TestRipple,
-                    bounded = true
-                )
+                RippleBoxWithBackground(interactionSource, TestRipple, bounded = true)
             }
         }
 
-        val expectedColor = calculateResultingRippleColor(
-            TestRippleColor,
-            rippleOpacity = TestRippleAlpha.focusedAlpha
-        )
+        val expectedColor =
+            calculateResultingRippleColor(
+                TestRippleColor,
+                rippleOpacity = TestRippleAlpha.focusedAlpha
+            )
 
-        assertRippleMatches(
-            scope!!,
-            interactionSource,
-            FocusInteraction.Focus(),
-            expectedColor
-        )
+        assertRippleMatches(scope!!, interactionSource, FocusInteraction.Focus(), expectedColor)
     }
 
     @Test
@@ -222,33 +326,25 @@ class RippleModifierNodeTest {
         rule.setContent {
             scope = rememberCoroutineScope()
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                RippleBoxWithBackground(
-                    interactionSource,
-                    TestRipple,
-                    bounded = true
-                )
+                RippleBoxWithBackground(interactionSource, TestRipple, bounded = true)
             }
         }
 
-        val expectedColor = calculateResultingRippleColor(
-            TestRippleColor,
-            rippleOpacity = TestRippleAlpha.draggedAlpha
-        )
+        val expectedColor =
+            calculateResultingRippleColor(
+                TestRippleColor,
+                rippleOpacity = TestRippleAlpha.draggedAlpha
+            )
 
-        assertRippleMatches(
-            scope!!,
-            interactionSource,
-            DragInteraction.Start(),
-            expectedColor
-        )
+        assertRippleMatches(scope!!, interactionSource, DragInteraction.Start(), expectedColor)
     }
 
     /**
      * Test case for changing a color captured by the color lambda during an existing ripple effect
      *
      * Note: no corresponding test for pressed ripples since RippleForeground does not update the
-     * color of currently active ripples unless they are being drawn on the UI thread
-     * (which should only happen if the target radius also changes).
+     * color of currently active ripples unless they are being drawn on the UI thread (which should
+     * only happen if the target radius also changes).
      */
     @Test
     fun colorChangeDuringRipple_dragged() {
@@ -264,26 +360,16 @@ class RippleModifierNodeTest {
         rule.setContent {
             scope = rememberCoroutineScope()
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                RippleBoxWithBackground(
-                    interactionSource,
-                    ripple,
-                    bounded = true
-                )
+                RippleBoxWithBackground(interactionSource, ripple, bounded = true)
             }
         }
 
-        rule.runOnIdle {
-            scope!!.launch {
-                interactionSource.emit(DragInteraction.Start())
-            }
-        }
+        rule.runOnIdle { scope!!.launch { interactionSource.emit(DragInteraction.Start()) } }
         rule.waitForIdle()
 
         with(rule.onNodeWithTag(Tag)) {
-            val centerPixel = captureToImage().asAndroidBitmap()
-                .run {
-                    getPixel(width / 2, height / 2)
-                }
+            val centerPixel =
+                captureToImage().asAndroidBitmap().run { getPixel(width / 2, height / 2) }
 
             val expectedColor =
                 calculateResultingRippleColor(
@@ -296,15 +382,11 @@ class RippleModifierNodeTest {
 
         val newColor = Color.Green
 
-        rule.runOnUiThread {
-            themeColor = newColor
-        }
+        rule.runOnUiThread { themeColor = newColor }
 
         with(rule.onNodeWithTag(Tag)) {
-            val centerPixel = captureToImage().asAndroidBitmap()
-                .run {
-                    getPixel(width / 2, height / 2)
-                }
+            val centerPixel =
+                captureToImage().asAndroidBitmap().run { getPixel(width / 2, height / 2) }
 
             val expectedColor =
                 calculateResultingRippleColor(
@@ -322,8 +404,8 @@ class RippleModifierNodeTest {
      * interactions (this should be a very rare case).
      *
      * Note: no corresponding test for pressed ripples since RippleForeground does not update the
-     * alpha of currently active ripples unless they are being drawn on the UI thread
-     * (which should only happen if the target radius also changes).
+     * alpha of currently active ripples unless they are being drawn on the UI thread (which should
+     * only happen if the target radius also changes).
      */
     @Test
     fun rippleAlphaChange() {
@@ -338,26 +420,16 @@ class RippleModifierNodeTest {
         rule.setContent {
             scope = rememberCoroutineScope()
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                RippleBoxWithBackground(
-                    interactionSource,
-                    ripple,
-                    bounded = true
-                )
+                RippleBoxWithBackground(interactionSource, ripple, bounded = true)
             }
         }
 
-        rule.runOnIdle {
-            scope!!.launch {
-                interactionSource.emit(DragInteraction.Start())
-            }
-        }
+        rule.runOnIdle { scope!!.launch { interactionSource.emit(DragInteraction.Start()) } }
         rule.waitForIdle()
 
         with(rule.onNodeWithTag(Tag)) {
-            val centerPixel = captureToImage().asAndroidBitmap()
-                .run {
-                    getPixel(width / 2, height / 2)
-                }
+            val centerPixel =
+                captureToImage().asAndroidBitmap().run { getPixel(width / 2, height / 2) }
 
             val expectedColor =
                 calculateResultingRippleColor(
@@ -370,15 +442,11 @@ class RippleModifierNodeTest {
 
         val newRippleAlpha = RippleAlpha(0.5f, 0.5f, 0.5f, 0.5f)
 
-        rule.runOnUiThread {
-            rippleAlpha = newRippleAlpha
-        }
+        rule.runOnUiThread { rippleAlpha = newRippleAlpha }
 
         with(rule.onNodeWithTag(Tag)) {
-            val centerPixel = captureToImage().asAndroidBitmap()
-                .run {
-                    getPixel(width / 2, height / 2)
-                }
+            val centerPixel =
+                captureToImage().asAndroidBitmap().run { getPixel(width / 2, height / 2) }
 
             // Alpha shouldn't have changed, since we don't retarget existing interactions
             val expectedColor =
@@ -390,18 +458,12 @@ class RippleModifierNodeTest {
             Truth.assertThat(Color(centerPixel)).isEqualTo(expectedColor)
         }
 
-        rule.runOnIdle {
-            scope!!.launch {
-                interactionSource.emit(FocusInteraction.Focus())
-            }
-        }
+        rule.runOnIdle { scope!!.launch { interactionSource.emit(FocusInteraction.Focus()) } }
         rule.waitForIdle()
 
         with(rule.onNodeWithTag(Tag)) {
-            val centerPixel = captureToImage().asAndroidBitmap()
-                .run {
-                    getPixel(width / 2, height / 2)
-                }
+            val centerPixel =
+                captureToImage().asAndroidBitmap().run { getPixel(width / 2, height / 2) }
 
             // Now that we animate to a new state layer, the new ripple alpha should be used
             val expectedColor =
@@ -420,7 +482,7 @@ class RippleModifierNodeTest {
      * @param interactionSource the [MutableInteractionSource] driving the ripple
      * @param interaction the [Interaction] to assert for
      * @param expectedCenterPixelColor the expected color for the pixel at the center of the
-     * [RippleBoxWithBackground]
+     *   [RippleBoxWithBackground]
      */
     private fun assertRippleMatches(
         scope: CoroutineScope,
@@ -434,11 +496,7 @@ class RippleModifierNodeTest {
         }
 
         // Start ripple
-        rule.runOnIdle {
-            scope.launch {
-                interactionSource.emit(interaction)
-            }
-        }
+        rule.runOnIdle { scope.launch { interactionSource.emit(interaction) } }
 
         // Advance to the end of the ripple / state layer animation
         rule.waitForIdle()
@@ -452,10 +510,8 @@ class RippleModifierNodeTest {
         }
 
         // Compare expected and actual pixel color
-        val centerPixel = rule.onNodeWithTag(Tag)
-            .captureToImage()
-            .asAndroidBitmap()
-            .run {
+        val centerPixel =
+            rule.onNodeWithTag(Tag).captureToImage().asAndroidBitmap().run {
                 getPixel(width / 2, height / 2)
             }
 
@@ -465,8 +521,8 @@ class RippleModifierNodeTest {
 
 /**
  * Generic Button like component with a border that allows injecting an [Indication], and has a
- * background with the same color around it - this makes the ripple contrast better and make it
- * more visible in screenshots.
+ * background with the same color around it - this makes the ripple contrast better and make it more
+ * visible in screenshots.
  *
  * @param interactionSource the [MutableInteractionSource] that is used to drive the ripple state
  * @param ripple ripple [Indication] placed inside the surface
@@ -479,44 +535,35 @@ private fun RippleBoxWithBackground(
     bounded: Boolean
 ) {
     Box(Modifier.semantics(mergeDescendants = true) {}.testTag(Tag)) {
-        Box(
-            Modifier.padding(25.dp).background(RippleBoxBackgroundColor)
-        ) {
+        Box(Modifier.padding(25.dp).background(RippleBoxBackgroundColor)) {
             val shape = RoundedCornerShape(20)
             // If the ripple is bounded, we want to clip to the shape, otherwise don't clip as
             // the ripple should draw outside the bounds.
             val clip = if (bounded) Modifier.clip(shape) else Modifier
             Box(
-                Modifier.padding(25.dp).width(40.dp).height(40.dp)
+                Modifier.padding(25.dp)
+                    .width(40.dp)
+                    .height(40.dp)
                     .border(BorderStroke(2.dp, Color.Black), shape)
                     .background(color = RippleBoxBackgroundColor, shape = shape)
                     .then(clip)
-                    .indication(
-                        interactionSource = interactionSource,
-                        indication = ripple
-                    )
+                    .indication(interactionSource = interactionSource, indication = ripple)
             ) {}
         }
     }
 }
 
 /**
- * Blends ([contentColor] with [rippleOpacity]) on top of [RippleBoxBackgroundColor] to provide
- * the resulting RGB color that can be used for pixel comparison.
+ * Blends ([contentColor] with [rippleOpacity]) on top of [RippleBoxBackgroundColor] to provide the
+ * resulting RGB color that can be used for pixel comparison.
  */
-private fun calculateResultingRippleColor(
-    contentColor: Color,
-    rippleOpacity: Float
-) = contentColor.copy(alpha = rippleOpacity).compositeOver(RippleBoxBackgroundColor)
+private fun calculateResultingRippleColor(contentColor: Color, rippleOpacity: Float) =
+    contentColor.copy(alpha = rippleOpacity).compositeOver(RippleBoxBackgroundColor)
 
 private val TestRippleColor = Color.Red
 
-private val TestRippleAlpha = RippleAlpha(
-    draggedAlpha = 0.1f,
-    focusedAlpha = 0.2f,
-    hoveredAlpha = 0.3f,
-    pressedAlpha = 0.4f
-)
+private val TestRippleAlpha =
+    RippleAlpha(draggedAlpha = 0.1f, focusedAlpha = 0.2f, hoveredAlpha = 0.3f, pressedAlpha = 0.4f)
 
 private val RippleBoxBackgroundColor = Color.Blue
 

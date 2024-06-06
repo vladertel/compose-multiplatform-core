@@ -16,7 +16,6 @@
 package androidx.build
 
 import androidx.build.uptodatedness.cacheEvenIfNoOutputs
-import com.android.build.gradle.LibraryExtension
 import java.io.File
 import java.io.FileNotFoundException
 import java.util.Locale
@@ -82,6 +81,7 @@ open class GMavenZipTask : Zip() {
             }
         }
     }
+
     /** Config action that configures the task when necessary. */
     class ConfigAction(private val params: Params) : Action<GMavenZipTask> {
         data class Params(
@@ -431,18 +431,6 @@ open class VerifyGMavenZipTask : DefaultTask() {
     }
 }
 
-/** Let you configure a library variant associated with [Release.DEFAULT_PUBLISH_CONFIG] */
-@Suppress("DEPRECATION") // LibraryVariant
-fun LibraryExtension.defaultPublishVariant(
-    config: (com.android.build.gradle.api.LibraryVariant) -> Unit
-) {
-    libraryVariants.all { variant ->
-        if (variant.name == Release.DEFAULT_PUBLISH_CONFIG) {
-            config(variant)
-        }
-    }
-}
-
 val AndroidXExtension.publishedArtifacts: List<Artifact>
     get() {
         val groupString = mavenGroup?.group!!
@@ -472,8 +460,12 @@ val AndroidXExtension.publishedArtifacts: List<Artifact>
 private val AndroidXExtension.publishPlatforms: List<String>
     get() {
         val potentialTargets =
-            project.multiplatformExtension?.targets?.asMap?.keys?.map { it.lowercase() }
-                ?: emptySet()
+            project.multiplatformExtension
+                ?.targets
+                ?.asMap
+                ?.filterValues { it.publishable }
+                ?.keys
+                ?.map { it.lowercase() } ?: emptySet()
         val declaredTargets = potentialTargets.filter { it != "metadata" }
         return declaredTargets.toList()
     }

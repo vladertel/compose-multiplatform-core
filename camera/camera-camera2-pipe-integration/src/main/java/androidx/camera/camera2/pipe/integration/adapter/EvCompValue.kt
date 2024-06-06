@@ -19,14 +19,10 @@ package androidx.camera.camera2.pipe.integration.adapter
 import android.annotation.SuppressLint
 import android.util.Range
 import android.util.Rational
-import androidx.annotation.RequiresApi
 import androidx.camera.core.ExposureState
 
-/**
- * Immutable adaptor to the ExposureState interface.
- */
+/** Immutable adaptor to the ExposureState interface. */
 @SuppressLint("UnsafeOptInUsageError")
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 data class EvCompValue(
     private val supported: Boolean,
     private val index: Int,
@@ -34,8 +30,11 @@ data class EvCompValue(
     private val step: Rational
 ) : ExposureState {
     override fun getExposureCompensationIndex(): Int = index
+
     override fun getExposureCompensationRange(): Range<Int> = range
+
     override fun getExposureCompensationStep(): Rational = step
+
     override fun isExposureCompensationSupported(): Boolean = supported
 
     internal fun updateIndex(newIndex: Int): EvCompValue {

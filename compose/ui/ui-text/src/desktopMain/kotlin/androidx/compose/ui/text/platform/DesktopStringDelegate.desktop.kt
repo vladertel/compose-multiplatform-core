@@ -17,30 +17,21 @@
 package androidx.compose.ui.text.platform
 
 import androidx.compose.ui.text.PlatformStringDelegate
-import androidx.compose.ui.text.intl.DesktopLocale
 import androidx.compose.ui.text.intl.PlatformLocale
 
-/**
- * An Desktop implementation of StringDelegate
- */
+/** An Desktop implementation of StringDelegate */
 internal class DesktopStringDelegate : PlatformStringDelegate {
     override fun toUpperCase(string: String, locale: PlatformLocale): String =
-        string.uppercase((locale as DesktopLocale).locale)
+        string.uppercase(locale)
 
     override fun toLowerCase(string: String, locale: PlatformLocale): String =
-        string.lowercase((locale as DesktopLocale).locale)
+        string.lowercase(locale)
 
     override fun capitalize(string: String, locale: PlatformLocale): String =
-        string.replaceFirstChar {
-            if (it.isLowerCase())
-                it.titlecase((locale as DesktopLocale).locale)
-            else
-                it.toString()
-        }
+        string.replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
 
     override fun decapitalize(string: String, locale: PlatformLocale): String =
-        string.replaceFirstChar { it.lowercase((locale as DesktopLocale).locale) }
+        string.replaceFirstChar { it.lowercase(locale) }
 }
 
-internal actual fun ActualStringDelegate(): PlatformStringDelegate =
-    DesktopStringDelegate()
+internal actual fun ActualStringDelegate(): PlatformStringDelegate = DesktopStringDelegate()

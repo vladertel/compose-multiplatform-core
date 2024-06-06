@@ -28,6 +28,8 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.LocusId;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -54,7 +56,9 @@ import android.util.SparseArray;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.RemoteViews;
+import android.widget.TextView;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.DimenRes;
@@ -2836,24 +2840,22 @@ public class NotificationCompat {
             if (platformTemplateClass == null) {
                 return null;
             }
-            if (Build.VERSION.SDK_INT >= 16) {
-                if (platformTemplateClass.equals(Notification.BigPictureStyle.class.getName())) {
-                    return new BigPictureStyle();
+            if (platformTemplateClass.equals(Notification.BigPictureStyle.class.getName())) {
+                return new BigPictureStyle();
+            }
+            if (platformTemplateClass.equals(Notification.BigTextStyle.class.getName())) {
+                return new BigTextStyle();
+            }
+            if (platformTemplateClass.equals(Notification.InboxStyle.class.getName())) {
+                return new InboxStyle();
+            }
+            if (Build.VERSION.SDK_INT >= 24) {
+                if (platformTemplateClass.equals(Notification.MessagingStyle.class.getName())) {
+                    return new MessagingStyle();
                 }
-                if (platformTemplateClass.equals(Notification.BigTextStyle.class.getName())) {
-                    return new BigTextStyle();
-                }
-                if (platformTemplateClass.equals(Notification.InboxStyle.class.getName())) {
-                    return new InboxStyle();
-                }
-                if (Build.VERSION.SDK_INT >= 24) {
-                    if (platformTemplateClass.equals(Notification.MessagingStyle.class.getName())) {
-                        return new MessagingStyle();
-                    }
-                    if (platformTemplateClass.equals(
-                            Notification.DecoratedCustomViewStyle.class.getName())) {
-                        return new DecoratedCustomViewStyle();
-                    }
+                if (platformTemplateClass.equals(
+                        Notification.DecoratedCustomViewStyle.class.getName())) {
+                    return new DecoratedCustomViewStyle();
                 }
             }
             return null;
@@ -2934,7 +2936,7 @@ public class NotificationCompat {
             boolean showLine2 = false;
 
             boolean minPriority = mBuilder.getPriority() < NotificationCompat.PRIORITY_LOW;
-            if (Build.VERSION.SDK_INT >= 16 && Build.VERSION.SDK_INT < 21) {
+            if (Build.VERSION.SDK_INT < 21) {
                 // lets color the backgrounds
                 if (minPriority) {
                     contentView.setInt(R.id.notification_background,
@@ -2952,13 +2954,9 @@ public class NotificationCompat {
             if (mBuilder.mLargeIcon != null) {
                 // On versions before Jellybean, the large icon was shown by SystemUI, so we need
                 // to hide it here.
-                if (Build.VERSION.SDK_INT >= 16) {
-                    contentView.setViewVisibility(R.id.icon, View.VISIBLE);
-                    contentView.setImageViewBitmap(R.id.icon,
+                contentView.setViewVisibility(R.id.icon, View.VISIBLE);
+                contentView.setImageViewBitmap(R.id.icon,
                             createColoredBitmap(mBuilder.mLargeIcon, Color.TRANSPARENT));
-                } else {
-                    contentView.setViewVisibility(R.id.icon, View.GONE);
-                }
                 if (showSmallIcon && mBuilder.mNotification.icon != 0) {
                     int backgroundSize = res.getDimensionPixelSize(
                             R.dimen.notification_right_icon_size);
@@ -3028,8 +3026,8 @@ public class NotificationCompat {
                 contentView.setViewVisibility(R.id.info, View.GONE);
             }
 
-            // Need to show three lines? Only allow on Jellybean+
-            if (mBuilder.mSubText != null && Build.VERSION.SDK_INT >= 16) {
+            // Need to show three lines?
+            if (mBuilder.mSubText != null) {
                 contentView.setTextViewText(R.id.text, mBuilder.mSubText);
                 if (mBuilder.mContentText != null) {
                     contentView.setTextViewText(R.id.text2, mBuilder.mContentText);
@@ -5494,6 +5492,77 @@ public class NotificationCompat {
                 return null;
             }
             return createRemoteViews(innerView, true);
+        }
+
+
+        /**
+         * A helper method to get texts from a {@link Notification}'s custom content view made by
+         * either
+         * {@link Builder#setCustomBigContentView(RemoteViews)},
+         * {@link Builder#setCustomContentView(RemoteViews)} or
+         * {@link Builder#setCustomHeadsUpContentView(RemoteViews)}.
+         *
+         * Note that this method will not look for {@link Notification#publicVersion} made by
+         * {@link Builder#setPublicVersion(Notification)}.
+         *
+         * @param context A {@link Context} that will be used to inflate the content view from
+         *                the notification.
+         * @param notification The notification from which to get texts from its content view.
+         * @return A list of text from the notification custom content view made by the above
+         * method. Otherwise, returns the empty list.
+         */
+        @NonNull
+        @SuppressWarnings("MixedMutabilityReturnType")
+        @RequiresApi(24)
+        public static List<CharSequence> getTextsFromContentView(@NonNull Context context,
+                @NonNull Notification notification) {
+            final String styleClassName = notification.extras.getString(EXTRA_TEMPLATE);
+            if (!Notification.DecoratedCustomViewStyle.class.getName().equals(styleClassName)) {
+                return Collections.emptyList();
+            }
+
+            if (notification.contentView == null && notification.bigContentView == null
+                    && notification.headsUpContentView == null) {
+                return Collections.emptyList();
+            }
+
+            RemoteViews contentView = notification.bigContentView != null
+                    ? notification.bigContentView : notification.contentView != null
+                    ? notification.contentView : notification.headsUpContentView;
+            final String packageName = contentView.getPackage();
+            ApplicationInfo applicationInfo;
+            Context packageContext;
+            try {
+                packageContext = context.createPackageContext(packageName, 0);
+                applicationInfo = context.getPackageManager().getApplicationInfo(packageName, 0);
+            } catch (PackageManager.NameNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+            packageContext.setTheme(applicationInfo.theme);
+            View contentLayout = contentView.apply(packageContext, null);
+
+            final ArrayList<CharSequence> texts = new ArrayList<>();
+            getTextsFromViewTraversal(contentLayout, texts);
+
+            return texts;
+        }
+
+        private static void getTextsFromViewTraversal(View v, ArrayList<CharSequence> outTexts) {
+            if (!(v instanceof ViewGroup)) {
+                return;
+            }
+            for (int i = 0; i < ((ViewGroup) v).getChildCount(); i++) {
+                View child = ((ViewGroup) v).getChildAt(i);
+                if (child instanceof TextView) {
+                    CharSequence text = ((TextView) child).getText();
+                    if (text != null && text.length() > 0) {
+                        outTexts.add(text);
+                    }
+                }
+                if (child instanceof ViewGroup) {
+                    getTextsFromViewTraversal(child, outTexts);
+                }
+            }
         }
 
         private RemoteViews createRemoteViews(RemoteViews innerView, boolean showActions) {
@@ -8959,7 +9028,10 @@ public class NotificationCompat {
      * Gets the {@link Notification#extras} field from a notification in a backwards
      * compatible manner. Extras field was supported from JellyBean (Api level 16)
      * forwards. This function will return {@code null} on older api levels.
+     * @deprecated Call {@link Notification#extras} directly.
      */
+    @Deprecated
+    @androidx.annotation.ReplaceWith(expression = "notification.extras")
     @Nullable
     public static Bundle getExtras(@NonNull Notification notification) {
         return notification.extras;

@@ -24,14 +24,14 @@ import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
 import java.awt.datatransfer.UnsupportedFlavorException
 import java.io.IOException
-import java.lang.IllegalStateException
 
 internal actual class PlatformClipboardManager : ClipboardManager {
-    internal val systemClipboard = try {
-        Toolkit.getDefaultToolkit().getSystemClipboard()
-    } catch (e: java.awt.HeadlessException) {
-        null
-    }
+    internal val systemClipboard =
+        try {
+            Toolkit.getDefaultToolkit().getSystemClipboard()
+        } catch (e: java.awt.HeadlessException) {
+            null
+        }
 
     actual override fun getText(): AnnotatedString? {
         return systemClipboard?.let {
@@ -55,28 +55,9 @@ internal actual class PlatformClipboardManager : ClipboardManager {
         }
     }
 
-    override fun getClipMetadata(): ClipMetadata? {
-        return try {
-            systemClipboard?.getContents(this)?.let(::ClipMetadata)
-        } catch (_: IllegalStateException) {
-            null
-        }
-    }
-
-    override fun setClip(
-        clipEntry: ClipEntry,
-        clipMetadata: ClipMetadata?
-    ) {
+    override fun setClip(clipEntry: ClipEntry?) {
         // Ignore clipDescription.
-        systemClipboard?.setContents(clipEntry.transferable, null)
-    }
-
-    override fun hasClip(): Boolean {
-        return try {
-            systemClipboard?.availableDataFlavors?.isNotEmpty() ?: false
-        } catch (_: IllegalStateException) {
-            false
-        }
+        systemClipboard?.setContents(clipEntry?.transferable, null)
     }
 
     /**
@@ -92,20 +73,19 @@ internal actual class PlatformClipboardManager : ClipboardManager {
 
 // Defining this class not as a typealias but a wrapper gives us flexibility in the future to
 // add more functionality in it.
-actual class ClipEntry(
-    internal val transferable: Transferable
-) {
+actual class ClipEntry(internal val transferable: Transferable) {
     @Throws(UnsupportedFlavorException::class, IOException::class)
     fun getTransferData(flavor: DataFlavor): Any? {
         return transferable.getTransferData(flavor)
     }
+
+    actual val clipMetadata: ClipMetadata
+        get() = ClipMetadata(transferable)
 }
 
 // Defining this class not as a typealias but a wrapper gives us flexibility in the future to
 // add more functionality in it.
-actual class ClipMetadata(
-    internal val transferable: Transferable
-) {
+actual class ClipMetadata(internal val transferable: Transferable) {
     fun getTransferDataFlavors(): List<DataFlavor> {
         val dataFlavors = transferable.transferDataFlavors ?: return emptyList()
         return dataFlavors.filterNotNull()

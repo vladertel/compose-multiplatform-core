@@ -15,14 +15,11 @@
  */
 package androidx.compose.ui.layout
 
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 
 /**
  * A line that can be used to align layout children inside a [Placeable.PlacementScope].
  *
- * [Ruler] values are only valid when there is no [rotation][Modifier.rotate].
  * @see Placeable.PlacementScope.current
  * @see MeasureScope.layout
  * @see RulerScope.provides
@@ -41,10 +38,10 @@ sealed class Ruler {
 }
 
 /**
- * A vertical [Ruler]. Defines a line that can be used by parent layouts
- * to align or position their children horizontally. The position of the ruler
- * can be retrieved with [Placeable.PlacementScope.current] and can be set with
- * [MeasureScope.layout] using [RulerScope.provides] or [RulerScope.providesRelative].
+ * A vertical [Ruler]. Defines a line that can be used by parent layouts to align or position their
+ * children horizontally. The position of the ruler can be retrieved with
+ * [Placeable.PlacementScope.current] and can be set with [MeasureScope.layout] using
+ * [RulerScope.provides] or [RulerScope.providesRelative].
  */
 class VerticalRuler() : Ruler() {
     override fun calculateCoordinate(
@@ -58,10 +55,10 @@ class VerticalRuler() : Ruler() {
 }
 
 /**
- * A horizontal [Ruler]. Defines a line that can be used by parent layouts
- * to align or position their children vertically. The position of the ruler
- * can be retrieved with [Placeable.PlacementScope.current] and can be set with
- * [MeasureScope.layout] using [RulerScope.provides] or [RulerScope.providesRelative].
+ * A horizontal [Ruler]. Defines a line that can be used by parent layouts to align or position
+ * their children vertically. The position of the ruler can be retrieved with
+ * [Placeable.PlacementScope.current] and can be set with [MeasureScope.layout] using
+ * [RulerScope.provides].
  */
 class HorizontalRuler : Ruler() {
     override fun calculateCoordinate(

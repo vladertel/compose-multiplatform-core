@@ -21,7 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
+import androidx.build.LibraryType
 import androidx.build.AndroidXConfig
 
 plugins {
@@ -66,14 +66,15 @@ dependencies {
 
 androidx {
     name = "Tracing Perfetto"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2022"
     description = "AndroidX Tracing: Perfetto SDK"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }
 
 android {
-    buildTypes.all {
+    buildTypes.configureEach {
         consumerProguardFiles "proguard-rules.pro"
     }
     namespace "androidx.tracing.perfetto"

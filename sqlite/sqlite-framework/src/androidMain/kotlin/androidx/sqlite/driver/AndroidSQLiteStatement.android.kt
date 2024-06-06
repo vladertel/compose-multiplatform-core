@@ -17,7 +17,6 @@
 package androidx.sqlite.driver
 
 import android.database.Cursor
-import android.database.DatabaseUtils
 import android.database.sqlite.SQLiteCursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteProgram
@@ -43,23 +42,32 @@ internal sealed class AndroidSQLiteStatement(
 
     companion object {
         fun create(db: SQLiteDatabase, sql: String): AndroidSQLiteStatement {
-            return when (DatabaseUtils.getSqlStatementType(sql)) {
-                DatabaseUtils.STATEMENT_SELECT,
-                DatabaseUtils.STATEMENT_PRAGMA ->
-                    // Statements that return rows (SQLITE_ROW)
-                    SelectAndroidSQLiteStatement(db, sql)
-                else ->
-                    // Statements that don't return row (SQLITE_DONE)
-                    OtherAndroidSQLiteStatement(db, sql)
+            return if (isRowStatement(sql)) {
+                // Statements that return rows (SQLITE_ROW)
+                SelectAndroidSQLiteStatement(db, sql)
+            } else {
+                // Statements that don't return row (SQLITE_DONE)
+                OtherAndroidSQLiteStatement(db, sql)
+            }
+        }
+
+        private fun isRowStatement(sql: String): Boolean {
+            val prefix = sql.trim()
+            if (prefix.length < 3) {
+                return false
+            }
+            return when (prefix.substring(0, 3).uppercase()) {
+                "SEL",
+                "PRA",
+                "WIT" -> true
+                else -> false
             }
         }
     }
 
     // TODO(b/304298743): Use android.database.SQLiteRawStatement on Android V+
-    private class SelectAndroidSQLiteStatement(
-        db: SQLiteDatabase,
-        sql: String
-    ) : AndroidSQLiteStatement(db, sql) {
+    private class SelectAndroidSQLiteStatement(db: SQLiteDatabase, sql: String) :
+        AndroidSQLiteStatement(db, sql) {
 
         private var bindingTypes: IntArray = IntArray(0)
         private var longBindings: LongArray = LongArray(0)
@@ -141,41 +149,37 @@ internal sealed class AndroidSQLiteStatement(
 
         override fun getColumnCount(): Int {
             throwIfClosed()
+            ensureCursor()
             return cursor?.columnCount ?: 0
         }
 
         override fun getColumnName(index: Int): String {
             throwIfClosed()
-            val c = throwIfNoRow()
+            ensureCursor()
+            val c = checkNotNull(cursor)
             throwIfInvalidColumn(c, index)
             return c.getColumnName(index)
         }
 
         override fun step(): Boolean {
             throwIfClosed()
-            if (cursor == null) {
-                cursor = db.rawQueryWithFactory(
-                    /* cursorFactory = */ { _, masterQuery, editTable, query ->
-                        bindTo(query)
-                        SQLiteCursor(masterQuery, editTable, query)
-                    },
-                    /* sql = */ sql,
-                    /* selectionArgs = */ arrayOfNulls(0),
-                    /* editTable = */ null
-                )
-            }
-            return requireNotNull(cursor).moveToNext()
+            ensureCursor()
+            return checkNotNull(cursor).moveToNext()
         }
 
         override fun reset() {
+            throwIfClosed()
+            cursor?.close()
+            cursor = null
+        }
+
+        override fun clearBindings() {
             throwIfClosed()
             bindingTypes = IntArray(0)
             longBindings = LongArray(0)
             doubleBindings = DoubleArray(0)
             stringBindings = emptyArray()
             blobBindings = emptyArray()
-            cursor?.close()
-            cursor = null
         }
 
         override fun close() {
@@ -214,6 +218,21 @@ internal sealed class AndroidSQLiteStatement(
             }
         }
 
+        private fun ensureCursor() {
+            if (cursor == null) {
+                cursor =
+                    db.rawQueryWithFactory(
+                        /* cursorFactory = */ { _, masterQuery, editTable, query ->
+                            bindTo(query)
+                            SQLiteCursor(masterQuery, editTable, query)
+                        },
+                        /* sql = */ sql,
+                        /* selectionArgs = */ arrayOfNulls(0),
+                        /* editTable = */ null
+                    )
+            }
+        }
+
         private fun bindTo(query: SQLiteProgram) {
             for (index in 1 until bindingTypes.size) {
                 when (bindingTypes[index]) {
@@ -245,10 +264,8 @@ internal sealed class AndroidSQLiteStatement(
         }
     }
 
-    private class OtherAndroidSQLiteStatement(
-        db: SQLiteDatabase,
-        sql: String
-    ) : AndroidSQLiteStatement(db, sql) {
+    private class OtherAndroidSQLiteStatement(db: SQLiteDatabase, sql: String) :
+        AndroidSQLiteStatement(db, sql) {
 
         private val delegate: FrameworkStatement = db.compileStatement(sql)
 
@@ -319,6 +336,10 @@ internal sealed class AndroidSQLiteStatement(
         }
 
         override fun reset() {
+            // Android executes and releases non-query statements, so there is nothing to 'reset'.
+        }
+
+        override fun clearBindings() {
             throwIfClosed()
             delegate.clearBindings()
         }

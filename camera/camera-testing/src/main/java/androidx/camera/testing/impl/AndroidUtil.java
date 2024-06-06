@@ -20,12 +20,9 @@ import static org.junit.Assume.assumeFalse;
 
 import android.os.Build;
 
-import androidx.annotation.RequiresApi;
-
 /**
  * Utility methods for testing related to Android OS.
  */
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 public final class AndroidUtil {
 
     private AndroidUtil() {
@@ -67,6 +64,16 @@ public final class AndroidUtil {
         assumeFalse(
                 "Emulator API 21 has empty supported qualities. Unable to test.",
                 AndroidUtil.isEmulatorAndAPI21()
+        );
+        // Skip test for b/331618729
+        assumeFalse(
+                "Emulator API 28 crashes running this test.",
+                Build.VERSION.SDK_INT == 28 && isEmulator()
+        );
+        // Skip test for b/331618729
+        assumeFalse(
+                "Emulator API 30 crashes running this test.",
+                Build.VERSION.SDK_INT == 30 && isEmulator()
         );
     }
 }

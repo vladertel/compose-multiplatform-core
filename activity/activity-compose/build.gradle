@@ -21,8 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.Publish
-import androidx.build.RunApiTasks
+import androidx.build.LibraryType
 
 plugins {
     id("AndroidXPlugin")
@@ -51,17 +50,16 @@ dependencies {
 
     lintChecks(projectOrArtifact(":activity:activity-compose-lint"))
     lintPublish(projectOrArtifact(":activity:activity-compose-lint"))
-
-    samples(projectOrArtifact(":activity:activity-compose:activity-compose-samples"))
 }
 
 androidx {
     name = "Activity Compose"
-    publish = Publish.SNAPSHOT_AND_RELEASE
+    type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     inceptionYear = "2020"
     description = "Compose integration with Activity"
-    runApiTasks = new RunApiTasks.Yes()
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
+    samples(projectOrArtifact(":activity:activity-compose:activity-compose-samples"))
 }
 
 android {

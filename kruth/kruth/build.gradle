@@ -21,7 +21,7 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
-import androidx.build.KmpPlatformsKt
+
 import androidx.build.LibraryType
 import androidx.build.PlatformIdentifier
 import androidx.build.Publish
@@ -31,12 +31,10 @@ plugins {
     id("AndroidXPlugin")
 }
 
-def macEnabled = KmpPlatformsKt.enableMac(project)
-def linuxEnabled = KmpPlatformsKt.enableLinux(project)
-def nativeEnabled = KmpPlatformsKt.enableNative(project)
-
 androidXMultiplatform {
-    jvm {}
+    jvm {
+        withJava()
+    }
     mac()
     linux()
     ios()
@@ -64,20 +62,26 @@ androidXMultiplatform {
                 api(libs.kotlinStdlib)
                 api(libs.kotlinTest)
                 implementation(libs.guavaAndroid)
+                implementation(libs.junit)
             }
         }
 
-        if (macEnabled || linuxEnabled || nativeEnabled) {
-            nativeMain {
-                dependsOn(commonMain)
-            }
-
-            nativeTest {
-                dependsOn(commonTest)
+        jvmTest {
+            dependsOn(commonTest)
+            dependencies {
+                api(libs.kotlinCoroutinesTest)
             }
         }
 
-        targets.all { target ->
+        nativeMain {
+            dependsOn(commonMain)
+        }
+
+        nativeTest {
+            dependsOn(commonTest)
+        }
+
+        targets.configureEach { target ->
             if (target.platformType == org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.native) {
                 target.compilations["main"].defaultSourceSet {
                     dependsOn(nativeMain)
@@ -101,4 +105,5 @@ androidx {
     publish = Publish.SNAPSHOT_ONLY
     runApiTasks = new RunApiTasks.Yes() // Used to diff against Google Truth
     type = LibraryType.INTERNAL_TEST_LIBRARY
+    doNotDocumentReason = "Not shipped externally"
 }

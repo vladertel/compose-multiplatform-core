@@ -18,7 +18,6 @@ package androidx.camera.camera2.pipe.integration.compat.quirk
 import android.annotation.SuppressLint
 import android.hardware.camera2.CameraCharacteristics
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.camera.core.impl.Quirk
 import java.nio.BufferUnderflowException
 import java.util.Locale
@@ -28,29 +27,26 @@ import java.util.Locale
  *
  * QuirkSummary
  * - Bug Id: 216667482
- * - Description: When attempting to retrieve the
- *   [CameraCharacteristics.FLASH_INFO_AVAILABLE] characteristic, a
- *   [BufferUnderflowException] is thrown. This is an undocumented exception
- *   on the [CameraCharacteristics.get] method, so this violates the API contract.
+ * - Description: When attempting to retrieve the [CameraCharacteristics.FLASH_INFO_AVAILABLE]
+ *   characteristic, a [BufferUnderflowException] is thrown. This is an undocumented exception on
+ *   the [CameraCharacteristics.get] method, so this violates the API contract.
  * - Device(s): Spreadtrum devices including LEMFO LEMP and DM20C
  *
  * TODO: enable CameraXQuirksClassDetector lint check when kotlin is supported.
  */
 @SuppressLint("CameraXQuirksClassDetector")
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 class FlashAvailabilityBufferUnderflowQuirk : Quirk {
 
     companion object {
-        private val KNOWN_AFFECTED_MODELS = setOf(
-            // Devices enumerated as DeviceInfo(Build.MANUFACTURER, Build.MODEL).
-            DeviceInfo("sprd", "lemp"),
-            DeviceInfo("sprd", "DM20C"),
-        )
+        private val KNOWN_AFFECTED_MODELS =
+            setOf(
+                // Devices enumerated as DeviceInfo(Build.MANUFACTURER, Build.MODEL).
+                DeviceInfo("sprd", "lemp"),
+                DeviceInfo("sprd", "DM20C"),
+            )
 
         fun isEnabled(): Boolean {
-            return KNOWN_AFFECTED_MODELS.contains(
-                DeviceInfo(Build.MANUFACTURER, Build.MODEL)
-            )
+            return KNOWN_AFFECTED_MODELS.contains(DeviceInfo(Build.MANUFACTURER, Build.MODEL))
         }
     }
 

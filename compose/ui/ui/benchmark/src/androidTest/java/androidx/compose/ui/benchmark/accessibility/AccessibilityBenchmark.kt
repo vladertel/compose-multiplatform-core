@@ -18,6 +18,8 @@ package androidx.compose.ui.benchmark.accessibility
 
 import android.view.View
 import android.view.accessibility.AccessibilityNodeProvider
+import androidx.benchmark.ExperimentalBenchmarkConfigApi
+import androidx.benchmark.MicrobenchmarkConfig
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.compose.foundation.layout.Column
@@ -50,11 +52,11 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AccessibilityBenchmark {
 
-    @get:Rule
-    val composeTestRule = createComposeRule()
+    @get:Rule val composeTestRule = createComposeRule()
 
+    @OptIn(ExperimentalBenchmarkConfigApi::class)
     @get:Rule
-    val benchmarkRule = BenchmarkRule()
+    val benchmarkRule = BenchmarkRule(MicrobenchmarkConfig(traceAppTagEnabled = true))
 
     private lateinit var composeView: View
     private lateinit var provider: AccessibilityNodeProvider
@@ -78,14 +80,13 @@ class AccessibilityBenchmark {
         //  Collection directly. If we were only fetching one node with `onNodeWithTag`, we could
         // have a `SemanticsNodeInteraction.semanticsId`, but we want to create ANIs for multiple
         // nodes.
-        semanticsList = composeTestRule
-            .onAllNodesWithTag(tag, useUnmergedTree = true)
-            .fetchSemanticsNodes(atLeastOneRootRequired = false)
+        semanticsList =
+            composeTestRule
+                .onAllNodesWithTag(tag, useUnmergedTree = true)
+                .fetchSemanticsNodes(atLeastOneRootRequired = false)
 
         benchmarkRule.measureRepeated {
-            semanticsList.forEach {
-                provider.createAccessibilityNodeInfo(it.id)
-            }
+            semanticsList.forEach { provider.createAccessibilityNodeInfo(it.id) }
         }
     }
 
@@ -104,8 +105,8 @@ class AccessibilityBenchmark {
                     Row(Modifier.semantics { isTraversalGroup = true }) {
                         Button(
                             onClick = {},
-                            modifier = Modifier
-                                .semantics {
+                            modifier =
+                                Modifier.semantics {
                                     contentDescription = "ContentDescription 1"
                                     traversalIndex = 2f
                                     testTag = tag
@@ -115,8 +116,8 @@ class AccessibilityBenchmark {
                         }
                         Button(
                             onClick = {},
-                            modifier = Modifier
-                                .semantics {
+                            modifier =
+                                Modifier.semantics {
                                     contentDescription = "ContentDescription 2"
                                     traversalIndex = 1f
                                     testTag = tag
@@ -126,8 +127,8 @@ class AccessibilityBenchmark {
                         }
                         Button(
                             onClick = {},
-                            modifier = Modifier
-                                .semantics {
+                            modifier =
+                                Modifier.semantics {
                                     contentDescription = "ContentDescription 3"
                                     traversalIndex = 3f
                                     testTag = tag
@@ -143,7 +144,7 @@ class AccessibilityBenchmark {
             // this is just a temporary workaround for now.
             LaunchedEffect(Unit) {
                 // Ensure that accessibility is enabled for testing.
-                (composeView as RootForTest).forceAccessibilityForTesting()
+                (composeView as RootForTest).forceAccessibilityForTesting(true)
             }
         }
     }

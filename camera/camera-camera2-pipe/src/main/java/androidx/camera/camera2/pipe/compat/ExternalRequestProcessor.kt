@@ -20,7 +20,6 @@ package androidx.camera.camera2.pipe.compat
 
 import android.hardware.camera2.CaptureRequest
 import android.view.Surface
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.CameraController
 import androidx.camera.camera2.pipe.CameraGraph
 import androidx.camera.camera2.pipe.CameraId
@@ -40,7 +39,6 @@ import androidx.camera.camera2.pipe.graph.GraphRequestProcessor
 import kotlin.reflect.KClass
 import kotlinx.atomicfu.atomic
 
-@RequiresApi(21)
 class ExternalCameraController(
     private val graphConfig: CameraGraph.Config,
     private val graphListener: GraphListener,
@@ -53,6 +51,7 @@ class ExternalCameraController(
 
     override val cameraId: CameraId
         get() = graphConfig.camera
+
     override var isForeground = false
 
     override fun start() {
@@ -82,7 +81,6 @@ class ExternalCameraController(
 }
 
 @Suppress("DEPRECATION")
-@RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 internal class ExternalCaptureSequenceProcessor(
     private val graphConfig: CameraGraph.Config,
     private val processor: RequestProcessor
@@ -197,8 +195,7 @@ internal class ExternalCaptureSequenceProcessor(
         override val listeners: List<Request.Listener>,
         override val sequenceListener: CaptureSequence.CaptureSequenceListener,
     ) : CaptureSequence<Request> {
-        @Volatile
-        private var _sequenceNumber: Int? = null
+        @Volatile private var _sequenceNumber: Int? = null
         override var sequenceNumber: Int
             get() {
                 if (_sequenceNumber == null) {
@@ -234,7 +231,9 @@ internal class ExternalCaptureSequenceProcessor(
         override val requestNumber: RequestNumber
     ) : RequestMetadata {
         override fun <T> get(key: CaptureRequest.Key<T>): T? = parameters[key] as T?
+
         override fun <T> get(key: Metadata.Key<T>): T? = parameters[key] as T?
+
         override fun <T> getOrDefault(key: CaptureRequest.Key<T>, default: T): T =
             get(key) ?: default
 

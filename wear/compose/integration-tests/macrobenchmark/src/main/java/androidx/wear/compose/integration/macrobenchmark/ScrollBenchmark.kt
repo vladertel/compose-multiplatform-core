@@ -24,6 +24,8 @@ import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.filters.LargeTest
 import androidx.test.uiautomator.By
 import androidx.testutils.createCompilationParams
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,11 +33,18 @@ import org.junit.runners.Parameterized
 
 @LargeTest
 @RunWith(Parameterized::class)
-class ScrollBenchmark(
-    private val compilationMode: CompilationMode
-) {
-    @get:Rule
-    val benchmarkRule = MacrobenchmarkRule()
+class ScrollBenchmark(private val compilationMode: CompilationMode) {
+    @get:Rule val benchmarkRule = MacrobenchmarkRule()
+
+    @Before
+    fun setUp() {
+        disableChargingExperience()
+    }
+
+    @After
+    fun destroy() {
+        enableChargingExperience()
+    }
 
     @Test
     fun start() {

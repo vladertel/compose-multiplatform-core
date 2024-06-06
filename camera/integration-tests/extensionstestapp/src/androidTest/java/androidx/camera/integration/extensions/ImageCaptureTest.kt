@@ -19,22 +19,23 @@ package androidx.camera.integration.extensions
 import android.Manifest
 import android.content.Context
 import android.os.SystemClock
-import androidx.camera.camera2.Camera2Config
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.impl.utils.executor.CameraXExecutors
 import androidx.camera.extensions.ExtensionsManager
 import androidx.camera.extensions.internal.ExtensionVersion
 import androidx.camera.extensions.internal.Version
+import androidx.camera.integration.extensions.CameraExtensionsActivity.CAMERA_PIPE_IMPLEMENTATION_OPTION
 import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil
+import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil.CameraXExtensionTestParams
 import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil.assumeExtensionModeSupported
 import androidx.camera.integration.extensions.util.CameraXExtensionsTestUtil.launchCameraExtensionsActivity
 import androidx.camera.integration.extensions.util.HOME_TIMEOUT_MS
 import androidx.camera.integration.extensions.util.takePictureAndWaitForImageSavedIdle
-import androidx.camera.integration.extensions.util.waitForPreviewViewIdle
-import androidx.camera.integration.extensions.utils.CameraIdExtensionModePair
+import androidx.camera.integration.extensions.util.waitForPreviewViewStreaming
 import androidx.camera.integration.extensions.utils.CameraSelectorUtil
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.testing.impl.CameraPipeConfigTestRule
 import androidx.camera.testing.impl.CameraUtil
 import androidx.camera.testing.impl.CameraUtil.PreTestCameraIdList
 import androidx.camera.testing.impl.CoreAppTestUtil
@@ -59,21 +60,28 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-/**
- * The tests to verify that ImageCapture can work well when extension modes are enabled.
- */
+/** The tests to verify that ImageCapture can work well when extension modes are enabled. */
 @LargeTest
 @RunWith(Parameterized::class)
-class ImageCaptureTest(private val config: CameraIdExtensionModePair) {
+class ImageCaptureTest(private val config: CameraXExtensionTestParams) {
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
     @get:Rule
-    val useCamera = CameraUtil.grantCameraPermissionAndPreTest(
-        PreTestCameraIdList(Camera2Config.defaultConfig())
-    )
+    val cameraPipeConfigTestRule =
+        CameraPipeConfigTestRule(active = config.implName == CAMERA_PIPE_IMPLEMENTATION_OPTION)
 
     @get:Rule
-    val permissionRule = GrantPermissionRule.grant(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    val useCamera =
+        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
+            PreTestCameraIdList(config.cameraXConfig)
+        )
+
+    @get:Rule
+    val permissionRule =
+        GrantPermissionRule.grant(
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.RECORD_AUDIO,
+        )
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
@@ -95,13 +103,13 @@ class ImageCaptureTest(private val config: CameraIdExtensionModePair) {
         // explicitly initiated from within the test.
         device.setOrientationNatural()
 
+        ProcessCameraProvider.configureInstance(config.cameraXConfig)
         val cameraProvider =
             ProcessCameraProvider.getInstance(context)[10000, TimeUnit.MILLISECONDS]
 
-        val extensionsManager = ExtensionsManager.getInstanceAsync(
-            context,
-            cameraProvider
-        )[10000, TimeUnit.MILLISECONDS]
+        val extensionsManager =
+            ExtensionsManager.getInstanceAsync(context, cameraProvider)[
+                    10000, TimeUnit.MILLISECONDS]
 
         assumeExtensionModeSupported(extensionsManager, config.cameraId, config.extensionMode)
     }
@@ -112,10 +120,9 @@ class ImageCaptureTest(private val config: CameraIdExtensionModePair) {
             ProcessCameraProvider.getInstance(context)[10000, TimeUnit.MILLISECONDS]
         cameraProvider.shutdownAsync()
 
-        val extensionsManager = ExtensionsManager.getInstanceAsync(
-            context,
-            cameraProvider
-        )[10000, TimeUnit.MILLISECONDS]
+        val extensionsManager =
+            ExtensionsManager.getInstanceAsync(context, cameraProvider)[
+                    10000, TimeUnit.MILLISECONDS]
         extensionsManager.shutdown()
 
         // Unfreeze rotation so the device can choose the orientation via its own policy. Be nice
@@ -132,26 +139,21 @@ class ImageCaptureTest(private val config: CameraIdExtensionModePair) {
     fun takePictureWithExtensionMode() {
         val activityScenario = launchCameraExtensionsActivity(config.cameraId, config.extensionMode)
 
-        with(activityScenario) {
-            use {
-                takePictureAndWaitForImageSavedIdle()
-            }
-        }
+        with(activityScenario) { use { takePictureAndWaitForImageSavedIdle() } }
     }
 
     /**
      * The following 1.4 interface methods are validated by this test.
      * <ol>
-     *   <li>ImageCaptureExtenderImpl#getRealtimeCaptureLatency()
-     *   <li>SessionProcessorImpl#getRealtimeCaptureLatency()
+     * <li>ImageCaptureExtenderImpl#getRealtimeCaptureLatency()
+     * <li>SessionProcessorImpl#getRealtimeCaptureLatency()
      * </ol>
      *
-     * According to the javadoc description, this method is guaranteed to be called after the
-     * camera capture session is initialized and camera preview is enabled for the
-     * ImageCaptureExtenderImpl implementation, or, after onCaptureSessionStart is called for the
-     * SessionProcessorImpl implementation. Using ActivityScenario to launch the extensions
-     * activity and waiting for its preview being ready can make sure that the calling timing can
-     * meet the javadoc description.
+     * According to the javadoc description, this method is guaranteed to be called after the camera
+     * capture session is initialized and camera preview is enabled for the ImageCaptureExtenderImpl
+     * implementation, or, after onCaptureSessionStart is called for the SessionProcessorImpl
+     * implementation. Using ActivityScenario to launch the extensions activity and waiting for its
+     * preview being ready can make sure that the calling timing can meet the javadoc description.
      */
     @Test
     fun validateRealtimeCaptureLatencySupport_sinceVersion_1_4() {
@@ -160,7 +162,7 @@ class ImageCaptureTest(private val config: CameraIdExtensionModePair) {
 
         with(activityScenario) {
             use {
-                waitForPreviewViewIdle()
+                waitForPreviewViewStreaming()
                 val camera = withActivity { mCamera }
                 // Retrieves the session processor from the camera's extended config
                 val sessionProcessor = camera.extendedConfig.sessionProcessor
@@ -179,32 +181,27 @@ class ImageCaptureTest(private val config: CameraIdExtensionModePair) {
         val cameraProvider =
             ProcessCameraProvider.getInstance(context)[10000, TimeUnit.MILLISECONDS]
 
-        val extensionsManager = ExtensionsManager.getInstanceAsync(
-            context,
-            cameraProvider
-        )[10000, TimeUnit.MILLISECONDS]
+        val extensionsManager =
+            ExtensionsManager.getInstanceAsync(context, cameraProvider)[
+                    10000, TimeUnit.MILLISECONDS]
 
         val baseCameraSelector = CameraSelectorUtil.createCameraSelectorById(config.cameraId)
-        val cameraSelector = extensionsManager.getExtensionEnabledCameraSelector(
-            baseCameraSelector,
-            config.extensionMode
-        )
-
-        val fakeLifecycleOwner = withContext(Dispatchers.Main) {
-            FakeLifecycleOwner().apply {
-                startAndResume()
-            }
-        }
-
-        val camera = withContext(Dispatchers.Main) {
-            cameraProvider.bindToLifecycle(
-                fakeLifecycleOwner,
-                cameraSelector
+        val cameraSelector =
+            extensionsManager.getExtensionEnabledCameraSelector(
+                baseCameraSelector,
+                config.extensionMode
             )
-        }
-        val isCaptureProcessProgressSupported = ImageCapture.getImageCaptureCapabilities(
-            camera.cameraInfo
-        ).isCaptureProcessProgressSupported
+
+        val fakeLifecycleOwner =
+            withContext(Dispatchers.Main) { FakeLifecycleOwner().apply { startAndResume() } }
+
+        val camera =
+            withContext(Dispatchers.Main) {
+                cameraProvider.bindToLifecycle(fakeLifecycleOwner, cameraSelector)
+            }
+        val isCaptureProcessProgressSupported =
+            ImageCapture.getImageCaptureCapabilities(camera.cameraInfo)
+                .isCaptureProcessProgressSupported
 
         assumeTrue(isCaptureProcessProgressSupported)
 
@@ -248,16 +245,19 @@ class ImageCaptureTest(private val config: CameraIdExtensionModePair) {
         // invoked
         assertThat(progress100Timestamp).isLessThan(imageCapturedTimestamp)
         // Makes sure that the received progress data is in increasing order
-        assertThat(processProgressData).isInOrder(object : Comparator<Int> {
-            override fun compare(progress1: Int, progress2: Int): Int {
-                return if (progress1 > progress2) {
-                    1
-                } else if (progress1 == progress2) {
-                    0
-                } else {
-                    -1
+        assertThat(processProgressData)
+            .isInOrder(
+                object : Comparator<Int> {
+                    override fun compare(progress1: Int, progress2: Int): Int {
+                        return if (progress1 > progress2) {
+                            1
+                        } else if (progress1 == progress2) {
+                            0
+                        } else {
+                            -1
+                        }
+                    }
                 }
-            }
-        })
+            )
     }
 }

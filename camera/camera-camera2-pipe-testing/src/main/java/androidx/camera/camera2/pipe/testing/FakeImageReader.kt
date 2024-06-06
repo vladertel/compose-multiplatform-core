@@ -16,10 +16,8 @@
 
 package androidx.camera.camera2.pipe.testing
 
-import android.os.Build
 import android.util.Size
 import android.view.Surface
-import androidx.annotation.RequiresApi
 import androidx.camera.camera2.pipe.OutputId
 import androidx.camera.camera2.pipe.StreamFormat
 import androidx.camera.camera2.pipe.StreamId
@@ -28,11 +26,9 @@ import androidx.camera.camera2.pipe.media.ImageWrapper
 import kotlin.reflect.KClass
 import kotlinx.atomicfu.atomic
 
-/**
- * Utility class for simulating [FakeImage] and testing code that uses an [ImageReaderWrapper].
- */
-@RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-class FakeImageReader private constructor(
+/** Utility class for simulating [FakeImage] and testing code that uses an [ImageReaderWrapper]. */
+class FakeImageReader
+private constructor(
     private val format: StreamFormat,
     override val capacity: Int,
     override val surface: Surface,

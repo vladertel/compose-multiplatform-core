@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
+@file:JvmMultifileClass
 @file:JvmName("RelationUtil")
-@file:RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 
 package androidx.room.util
 
@@ -32,6 +32,7 @@ import androidx.room.RoomDatabase
  * @param isRelationCollection - True if [V] is a [Collection] which means it is non null.
  * @param fetchBlock - A lambda for calling the generated _fetchRelationship function.
  */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 fun <K : Any, V> recursiveFetchHashMap(
     map: HashMap<K, V>,
     isRelationCollection: Boolean,
@@ -70,9 +71,8 @@ fun <K : Any, V> recursiveFetchHashMap(
     }
 }
 
-/**
- * Same as [recursiveFetchHashMap] but for [LongSparseArray].
- */
+/** Same as [recursiveFetchHashMap] but for [LongSparseArray]. */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 fun <V> recursiveFetchLongSparseArray(
     map: LongSparseArray<V>,
     isRelationCollection: Boolean,
@@ -87,8 +87,7 @@ fun <V> recursiveFetchLongSparseArray(
             tmpMap.put(map.keyAt(mapIndex), map.valueAt(mapIndex))
         } else {
             // Safe because `V` is a nullable type arg when isRelationCollection == false
-            @Suppress("UNCHECKED_CAST")
-            tmpMap.put(map.keyAt(mapIndex), null as V)
+            @Suppress("UNCHECKED_CAST") tmpMap.put(map.keyAt(mapIndex), null as V)
         }
         mapIndex++
         count++
@@ -109,9 +108,8 @@ fun <V> recursiveFetchLongSparseArray(
     }
 }
 
-/**
- * Same as [recursiveFetchHashMap] but for [ArrayMap].
- */
+/** Same as [recursiveFetchHashMap] but for [ArrayMap]. */
+@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP_PREFIX)
 fun <K : Any, V> recursiveFetchArrayMap(
     map: ArrayMap<K, V>,
     isRelationCollection: Boolean,

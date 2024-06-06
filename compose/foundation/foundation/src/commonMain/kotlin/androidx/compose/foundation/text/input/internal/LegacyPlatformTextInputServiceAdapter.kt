@@ -18,9 +18,12 @@
 
 package androidx.compose.foundation.text.input.internal
 
+import androidx.compose.foundation.text.LegacyTextFieldState
+import androidx.compose.foundation.text.selection.TextFieldSelectionManager
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.PlatformTextInputSession
 import androidx.compose.ui.platform.SoftwareKeyboardController
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.text.input.PlatformTextInputService
 import kotlinx.coroutines.Job
 
@@ -31,8 +34,8 @@ internal expect fun createLegacyPlatformTextInputServiceAdapter():
  * An implementation of the legacy [PlatformTextInputService] interface that delegates to a
  * [LegacyAdaptingPlatformTextInputModifierNode].
  *
- * For this class to work, exactly one [LegacyAdaptingPlatformTextInputModifier] must be attached
- * to a layout node and passed an instance of this class. This class will only function when such a
+ * For this class to work, exactly one [LegacyAdaptingPlatformTextInputModifier] must be attached to
+ * a layout node and passed an instance of this class. This class will only function when such a
  * modifier is attached to the modifier system, otherwise many of its operations will no-op.
  *
  * Note that, contrary to the original design intent of a [PlatformTextInputService], every text
@@ -63,9 +66,15 @@ internal abstract class LegacyPlatformTextInputServiceAdapter : PlatformTextInpu
         textInputModifierNode?.softwareKeyboardController?.hide()
     }
 
+    abstract fun startStylusHandwriting()
+
     interface LegacyPlatformTextInputNode {
         val softwareKeyboardController: SoftwareKeyboardController?
         val layoutCoordinates: LayoutCoordinates?
+        val legacyTextFieldState: LegacyTextFieldState?
+        val textFieldSelectionManager: TextFieldSelectionManager?
+        val viewConfiguration: ViewConfiguration
+
         fun launchTextInputSession(block: suspend PlatformTextInputSession.() -> Nothing): Job?
     }
 }

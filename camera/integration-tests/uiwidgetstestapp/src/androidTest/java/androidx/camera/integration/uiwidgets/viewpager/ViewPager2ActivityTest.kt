@@ -19,6 +19,7 @@ package androidx.camera.integration.uiwidgets.viewpager
 import android.content.Context
 import android.content.Intent
 import android.graphics.SurfaceTexture
+import android.os.Build
 import android.view.TextureView
 import android.view.View
 import androidx.camera.camera2.Camera2Config
@@ -28,6 +29,7 @@ import androidx.camera.integration.uiwidgets.R
 import androidx.camera.integration.uiwidgets.viewpager.BaseActivity.Companion.COMPATIBLE_MODE
 import androidx.camera.integration.uiwidgets.viewpager.BaseActivity.Companion.PERFORMANCE_MODE
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.testing.impl.AndroidUtil.isEmulator
 import androidx.camera.testing.impl.CameraPipeConfigTestRule
 import androidx.camera.testing.impl.CameraUtil
 import androidx.camera.testing.impl.CoreAppTestUtil
@@ -51,6 +53,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assume
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -73,49 +76,51 @@ class ViewPager2ActivityTest(
         private val lensFacingList =
             arrayOf(CameraSelector.LENS_FACING_BACK, CameraSelector.LENS_FACING_FRONT)
 
-        @JvmStatic
-        private val implementationModeList = arrayOf(COMPATIBLE_MODE, PERFORMANCE_MODE)
+        @JvmStatic private val implementationModeList = arrayOf(COMPATIBLE_MODE, PERFORMANCE_MODE)
 
         @JvmStatic
-        private val cameraXConfigList = arrayOf(
-            CameraFragment.CAMERA2_IMPLEMENTATION_OPTION,
-            CameraFragment.CAMERA_PIPE_IMPLEMENTATION_OPTION
-        )
+        private val cameraXConfigList =
+            arrayOf(
+                CameraFragment.CAMERA2_IMPLEMENTATION_OPTION,
+                CameraFragment.CAMERA_PIPE_IMPLEMENTATION_OPTION
+            )
 
         @JvmStatic
         @Parameterized.Parameters(name = "lensFacing={0}, mode={1}, cameraXConfig={2}")
-        fun data() = mutableListOf<Array<Any?>>().apply {
-            lensFacingList.forEach { lens ->
-                implementationModeList.forEach { mode ->
-                    cameraXConfigList.forEach { cameraXConfig ->
-                        add(arrayOf(lens, mode, cameraXConfig))
+        fun data() =
+            mutableListOf<Array<Any?>>().apply {
+                lensFacingList.forEach { lens ->
+                    implementationModeList.forEach { mode ->
+                        cameraXConfigList.forEach { cameraXConfig ->
+                            add(arrayOf(lens, mode, cameraXConfig))
+                        }
                     }
                 }
             }
-        }
 
-        @JvmField
-        val testCameraRule = CameraUtil.PreTestCamera()
+        @JvmField val testCameraRule = CameraUtil.PreTestCamera()
     }
 
     @get:Rule
-    val cameraPipeConfigTestRule = CameraPipeConfigTestRule(
-        active = cameraXConfig == CameraFragment.CAMERA_PIPE_IMPLEMENTATION_OPTION,
-    )
+    val cameraPipeConfigTestRule =
+        CameraPipeConfigTestRule(
+            active = cameraXConfig == CameraFragment.CAMERA_PIPE_IMPLEMENTATION_OPTION,
+        )
 
     @get:Rule
-    val useCamera = CameraUtil.grantCameraPermissionAndPreTest(
-        testCameraRule, CameraUtil.PreTestCameraIdList(
-            if (cameraXConfig == CameraFragment.CAMERA2_IMPLEMENTATION_OPTION) {
-                Camera2Config.defaultConfig()
-            } else {
-                CameraPipeConfig.defaultConfig()
-            }
+    val useCamera =
+        CameraUtil.grantCameraPermissionAndPreTestAndPostTest(
+            testCameraRule,
+            CameraUtil.PreTestCameraIdList(
+                if (cameraXConfig == CameraFragment.CAMERA2_IMPLEMENTATION_OPTION) {
+                    Camera2Config.defaultConfig()
+                } else {
+                    CameraPipeConfig.defaultConfig()
+                }
+            )
         )
-    )
 
-    private val mDevice =
-        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+    private val mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
     @Before
     fun setUp() {
@@ -158,6 +163,7 @@ class ViewPager2ActivityTest(
     // The test makes sure the TextureView surface texture keeps the same after switch.
     @Test
     fun testPreviewViewUpdateAfterSwitch() {
+        assumeFalse(shouldSkipTest()) // b/331933633
 
         launchActivity(lensFacing, cameraXConfig).use { scenario ->
             // At first, check Preview in stream state
@@ -177,6 +183,16 @@ class ViewPager2ActivityTest(
         }
     }
 
+    /**
+     * The testPreviewViewUpdateAfterSwitch test will run failed in API 34 emulator's front camera
+     * when using SurfaceView implementation. See b/331933633.
+     */
+    private fun shouldSkipTest() =
+        isEmulator() &&
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            lensFacing == CameraSelector.LENS_FACING_FRONT &&
+            implementationMode == PERFORMANCE_MODE
+
     @Test
     fun testPreviewViewUpdateAfterSwitchAndStop_ResumeAndSwitchBack() {
         launchActivity(lensFacing, cameraXConfig).use { scenario ->
@@ -190,7 +206,7 @@ class ViewPager2ActivityTest(
 
             scenario.moveToState(State.CREATED)
             scenario.moveToState(State.RESUMED)
-            mDevice.waitForIdle(ACTION_IDLE_TIMEOUT)
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
             // After resume, switch back to CameraFragment, to check Preview in stream state
             onView(withId(ViewPager2Activity.CAMERA_VIEW_ID)).perform(click())
@@ -207,19 +223,17 @@ class ViewPager2ActivityTest(
     private fun launchActivity(
         lensFacing: Int,
         cameraXConfig: String = CameraFragment.CAMERA2_IMPLEMENTATION_OPTION,
-    ):
-        ActivityScenario<ViewPager2Activity> {
-            val intent = Intent(
-                ApplicationProvider.getApplicationContext(),
-                ViewPager2Activity::class.java
-            ).apply {
-                putExtra(BaseActivity.INTENT_LENS_FACING, lensFacing)
-                putExtra(BaseActivity.INTENT_IMPLEMENTATION_MODE, implementationMode)
-                putExtra(CameraFragment.KEY_CAMERA_IMPLEMENTATION, cameraXConfig)
-                putExtra(CameraFragment.KEY_CAMERA_IMPLEMENTATION_NO_HISTORY, true)
-            }
-            return ActivityScenario.launch(intent)
-        }
+    ): ActivityScenario<ViewPager2Activity> {
+        val intent =
+            Intent(ApplicationProvider.getApplicationContext(), ViewPager2Activity::class.java)
+                .apply {
+                    putExtra(BaseActivity.INTENT_LENS_FACING, lensFacing)
+                    putExtra(BaseActivity.INTENT_IMPLEMENTATION_MODE, implementationMode)
+                    putExtra(CameraFragment.KEY_CAMERA_IMPLEMENTATION, cameraXConfig)
+                    putExtra(CameraFragment.KEY_CAMERA_IMPLEMENTATION_NO_HISTORY, true)
+                }
+        return ActivityScenario.launch(intent)
+    }
 
     private fun getTextureView(previewView: PreviewView): TextureView? {
         var index: Int = 0
@@ -240,16 +254,17 @@ class ViewPager2ActivityTest(
     private fun assertStreamState(
         scenario: ActivityScenario<ViewPager2Activity>,
         expectStreamState: PreviewView.StreamState
-    ) = runBlocking<Unit> {
-        lateinit var result: Deferred<Boolean>
+    ) =
+        runBlocking<Unit> {
+            lateinit var result: Deferred<Boolean>
 
-        scenario.onActivity { activity ->
-            // Make async Coroutine to wait the result, not block the test thread.
-            result = async { activity.waitForStreamState(expectStreamState) }
+            scenario.onActivity { activity ->
+                // Make async Coroutine to wait the result, not block the test thread.
+                result = async { activity.waitForStreamState(expectStreamState) }
+            }
+
+            assertThat(result.await()).isTrue()
         }
-
-        assertThat(result.await()).isTrue()
-    }
 
     private fun assertPreviewViewUpdate(scenario: ActivityScenario<ViewPager2Activity>) {
         when (implementationMode) {
@@ -269,15 +284,13 @@ class ViewPager2ActivityTest(
         }
 
         val latchForFrameUpdate = CountDownLatch(1)
-        newSurfaceTexture!!.setOnFrameAvailableListener { _ ->
-            latchForFrameUpdate.countDown()
-        }
+        newSurfaceTexture!!.setOnFrameAvailableListener { _ -> latchForFrameUpdate.countDown() }
         assertThat(latchForFrameUpdate.await(ACTION_IDLE_TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
     }
 
     /**
-     * Checks update from Preview instead of SurfaceView, since the SurfaceView's content can not
-     * be got.
+     * Checks update from Preview instead of SurfaceView, since the SurfaceView's content can not be
+     * got.
      */
     private fun assertPreviewUpdate(scenario: ActivityScenario<ViewPager2Activity>) {
         val latch = CountDownLatch(PREVIEW_UPDATE_COUNT)

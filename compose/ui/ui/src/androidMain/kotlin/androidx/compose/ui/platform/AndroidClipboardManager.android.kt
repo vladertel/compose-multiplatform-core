@@ -19,11 +19,14 @@ package androidx.compose.ui.platform
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.Context
+import android.os.Build
 import android.os.Parcel
 import android.text.Annotation
 import android.text.SpannableString
 import android.text.Spanned
 import android.util.Base64
+import androidx.annotation.DoNotInline
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -44,23 +47,20 @@ import androidx.compose.ui.util.fastForEach
 
 private const val PLAIN_TEXT_LABEL = "plain text"
 
-/**
- * Android implementation for [ClipboardManager].
- */
-internal class AndroidClipboardManager internal constructor(
-    private val clipboardManager: android.content.ClipboardManager
-) : ClipboardManager {
+/** Android implementation for [ClipboardManager]. */
+internal class AndroidClipboardManager
+internal constructor(private val clipboardManager: android.content.ClipboardManager) :
+    ClipboardManager {
 
-    internal constructor(context: Context) : this(
+    internal constructor(
+        context: Context
+    ) : this(
         context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
     )
 
     override fun setText(annotatedString: AnnotatedString) {
         clipboardManager.setPrimaryClip(
-            ClipData.newPlainText(
-                PLAIN_TEXT_LABEL,
-                annotatedString.convertToCharSequence()
-            )
+            ClipData.newPlainText(PLAIN_TEXT_LABEL, annotatedString.convertToCharSequence())
         )
     }
 
@@ -75,37 +75,36 @@ internal class AndroidClipboardManager internal constructor(
         }
     }
 
-    override fun hasText() =
-        clipboardManager.primaryClipDescription?.hasMimeType("text/*") ?: false
+    override fun hasText() = clipboardManager.primaryClipDescription?.hasMimeType("text/*") ?: false
 
     override fun getClip(): ClipEntry? {
         return clipboardManager.primaryClip?.let(::ClipEntry)
     }
 
-    override fun getClipMetadata(): ClipMetadata? {
-        return clipboardManager.primaryClipDescription?.let(::ClipMetadata)
+    override fun setClip(clipEntry: ClipEntry?) {
+        if (clipEntry == null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                Api28ClipboardManagerClipClear.clearPrimaryClip(clipboardManager)
+            } else {
+                clipboardManager.setPrimaryClip(ClipData.newPlainText("", ""))
+            }
+        } else {
+            clipboardManager.setPrimaryClip(clipEntry.clipData)
+        }
     }
-
-    override fun setClip(
-        clipEntry: ClipEntry,
-        clipMetadata: ClipMetadata?
-    ) {
-        // We ignore the clipDescription parameter on Android because clipEntry comes with one.
-        clipboardManager.setPrimaryClip(clipEntry.clipData)
-    }
-
-    override fun hasClip(): Boolean = clipboardManager.hasPrimaryClip()
 
     override val nativeClipboard: NativeClipboard
         get() = clipboardManager
 }
 
-/**
- * Android specific class that contains the primary clip in [android.content.ClipboardManager].
- */
+/** Android specific class that contains the primary clip in [android.content.ClipboardManager]. */
 // Defining this class not as a typealias but a wrapper gives us flexibility in the future to
 // add more functionality in it.
-actual class ClipEntry(val clipData: ClipData)
+actual class ClipEntry(val clipData: ClipData) {
+
+    actual val clipMetadata: ClipMetadata
+        get() = clipData.description.toClipMetadata()
+}
 
 fun ClipData.toClipEntry(): ClipEntry = ClipEntry(this)
 
@@ -120,6 +119,16 @@ actual class ClipMetadata(val clipDescription: ClipDescription)
 fun ClipDescription.toClipMetadata(): ClipMetadata = ClipMetadata(this)
 
 actual typealias NativeClipboard = android.content.ClipboardManager
+
+@RequiresApi(28)
+private object Api28ClipboardManagerClipClear {
+
+    @DoNotInline
+    @JvmStatic
+    fun clearPrimaryClip(clipboardManager: android.content.ClipboardManager) {
+        clipboardManager.clearPrimaryClip()
+    }
+}
 
 internal fun CharSequence?.convertToAnnotatedString(): AnnotatedString? {
     if (this == null) return null
@@ -166,9 +175,9 @@ internal fun AnnotatedString.convertToCharSequence(): CharSequence {
 }
 
 /**
- * A helper class used to encode SpanStyles into bytes.
- * Each field of SpanStyle is assigned with an ID. And if a field is not null or Unspecified, it
- * will be encoded. Otherwise, it will simply be omitted to save space.
+ * A helper class used to encode SpanStyles into bytes. Each field of SpanStyle is assigned with an
+ * ID. And if a field is not null or Unspecified, it will be encoded. Otherwise, it will simply be
+ * omitted to save space.
  */
 internal class EncodeHelper {
     private var parcel = Parcel.obtain()
@@ -248,12 +257,13 @@ internal class EncodeHelper {
     }
 
     fun encode(textUnit: TextUnit) {
-        val typeCode = when (textUnit.type) {
-            TextUnitType.Unspecified -> UNIT_TYPE_UNSPECIFIED
-            TextUnitType.Sp -> UNIT_TYPE_SP
-            TextUnitType.Em -> UNIT_TYPE_EM
-            else -> UNIT_TYPE_UNSPECIFIED
-        }
+        val typeCode =
+            when (textUnit.type) {
+                TextUnitType.Unspecified -> UNIT_TYPE_UNSPECIFIED
+                TextUnitType.Sp -> UNIT_TYPE_SP
+                TextUnitType.Em -> UNIT_TYPE_EM
+                else -> UNIT_TYPE_UNSPECIFIED
+            }
         encode(typeCode)
         if (textUnit.type != TextUnitType.Unspecified) {
             encode(textUnit.value)
@@ -275,13 +285,14 @@ internal class EncodeHelper {
     }
 
     fun encode(fontSynthesis: FontSynthesis) {
-        val value = when (fontSynthesis) {
-            FontSynthesis.None -> FONT_SYNTHESIS_NONE
-            FontSynthesis.All -> FONT_SYNTHESIS_ALL
-            FontSynthesis.Weight -> FONT_SYNTHESIS_WEIGHT
-            FontSynthesis.Style -> FONT_SYNTHESIS_STYLE
-            else -> FONT_SYNTHESIS_NONE
-        }
+        val value =
+            when (fontSynthesis) {
+                FontSynthesis.None -> FONT_SYNTHESIS_NONE
+                FontSynthesis.All -> FONT_SYNTHESIS_ALL
+                FontSynthesis.Weight -> FONT_SYNTHESIS_WEIGHT
+                FontSynthesis.Style -> FONT_SYNTHESIS_STYLE
+                else -> FONT_SYNTHESIS_NONE
+            }
         encode(value)
     }
 
@@ -326,9 +337,7 @@ internal class EncodeHelper {
     }
 }
 
-/**
- * The helper class to decode SpanStyle from a string encoded by [EncodeHelper].
- */
+/** The helper class to decode SpanStyle from a string encoded by [EncodeHelper]. */
 internal class DecodeHelper(string: String) {
     private val parcel = Parcel.obtain()
 
@@ -373,8 +382,7 @@ internal class DecodeHelper(string: String) {
                     } else {
                         break
                     }
-                FONT_FEATURE_SETTINGS_ID ->
-                    mutableSpanStyle.fontFeatureSettings = decodeString()
+                FONT_FEATURE_SETTINGS_ID -> mutableSpanStyle.fontFeatureSettings = decodeString()
                 LETTER_SPACING_ID ->
                     if (dataAvailable() >= TEXT_UNIT_SIZE) {
                         mutableSpanStyle.letterSpacing = decodeTextUnit()
@@ -423,11 +431,12 @@ internal class DecodeHelper(string: String) {
 
     @OptIn(ExperimentalUnitApi::class)
     fun decodeTextUnit(): TextUnit {
-        val type = when (decodeByte()) {
-            UNIT_TYPE_SP -> TextUnitType.Sp
-            UNIT_TYPE_EM -> TextUnitType.Em
-            else -> TextUnitType.Unspecified
-        }
+        val type =
+            when (decodeByte()) {
+                UNIT_TYPE_SP -> TextUnitType.Sp
+                UNIT_TYPE_EM -> TextUnitType.Em
+                else -> TextUnitType.Unspecified
+            }
         if (type == TextUnitType.Unspecified) {
             return TextUnit.Unspecified
         }
@@ -463,10 +472,7 @@ internal class DecodeHelper(string: String) {
     }
 
     private fun decodeTextGeometricTransform(): TextGeometricTransform {
-        return TextGeometricTransform(
-            scaleX = decodeFloat(),
-            skewX = decodeFloat()
-        )
+        return TextGeometricTransform(scaleX = decodeFloat(), skewX = decodeFloat())
     }
 
     private fun decodeTextDecoration(): TextDecoration {

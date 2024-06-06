@@ -15,12 +15,11 @@
  */
 
 @file:Suppress("NOTHING_TO_INLINE")
-@file:RequiresApi(21) // TODO(b/200306659): Remove and replace with annotation on package-info.java
 
 package androidx.camera.camera2.pipe
 
-import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -76,6 +75,34 @@ interface CameraDevices {
     ): CameraMetadata?
 
     /**
+     * Opens the camera device indicated by the cameraId, so that any subsequent open calls will
+     * potentially have a better latency.
+     */
+    fun prewarm(cameraId: CameraId, cameraBackendId: CameraBackendId? = null)
+
+    /** Non blocking operation that disconnects the underlying active Camera. */
+    fun disconnect(cameraId: CameraId, cameraBackendId: CameraBackendId? = null)
+
+    /**
+     * Disconnects the underlying active Camera. Once fully closed, the returned [Deferred] should
+     * be completed. It is synchronous with the other operations within this class.
+     */
+    fun disconnectAsync(
+        cameraId: CameraId,
+        cameraBackendId: CameraBackendId? = null
+    ): Deferred<Unit>
+
+    /** Non blocking operation that disconnects all active Cameras. */
+    fun disconnectAll(cameraBackendId: CameraBackendId? = null)
+
+    /**
+     * Non blocking operation that disconnects all active Cameras. Once all connections are fully
+     * closed, the returned [Deferred] should be completed. It is synchronous with the other
+     * operations within this class.
+     */
+    fun disconnectAllAsync(cameraBackendId: CameraBackendId? = null): Deferred<Unit>
+
+    /**
      * Iterate and return a list of CameraId's on the device that are capable of being opened. Some
      * camera devices may be hidden or un-openable if they are included as part of a logical camera
      * group.
@@ -122,20 +149,17 @@ interface CameraDevices {
     fun awaitMetadata(camera: CameraId): CameraMetadata
 }
 
-/**
- * CameraId represents a typed identifier for a camera represented as a non-blank String.
- */
+/** CameraId represents a typed identifier for a camera represented as a non-blank String. */
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 @JvmInline
 value class CameraId(val value: String) {
     init {
-        require(value.isNotBlank()) {
-            "CameraId cannot be null or blank!"
-        }
+        require(value.isNotBlank()) { "CameraId cannot be null or blank!" }
     }
 
     companion object {
         inline fun fromCamera2Id(value: String): CameraId = CameraId(value)
+
         inline fun fromCamera1Id(value: Int): CameraId = CameraId("$value")
     }
 
@@ -145,7 +169,8 @@ value class CameraId(val value: String) {
      * @return The parsed Camera1 id, or null if the value cannot be parsed as a Camera1 id.
      */
     inline fun toCamera1Id(): Int? = value.toIntOrNull()
-    override fun toString(): String = "Camera $value"
+
+    override fun toString(): String = "CameraId-$value"
 }
 
 /**
@@ -177,9 +202,10 @@ fun CameraDevices.find(
             for (physicalId in metadata.physicalCameraIds) {
                 if (!visited.contains(physicalId)) {
                     val physicalMetadata = this@find.getCameraMetadata(physicalId, cameraBackendId)
-                    if (physicalMetadata != null &&
-                        physicalMetadata.camera == physicalId &&
-                        visited.add(physicalId)
+                    if (
+                        physicalMetadata != null &&
+                            physicalMetadata.camera == physicalId &&
+                            visited.add(physicalId)
                     ) {
                         emit(physicalMetadata)
                     }
