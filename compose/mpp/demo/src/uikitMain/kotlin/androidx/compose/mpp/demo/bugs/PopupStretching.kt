@@ -32,11 +32,16 @@ import androidx.compose.material.Text
 import androidx.compose.material3.Button
 import androidx.compose.mpp.demo.Screen
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.interop.LocalUIViewController
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
+import kotlin.native.runtime.GC
+import kotlin.native.runtime.NativeRuntimeApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import platform.UIKit.UIModalPresentationFormSheet
 import platform.UIKit.UISheetPresentationControllerDetent
 import platform.UIKit.sheetPresentationController
@@ -75,7 +80,7 @@ val PopupStretching = Screen.Example("Popup stretching") {
             )
         )
 
-        viewController.presentViewController(bottomSheetController, animated = true, completion = {})
+        viewController.presentViewController(bottomSheetController, animated = false, completion = {})
     }) {
         Text("Show popup")
     }
