@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog as CoreDialog
+import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.rememberDialogState
@@ -191,6 +191,7 @@ object PopupAlertDialogProvider : AlertDialogProvider {
         // [alignment] property of [Popup] and have to use [Box] that fills all the
         // available space. Also [Box] provides a dismiss request feature when clicked
         // outside of the [AlertDialog] content.
+        @Suppress("DEPRECATION") // Will be removed in aosp/3077146
         Popup(
             popupPositionProvider = object : PopupPositionProvider {
                 override fun calculatePosition(
@@ -229,7 +230,7 @@ object UndecoratedWindowAlertDialogProvider : AlertDialogProvider {
         onDismissRequest: () -> Unit,
         content: @Composable () -> Unit
     ) {
-        CoreDialog(
+        DialogWindow(
             onCloseRequest = onDismissRequest,
             state = rememberDialogState(width = Dp.Unspecified, height = Dp.Unspecified),
             undecorated = true,

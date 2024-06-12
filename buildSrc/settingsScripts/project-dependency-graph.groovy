@@ -266,10 +266,6 @@ class ProjectDependencyGraph {
                     links.add(":compose:compiler:compiler")
                     links.add(":compose:lint:internal-lint-checks")
                 }
-                if (paparazziPlugin.matcher(line).find()) {
-                    links.add(":test:screenshot:screenshot-proto")
-                    links.add(":internal-testutils-paparazzi")
-                }
                 if (iconGenerator.matcher(line).find()) {
                     links.add(":compose:material:material:icons:generator")
                 }
@@ -297,10 +293,9 @@ class ProjectDependencyGraph {
     private static Pattern multilineProjectReference = Pattern.compile("project\\(\$")
     private static Pattern inspection = Pattern.compile("packageInspector\\(project, \"(.*)\"\\)")
     private static Pattern composePlugin = Pattern.compile("id\\(\"AndroidXComposePlugin\"\\)")
-    private static Pattern paparazziPlugin = Pattern.compile("id\\(\"AndroidXPaparazziPlugin\"\\)")
     private static Pattern iconGenerator = Pattern.compile("IconGenerationTask\\.register")
     private static Pattern publishedLibrary = Pattern.compile(
-            "(type = LibraryType\\.(PUBLISHED_LIBRARY|GRADLE_PLUGIN|ANNOTATION_PROCESSOR|PUBLISHED_KOTLIN_ONLY_LIBRARY)|" +
+            "(type = LibraryType\\.(PUBLISHED_LIBRARY|GRADLE_PLUGIN|ANNOTATION_PROCESSOR|PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS)|" +
                     "publish = Publish\\.SNAPSHOT_AND_RELEASE)"
     )
 }

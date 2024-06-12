@@ -24,8 +24,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
  *
  * @sample androidx.compose.ui.samples.MoveFocusSample
  */
-@kotlin.jvm.JvmInline
-value class FocusDirection internal constructor(@Suppress("unused") private val value: Int) {
+@JvmInline
+value class FocusDirection internal constructor(private val value: Int) {
 
     override fun toString(): String {
         return when (this) {
