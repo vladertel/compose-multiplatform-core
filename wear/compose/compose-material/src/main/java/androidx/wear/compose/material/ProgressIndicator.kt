@@ -92,7 +92,8 @@ public fun CircularProgressIndicator(
     // Using Spacer.drawWithCache to optimize the stroke allocations.
     Spacer(
         modifier
-            .progressSemantics(progress)
+            // trimming progress to 2 decimal digits
+            .progressSemantics(Math.round(progress * 100) / 100.0f)
             .size(ButtonCircularIndicatorDiameter)
             .focusable()
             .drawWithCache {
@@ -245,14 +246,14 @@ public object ProgressIndicatorDefaults {
      *
      * This can be customized with the `strokeWidth` parameter on [CircularProgressIndicator]
      */
-    internal val IndeterminateStrokeWidth = 3.dp
+    public val IndeterminateStrokeWidth = 3.dp
 
     /**
      * Stroke width for full screen [CircularProgressIndicator]
      *
      * This can be customized with the `strokeWidth` parameter on [CircularProgressIndicator]
      */
-    internal val FullScreenStrokeWidth = 5.dp
+    public val FullScreenStrokeWidth = 5.dp
 
     /**
      * The default [AnimationSpec] that should be used when animating between progress in a
