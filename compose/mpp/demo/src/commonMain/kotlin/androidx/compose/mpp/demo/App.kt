@@ -1,72 +1,64 @@
 package androidx.compose.mpp.demo
 
-import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.SeekableTransitionState
+import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.Button
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.unit.IntOffset
-import androidx.lifecycle.Lifecycle
-import androidx.navigation.NavController
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.dialog
-import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
+enum class TestState {
+    First, Second
+}
+
+@Composable
+fun AnimatedContentSample() {
+    Column {
+        val seekingState = remember { SeekableTransitionState(TestState.First) }
+        val scope = rememberCoroutineScope()
+        Column {
+            Row {
+                Button(onClick = { scope.launch { seekingState.animateTo(TestState.First) } }) {
+                    Text("First")
+                }
+                Button(onClick = {  scope.launch { seekingState.animateTo(TestState.Second) } }) {
+                    Text("Second")
+                }
+            }
+        }
+        val transition = rememberTransition(seekingState)
+        transition.AnimatedContent(transitionSpec = {
+            fadeIn(tween(easing = LinearEasing)) togetherWith fadeOut(tween(easing = LinearEasing))
+        }) { state ->
+            println("AnimationScope: $state")
+            remember { println("AnimationScope: $state remember") }
+            DisposableEffect(Unit) {
+                onDispose {
+                    println("AnimationScope: $state onDispose")
+                }
+            }
+        }
+    }
+}
 
 class App(
     private val initialScreenName: String? = null,
     private val extraScreens: List<Screen> = listOf()
 ) {
+
     @Composable
     fun Content() {
-        val navController = rememberNavController()
-        val animationSpec = tween<IntOffset>(500)
-        NavHost(
-            navController = navController,
-            startDestination = initialScreenName ?: MainScreen.title,
-
-            // Custom animations
-            enterTransition = { slideIntoContainer(SlideDirection.Left, animationSpec) },
-            exitTransition = { slideOutOfContainer(SlideDirection.Left, animationSpec) },
-            popEnterTransition = { slideIntoContainer(SlideDirection.Right, animationSpec) },
-            popExitTransition = { slideOutOfContainer(SlideDirection.Right, animationSpec) }
-        ) {
-            buildScreen(MainScreen.mergedWith(extraScreens), navController)
-        }
-    }
-
-    private fun NavGraphBuilder.buildScreen(screen: Screen, navController: NavController) {
-        if (screen is Screen.Selection) {
-            for (i in screen.screens) {
-                buildScreen(i, navController)
-            }
-        }
-        if (screen is Screen.Dialog) {
-            dialog(screen.title) { ScreenContent(screen, navController) }
-        } else {
-            composable(screen.title) { ScreenContent(screen, navController) }
-        }
-    }
-
-    @Composable
-    private fun ScreenContent(screen: Screen, navController: NavController) {
-        val lifecycle = LocalLifecycleOwner.current.lifecycle
-        val currentBackStack = remember(screen) { navController.currentBackStack.value }
-        screen.Content(
-            title = currentBackStack.drop(1)
-                .joinToString("/") { it.destination.route ?: it.destination.displayName },
-            navigate = { navController.navigate(it) },
-            back = back@{
-                // Filter multi-click by current lifecycle state: it's not [RESUMED] in case if
-                // a navigation transaction is in progress or the window is not focused.
-                if (lifecycle.currentState < Lifecycle.State.RESUMED) {
-                    return@back
-                }
-                if (navController.previousBackStackEntry != null) {
-                    navController.popBackStack()
-                }
-            }
-        )
+        AnimatedContentSample()
     }
 }

@@ -752,6 +752,7 @@ fun <S> Transition<S>.AnimatedContent(
         }
     }
     if (!contentMap.containsKey(targetState) || !contentMap.containsKey(currentState)) {
+//        remember { println("ABC") }
         contentMap.clear()
         currentlyVisible.fastForEach { stateForContent ->
             contentMap[stateForContent] = {
