@@ -54,5 +54,10 @@ val IosSpecificFeatures = Screen.Selection(
     LazyColumnWithInteropViewsExample,
     AccessibilityLiveRegionExample,
     InteropViewAndSemanticsConfigMerge,
-    StatusBarStateExample
+    StatusBarStateExample,
+    Screen.Example("TextDragAndDropTargetSample") {
+        TextDragAndDropTargetSample("Sample text") {
+            println("Sample text dropped: $it")
+        }
+    }
 )
