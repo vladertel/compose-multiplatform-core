@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package androidx.compose.mpp.demo.components.dragndrop
+package androidx.compose.mpp.demo
 
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.DurationBasedAnimationSpec
@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
@@ -61,7 +62,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
-import androidx.compose.ui.draganddrop.dragAndDropTransferData
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -139,7 +139,7 @@ fun TextDragAndDropSourceSample(
                 detectTapGestures(
                     onLongPress = {
                         startTransfer(
-                            dragAndDropTransferData(label)
+                            DragAndDropTransferData(label)
                         )
                     }
                 )
@@ -160,107 +160,66 @@ fun TextDragAndDropSourceSample(
     }
 }
 
-//@OptIn(ExperimentalFoundationApi::class)
-//@Composable
-//fun TextDragAndDropTargetSample(
-//    eventSummary: String?,
-//    onDragAndDropEventDropped: (DragAndDropEvent) -> Unit,
-//) {
-//    val validMimeTypePrefixes = remember {
-//        setOf(
-//            ClipDescription.MIMETYPE_TEXT_INTENT,
-//            "image/",
-//            "text/",
-//            "video/",
-//            "audio/",
-//        )
-//    }
-//    var backgroundColor by remember { mutableStateOf(Color.Transparent) }
-//    Box(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .dragAndDropTarget(
-//                shouldStartDragAndDrop = accept@{ startEvent ->
-//                    val hasValidMimeType = startEvent
-//                        .mimeTypes()
-//                        .any { eventMimeType ->
-//                            validMimeTypePrefixes.any(eventMimeType::startsWith)
-//                        }
-//                    hasValidMimeType
-//                },
-//                target = object : DragAndDropTarget {
-//                    override fun onStarted(event: DragAndDropEvent) {
-//                        backgroundColor = Color.DarkGray.copy(alpha = 0.2f)
-//                    }
-//
-//                    override fun onDrop(event: DragAndDropEvent): Boolean {
-//                        onDragAndDropEventDropped(event)
-//                        return true
-//                    }
-//
-//                    override fun onEnded(event: DragAndDropEvent) {
-//                        backgroundColor = Color.Transparent
-//                    }
-//                },
-//            )
-//            .background(backgroundColor)
-//            .border(
-//                width = 4.dp,
-//                color = Color.Magenta,
-//                shape = RoundedCornerShape(16.dp)
-//            ),
-//    ) {
-//        when (eventSummary) {
-//            null -> Text(
-//                modifier = Modifier
-//                    .align(Alignment.Center),
-//                text = "Drop anything here"
-//            )
-//
-//            else -> Text(
-//                modifier = Modifier
-//                    .padding(
-//                        horizontal = 16.dp,
-//                        vertical = 24.dp
-//                    )
-//                    .verticalScroll(rememberScrollState()),
-//                text = eventSummary
-//            )
-//        }
-//    }
-//}
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun TextDragAndDropTargetSample(
+    eventSummary: String?,
+    onDragAndDropEventDropped: (DragAndDropEvent) -> Unit,
+) {
+    var backgroundColor by remember { mutableStateOf(Color.Transparent) }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .dragAndDropTarget(
+                shouldStartDragAndDrop = { startEvent ->
+                    true
+                },
+                target = object : DragAndDropTarget {
+                    override fun onStarted(event: DragAndDropEvent) {
+                        backgroundColor = Color.DarkGray.copy(alpha = 0.2f)
+                    }
 
-//private fun DragAndDropEvent.summary() =
-//    (0 until toAndroidDragEvent().clipData.itemCount)
-//        .map(toAndroidDragEvent().clipData::getItemAt)
-//        .withIndex()
-//        .joinToString(separator = "\n\n") { (index, clipItem) ->
-//            val mimeTypes = (0 until toAndroidDragEvent().clipData.description.mimeTypeCount)
-//                .joinToString(
-//                    separator = ", ",
-//                    transform = toAndroidDragEvent().clipData.description::getMimeType
-//                )
-//            listOfNotNull(
-//                "index: $index",
-//                "mimeTypes: $mimeTypes",
-//                clipItem.text
-//                    ?.takeIf(CharSequence::isNotEmpty)
-//                    ?.let {
-//                        "text: $it"
-//                    },
-//                clipItem.htmlText
-//                    ?.takeIf(CharSequence::isNotEmpty)
-//                    ?.let {
-//                        "html text: $it"
-//                    },
-//                clipItem.uri?.toString()?.let {
-//                    "uri: $it"
-//                },
-//                clipItem.intent?.let {
-//                    "intent: action - ${it.action}; extras size: ${it.extras?.size()}"
-//                },
-//            ).joinToString(separator = "\n")
-//        }
+                    override fun onDrop(event: DragAndDropEvent): Boolean {
+                        onDragAndDropEventDropped(event)
+                        return true
+                    }
+
+                    override fun onEnded(event: DragAndDropEvent) {
+                        backgroundColor = Color.Transparent
+                    }
+                },
+            )
+            .background(backgroundColor)
+            .border(
+                width = 4.dp,
+                color = Color.Magenta,
+                shape = RoundedCornerShape(16.dp)
+            ),
+    ) {
+        when (eventSummary) {
+            null -> Text(
+                modifier = Modifier
+                    .align(Alignment.Center),
+                text = "Drop anything here"
+            )
+
+            else -> Text(
+                modifier = Modifier
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 24.dp
+                    )
+                    .verticalScroll(rememberScrollState()),
+                text = eventSummary
+            )
+        }
+    }
+}
+
+private fun DragAndDropEvent.summary() =
+    elements.joinToString {
+        it.toString()
+    }
 
 @Composable
 fun DragAndDropNestedSample() {
@@ -408,7 +367,7 @@ private fun Modifier.stateDropTarget(
     state: State
 ) = dragAndDropTarget(
     shouldStartDragAndDrop = { startEvent ->
-        startEvent.mimeTypes().contains(ClipDescription.MIMETYPE_TEXT_INTENT)
+        true
     },
     target = object : DragAndDropTarget {
         override fun onStarted(event: DragAndDropEvent) {
@@ -436,13 +395,15 @@ private fun Modifier.stateDropTarget(
 
         override fun onDrop(event: DragAndDropEvent): Boolean {
             println("Dropped items in ${state.name}")
-            return when (val transferredColor = event.toAndroidDragEvent().clipData.color()) {
-                null -> false
-                else -> {
-                    state.onDropped(transferredColor)
-                    true
-                }
+            val element = event.elements.firstOrNull {
+                it.payload is Color
             }
+
+            val transferredColor = (element?.payload as? Color) ?: return false
+
+            state.onDropped(transferredColor)
+
+            return true
         }
     }
 )
