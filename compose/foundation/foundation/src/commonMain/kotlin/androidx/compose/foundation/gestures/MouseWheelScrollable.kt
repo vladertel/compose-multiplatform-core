@@ -43,17 +43,15 @@ import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeoutOrNull
 
 internal class MouseWheelScrollNode(
     private val scrollingLogic: ScrollingLogic,
-    private val onScrollStopped: suspend CoroutineScope.(velocity: Velocity) -> Unit,
+    private val onScrollStopped: suspend (velocity: Velocity) -> Unit,
     private var enabled: Boolean,
 ) : DelegatingNode(), CompositionLocalConsumerModifierNode {
     private lateinit var mouseWheelScrollConfig: ScrollConfig
@@ -65,7 +63,13 @@ internal class MouseWheelScrollNode(
         }
     }
 
-    private val pointerInputNode = delegate(SuspendingPointerInputModifierNode {
+    // Note that when `MouseWheelScrollNode` is used as a delegate of `ScrollableNode`,
+    // pointerInputNode does not get dispatched pointer events to in the standard manner because
+    // Modifier.Node.dispatchForKind does not dispatch to child/delegate nodes of the matching type,
+    // and `ScrollableNode` is already an instance of `PointerInputModifierNode`.
+    // This is worked around by having `MouseWheelScrollNode` simply forward the corresponding calls
+    // to pointerInputNode (hence its need to be `internal`).
+    internal val pointerInputNode = delegate(SuspendingPointerInputModifierNode {
         if (enabled) {
             mouseWheelInput()
         }
@@ -129,13 +133,6 @@ internal class MouseWheelScrollNode(
             val speed = with(density) { AnimationSpeed.toPx() }
             scrollingLogic.dispatchMouseWheelScroll(scrollDelta, threshold, speed)
         }
-    }
-
-    private suspend fun ScrollableState.userScroll(
-        block: suspend ScrollScope.() -> Unit
-    ) = supervisorScope {
-        // Run it in supervisorScope to ignore cancellations from scrolls with higher MutatePriority
-        scroll(MutatePriority.UserInput, block)
     }
 
     private fun PointerInputScope.onMouseWheel(pointerEvent: PointerEvent): Boolean {
@@ -238,7 +235,7 @@ internal class MouseWheelScrollNode(
             } ?: false
         }
 
-        scrollableState.userScroll {
+        scroll(MutatePriority.UserInput) {
             var requiredAnimation = true
             while (requiredAnimation) {
                 requiredAnimation = false
@@ -275,11 +272,11 @@ internal class MouseWheelScrollNode(
             }
         }
         val velocityPxInMs = minOf(abs(targetValue) / MaxAnimationDuration, speed)
-        val velocity = Velocity.Zero.update(sign(targetValue).reverseIfNeeded() * velocityPxInMs * 1000)
-        coroutineScope.onScrollStopped(velocity)
+        val velocity = sign(targetValue).reverseIfNeeded() * velocityPxInMs * 1000
+        onScrollStopped(velocity.toVelocity())
     }
 
-    private suspend fun ScrollScope.animateMouseWheelScroll(
+    private suspend fun NestedScrollScope.animateMouseWheelScroll(
         animationState: AnimationState<Float, AnimationVector1D>,
         targetValue: Float,
         durationMillis: Int,
@@ -309,9 +306,12 @@ internal class MouseWheelScrollNode(
         }
     }
 
-    private fun ScrollScope.dispatchMouseWheelScroll(delta: Float) = with(scrollingLogic) {
+    private fun NestedScrollScope.dispatchMouseWheelScroll(delta: Float) = with(scrollingLogic) {
         val offset = delta.reverseIfNeeded().toOffset()
-        val consumed = dispatchScroll(offset, NestedScrollSource.Wheel)
+        val consumed = scrollBy(
+            offset,
+            NestedScrollSource.UserInput,
+        )
         consumed.reverseIfNeeded().toFloat()
     }
 }
