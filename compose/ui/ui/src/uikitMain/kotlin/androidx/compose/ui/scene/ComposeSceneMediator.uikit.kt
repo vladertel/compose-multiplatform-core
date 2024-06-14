@@ -21,6 +21,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ExperimentalComposeApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.draganddrop.CupertinoDragAndDropManager
+import androidx.compose.ui.draganddrop.SkikoDragAndDropManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asComposeCanvas
@@ -252,14 +254,15 @@ internal class ComposeSceneMediator(
         renderingUIViewFactory(interopContext, renderDelegate)
     }
 
-    private val applicationForegroundStateListener = ApplicationForegroundStateListener { isForeground ->
-        // Sometimes the application can trigger animation and go background before the animation is
-        // finished. The scheduled GPU work is performed, but no presentation can be done, causing
-        // mismatch between visual state and application state. This can be fixed by forcing
-        // a redraw when app returns to foreground, which will ensure that the visual state is in
-        // sync with the application state even if such sequence of events took a place.
-        renderingView.needRedraw()
-    }
+    private val applicationForegroundStateListener =
+        ApplicationForegroundStateListener { isForeground ->
+            // Sometimes the application can trigger animation and go background before the animation is
+            // finished. The scheduled GPU work is performed, but no presentation can be done, causing
+            // mismatch between visual state and application state. This can be fixed by forcing
+            // a redraw when app returns to foreground, which will ensure that the visual state is in
+            // sync with the application state even if such sequence of events took a place.
+            renderingView.needRedraw()
+        }
 
     /**
      * view, that contains [interopViewContainer] and [interactionView] and is added to [container]
@@ -270,16 +273,18 @@ internal class ComposeSceneMediator(
     private val interopContext = UIKitInteropContext(
         requestRedraw = ::onComposeSceneInvalidate
     )
-    
+
     /**
      * Container for UIKitView and UIKitViewController
      */
     private val interopViewContainer = UIKitInteropContainer(interopContext)
+    private val dragAndDropManager = CupertinoDragAndDropManager()
 
-    private val interactionBounds: IntRect get() {
-        val boundsLayout = _layout as? SceneLayout.Bounds
-        return boundsLayout?.interactionBounds ?: renderingViewBoundsInPx
-    }
+    private val interactionBounds: IntRect
+        get() {
+            val boundsLayout = _layout as? SceneLayout.Bounds
+            return boundsLayout?.interactionBounds ?: renderingViewBoundsInPx
+        }
 
     private val interactionView by lazy {
         InteractionUIView(
@@ -307,9 +312,9 @@ internal class ComposeSceneMediator(
                 configuration.accessibilitySyncOptions
             },
             convertToAppWindowCGRect = { rect, window ->
-               windowContext.convertWindowRect(rect, window)
-                   .toDpRect(Density(window.screen.scale.toFloat()))
-                   .asCGRect()
+                windowContext.convertWindowRect(rect, window)
+                    .toDpRect(Density(window.screen.scale.toFloat()))
+                    .asCGRect()
             },
             performEscape = {
                 val down = onKeyboardEvent(KeyEvent(Key.Escape, KeyEventType.KeyDown))
@@ -327,7 +332,9 @@ internal class ComposeSceneMediator(
             viewProvider = { viewForKeyboardOffsetTransform },
             composeSceneMediatorProvider = { this },
             onComposeSceneOffsetChanged = { offset ->
-                viewForKeyboardOffsetTransform.layer.setAffineTransform(CGAffineTransformMakeTranslation(0.0, -offset))
+                viewForKeyboardOffsetTransform.layer.setAffineTransform(
+                    CGAffineTransformMakeTranslation(0.0, -offset)
+                )
                 scene.invalidatePositionInWindow()
             }
         )
@@ -584,9 +591,10 @@ internal class ComposeSceneMediator(
             )
         }
 
-    private val renderingViewBoundsInPx: IntRect get() = with(container.systemDensity) {
-        renderingView.frame.useContents { asDpRect().toRect().roundToIntRect() }
-    }
+    private val renderingViewBoundsInPx: IntRect
+        get() = with(container.systemDensity) {
+            renderingView.frame.useContents { asDpRect().toRect().roundToIntRect() }
+        }
 
     fun viewWillTransitionToSize(
         targetSize: CValue<CGSize>,
@@ -638,10 +646,6 @@ internal class ComposeSceneMediator(
         keyboardManager.stop()
     }
 
-    fun getViewHeight(): Double = renderingView.frame.useContents {
-        size.height
-    }
-
     private var _onPreviewKeyEvent: (KeyEvent) -> Boolean = { false }
     private var _onKeyEvent: (KeyEvent) -> Boolean = { false }
     fun setKeyEventListener(
@@ -667,6 +671,9 @@ internal class ComposeSceneMediator(
 
     private inner class IOSPlatformContext : PlatformContext by PlatformContext.Empty {
         override val windowInfo: WindowInfo get() = windowContext.windowInfo
+
+        override val dragAndDropManager: SkikoDragAndDropManager
+            get() = this@ComposeSceneMediator.dragAndDropManager
 
         override fun convertLocalToWindowPosition(localPosition: Offset): Offset =
             windowContext.convertLocalToWindowPosition(viewForKeyboardOffsetTransform, localPosition)
