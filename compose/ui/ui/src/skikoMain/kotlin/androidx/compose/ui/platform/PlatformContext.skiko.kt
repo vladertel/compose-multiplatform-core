@@ -20,10 +20,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropManager
+import androidx.compose.ui.draganddrop.DragAndDropModifierNode
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.draganddrop.SkikoDragAndDropManager
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -51,6 +58,12 @@ interface PlatformContext {
      * The value that will be provided to [LocalWindowInfo] by default.
      */
     val windowInfo: WindowInfo
+
+    /**
+     * The [SkikoDragAndDropManager] that will be used to handle drag and drop events.
+     */
+    val dragAndDropManager: SkikoDragAndDropManager
+        get() = EmptySkikoDragAndDropManager
 
     /**
      * Indicates if the compose view is positioned in a transparent window.
@@ -197,6 +210,18 @@ internal object EmptyViewConfiguration : ViewConfiguration {
     override val touchSlop: Float = 18f
 }
 
+private object EmptySkikoDragAndDropManager : SkikoDragAndDropManager {
+    override val modifier: Modifier get() = Modifier
+    override fun drag(
+        transferData: DragAndDropTransferData,
+        decorationSize: Size,
+        drawDragDecoration: DrawScope.() -> Unit
+    ) = false
+
+    override fun registerNodeInterest(node: DragAndDropModifierNode) = Unit
+    override fun isInterestedNode(node: DragAndDropModifierNode) = false
+}
+
 private object EmptyPlatformTextInputService : PlatformTextInputService {
     override fun startInput(
         value: TextFieldValue,
@@ -246,11 +271,18 @@ internal class DelegateRootForTestListener : PlatformContext.RootForTestListener
     }
 
     @Suppress("RedundantNullableReturnType")
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): PlatformContext.RootForTestListener? {
+    operator fun getValue(
+        thisRef: Any?,
+        property: KProperty<*>
+    ): PlatformContext.RootForTestListener? {
         return this
     }
 
-    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: PlatformContext.RootForTestListener?) {
+    operator fun setValue(
+        thisRef: Any?,
+        property: KProperty<*>,
+        value: PlatformContext.RootForTestListener?
+    ) {
         listener = value
         sendMissingEvents()
     }
