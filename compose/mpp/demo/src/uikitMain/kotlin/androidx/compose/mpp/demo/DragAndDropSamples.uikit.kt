@@ -217,9 +217,7 @@ fun TextDragAndDropTargetSample(
 }
 
 private fun DragAndDropEvent.summary() =
-    elements.joinToString {
-        it.toString()
-    }
+    data.payload.toString()
 
 @Composable
 fun DragAndDropNestedSample() {
@@ -394,12 +392,9 @@ private fun Modifier.stateDropTarget(
         }
 
         override fun onDrop(event: DragAndDropEvent): Boolean {
-            println("Dropped items in ${state.name}")
-            val element = event.elements.firstOrNull {
-                it.payload is Color
-            }
+            val transferredColor = event.data.payload as? Color ?: return false
 
-            val transferredColor = (element?.payload as? Color) ?: return false
+            println("Dropped items in ${state.name}")
 
             state.onDropped(transferredColor)
 

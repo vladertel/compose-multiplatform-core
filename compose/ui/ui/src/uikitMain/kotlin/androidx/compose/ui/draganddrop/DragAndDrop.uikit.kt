@@ -30,10 +30,8 @@ actual class DragAndDropTransferData(
  * A representation of an event sent by the platform during a drag and drop operation.
  */
 actual class DragAndDropEvent(
-    val elements: List<DragAndDropTransferData>
-) {
-    constructor(data: DragAndDropTransferData) : this(listOf(data))
-}
+    val data: DragAndDropTransferData
+)
 
 /**
  * Returns the position of this [DragAndDropEvent] relative to the root Compose View in the

@@ -56,8 +56,6 @@ val IosSpecificFeatures = Screen.Selection(
     InteropViewAndSemanticsConfigMerge,
     StatusBarStateExample,
     Screen.Example("TextDragAndDropTargetSample") {
-        TextDragAndDropTargetSample("Sample text") {
-            println("Sample text dropped: $it")
-        }
+        DragAndDropNestedSample()
     }
 )
