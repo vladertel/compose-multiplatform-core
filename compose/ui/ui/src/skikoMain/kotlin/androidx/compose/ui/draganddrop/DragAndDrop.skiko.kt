@@ -17,12 +17,17 @@
 package androidx.compose.ui.draganddrop
 
 import androidx.compose.ui.geometry.Offset
+import org.jetbrains.skia.Data
 
 // TODO https://youtrack.jetbrains.com/issue/COMPOSE-743/Implement-commonMain-Dragdrop-developed-in-AOSP
 
-actual class DragAndDropTransferData
+actual class DragAndDropTransferData(
+    val payload: Any
+)
 
-actual class DragAndDropEvent
+actual class DragAndDropEvent(
+    val data: DragAndDropTransferData
+)
 
 internal actual val DragAndDropEvent.positionInRoot: Offset
     get() = TODO("Drag&drop isn't implemented")
