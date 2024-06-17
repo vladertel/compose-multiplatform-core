@@ -15,6 +15,8 @@
  */
 
 @file:OptIn(InternalComposeApi::class)
+@file:JvmName("ComposableLambdaKt")
+@file:JvmMultifileClass
 package androidx.compose.runtime.internal
 
 import androidx.compose.runtime.Composable
@@ -26,6 +28,8 @@ import androidx.compose.runtime.RecomposeScopeImpl
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rol
+import kotlin.jvm.JvmMultifileClass
+import kotlin.jvm.JvmName
 
 internal const val SLOTS_PER_INT = 10
 private const val BITS_PER_SLOT = 3
@@ -619,7 +623,8 @@ fun composableLambdaInstance(
 ): ComposableLambda =
     ComposableLambdaImpl(key, tracked, block)
 
-// TODO fix wasm
+// TODO(o.karpovich): uncomment this as soon as all Compose compiler plugins support this function for web
+// see https://youtrack.jetbrains.com/issue/CMP-1547
 
 //@Suppress("unused")
 //@Composable

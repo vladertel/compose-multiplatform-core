@@ -175,6 +175,11 @@ if(AndroidXComposePlugin.isMultiplatformEnabled(project)) {
                 }
             }
 
+            def jvmAndNativeMain = sourceSets.create("jvmAndNativeMain")
+            jvmAndNativeMain.dependsOn(commonMain)
+            nativeMain.dependsOn(jvmAndNativeMain)
+            jvmMain.dependsOn(jvmAndNativeMain)
+
             jbMain {
                 dependsOn(commonMain)
                 dependencies {
