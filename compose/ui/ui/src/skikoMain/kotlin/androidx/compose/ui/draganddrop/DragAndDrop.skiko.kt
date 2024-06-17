@@ -17,7 +17,6 @@
 package androidx.compose.ui.draganddrop
 
 import androidx.compose.ui.geometry.Offset
-import org.jetbrains.skia.Data
 
 // TODO https://youtrack.jetbrains.com/issue/COMPOSE-743/Implement-commonMain-Dragdrop-developed-in-AOSP
 
