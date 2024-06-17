@@ -16,6 +16,7 @@
 
 package androidx.compose.mpp.demo.components
 
+import androidx.compose.mpp.demo.DragAndDrop
 import androidx.compose.mpp.demo.Screen
 import androidx.compose.mpp.demo.components.dialog.Dialogs
 import androidx.compose.mpp.demo.components.material.AlertDialogExample
@@ -49,6 +50,7 @@ private val Material3Components = Screen.Selection(
 
 val Components = Screen.Selection(
     "Components",
+    DragAndDrop,
     Popups,
     Dialogs,
     TextFields,

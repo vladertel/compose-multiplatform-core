@@ -69,6 +69,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.random.Random
 
+val DragAndDrop = Screen.Selection("DragAndDrop") {
+    example("Drag and Drop Nested") {
+        DragAndDropNestedSample()
+    }
+
+    example("Drag and Drop Multi App") {
+        DragAndDropMultiAppSample()
+    }
+}
+
 @Composable
 fun DragAndDropMultiAppSample() {
     var dragAndDropEventSummary by remember { mutableStateOf<String?>(null) }

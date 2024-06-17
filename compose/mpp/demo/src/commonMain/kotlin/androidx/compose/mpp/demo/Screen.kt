@@ -51,6 +51,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+interface ScreenSelectionScope {
+    fun example(title: String, content: @Composable () -> Unit)
+}
+
 sealed interface Screen {
     val title: String
 
@@ -76,6 +80,20 @@ sealed interface Screen {
         val screens: List<Screen>
     ) : Screen {
         constructor(title: String, vararg screens: Screen) : this(title, listOf(*screens))
+
+        constructor(title: String, block: ScreenSelectionScope.() -> Unit) : this(title, kotlin.run {
+            val screens = mutableListOf<Screen>()
+
+            val selectionScope = object : ScreenSelectionScope {
+                override fun example(title: String, content: @Composable () -> Unit) {
+                    screens.add(Example(title = title, content = content))
+                }
+            }
+
+            selectionScope.block()
+
+            screens
+        })
 
         fun mergedWith(screens: List<Screen>): Selection {
             return Selection(title, screens + this.screens)
