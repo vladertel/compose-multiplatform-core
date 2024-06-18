@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.tv.integration.presentation
 
 import androidx.compose.foundation.layout.Arrangement
@@ -59,15 +61,7 @@ fun AppLazyRow(
             contentPadding = PaddingValues(horizontal = paddingLeft),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            items.forEachIndexed { index, movie ->
-                item {
-                    drawItem(
-                        movie,
-                        index,
-                        Modifier
-                    )
-                }
-            }
+            items.forEachIndexed { index, movie -> item { drawItem(movie, index, Modifier) } }
         }
     }
 }

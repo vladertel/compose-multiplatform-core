@@ -41,7 +41,11 @@ import androidx.camera.camera2.pipe.integration.adapter.TestDeferrableSurface
 import androidx.camera.camera2.pipe.integration.adapter.ZslControlNoOpImpl
 import androidx.camera.camera2.pipe.integration.compat.StreamConfigurationMapCompat
 import androidx.camera.camera2.pipe.integration.compat.quirk.CameraQuirks
+import androidx.camera.camera2.pipe.integration.compat.quirk.CaptureIntentPreviewQuirk
+import androidx.camera.camera2.pipe.integration.compat.workaround.NoOpTemplateParamsOverride
 import androidx.camera.camera2.pipe.integration.compat.workaround.OutputSizesCorrector
+import androidx.camera.camera2.pipe.integration.compat.workaround.TemplateParamsOverride
+import androidx.camera.camera2.pipe.integration.compat.workaround.TemplateParamsQuirkOverride
 import androidx.camera.camera2.pipe.integration.config.CameraConfig
 import androidx.camera.camera2.pipe.integration.impl.UseCaseCamera.RunningUseCasesChangeListener
 import androidx.camera.camera2.pipe.integration.interop.Camera2CameraControl
@@ -56,6 +60,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCase
 import androidx.camera.core.impl.DeferrableSurface
+import androidx.camera.core.impl.Quirks
 import androidx.camera.core.impl.SessionConfig
 import androidx.camera.core.impl.SessionProcessor
 import androidx.camera.core.impl.StreamSpec
@@ -517,12 +522,45 @@ class UseCaseManagerTest {
             .isEqualTo(mapOf(CONTROL_CAPTURE_INTENT to CONTROL_CAPTURE_INTENT_PREVIEW))
     }
 
+    @Test
+    fun overrideTemplateParams() = runTest {
+        // Arrange
+        initializeUseCaseThreads(this)
+        val useCaseManager =
+            createUseCaseManager(
+                templateParamsOverride =
+                    TemplateParamsQuirkOverride(
+                        Quirks(listOf(object : CaptureIntentPreviewQuirk {}))
+                    )
+            )
+        val fakeUseCase =
+            FakeUseCase().apply {
+                updateSessionConfigForTesting(
+                    SessionConfig.Builder().setTemplateType(TEMPLATE_RECORD).build()
+                )
+            }
+        val sessionConfigAdapter = SessionConfigAdapter(setOf(fakeUseCase))
+        val streamConfigMap = mutableMapOf<CameraStream.Config, DeferrableSurface>()
+
+        // Act.
+        val cameraGraphConfig =
+            useCaseManager.createCameraGraphConfig(
+                sessionConfigAdapter,
+                streamConfigMap,
+            )
+
+        // Assert
+        assertThat(cameraGraphConfig.sessionParameters[CONTROL_CAPTURE_INTENT])
+            .isEqualTo(CONTROL_CAPTURE_INTENT_PREVIEW)
+    }
+
     @OptIn(ExperimentalCamera2Interop::class)
     @Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
     private fun createUseCaseManager(
         controls: Set<UseCaseCameraControl> = emptySet(),
         useCaseCameraComponentBuilder: FakeUseCaseCameraComponentBuilder =
             FakeUseCaseCameraComponentBuilder(),
+        templateParamsOverride: TemplateParamsOverride = NoOpTemplateParamsOverride,
     ): UseCaseManager {
         val cameraId = CameraId("0")
         val characteristicsMap: Map<CameraCharacteristics.Key<*>, Any?> =
@@ -576,6 +614,7 @@ class UseCaseManagerTest {
                     DisplayInfoManager(ApplicationProvider.getApplicationContext()),
                 context = ApplicationProvider.getApplicationContext(),
                 cameraInfoInternal = { fakeCamera.cameraInfoInternal },
+                templateParamsOverride = templateParamsOverride,
                 useCaseThreads = { useCaseThreads },
             )
             .also { useCaseManagerList.add(it) }

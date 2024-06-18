@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.AndroidComposeView
 import androidx.compose.ui.platform.LocalView
@@ -56,8 +55,7 @@ import org.mockito.kotlin.verifyNoMoreInteractions
 @RequiresApi(Build.VERSION_CODES.O)
 @RunWith(AndroidJUnit4::class)
 class SemanticAutofillManagerTest {
-    @get:Rule
-    val rule = createAndroidComposeRule<TestActivity>()
+    @get:Rule val rule = createAndroidComposeRule<TestActivity>()
 
     private lateinit var androidComposeView: AndroidComposeView
     private lateinit var composeView: View
@@ -76,18 +74,13 @@ class SemanticAutofillManagerTest {
 
         rule.setContentWithAutofillEnabled {
             Box(
-                Modifier
-                    .semantics {
-                        contentType = ContentType.Username
-                    }
+                Modifier.semantics { contentType = ContentType.Username }
                     .size(height, width)
                     .testTag(usernameTag)
             )
         }
 
-        rule.runOnIdle {
-            verifyNoMoreInteractions(autofillManagerMock)
-        }
+        rule.runOnIdle { verifyNoMoreInteractions(autofillManagerMock) }
     }
 
     @Test
@@ -99,8 +92,7 @@ class SemanticAutofillManagerTest {
 
         rule.setContentWithAutofillEnabled {
             Box(
-                Modifier
-                    .semantics {
+                Modifier.semantics {
                         contentType = ContentType.Username
                         contentDataType = ContentDataType.Text
                         editableText = AnnotatedString(if (changeText) "1234" else "****")
@@ -112,9 +104,7 @@ class SemanticAutofillManagerTest {
 
         rule.runOnIdle { changeText = true }
 
-        rule.runOnIdle {
-            verify(autofillManagerMock).notifyValueChanged(any(), any())
-        }
+        rule.runOnIdle { verify(autofillManagerMock).notifyValueChanged(any(), any()) }
     }
 
     @Test
@@ -126,8 +116,7 @@ class SemanticAutofillManagerTest {
 
         rule.setContentWithAutofillEnabled {
             Box(
-                Modifier
-                    .semantics {
+                Modifier.semantics {
                         contentType = ContentType.Username
                         contentDataType = ContentDataType.Text
                         focused = hasFocus
@@ -139,9 +128,7 @@ class SemanticAutofillManagerTest {
 
         rule.runOnIdle { hasFocus = true }
 
-        rule.runOnIdle {
-            verify(autofillManagerMock).notifyViewEntered(any(), any())
-        }
+        rule.runOnIdle { verify(autofillManagerMock).notifyViewEntered(any(), any()) }
     }
 
     @Test
@@ -154,25 +141,21 @@ class SemanticAutofillManagerTest {
         rule.setContentWithAutofillEnabled {
             Box(
                 modifier =
-                if (hasFocus)
-                    Modifier
-                        .semantics {
-                            contentType = ContentType.Username
-                            contentDataType = ContentDataType.Text
-                            focused = hasFocus
-                        }
-                        .size(height, width)
-                        .testTag(usernameTag)
-                else
-                    plainVisibleModifier(usernameTag)
+                    if (hasFocus)
+                        Modifier.semantics {
+                                contentType = ContentType.Username
+                                contentDataType = ContentDataType.Text
+                                focused = hasFocus
+                            }
+                            .size(height, width)
+                            .testTag(usernameTag)
+                    else plainVisibleModifier(usernameTag)
             )
         }
 
         rule.runOnIdle { hasFocus = true }
 
-        rule.runOnIdle {
-            verify(autofillManagerMock).notifyViewEntered(any(), any())
-        }
+        rule.runOnIdle { verify(autofillManagerMock).notifyViewEntered(any(), any()) }
     }
 
     @Test
@@ -184,8 +167,7 @@ class SemanticAutofillManagerTest {
 
         rule.setContentWithAutofillEnabled {
             Box(
-                Modifier
-                    .semantics {
+                Modifier.semantics {
                         contentType = ContentType.Username
                         contentDataType = ContentDataType.Text
                         focused = hasFocus
@@ -197,9 +179,7 @@ class SemanticAutofillManagerTest {
 
         rule.runOnIdle { hasFocus = false }
 
-        rule.runOnIdle {
-            verify(autofillManagerMock).notifyViewExited(any())
-        }
+        rule.runOnIdle { verify(autofillManagerMock).notifyViewExited(any()) }
     }
 
     @Test
@@ -212,17 +192,14 @@ class SemanticAutofillManagerTest {
         rule.setContentWithAutofillEnabled {
             Box(
                 modifier =
-                if (isVisible) plainVisibleModifier(usernameTag) else invisibleModifier(usernameTag)
+                    if (isVisible) plainVisibleModifier(usernameTag)
+                    else invisibleModifier(usernameTag)
             )
         }
 
-        rule.runOnIdle {
-            isVisible = false
-        }
+        rule.runOnIdle { isVisible = false }
 
-        rule.runOnIdle {
-            verify(autofillManagerMock).notifyViewVisibilityChanged(any(), any())
-        }
+        rule.runOnIdle { verify(autofillManagerMock).notifyViewVisibilityChanged(any(), any()) }
     }
 
     @Test
@@ -235,17 +212,14 @@ class SemanticAutofillManagerTest {
         rule.setContentWithAutofillEnabled {
             Box(
                 modifier =
-                if (isVisible) plainVisibleModifier(usernameTag) else invisibleModifier(usernameTag)
+                    if (isVisible) plainVisibleModifier(usernameTag)
+                    else invisibleModifier(usernameTag)
             )
         }
 
-        rule.runOnIdle {
-            isVisible = true
-        }
+        rule.runOnIdle { isVisible = true }
 
-        rule.runOnIdle {
-            verify(autofillManagerMock).notifyViewVisibilityChanged(any(), any())
-        }
+        rule.runOnIdle { verify(autofillManagerMock).notifyViewVisibilityChanged(any(), any()) }
     }
 
     // ============================================================================================
@@ -253,8 +227,7 @@ class SemanticAutofillManagerTest {
     // ============================================================================================
 
     private fun plainVisibleModifier(testTag: String): Modifier {
-        return Modifier
-            .semantics {
+        return Modifier.semantics {
                 contentType = ContentType.Username
                 contentDataType = ContentDataType.Text
             }
@@ -262,10 +235,8 @@ class SemanticAutofillManagerTest {
             .testTag(testTag)
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     private fun invisibleModifier(testTag: String): Modifier {
-        return Modifier
-            .semantics {
+        return Modifier.semantics {
                 contentType = ContentType.Username
                 contentDataType = ContentDataType.Text
                 invisibleToUser()

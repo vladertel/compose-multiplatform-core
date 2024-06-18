@@ -37,12 +37,11 @@ import androidx.camera.core.impl.ImmediateSurface
 import androidx.camera.core.impl.StreamSpec
 import androidx.camera.core.impl.utils.TransformUtils
 import androidx.camera.core.impl.utils.TransformUtils.getRectToRect
-import androidx.camera.core.impl.utils.TransformUtils.getRotatedSize
 import androidx.camera.core.impl.utils.TransformUtils.is90or270
 import androidx.camera.core.impl.utils.TransformUtils.rectToSize
 import androidx.camera.core.impl.utils.TransformUtils.sizeToRect
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor
-import androidx.camera.core.processing.SurfaceProcessorNode.OutConfig
+import androidx.camera.core.processing.util.OutConfig
 import androidx.camera.testing.fakes.FakeCamera
 import androidx.camera.testing.impl.fakes.FakeImageReaderProxy
 import androidx.camera.testing.impl.fakes.FakeSurfaceProcessorInternal
@@ -440,7 +439,8 @@ class SurfaceProcessorNodeTest {
         assertThat(videoSurfaceOutput.size).isEqualTo(VIDEO_SIZE)
         assertThat(videoSurfaceOutput.inputCropRect).isEqualTo(VIDEO_CROP_RECT)
         assertThat(videoTransformInfo.cropRect).isEqualTo(sizeToRect(VIDEO_SIZE))
-        assertThat(videoTransformInfo.rotationDegrees).isEqualTo(270)
+        assertThat(videoTransformInfo.rotationDegrees)
+            .isEqualTo(INPUT_ROTATION_DEGREES - VIDEO_ROTATION_DEGREES)
         assertThat(videoSurfaceOutput.inputSize).isEqualTo(INPUT_SIZE)
         assertThat(videoSurfaceOutput.isMirroring).isTrue()
         assertThat(videoSurfaceOutput.camera).isNotNull()

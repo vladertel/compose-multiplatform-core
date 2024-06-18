@@ -597,6 +597,23 @@ public class WebViewFeature {
     public static final String WEB_AUTHENTICATION = "WEB_AUTHENTICATION";
 
     /**
+     * Feature for {@link #isFeatureSupported(String)}.
+     * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#setSpeculativeLoadingStatus(WebSettings, int)}
+     * {@link androidx.webkit.WebSettingsCompat#getSpeculativeLoadingStatus(WebSettings)}}
+     */
+    public static final String SPECULATIVE_LOADING =
+            "SPECULATIVE_LOADING_STATUS";
+
+    /**
+     * Feature for {@link #isFeatureSupported(String)}.
+     * This feature covers
+     * {@link androidx.webkit.WebSettingsCompat#setBackForwardCacheEnabled(WebSettings, boolean)}
+     * {@link androidx.webkit.WebSettingsCompat#getBackForwardCacheEnabled(WebSettings)}
+     */
+    public static final String BACK_FORWARD_CACHE = "BACK_FORWARD_CACHE";
+
+    /**
      * Return whether a feature is supported at run-time. This will check whether a feature is
      * supported, depending on the combination of the desired feature, the Android version of
      * device, and the WebView APK on the device.

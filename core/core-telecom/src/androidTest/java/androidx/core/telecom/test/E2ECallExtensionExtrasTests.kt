@@ -200,10 +200,10 @@ class E2ECallExtensionExtrasTests : BaseTelecomTest() {
     private fun assertCallExtraOrProperty(call: Call) {
         // Call details should be present at this point
         val callDetails = call.details!!
-        if (TestUtils.buildIsAtLeastU()) {
+        if (Utils.hasPlatformV2Apis()) {
             if (TestUtils.buildIsAtLeastV()) {
                 assertTrue(callDetails.hasProperty(CallsManager.PROPERTY_IS_TRANSACTIONAL))
-            } else if (Utils.hasPlatformV2Apis()) {
+            } else {
                 // Wait for capability exchange to complete before verifying the extension level:
                 runBlocking { waitOnInCallServiceToReachXCallCompats(1) }
                 assertEquals(

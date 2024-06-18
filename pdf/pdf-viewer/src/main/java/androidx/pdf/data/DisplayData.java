@@ -24,7 +24,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.pdf.data.Openable.Open;
-import androidx.pdf.util.ErrorLog;
 import androidx.pdf.util.Preconditions;
 
 import java.io.IOException;
@@ -63,14 +62,17 @@ public class DisplayData {
         this.mOpenable = Preconditions.checkNotNull(openable);
     }
 
+    @NonNull
     public Uri getUri() {
         return mUri;
     }
 
+    @NonNull
     public String getName() {
         return mName;
     }
 
+    @NonNull
     public Openable getOpenable() {
         return mOpenable;
     }
@@ -82,7 +84,6 @@ public class DisplayData {
         try {
             return open(opener).getFd();
         } catch (IOException e) {
-            ErrorLog.log(TAG, "openFd", e);
             return null;
         }
     }

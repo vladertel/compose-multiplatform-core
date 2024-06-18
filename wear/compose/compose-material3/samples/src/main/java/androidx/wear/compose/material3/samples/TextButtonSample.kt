@@ -28,9 +28,7 @@ import androidx.wear.compose.material3.TextButtonDefaults
 @Composable
 @Sampled
 fun TextButtonSample() {
-    TextButton(onClick = { /* Do something */ }) {
-        Text(text = "ABC")
-    }
+    TextButton(onClick = { /* Do something */ }) { Text(text = "ABC") }
 }
 
 @Composable
@@ -74,6 +72,18 @@ fun OutlinedTextButtonSample() {
         onClick = { /* Do something */ },
         colors = TextButtonDefaults.outlinedTextButtonColors(),
         border = ButtonDefaults.outlinedButtonBorder(enabled = true)
+    ) {
+        Text(text = "ABC")
+    }
+}
+
+@Sampled
+@Composable
+fun TextButtonWithOnLongClickSample(onLongClick: () -> Unit) {
+    TextButton(
+        onClick = { /* Do something for onClick*/ },
+        onLongClick = onLongClick,
+        onLongClickLabel = "Long click"
     ) {
         Text(text = "ABC")
     }

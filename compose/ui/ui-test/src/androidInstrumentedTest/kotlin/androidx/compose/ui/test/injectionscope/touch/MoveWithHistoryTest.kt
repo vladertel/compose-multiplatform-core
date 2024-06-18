@@ -26,7 +26,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.testutils.WithTouchSlop
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
@@ -52,18 +51,13 @@ class MoveWithHistoryTest {
         private const val tag = "widget"
     }
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     private val recorder = SinglePointerInputRecorder()
 
     @Composable
     fun Ui(alignment: Alignment) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .wrapContentSize(alignment)
-        ) {
+        Box(Modifier.fillMaxSize().wrapContentSize(alignment)) {
             ClickableTestBox(modifier = recorder, tag = tag)
         }
     }
@@ -91,7 +85,6 @@ class MoveWithHistoryTest {
         Truth.assertThat(scrollState.value).isLessThan(101)
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     fun flingScrollableImpl(scrollState: ScrollState, useHistoricalEvents: Boolean) {
         val touchSlop = 18f
         rule.setContent {
@@ -99,14 +92,11 @@ class MoveWithHistoryTest {
                 with(LocalDensity.current) {
                     // Scrollable with a viewport the size of 10 boxes
                     Column(
-                        Modifier
-                            .testTag("scrollable")
+                        Modifier.testTag("scrollable")
                             .requiredSize(100.toDp(), 1000.toDp())
                             .verticalScroll(scrollState)
                     ) {
-                        repeat(100) {
-                            ClickableTestBox()
-                        }
+                        repeat(100) { ClickableTestBox() }
                     }
                 }
             }

@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.mouse.MouseScrollEvent
 import androidx.compose.ui.input.mouse.MouseScrollOrientation
@@ -40,21 +39,20 @@ import org.junit.runners.JUnit4
 
 // TODO(demin): convert to ComposeScene instead of TestComposeWindow,
 //  after that we won't need `window.render`
-@OptIn(ExperimentalComposeUiApi::class)
 @RunWith(JUnit4::class)
-@Ignore // TODO(b/217238066) remove after migration to ImageComposeScene (it will be upstreamed from Compose MPP 1.0.0)
+@Ignore // TODO(b/217238066) remove after migration to ImageComposeScene (it will be upstreamed from
+// Compose MPP 1.0.0)
 class DesktopScrollableTest {
     private val density = 2f
 
-    private fun window() = TestComposeWindow(
-        width = 100,
-        height = 100,
-        density = Density(density)
-    )
+    private fun window() = TestComposeWindow(width = 100, height = 100, density = Density(density))
 
     private fun scrollLineLinux(bounds: Dp) = sqrt(bounds.value * density)
+
     private fun scrollLineWindows(bounds: Dp) = bounds.value * density / 20f
+
     private fun scrollLineMacOs() = density * 10f
+
     private fun scrollPage(bounds: Dp) = bounds.value * density
 
     @Test
@@ -63,12 +61,9 @@ class DesktopScrollableTest {
         val context = TestColumn()
 
         window.setContent {
-            CompositionLocalProvider(
-                LocalScrollConfig provides LinuxGnomeConfig
-            ) {
+            CompositionLocalProvider(LocalScrollConfig provides LinuxGnomeConfig) {
                 Box(
-                    Modifier
-                        .scrollable(
+                    Modifier.scrollable(
                             orientation = Orientation.Vertical,
                             state = context.controller()
                         )
@@ -102,12 +97,9 @@ class DesktopScrollableTest {
         val context = TestColumn()
 
         window.setContent {
-            CompositionLocalProvider(
-                LocalScrollConfig provides WindowsWinUIConfig
-            ) {
+            CompositionLocalProvider(LocalScrollConfig provides WindowsWinUIConfig) {
                 Box(
-                    Modifier
-                        .scrollable(
+                    Modifier.scrollable(
                             orientation = Orientation.Vertical,
                             state = context.controller()
                         )
@@ -141,12 +133,9 @@ class DesktopScrollableTest {
         val context = TestColumn()
 
         window.setContent {
-            CompositionLocalProvider(
-                LocalScrollConfig provides WindowsWinUIConfig
-            ) {
+            CompositionLocalProvider(LocalScrollConfig provides WindowsWinUIConfig) {
                 Box(
-                    Modifier
-                        .scrollable(
+                    Modifier.scrollable(
                             orientation = Orientation.Vertical,
                             state = context.controller()
                         )
@@ -171,12 +160,9 @@ class DesktopScrollableTest {
         val context = TestColumn()
 
         window.setContent {
-            CompositionLocalProvider(
-                LocalScrollConfig provides MacOSCocoaConfig
-            ) {
+            CompositionLocalProvider(LocalScrollConfig provides MacOSCocoaConfig) {
                 Box(
-                    Modifier
-                        .scrollable(
+                    Modifier.scrollable(
                             orientation = Orientation.Vertical,
                             state = context.controller()
                         )
@@ -201,12 +187,9 @@ class DesktopScrollableTest {
         val column = TestColumn()
 
         window.setContent {
-            CompositionLocalProvider(
-                LocalScrollConfig provides LinuxGnomeConfig
-            ) {
+            CompositionLocalProvider(LocalScrollConfig provides LinuxGnomeConfig) {
                 Box(
-                    Modifier
-                        .scrollable(
+                    Modifier.scrollable(
                             orientation = Orientation.Vertical,
                             state = column.controller()
                         )
@@ -229,8 +212,7 @@ class DesktopScrollableTest {
         var offset = 0f
             private set
 
-        @Composable
-        fun controller() = ScrollableState(::consumeScrollDelta)
+        @Composable fun controller() = ScrollableState(::consumeScrollDelta)
 
         private fun consumeScrollDelta(delta: Float): Float {
             offset += delta

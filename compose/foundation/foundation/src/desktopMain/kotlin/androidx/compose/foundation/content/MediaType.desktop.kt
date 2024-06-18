@@ -16,10 +16,8 @@
 
 package androidx.compose.foundation.content
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import java.awt.datatransfer.DataFlavor
 
-@ExperimentalFoundationApi
 actual class MediaType internal constructor(val dataFlavor: DataFlavor) {
 
     actual constructor(representation: String) : this(DataFlavor(representation))
@@ -50,8 +48,6 @@ actual class MediaType internal constructor(val dataFlavor: DataFlavor) {
     }
 
     override fun toString(): String {
-        return "MediaType(" +
-            "dataFlavor=$dataFlavor, " +
-            "representation='$representation')"
+        return "MediaType(" + "dataFlavor=$dataFlavor, " + "representation='$representation')"
     }
 }

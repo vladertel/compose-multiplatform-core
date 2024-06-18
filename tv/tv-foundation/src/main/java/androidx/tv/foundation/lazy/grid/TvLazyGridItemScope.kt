@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.tv.foundation.lazy.grid
 
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -25,9 +27,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 
-/**
- * Receiver scope being used by the item content parameter of [TvLazyVerticalGrid].
- */
+/** Receiver scope being used by the item content parameter of [TvLazyVerticalGrid]. */
+@Deprecated("Use `LazyGridItemScope` instead.")
 @Stable
 @TvLazyGridScopeMarker
 sealed interface TvLazyGridItemScope {
@@ -40,11 +41,13 @@ sealed interface TvLazyGridItemScope {
      *
      * @param animationSpec a finite animation that will be used to animate the item placement.
      */
+    @Deprecated("Use `LazyGridItemScope.animateItemPlacement` instead.")
     @ExperimentalFoundationApi
     fun Modifier.animateItemPlacement(
-        animationSpec: FiniteAnimationSpec<IntOffset> = spring(
-            stiffness = Spring.StiffnessMediumLow,
-            visibilityThreshold = IntOffset.VisibilityThreshold
-        )
+        animationSpec: FiniteAnimationSpec<IntOffset> =
+            spring(
+                stiffness = Spring.StiffnessMediumLow,
+                visibilityThreshold = IntOffset.VisibilityThreshold
+            )
     ): Modifier
 }

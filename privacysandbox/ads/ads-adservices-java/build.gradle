@@ -65,7 +65,7 @@ android {
     }
 
     compileSdk = 34
-    compileSdkExtension = 11
+    compileSdkExtension = 12
     namespace "androidx.privacysandbox.ads.adservices.java"
 }
 
@@ -75,4 +75,5 @@ androidx {
     inceptionYear = "2022"
     description = "write Java code to call PP APIs."
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

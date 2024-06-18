@@ -1,5 +1,3 @@
-// ktlint-disable filename
-
 /*
  * Copyright 2021 The Android Open Source Project
  *
@@ -20,24 +18,16 @@ package androidx.compose.ui.test
 
 // TODO: use constants instead of literals
 
-@ExperimentalTestApi
 @JvmInline
 actual value class MouseButton(val buttonId: Int) {
-    @ExperimentalTestApi
     actual companion object {
-        /**
-         * The left mouse button
-         */
+        /** The left mouse button */
         actual val Primary = MouseButton(1)
 
-        /**
-         * The right mouse button
-         */
+        /** The right mouse button */
         actual val Secondary = MouseButton(2)
 
-        /**
-         * The middle mouse button
-         */
+        /** The middle mouse button */
         actual val Tertiary = MouseButton(4)
     }
 }

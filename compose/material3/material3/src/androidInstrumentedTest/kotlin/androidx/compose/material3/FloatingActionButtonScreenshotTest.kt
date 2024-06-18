@@ -27,14 +27,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.testutils.assertAgainstGolden
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -54,25 +52,23 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
-@OptIn(ExperimentalTestApi::class)
 class FloatingActionButtonScreenshotTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
-    @get:Rule
-    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL3)
+    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL3)
 
     // TODO(b/267253920): Add a compose test API to set/reset InputMode.
     @After
-    fun resetTouchMode() = with(InstrumentationRegistry.getInstrumentation()) {
-        if (SDK_INT < 33) setInTouchMode(true) else resetInTouchMode()
-    }
+    fun resetTouchMode() =
+        with(InstrumentationRegistry.getInstrumentation()) {
+            if (SDK_INT < 33) setInTouchMode(true) else resetInTouchMode()
+        }
 
     @Test
     fun icon_primary_light_color_scheme() {
         rule.setMaterialContent(lightColorScheme()) {
-            FloatingActionButton(onClick = { }) {
+            FloatingActionButton(onClick = {}) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
             }
         }
@@ -84,7 +80,7 @@ class FloatingActionButtonScreenshotTest {
     fun lower_elevation_icon_primary_light_color_scheme() {
         rule.setMaterialContent(lightColorScheme()) {
             FloatingActionButton(
-                onClick = { },
+                onClick = {},
                 elevation = FloatingActionButtonDefaults.loweredElevation(),
             ) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
@@ -97,7 +93,7 @@ class FloatingActionButtonScreenshotTest {
     @Test
     fun icon_primary_dark_color_scheme() {
         rule.setMaterialContent(darkColorScheme()) {
-            FloatingActionButton(onClick = { }) {
+            FloatingActionButton(onClick = {}) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
             }
         }
@@ -109,7 +105,7 @@ class FloatingActionButtonScreenshotTest {
     fun lower_elevation_icon_primary_dark_color_scheme() {
         rule.setMaterialContent(darkColorScheme()) {
             FloatingActionButton(
-                onClick = { },
+                onClick = {},
                 elevation = FloatingActionButtonDefaults.loweredElevation(),
             ) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
@@ -118,11 +114,12 @@ class FloatingActionButtonScreenshotTest {
 
         assertClickableAgainstGolden("fab_primary_lower_elevation_dark_color_scheme")
     }
+
     @Test
     fun icon_secondary_light_color_scheme() {
         rule.setMaterialContent(lightColorScheme()) {
             FloatingActionButton(
-                onClick = { },
+                onClick = {},
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
@@ -136,7 +133,7 @@ class FloatingActionButtonScreenshotTest {
     fun icon_secondary_dark_color_scheme() {
         rule.setMaterialContent(darkColorScheme()) {
             FloatingActionButton(
-                onClick = { },
+                onClick = {},
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
@@ -150,7 +147,7 @@ class FloatingActionButtonScreenshotTest {
     fun icon_tertiary_light_color_scheme() {
         rule.setMaterialContent(lightColorScheme()) {
             FloatingActionButton(
-                onClick = { },
+                onClick = {},
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
             ) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
@@ -164,7 +161,7 @@ class FloatingActionButtonScreenshotTest {
     fun icon_tertiary_dark_color_scheme() {
         rule.setMaterialContent(darkColorScheme()) {
             FloatingActionButton(
-                onClick = { },
+                onClick = {},
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
             ) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
@@ -178,7 +175,7 @@ class FloatingActionButtonScreenshotTest {
     fun icon_surface_light_color_scheme() {
         rule.setMaterialContent(lightColorScheme()) {
             FloatingActionButton(
-                onClick = { },
+                onClick = {},
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary,
             ) {
@@ -193,7 +190,7 @@ class FloatingActionButtonScreenshotTest {
     fun icon_surface_dark_color_scheme() {
         rule.setMaterialContent(darkColorScheme()) {
             FloatingActionButton(
-                onClick = { },
+                onClick = {},
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary,
             ) {
@@ -207,7 +204,7 @@ class FloatingActionButtonScreenshotTest {
     @Test
     fun smallIcon() {
         rule.setMaterialContent(lightColorScheme()) {
-            FloatingActionButton(onClick = { }) {
+            FloatingActionButton(onClick = {}) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
             }
         }
@@ -218,7 +215,7 @@ class FloatingActionButtonScreenshotTest {
     @Test
     fun largeIcon() {
         rule.setMaterialContent(lightColorScheme()) {
-            FloatingActionButton(onClick = { }) {
+            FloatingActionButton(onClick = {}) {
                 Icon(Icons.Filled.Favorite, contentDescription = null)
             }
         }
@@ -255,15 +252,14 @@ class FloatingActionButtonScreenshotTest {
     fun ripple() {
         rule.setMaterialContent(lightColorScheme()) {
             Box(Modifier.requiredSize(100.dp, 100.dp).wrapContentSize()) {
-                FloatingActionButton(onClick = { }) {
+                FloatingActionButton(onClick = {}) {
                     Icon(Icons.Filled.Favorite, contentDescription = null)
                 }
             }
         }
 
         // Start ripple
-        rule.onNode(hasClickAction())
-            .performTouchInput { down(center) }
+        rule.onNode(hasClickAction()).performTouchInput { down(center) }
 
         rule.waitForIdle()
         // Ripples are drawn on the RenderThread, not the main (UI) thread, so we can't
@@ -278,14 +274,13 @@ class FloatingActionButtonScreenshotTest {
     fun hover() {
         rule.setMaterialContent(lightColorScheme()) {
             Box(Modifier.requiredSize(100.dp, 100.dp).wrapContentSize()) {
-                FloatingActionButton(onClick = { }) {
+                FloatingActionButton(onClick = {}) {
                     Icon(Icons.Filled.Favorite, contentDescription = null)
                 }
             }
         }
 
-        rule.onNode(hasClickAction())
-            .performMouseInput { enter(center) }
+        rule.onNode(hasClickAction()).performMouseInput { enter(center) }
 
         rule.waitForIdle()
 
@@ -301,9 +296,8 @@ class FloatingActionButtonScreenshotTest {
             localInputModeManager = LocalInputModeManager.current
             Box(Modifier.requiredSize(100.dp, 100.dp).wrapContentSize()) {
                 FloatingActionButton(
-                    onClick = { },
-                    modifier = Modifier
-                        .focusRequester(focusRequester)
+                    onClick = {},
+                    modifier = Modifier.focusRequester(focusRequester)
                 ) {
                     Icon(Icons.Filled.Favorite, contentDescription = null)
                 }
@@ -311,7 +305,6 @@ class FloatingActionButtonScreenshotTest {
         }
 
         rule.runOnIdle {
-            @OptIn(ExperimentalComposeUiApi::class)
             localInputModeManager!!.requestInputMode(InputMode.Keyboard)
             focusRequester.requestFocus()
         }
@@ -345,13 +338,15 @@ class FloatingActionButtonScreenshotTest {
     }
 
     private fun assertClickableAgainstGolden(goldenName: String) {
-        rule.onNode(hasClickAction())
+        rule
+            .onNode(hasClickAction())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }
 
     private fun assertRootAgainstGolden(goldenName: String) {
-        rule.onNode(hasClickAction())
+        rule
+            .onNode(hasClickAction())
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }

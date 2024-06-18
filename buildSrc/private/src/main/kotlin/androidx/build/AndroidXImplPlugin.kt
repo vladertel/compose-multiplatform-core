@@ -27,6 +27,7 @@ import androidx.build.checkapi.LibraryApiTaskConfig
 import androidx.build.checkapi.configureProjectForApiTasks
 import androidx.build.docs.CheckTipOfTreeDocsTask.Companion.setUpCheckDocsTask
 import androidx.build.gradle.isRoot
+import androidx.build.license.addLicensesToPublishedArtifacts
 import androidx.build.license.configureExternalDependencyLicenseCheck
 import androidx.build.resources.CopyPublicResourcesDirTask
 import androidx.build.resources.configurePublicResourcesStub
@@ -64,7 +65,6 @@ import com.android.build.gradle.tasks.factory.AndroidUnitTest
 import com.android.utils.appendCapitalized
 import java.io.File
 import java.time.Duration
-import java.time.LocalDateTime
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -107,6 +107,7 @@ import org.gradle.kotlin.dsl.withModule
 import org.gradle.kotlin.dsl.withType
 import org.gradle.plugin.devel.plugins.JavaGradlePluginPlugin
 import org.gradle.plugin.devel.tasks.ValidatePlugins
+import org.jetbrains.kotlin.gradle.dsl.ExplicitApiMode
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
@@ -169,13 +170,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         }
 
         project.configureLint()
-        val formatWithKtfmt =
-            project.getKtfmtOptInPathPrefixes().any { prefix -> project.path.startsWith(prefix) }
-        if (formatWithKtfmt) {
-            project.configureKtfmt()
-        } else {
-            project.configureKtlint()
-        }
+        project.configureKtfmt()
         project.configureKotlinVersion()
 
         // Avoid conflicts between full Guava and LF-only Guava.
@@ -222,6 +217,7 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
             if (androidXExtension.shouldPublish()) {
                 project.validatePublishedMultiplatformHasDefault()
+                project.addLicensesToPublishedArtifacts(androidXExtension.license)
             }
             project.registerValidateMultiplatformSourceSetNamingTask()
         }
@@ -536,19 +532,15 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
                         )
                 }
                 task.kotlinOptions.freeCompilerArgs += kotlinCompilerArgs
-                logScriptSources(task, project)
             }
 
-            // Explicit API mode is broken for Android projects
-            // https://youtrack.jetbrains.com/issue/KT-37652
-            if (androidXExtension.shouldEnforceKotlinStrictApiMode() && !targetsAndroid) {
-                project.tasks.withType(KotlinCompile::class.java).configureEach { task ->
-                    // Workaround for https://youtrack.jetbrains.com/issue/KT-37652
-                    if (task.name.endsWith("TestKotlin")) return@configureEach
-                    if (task.name.endsWith("TestKotlinJvm")) return@configureEach
-                    task.kotlinOptions.freeCompilerArgs += listOf("-Xexplicit-api=strict")
+            val kotlinExtension = project.extensions.getByType(KotlinProjectExtension::class.java)
+            kotlinExtension.explicitApi =
+                if (androidXExtension.shouldEnforceKotlinStrictApiMode()) {
+                    ExplicitApiMode.Strict
+                } else {
+                    ExplicitApiMode.Disabled
                 }
-            }
         }
         if (plugin is KotlinMultiplatformPluginWrapper) {
             KonanPrebuiltsSetup.configureKonanDirectory(project)
@@ -724,22 +716,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
     private val ASB_SIGNING_CONFIG_PROPERTY_NAME =
         "android.privacy_sandbox.local_deployment_signing_store_file"
 
-    /** Temporary diagnostics for b/321949384 */
-    private fun logScriptSources(task: KotlinCompile, project: Project) {
-        if (getBuildId() == "0") return // don't need to log when not running on the build server
-        val logFile = File(project.getDistributionDirectory(), "KotlinCompile-scriptSources.log")
-        fun writeScriptSources(label: String) {
-            val now = LocalDateTime.now()
-            @Suppress("INVISIBLE_MEMBER") val scriptSources = task.scriptSources.files
-            logFile.appendText(
-                "${task.path} $label at $now with ${scriptSources.size} scriptSources: " +
-                    "${scriptSources.joinToString()}\n"
-            )
-        }
-        task.doFirst { writeScriptSources("starting") }
-        task.doLast { writeScriptSources("completed") }
-    }
-
     /**
      * Excludes files telling which versions of androidx libraries were used in test apks, to avoid
      * invalidating caches as often
@@ -818,13 +794,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
         }
     }
 
-    private fun Variant.aotCompileMicrobenchmarks(project: Project) {
-        if (project.hasBenchmarkPlugin()) {
-            @Suppress("UnstableApiUsage") // usage of experimentalProperties
-            experimentalProperties.put("android.experimental.force-aot-compilation", true)
-        }
-    }
-
     @Suppress("UnstableApiUsage") // usage of experimentalProperties
     private fun Variant.configureLocalAsbSigning(keyStore: File) {
         experimentalProperties.put(ASB_SIGNING_CONFIG_PROPERTY_NAME, keyStore.absolutePath)
@@ -871,7 +840,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
             }
             onVariants { variant ->
                 variant.configureTests()
-                variant.aotCompileMicrobenchmarks(project)
                 variant.enableLongMethodTracingInMicrobenchmark(project)
             }
         }
@@ -1413,7 +1381,6 @@ constructor(private val componentFactory: SoftwareComponentFactory) : Plugin<Pro
 
     companion object {
         const val CREATE_LIBRARY_BUILD_INFO_FILES_TASK = "createLibraryBuildInfoFiles"
-        const val GENERATE_TEST_CONFIGURATION_TASK = "GenerateTestConfiguration"
         const val FINALIZE_TEST_CONFIGS_WITH_APKS_TASK = "finalizeTestConfigsWithApks"
         const val ZIP_TEST_CONFIGS_WITH_APKS_TASK = "zipTestConfigsWithApks"
 

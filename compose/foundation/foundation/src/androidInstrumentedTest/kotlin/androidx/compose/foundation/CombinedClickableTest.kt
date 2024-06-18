@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReusableContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.movableContentOf
@@ -41,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.testutils.first
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusManager
@@ -66,6 +66,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.KeyInjectionScope
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
@@ -104,11 +105,9 @@ import org.junit.runner.RunWith
 
 @MediumTest
 @RunWith(AndroidJUnit4::class)
-@OptIn(ExperimentalFoundationApi::class)
 class CombinedClickableTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     @Before
     fun before() {
@@ -122,9 +121,10 @@ class CombinedClickableTest {
 
     // TODO(b/267253920): Add a compose test API to set/reset InputMode.
     @After
-    fun resetTouchMode() = with(InstrumentationRegistry.getInstrumentation()) {
-        if (SDK_INT < 33) setInTouchMode(true) else resetInTouchMode()
-    }
+    fun resetTouchMode() =
+        with(InstrumentationRegistry.getInstrumentation()) {
+            if (SDK_INT < 33) setInTouchMode(true) else resetInTouchMode()
+        }
 
     @Test
     fun defaultSemantics() {
@@ -137,7 +137,8 @@ class CombinedClickableTest {
             }
         }
 
-        rule.onNodeWithTag("myClickable")
+        rule
+            .onNodeWithTag("myClickable")
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
             .assertIsEnabled()
             .assertHasClickAction()
@@ -154,7 +155,8 @@ class CombinedClickableTest {
             }
         }
 
-        rule.onNodeWithTag("myClickable")
+        rule
+            .onNodeWithTag("myClickable")
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Role))
             .assertIsNotEnabled()
             .assertHasClickAction()
@@ -169,27 +171,24 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(onLongClick = onLongClick) {}
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
+                            onLongClick = onLongClick
+                        ) {}
                 )
             }
         }
 
-        rule.onNodeWithTag("myClickable")
+        rule
+            .onNodeWithTag("myClickable")
             .assertIsEnabled()
             .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
 
-        rule.runOnIdle {
-            assertThat(counter).isEqualTo(0)
-        }
+        rule.runOnIdle { assertThat(counter).isEqualTo(0) }
 
-        rule.onNodeWithTag("myClickable")
-            .performSemanticsAction(SemanticsActions.OnLongClick)
+        rule.onNodeWithTag("myClickable").performSemanticsAction(SemanticsActions.OnLongClick)
 
-        rule.runOnIdle {
-            assertThat(counter).isEqualTo(1)
-        }
+        rule.runOnIdle { assertThat(counter).isEqualTo(1) }
     }
 
     @Test
@@ -201,14 +200,16 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(onLongClick = onLongClick) {}
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
+                            onLongClick = onLongClick
+                        ) {}
                 )
             }
         }
 
-        rule.onNodeWithTag("myClickable")
+        rule
+            .onNodeWithTag("myClickable")
             .assertIsEnabled()
             .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnLongClick))
 
@@ -217,7 +218,8 @@ class CombinedClickableTest {
             onLongClick = { /* no-op */ }
         }
 
-        rule.onNodeWithTag("myClickable")
+        rule
+            .onNodeWithTag("myClickable")
             .assertIsEnabled()
             .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
             .performSemanticsAction(SemanticsActions.OnLongClick)
@@ -229,8 +231,7 @@ class CombinedClickableTest {
             onLongClick = { ++counter }
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performSemanticsAction(SemanticsActions.OnLongClick)
+        rule.onNodeWithTag("myClickable").performSemanticsAction(SemanticsActions.OnLongClick)
 
         rule.runOnIdle {
             // Changes should now be applied
@@ -239,7 +240,8 @@ class CombinedClickableTest {
             onLongClick = null
         }
 
-        rule.onNodeWithTag("myClickable")
+        rule
+            .onNodeWithTag("myClickable")
             .assertIsEnabled()
             // Long click action should be removed
             .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnLongClick))
@@ -248,9 +250,7 @@ class CombinedClickableTest {
     @Test
     fun click() {
         var counter = 0
-        val onClick: () -> Unit = {
-            ++counter
-        }
+        val onClick: () -> Unit = { ++counter }
 
         rule.setContent {
             Box {
@@ -261,109 +261,13 @@ class CombinedClickableTest {
             }
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performClick()
-
-        rule.runOnIdle {
-            assertThat(counter).isEqualTo(1)
-        }
-
-        rule.onNodeWithTag("myClickable")
-            .performClick()
-
-        rule.runOnIdle {
-            assertThat(counter).isEqualTo(2)
-        }
-    }
-
-    @Test
-    @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
-    fun clickWithEnterKey() {
-        var counter = 0
-        val focusRequester = FocusRequester()
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            inputModeManager = LocalInputModeManager.current
-            BasicText(
-                    "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .focusRequester(focusRequester)
-                        .combinedClickable { counter++ }
-            )
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-
-        rule.onNodeWithTag("myClickable").performKeyInput { keyDown(Key.Enter) }
-
-        rule.runOnIdle { assertThat(counter).isEqualTo(0) }
-
-        rule.onNodeWithTag("myClickable").performKeyInput { keyUp(Key.Enter) }
+        rule.onNodeWithTag("myClickable").performClick()
 
         rule.runOnIdle { assertThat(counter).isEqualTo(1) }
-    }
 
-    @Test
-    @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
-    fun clickWithNumPadEnterKey() {
-        var counter = 0
-        val focusRequester = FocusRequester()
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            inputModeManager = LocalInputModeManager.current
-            BasicText(
-                "ClickableText",
-                modifier = Modifier
-                    .testTag("myClickable")
-                    .focusRequester(focusRequester)
-                    .combinedClickable { counter++ }
-            )
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
+        rule.onNodeWithTag("myClickable").performClick()
 
-        rule.onNodeWithTag("myClickable").performKeyInput { keyDown(Key.NumPadEnter) }
-
-        rule.runOnIdle { assertThat(counter).isEqualTo(0) }
-
-        rule.onNodeWithTag("myClickable").performKeyInput { keyUp(Key.NumPadEnter) }
-
-        rule.runOnIdle { assertThat(counter).isEqualTo(1) }
-    }
-
-    @Test
-    @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
-    fun clickWithDPadCenter() {
-        var counter = 0
-        val focusRequester = FocusRequester()
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            inputModeManager = LocalInputModeManager.current
-            BasicText(
-                "ClickableText",
-                modifier = Modifier
-                    .testTag("myClickable")
-                    .focusRequester(focusRequester)
-                    .combinedClickable { counter++ }
-            )
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-
-        rule.onNodeWithTag("myClickable").performKeyInput { keyDown(Key.DirectionCenter) }
-
-        rule.runOnIdle { assertThat(counter).isEqualTo(0) }
-
-        rule.onNodeWithTag("myClickable").performKeyInput { keyUp(Key.DirectionCenter) }
-
-        rule.runOnIdle { assertThat(counter).isEqualTo(1) }
+        rule.runOnIdle { assertThat(counter).isEqualTo(2) }
     }
 
     @Test
@@ -383,15 +287,11 @@ class CombinedClickableTest {
 
         rule.onNodeWithText("Foo", substring = true).performClick()
 
-        rule.runOnIdle {
-            assertThat(counter).isEqualTo(1)
-        }
+        rule.runOnIdle { assertThat(counter).isEqualTo(1) }
 
         rule.onNodeWithText("Bar", substring = true).performClick()
 
-        rule.runOnIdle {
-            assertThat(counter).isEqualTo(2)
-        }
+        rule.runOnIdle { assertThat(counter).isEqualTo(2) }
     }
 
     @Test
@@ -404,29 +304,239 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(onLongClick = onClick) {}
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(onLongClick = onClick) {}
                 )
             }
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                longClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { longClick() }
 
+        rule.runOnIdle { assertThat(counter).isEqualTo(1) }
+
+        rule.onNodeWithTag("myClickable").performTouchInput { longClick() }
+
+        rule.runOnIdle { assertThat(counter).isEqualTo(2) }
+    }
+
+    @Test
+    @OptIn(ExperimentalTestApi::class)
+    fun longClickWithEnterKeyThenDPadCenter_triggersListenerTwice() {
+        var clickCounter = 0
+        var longClickCounter = 0
+        val focusRequester = FocusRequester()
+        lateinit var inputModeManager: InputModeManager
+        rule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            BasicText(
+                "ClickableText",
+                modifier =
+                    Modifier.testTag("myClickable")
+                        .focusRequester(focusRequester)
+                        .combinedClickable(
+                            onLongClick = { ++longClickCounter },
+                            onClick = { ++clickCounter }
+                        )
+            )
+        }
         rule.runOnIdle {
-            assertThat(counter).isEqualTo(1)
+            inputModeManager.requestInputMode(Keyboard)
+            focusRequester.requestFocus()
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                longClick()
-            }
+        rule.onNodeWithTag("myClickable").performKeyInput {
+            assertThat(inputModeManager.inputMode).isEqualTo(Keyboard)
+            longPressKey(Key.Enter)
+            longPressKey(Key.DirectionCenter)
+        }
 
         rule.runOnIdle {
-            assertThat(counter).isEqualTo(2)
+            assertThat(longClickCounter).isEqualTo(2)
+            assertThat(clickCounter).isEqualTo(0)
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalTestApi::class)
+    fun longClickWithEnterKeyConcurrentlyWithDPadCenter_triggersListenerForEach() {
+        var clickCounter = 0
+        var longClickCounter = 0
+        val focusRequester = FocusRequester()
+        lateinit var inputModeManager: InputModeManager
+        rule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            BasicText(
+                "ClickableText",
+                modifier =
+                    Modifier.testTag("myClickable")
+                        .focusRequester(focusRequester)
+                        .combinedClickable(
+                            onLongClick = { ++longClickCounter },
+                            onClick = { ++clickCounter }
+                        )
+            )
+        }
+        rule.runOnIdle {
+            inputModeManager.requestInputMode(Keyboard)
+            focusRequester.requestFocus()
+        }
+
+        rule.onNodeWithTag("myClickable").performKeyInput {
+            assertThat(inputModeManager.inputMode).isEqualTo(Keyboard)
+            // The press duration is 100ms longer than the minimum required for a long press.
+            val durationMillis: Long = viewConfiguration.longPressTimeoutMillis + 100
+            keyDown(Key.Enter)
+            advanceEventTime(durationMillis / 2)
+            keyDown(Key.DirectionCenter)
+            advanceEventTime(durationMillis / 2)
+            keyUp(Key.Enter)
+            advanceEventTime(durationMillis / 2)
+            keyUp(Key.DirectionCenter)
+        }
+
+        rule.runOnIdle {
+            assertThat(longClickCounter).isEqualTo(2)
+            assertThat(clickCounter).isEqualTo(0)
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalTestApi::class)
+    fun longClickWithEnterKeyConcurrentlyWithShortClickDPadCenter_triggersListenerForEach() {
+        var clickCounter = 0
+        var longClickCounter = 0
+        val focusRequester = FocusRequester()
+        lateinit var inputModeManager: InputModeManager
+        rule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            BasicText(
+                "ClickableText",
+                modifier =
+                    Modifier.testTag("myClickable")
+                        .focusRequester(focusRequester)
+                        .combinedClickable(
+                            onLongClick = { ++longClickCounter },
+                            onClick = { ++clickCounter }
+                        )
+            )
+        }
+        rule.runOnIdle {
+            inputModeManager.requestInputMode(Keyboard)
+            focusRequester.requestFocus()
+        }
+
+        rule.onNodeWithTag("myClickable").performKeyInput {
+            assertThat(inputModeManager.inputMode).isEqualTo(Keyboard)
+            // The press duration is 100ms longer than the minimum required for a long press.
+            val durationMillis: Long = viewConfiguration.longPressTimeoutMillis + 100
+            keyDown(Key.Enter)
+            advanceEventTime(durationMillis / 2)
+            keyDown(Key.DirectionCenter)
+            advanceEventTime(durationMillis / 2)
+            keyUp(Key.Enter)
+            keyUp(Key.DirectionCenter)
+        }
+
+        rule.runOnIdle {
+            assertThat(longClickCounter).isEqualTo(1)
+            assertThat(clickCounter).isEqualTo(1)
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalTestApi::class)
+    fun updateOnLongClickListenerBetweenEnterKeyDownAndUp_callsNewListener() {
+        var clickCounter = 0
+        var longClickCounter = 0
+        var newLongClickCounter = 0
+        var mutableOnLongClick: () -> Unit by mutableStateOf({ ++longClickCounter })
+        val focusRequester = FocusRequester()
+        lateinit var inputModeManager: InputModeManager
+        rule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            BasicText(
+                "ClickableText",
+                modifier =
+                    Modifier.testTag("myClickable")
+                        .focusRequester(focusRequester)
+                        .combinedClickable(
+                            onLongClick = mutableOnLongClick,
+                            onClick = { ++clickCounter }
+                        )
+            )
+        }
+        rule.runOnIdle {
+            inputModeManager.requestInputMode(Keyboard)
+            focusRequester.requestFocus()
+        }
+
+        rule.onNodeWithTag("myClickable").performKeyInput {
+            assertThat(inputModeManager.inputMode).isEqualTo(Keyboard)
+            keyDown(Key.Enter)
+            advanceEventTime(100)
+        }
+        mutableOnLongClick = { ++newLongClickCounter }
+        rule.waitForIdle()
+        rule.onNodeWithTag("myClickable").performKeyInput {
+            // The press duration is 100ms longer than the minimum required for a long press.
+            val durationMillis: Long = viewConfiguration.longPressTimeoutMillis + 100
+            advanceEventTime(durationMillis)
+            keyUp(Key.Enter)
+        }
+
+        rule.runOnIdle {
+            assertThat(longClickCounter).isEqualTo(0)
+            assertThat(newLongClickCounter).isEqualTo(1)
+            assertThat(clickCounter).isEqualTo(0)
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalTestApi::class)
+    fun modifierReusedBetweenEnterKeyDownAndKeyUp_doesNotCallListeners() {
+        var clickCounter = 0
+        var longClickCounter = 0
+        var reuseKey by mutableStateOf(0)
+        val focusRequester = FocusRequester()
+        lateinit var inputModeManager: InputModeManager
+        rule.setContent {
+            inputModeManager = LocalInputModeManager.current
+            ReusableContent(reuseKey) {
+                BasicText(
+                    "ClickableText",
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .focusRequester(focusRequester)
+                            .combinedClickable(
+                                onLongClick = { ++longClickCounter },
+                                onClick = { ++clickCounter }
+                            )
+                )
+            }
+        }
+        rule.runOnIdle {
+            inputModeManager.requestInputMode(Keyboard)
+            focusRequester.requestFocus()
+        }
+
+        rule.onNodeWithTag("myClickable").performKeyInput {
+            assertThat(inputModeManager.inputMode).isEqualTo(Keyboard)
+            keyDown(Key.Enter)
+            // Press the Enter key down for 100ms less than the required long press duration.
+            val durationMillis: Long = viewConfiguration.longPressTimeoutMillis - 100
+            advanceEventTime(durationMillis)
+        }
+        rule.runOnIdle { reuseKey = 1 }
+        rule.waitForIdle()
+        rule.onNodeWithTag("myClickable").performKeyInput {
+            // Press the key down for another 200ms to reach the required long press duration.
+            advanceEventTime(200)
+            keyUp(Key.Enter)
+        }
+
+        rule.runOnIdle {
+            assertThat(longClickCounter).isEqualTo(0)
+            assertThat(clickCounter).isEqualTo(0)
         }
     }
 
@@ -441,30 +551,21 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
-                            onLongClick = onLongClick,
-                            onClick = onClick
-                        )
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .combinedClickable(onLongClick = onLongClick, onClick = onClick)
                 )
             }
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                click()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { click() }
 
         rule.runOnIdle {
             assertThat(clickCounter).isEqualTo(1)
             assertThat(longClickCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                longClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { longClick() }
 
         rule.runOnIdle {
             assertThat(clickCounter).isEqualTo(1)
@@ -483,18 +584,14 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
-                            onDoubleClick = onDoubleClick,
-                            onClick = onClick
-                        )
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .combinedClickable(onDoubleClick = onDoubleClick, onClick = onClick)
                 )
             }
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performClick()
+        rule.onNodeWithTag("myClickable").performClick()
 
         rule.mainClock.advanceTimeUntil { clickCounter == 1 }
         rule.runOnIdle {
@@ -502,10 +599,7 @@ class CombinedClickableTest {
             assertThat(doubleClickCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                doubleClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
 
         rule.runOnIdle {
             assertThat(doubleClickCounter).isEqualTo(1)
@@ -527,19 +621,18 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
-                            onDoubleClick = onDoubleClick,
-                            onLongClick = onLongClick,
-                            onClick = onClick
-                        )
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .combinedClickable(
+                                onDoubleClick = onDoubleClick,
+                                onLongClick = onLongClick,
+                                onClick = onClick
+                            )
                 )
             }
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performClick()
+        rule.onNodeWithTag("myClickable").performClick()
 
         rule.mainClock.advanceTimeUntil { clickCounter == 1 }
         rule.runOnIdle {
@@ -548,10 +641,7 @@ class CombinedClickableTest {
             assertThat(clickCounter).isEqualTo(1)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                doubleClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
 
         rule.mainClock.advanceTimeUntil { doubleClickCounter == 1 }
         rule.runOnIdle {
@@ -560,10 +650,7 @@ class CombinedClickableTest {
             assertThat(clickCounter).isEqualTo(1)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                longClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { longClick() }
 
         rule.mainClock.advanceTimeUntil { longClickCounter == 1 }
         rule.runOnIdle {
@@ -582,24 +669,19 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(onDoubleClick = onClick) {}
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
+                            onDoubleClick = onClick
+                        ) {}
                 )
             }
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                doubleClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
 
         rule.mainClock.advanceTimeUntil { counter == 1 }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                doubleClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
 
         rule.mainClock.advanceTimeUntil { counter == 2 }
     }
@@ -617,9 +699,8 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {}
@@ -629,16 +710,11 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { down(center) }
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
 
         // No scrollable container, so there should be no delay and we should instantly appear
         // pressed
@@ -647,8 +723,7 @@ class CombinedClickableTest {
             assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { up() }
+        rule.onNodeWithTag("myClickable").performTouchInput { up() }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(2)
@@ -672,9 +747,8 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {}
@@ -684,19 +758,14 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                down(center)
-                up()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            down(center)
+            up()
+        }
 
         // Press finished so we should see both press and release
         rule.runOnIdle {
@@ -721,9 +790,8 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {}
@@ -733,19 +801,14 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                down(center)
-                cancel()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            down(center)
+            cancel()
+        }
 
         // We are not in a scrollable container, so we should see a press and immediate cancel
         rule.runOnIdle {
@@ -770,35 +833,30 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .draggable(
-                            state = rememberDraggableState {},
-                            orientation = Orientation.Horizontal
-                        )
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .draggable(
+                                state = rememberDraggableState {},
+                                orientation = Orientation.Horizontal
+                            )
+                            .combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = null
+                            ) {}
                 )
             }
         }
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                down(centerLeft)
-                moveTo(centerRight)
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            down(centerLeft)
+            moveTo(centerRight)
+        }
 
         // The press should fire, and then the drag should instantly cancel it
         rule.runOnIdle {
@@ -823,9 +881,8 @@ class CombinedClickableTest {
             Box(Modifier.verticalScroll(rememberScrollState())) {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {}
@@ -835,25 +892,18 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { down(center) }
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
 
         val halfTapIndicationDelay = TapIndicationDelay / 2
 
         rule.mainClock.advanceTimeBy(halfTapIndicationDelay)
 
         // Haven't reached the tap delay yet, so we shouldn't have started a press
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
         // Advance past the tap delay
         rule.mainClock.advanceTimeBy(halfTapIndicationDelay)
@@ -863,8 +913,7 @@ class CombinedClickableTest {
             assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { up() }
+        rule.onNodeWithTag("myClickable").performTouchInput { up() }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(2)
@@ -888,9 +937,8 @@ class CombinedClickableTest {
             Box(Modifier.verticalScroll(rememberScrollState())) {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {}
@@ -900,19 +948,14 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                down(center)
-                up()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            down(center)
+            up()
+        }
 
         // We haven't reached the tap delay, but we have finished a press so we should have
         // emitted both press and release
@@ -938,9 +981,8 @@ class CombinedClickableTest {
             Box(Modifier.verticalScroll(rememberScrollState())) {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {}
@@ -950,25 +992,18 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                down(center)
-                cancel()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            down(center)
+            cancel()
+        }
 
         // We haven't reached the tap delay, and a cancel was emitted, so no press should ever be
         // shown
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
     }
 
     @Test
@@ -984,42 +1019,35 @@ class CombinedClickableTest {
             Box(Modifier.verticalScroll(rememberScrollState())) {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .draggable(
-                            state = rememberDraggableState {},
-                            orientation = Orientation.Horizontal
-                        )
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .draggable(
+                                state = rememberDraggableState {},
+                                orientation = Orientation.Horizontal
+                            )
+                            .combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = null
+                            ) {}
                 )
             }
         }
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                down(centerLeft)
-                moveTo(centerRight)
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput {
+            down(centerLeft)
+            moveTo(centerRight)
+        }
 
         rule.mainClock.advanceTimeBy(TapIndicationDelay)
 
         // We started a drag before the timeout, so no press should be emitted
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
     }
 
     @Test
@@ -1035,34 +1063,27 @@ class CombinedClickableTest {
             Box(Modifier.verticalScroll(rememberScrollState())) {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .draggable(
-                            state = rememberDraggableState {},
-                            orientation = Orientation.Horizontal
-                        )
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .draggable(
+                                state = rememberDraggableState {},
+                                orientation = Orientation.Horizontal
+                            )
+                            .combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = null
+                            ) {}
                 )
             }
         }
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                down(centerLeft)
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { down(centerLeft) }
 
         rule.mainClock.advanceTimeBy(TapIndicationDelay)
 
@@ -1071,10 +1092,7 @@ class CombinedClickableTest {
             assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                moveTo(centerRight)
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { moveTo(centerRight) }
 
         // The drag should cancel the press
         rule.runOnIdle {
@@ -1099,9 +1117,8 @@ class CombinedClickableTest {
             Box(Modifier.verticalScroll(rememberScrollState())) {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {}
@@ -1111,16 +1128,11 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { down(center) }
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
 
         rule.mainClock.advanceTimeBy(TapIndicationDelay)
 
@@ -1129,8 +1141,7 @@ class CombinedClickableTest {
             assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { cancel() }
+        rule.onNodeWithTag("myClickable").performTouchInput { cancel() }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(2)
@@ -1156,9 +1167,8 @@ class CombinedClickableTest {
                 if (emitClickableText) {
                     BasicText(
                         "ClickableText",
-                        modifier = Modifier
-                            .testTag("myClickable")
-                            .combinedClickable(
+                        modifier =
+                            Modifier.testTag("myClickable").combinedClickable(
                                 interactionSource = interactionSource,
                                 indication = null
                             ) {}
@@ -1169,16 +1179,11 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { down(center) }
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
 
         rule.mainClock.advanceTimeBy(TapIndicationDelay)
 
@@ -1188,9 +1193,7 @@ class CombinedClickableTest {
         }
 
         // Dispose clickable
-        rule.runOnIdle {
-            emitClickableText = false
-        }
+        rule.runOnIdle { emitClickableText = false }
 
         rule.mainClock.advanceTimeByFrame()
 
@@ -1203,7 +1206,6 @@ class CombinedClickableTest {
         }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun interactionSource_hover() {
         val interactionSource = MutableInteractionSource()
@@ -1215,9 +1217,8 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {}
@@ -1227,36 +1228,27 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performMouseInput { enter(center) }
+        rule.onNodeWithTag("myClickable").performMouseInput { enter(center) }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(1)
             assertThat(interactions.first()).isInstanceOf(HoverInteraction.Enter::class.java)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performMouseInput { exit(Offset(-1f, -1f)) }
+        rule.onNodeWithTag("myClickable").performMouseInput { exit(Offset(-1f, -1f)) }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(2)
             assertThat(interactions.first()).isInstanceOf(HoverInteraction.Enter::class.java)
-            assertThat(interactions[1])
-                .isInstanceOf(HoverInteraction.Exit::class.java)
-            assertThat((interactions[1] as HoverInteraction.Exit).enter)
-                .isEqualTo(interactions[0])
+            assertThat(interactions[1]).isInstanceOf(HoverInteraction.Exit::class.java)
+            assertThat((interactions[1] as HoverInteraction.Exit).enter).isEqualTo(interactions[0])
         }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     fun interactionSource_hover_and_press() {
         val interactionSource = MutableInteractionSource()
@@ -1268,9 +1260,8 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {}
@@ -1280,20 +1271,15 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performMouseInput {
-                enter(center)
-                click()
-                exit(Offset(-1f, -1f))
-            }
+        rule.onNodeWithTag("myClickable").performMouseInput {
+            enter(center)
+            click()
+            exit(Offset(-1f, -1f))
+        }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(4)
@@ -1303,8 +1289,7 @@ class CombinedClickableTest {
             assertThat(interactions[3]).isInstanceOf(HoverInteraction.Exit::class.java)
             assertThat((interactions[2] as PressInteraction.Release).press)
                 .isEqualTo(interactions[1])
-            assertThat((interactions[3] as HoverInteraction.Exit).enter)
-                .isEqualTo(interactions[0])
+            assertThat((interactions[3] as HoverInteraction.Exit).enter).isEqualTo(interactions[0])
         }
     }
 
@@ -1320,39 +1305,28 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .focusRequester(focusRequester)
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .focusRequester(focusRequester)
+                            .combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = null
+                            ) {}
                 )
             }
         }
-        rule.runOnIdle {
-            @OptIn(ExperimentalComposeUiApi::class)
-            inputModeManager.requestInputMode(Touch)
-        }
+        rule.runOnIdle { inputModeManager.requestInputMode(Touch) }
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.runOnIdle {
-            focusRequester.requestFocus()
-        }
+        rule.runOnIdle { focusRequester.requestFocus() }
 
         // Touch mode by default, so we shouldn't be focused
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
     }
 
     @Test
@@ -1366,37 +1340,28 @@ class CombinedClickableTest {
             scope = rememberCoroutineScope()
             focusManager = LocalFocusManager.current
             inputModeManager = LocalInputModeManager.current
-                Box {
-                    BasicText(
-                        "ClickableText",
-                        modifier = Modifier
-                            .testTag("myClickable")
+            Box {
+                BasicText(
+                    "ClickableText",
+                    modifier =
+                        Modifier.testTag("myClickable")
                             .focusRequester(focusRequester)
                             .combinedClickable(
                                 interactionSource = interactionSource,
                                 indication = null
                             ) {}
-                    )
-                }
+                )
+            }
         }
-        rule.runOnIdle {
-            @OptIn(ExperimentalComposeUiApi::class)
-            inputModeManager.requestInputMode(Keyboard)
-        }
+        rule.runOnIdle { inputModeManager.requestInputMode(Keyboard) }
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.runOnIdle {
-            focusRequester.requestFocus()
-        }
+        rule.runOnIdle { focusRequester.requestFocus() }
 
         // Keyboard mode, so we should now be focused and see an interaction
         rule.runOnIdle {
@@ -1404,15 +1369,12 @@ class CombinedClickableTest {
             assertThat(interactions.first()).isInstanceOf(FocusInteraction.Focus::class.java)
         }
 
-        rule.runOnIdle {
-            focusManager.clearFocus()
-        }
+        rule.runOnIdle { focusManager.clearFocus() }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(2)
             assertThat(interactions.first()).isInstanceOf(FocusInteraction.Focus::class.java)
-            assertThat(interactions[1])
-                .isInstanceOf(FocusInteraction.Unfocus::class.java)
+            assertThat(interactions[1]).isInstanceOf(FocusInteraction.Unfocus::class.java)
             assertThat((interactions[1] as FocusInteraction.Unfocus).focus)
                 .isEqualTo(interactions[0])
         }
@@ -1447,9 +1409,8 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             onLongClick = onLongClick,
                             interactionSource = interactionSource,
                             indication = null
@@ -1460,17 +1421,14 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
         rule.runOnIdle {
             assertThat(interactions).isEmpty()
             assertThat(onLongClick).isEqualTo(initialLongClick)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { down(center) }
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
 
         // Simulate a long click
         rule.mainClock.advanceTimeBy(1000)
@@ -1485,8 +1443,7 @@ class CombinedClickableTest {
             assertThat(onLongClick).isEqualTo(finalLongClick)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { up() }
+        rule.onNodeWithTag("myClickable").performTouchInput { up() }
 
         // The up should now cause a release
         rule.runOnIdle {
@@ -1523,9 +1480,8 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
+                    modifier =
+                        Modifier.testTag("myClickable").combinedClickable(
                             onLongClick = onLongClick,
                             interactionSource = interactionSource,
                             indication = null
@@ -1536,17 +1492,14 @@ class CombinedClickableTest {
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
         rule.runOnIdle {
             assertThat(interactions).isEmpty()
             assertThat(onLongClick).isEqualTo(initialLongClick)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput { down(center) }
+        rule.onNodeWithTag("myClickable").performTouchInput { down(center) }
 
         // Initial press
         rule.mainClock.advanceTimeBy(100)
@@ -1588,20 +1541,19 @@ class CombinedClickableTest {
             Box {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
-                            enabled = enabled.value,
-                            onDoubleClick = onDoubleClick,
-                            onLongClick = onLongClick,
-                            onClick = onClick
-                        )
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .combinedClickable(
+                                enabled = enabled.value,
+                                onDoubleClick = onDoubleClick,
+                                onLongClick = onLongClick,
+                                onClick = onClick
+                            )
                 )
             }
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performClick()
+        rule.onNodeWithTag("myClickable").performClick()
 
         // Process gestures
         rule.mainClock.advanceTimeBy(1000)
@@ -1612,10 +1564,7 @@ class CombinedClickableTest {
             assertThat(clickCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                doubleClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
 
         // Process gestures
         rule.mainClock.advanceTimeBy(1000)
@@ -1626,10 +1575,7 @@ class CombinedClickableTest {
             assertThat(clickCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                longClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { longClick() }
 
         // Process gestures
         rule.mainClock.advanceTimeBy(1000)
@@ -1641,8 +1587,7 @@ class CombinedClickableTest {
             enabled.value = true
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performClick()
+        rule.onNodeWithTag("myClickable").performClick()
 
         rule.mainClock.advanceTimeUntil { clickCounter == 1 }
 
@@ -1652,10 +1597,7 @@ class CombinedClickableTest {
             assertThat(clickCounter).isEqualTo(1)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                doubleClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
 
         rule.mainClock.advanceTimeUntil { doubleClickCounter == 1 }
 
@@ -1665,10 +1607,7 @@ class CombinedClickableTest {
             assertThat(clickCounter).isEqualTo(1)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                longClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { longClick() }
 
         rule.mainClock.advanceTimeUntil { longClickCounter == 1 }
 
@@ -1706,20 +1645,19 @@ class CombinedClickableTest {
             ) {
                 BasicText(
                     "ClickableText",
-                    modifier = Modifier
-                        .testTag("myClickable")
-                        .combinedClickable(
-                            enabled = enabled.value,
-                            onDoubleClick = onDoubleClick,
-                            onLongClick = onLongClick,
-                            onClick = onClick
-                        )
+                    modifier =
+                        Modifier.testTag("myClickable")
+                            .combinedClickable(
+                                enabled = enabled.value,
+                                onDoubleClick = onDoubleClick,
+                                onLongClick = onLongClick,
+                                onClick = onClick
+                            )
                 )
             }
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performClick()
+        rule.onNodeWithTag("myClickable").performClick()
 
         // Process gestures
         rule.mainClock.advanceTimeBy(1000)
@@ -1733,10 +1671,7 @@ class CombinedClickableTest {
             assertThat(outerClickCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                doubleClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
 
         // Process gestures
         rule.mainClock.advanceTimeBy(1000)
@@ -1750,10 +1685,7 @@ class CombinedClickableTest {
             assertThat(outerClickCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                longClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { longClick() }
 
         // Process gestures
         rule.mainClock.advanceTimeBy(1000)
@@ -1768,8 +1700,7 @@ class CombinedClickableTest {
             enabled.value = true
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performClick()
+        rule.onNodeWithTag("myClickable").performClick()
 
         rule.mainClock.advanceTimeUntil { clickCounter == 1 }
 
@@ -1782,10 +1713,7 @@ class CombinedClickableTest {
             assertThat(outerClickCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                doubleClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { doubleClick() }
 
         rule.mainClock.advanceTimeUntil { doubleClickCounter == 1 }
 
@@ -1798,10 +1726,7 @@ class CombinedClickableTest {
             assertThat(outerClickCounter).isEqualTo(0)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performTouchInput {
-                longClick()
-            }
+        rule.onNodeWithTag("myClickable").performTouchInput { longClick() }
 
         rule.mainClock.advanceTimeUntil { longClickCounter == 1 }
 
@@ -1815,7 +1740,6 @@ class CombinedClickableTest {
         }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
     @LargeTest
     fun noHover_whenDisabled() {
@@ -1828,78 +1752,65 @@ class CombinedClickableTest {
             scope = rememberCoroutineScope()
             BasicText(
                 "ClickableText",
-                modifier = Modifier
-                    .testTag("myClickable")
-                    .combinedClickable(
-                        enabled = enabled.value,
-                        onClick = {},
-                        interactionSource = interactionSource,
-                        indication = null
-                    )
+                modifier =
+                    Modifier.testTag("myClickable")
+                        .combinedClickable(
+                            enabled = enabled.value,
+                            onClick = {},
+                            interactionSource = interactionSource,
+                            indication = null
+                        )
             )
         }
 
         val interactions = mutableListOf<Interaction>()
 
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performMouseInput { enter(center) }
+        rule.onNodeWithTag("myClickable").performMouseInput { enter(center) }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(1)
             assertThat(interactions.first()).isInstanceOf(HoverInteraction.Enter::class.java)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performMouseInput { exit(Offset(-1f, -1f)) }
+        rule.onNodeWithTag("myClickable").performMouseInput { exit(Offset(-1f, -1f)) }
 
         rule.runOnIdle {
             interactions.clear()
             enabled.value = false
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performMouseInput { enter(center) }
+        rule.onNodeWithTag("myClickable").performMouseInput { enter(center) }
 
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
 
-        rule.onNodeWithTag("myClickable")
-            .performMouseInput { exit(Offset(-1f, -1f)) }
+        rule.onNodeWithTag("myClickable").performMouseInput { exit(Offset(-1f, -1f)) }
 
-        rule.runOnIdle {
-            enabled.value = true
-        }
+        rule.runOnIdle { enabled.value = true }
 
-        rule.onNodeWithTag("myClickable")
-            .performMouseInput { enter(center) }
+        rule.onNodeWithTag("myClickable").performMouseInput { enter(center) }
 
         rule.runOnIdle {
             assertThat(interactions).hasSize(1)
             assertThat(interactions.first()).isInstanceOf(HoverInteraction.Enter::class.java)
         }
 
-        rule.onNodeWithTag("myClickable")
-            .performMouseInput { exit(Offset(-1f, -1f)) }
+        rule.onNodeWithTag("myClickable").performMouseInput { exit(Offset(-1f, -1f)) }
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
     @Test
     fun noFocus_whenDisabled() {
         val requester = FocusRequester()
         // Force clickable to always be in non-touch mode, so it should be focusable
-        val keyboardMockManager = object : InputModeManager {
-            override val inputMode = Keyboard
-            override fun requestInputMode(inputMode: InputMode) = true
-        }
+        val keyboardMockManager =
+            object : InputModeManager {
+                override val inputMode = Keyboard
+
+                override fun requestInputMode(inputMode: InputMode) = true
+            }
 
         val enabled = mutableStateOf(true)
         lateinit var focusState: FocusState
@@ -1909,11 +1820,11 @@ class CombinedClickableTest {
                 Box {
                     BasicText(
                         "ClickableText",
-                        modifier = Modifier
-                            .testTag("myClickable")
-                            .focusRequester(requester)
-                            .onFocusEvent { focusState = it }
-                            .combinedClickable(enabled = enabled.value) {}
+                        modifier =
+                            Modifier.testTag("myClickable")
+                                .focusRequester(requester)
+                                .onFocusEvent { focusState = it }
+                                .combinedClickable(enabled = enabled.value) {}
                     )
                 }
             }
@@ -1924,9 +1835,7 @@ class CombinedClickableTest {
             assertThat(focusState.isFocused).isTrue()
         }
 
-        rule.runOnIdle {
-            enabled.value = false
-        }
+        rule.runOnIdle { enabled.value = false }
 
         rule.runOnIdle {
             assertThat(focusState.isFocused).isFalse()
@@ -1935,18 +1844,17 @@ class CombinedClickableTest {
         }
     }
 
-    /**
-     * Test for b/269319898
-     */
-    @OptIn(ExperimentalComposeUiApi::class)
+    /** Test for b/269319898 */
     @Test
     fun noFocusPropertiesSet_whenDisabled() {
         val requester = FocusRequester()
         // Force clickable to always be in non-touch mode, so it should be focusable
-        val keyboardMockManager = object : InputModeManager {
-            override val inputMode = Keyboard
-            override fun requestInputMode(inputMode: InputMode) = true
-        }
+        val keyboardMockManager =
+            object : InputModeManager {
+                override val inputMode = Keyboard
+
+                override fun requestInputMode(inputMode: InputMode) = true
+            }
 
         val enabled = mutableStateOf(true)
         lateinit var focusState: FocusState
@@ -1955,8 +1863,7 @@ class CombinedClickableTest {
             CompositionLocalProvider(LocalInputModeManager provides keyboardMockManager) {
                 Box(Modifier.combinedClickable(enabled = enabled.value, onClick = {})) {
                     Box(
-                        Modifier
-                            .size(10.dp)
+                        Modifier.size(10.dp)
                             // If clickable is setting canFocus to true without a focus target, then
                             // that would override this property
                             .focusProperties { canFocus = false }
@@ -1976,9 +1883,7 @@ class CombinedClickableTest {
             assertThat(focusState.isFocused).isFalse()
         }
 
-        rule.runOnIdle {
-            enabled.value = false
-        }
+        rule.runOnIdle { enabled.value = false }
 
         rule.runOnIdle {
             // Clickable is disabled, it should not apply properties down the tree
@@ -1989,45 +1894,49 @@ class CombinedClickableTest {
 
     @Test
     fun testInspectorValue_noIndicationOverload() {
-        val onClick: () -> Unit = { }
+        val onClick: () -> Unit = {}
         rule.setContent {
             val modifier = Modifier.combinedClickable(onClick = onClick) as InspectableValue
             assertThat(modifier.nameFallback).isEqualTo("combinedClickable")
             assertThat(modifier.valueOverride).isNull()
-            assertThat(modifier.inspectableElements.map { it.name }.asIterable()).containsExactly(
-                "enabled",
-                "onClickLabel",
-                "role",
-                "onClick",
-                "onDoubleClick",
-                "onLongClick",
-                "onLongClickLabel"
-            )
+            assertThat(modifier.inspectableElements.map { it.name }.asIterable())
+                .containsExactly(
+                    "enabled",
+                    "onClickLabel",
+                    "role",
+                    "onClick",
+                    "onDoubleClick",
+                    "onLongClick",
+                    "onLongClickLabel"
+                )
         }
     }
 
     @Test
     fun testInspectorValue_fullParamsOverload() {
-        val onClick: () -> Unit = { }
+        val onClick: () -> Unit = {}
         rule.setContent {
-            val modifier = Modifier.combinedClickable(
-                onClick = onClick,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ).first() as InspectableValue
+            val modifier =
+                Modifier.combinedClickable(
+                        onClick = onClick,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    )
+                    .first() as InspectableValue
             assertThat(modifier.nameFallback).isEqualTo("combinedClickable")
             assertThat(modifier.valueOverride).isNull()
-            assertThat(modifier.inspectableElements.map { it.name }.asIterable()).containsExactly(
-                "enabled",
-                "onClickLabel",
-                "onClick",
-                "role",
-                "onDoubleClick",
-                "onLongClick",
-                "onLongClickLabel",
-                "indicationNodeFactory",
-                "interactionSource"
-            )
+            assertThat(modifier.inspectableElements.map { it.name }.asIterable())
+                .containsExactly(
+                    "enabled",
+                    "onClickLabel",
+                    "onClick",
+                    "role",
+                    "onDoubleClick",
+                    "onLongClick",
+                    "onLongClickLabel",
+                    "indicationNodeFactory",
+                    "interactionSource"
+                )
         }
     }
 
@@ -2037,26 +1946,22 @@ class CombinedClickableTest {
         val tag = "my clickable"
         rule.setContent {
             Box(
-                Modifier
-                    .requiredHeight(20.dp)
+                Modifier.requiredHeight(20.dp)
                     .requiredWidth(20.dp)
                     .clipToBounds()
                     .combinedClickable { clicked = true }
                     .testTag(tag)
             )
         }
-        rule.onNodeWithTag(tag)
+        rule
+            .onNodeWithTag(tag)
             .assertWidthIsEqualTo(20.dp)
             .assertHeightIsEqualTo(20.dp)
             .assertTouchHeightIsEqualTo(48.dp)
             .assertTouchWidthIsEqualTo(48.dp)
-            .performTouchInput {
-                click(Offset(-1f, -1f))
-            }
+            .performTouchInput { click(Offset(-1f, -1f)) }
 
-        rule.runOnIdle {
-            assertThat(clicked).isTrue()
-        }
+        rule.runOnIdle { assertThat(clicked).isTrue() }
     }
 
     @Test
@@ -2065,26 +1970,22 @@ class CombinedClickableTest {
         val tag = "my clickable"
         rule.setContent {
             Box(
-                Modifier
-                    .requiredHeight(50.dp)
+                Modifier.requiredHeight(50.dp)
                     .requiredWidth(20.dp)
                     .clipToBounds()
                     .combinedClickable { clicked = true }
                     .testTag(tag)
             )
         }
-        rule.onNodeWithTag(tag)
+        rule
+            .onNodeWithTag(tag)
             .assertWidthIsEqualTo(20.dp)
             .assertHeightIsEqualTo(50.dp)
             .assertTouchHeightIsEqualTo(50.dp)
             .assertTouchWidthIsEqualTo(48.dp)
-            .performTouchInput {
-                click(Offset(-1f, 0f))
-            }
+            .performTouchInput { click(Offset(-1f, 0f)) }
 
-        rule.runOnIdle {
-            assertThat(clicked).isTrue()
-        }
+        rule.runOnIdle { assertThat(clicked).isTrue() }
     }
 
     @Test
@@ -2093,175 +1994,26 @@ class CombinedClickableTest {
         val tag = "my clickable"
         rule.setContent {
             Box(
-                Modifier
-                    .requiredHeight(20.dp)
+                Modifier.requiredHeight(20.dp)
                     .requiredWidth(50.dp)
                     .clipToBounds()
                     .combinedClickable { clicked = true }
                     .testTag(tag)
             )
         }
-        rule.onNodeWithTag(tag)
+        rule
+            .onNodeWithTag(tag)
             .assertWidthIsEqualTo(50.dp)
             .assertHeightIsEqualTo(20.dp)
             .assertTouchHeightIsEqualTo(48.dp)
             .assertTouchWidthIsEqualTo(50.dp)
-            .performTouchInput {
-                click(Offset(0f, -1f))
-            }
+            .performTouchInput { click(Offset(0f, -1f)) }
 
-        rule.runOnIdle {
-            assertThat(clicked).isTrue()
-        }
+        rule.runOnIdle { assertThat(clicked).isTrue() }
     }
 
     @Test
-    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
-    fun enterKey_emitsIndication() {
-        val interactionSource = MutableInteractionSource()
-        val focusRequester = FocusRequester()
-        lateinit var scope: CoroutineScope
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            scope = rememberCoroutineScope()
-            inputModeManager = LocalInputModeManager.current
-            Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .focusRequester(focusRequester)
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
-                )
-            }
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-
-        val interactions = mutableListOf<Interaction>()
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
-
-        rule.onNodeWithTag("clickable").performKeyInput { keyDown(Key.Enter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(1)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-        }
-
-        rule.onNodeWithTag("clickable").performKeyInput { keyUp(Key.Enter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(2)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(interactions.last()).isInstanceOf(PressInteraction.Release::class.java)
-        }
-    }
-
-    @Test
-    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
-    fun numPadEnterKey_emitsIndication() {
-        val interactionSource = MutableInteractionSource()
-        val focusRequester = FocusRequester()
-        lateinit var scope: CoroutineScope
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            scope = rememberCoroutineScope()
-            inputModeManager = LocalInputModeManager.current
-            Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .focusRequester(focusRequester)
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
-                )
-            }
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-
-        val interactions = mutableListOf<Interaction>()
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
-
-        rule.onNodeWithTag("clickable").performKeyInput { keyDown(Key.NumPadEnter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(1)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-        }
-
-        rule.onNodeWithTag("clickable").performKeyInput { keyUp(Key.NumPadEnter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(2)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(interactions.last()).isInstanceOf(PressInteraction.Release::class.java)
-        }
-    }
-
-    @Test
-    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
-    fun dpadCenter_emitsIndication() {
-        val interactionSource = MutableInteractionSource()
-        val focusRequester = FocusRequester()
-        lateinit var scope: CoroutineScope
-        lateinit var inputModeManager: InputModeManager
-        rule.setContent {
-            scope = rememberCoroutineScope()
-            inputModeManager = LocalInputModeManager.current
-            Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .focusRequester(focusRequester)
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
-                )
-            }
-        }
-        rule.runOnIdle {
-            inputModeManager.requestInputMode(Keyboard)
-            focusRequester.requestFocus()
-        }
-        rule.waitForIdle()
-
-        val interactions = mutableListOf<Interaction>()
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
-
-        rule.onNodeWithTag("clickable").performKeyInput { keyDown(Key.DirectionCenter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(1)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-        }
-
-        rule.onNodeWithTag("clickable").performKeyInput { keyUp(Key.DirectionCenter) }
-
-        rule.runOnIdle {
-            assertThat(interactions).hasSize(2)
-            assertThat(interactions.first()).isInstanceOf(PressInteraction.Press::class.java)
-            assertThat(interactions.last()).isInstanceOf(PressInteraction.Release::class.java)
-        }
-    }
-
-    @Test
-    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
+    @OptIn(ExperimentalTestApi::class)
     fun otherKey_doesNotEmitIndication() {
         val interactionSource = MutableInteractionSource()
         val focusRequester = FocusRequester()
@@ -2271,14 +2023,15 @@ class CombinedClickableTest {
             scope = rememberCoroutineScope()
             inputModeManager = LocalInputModeManager.current
             Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .focusRequester(focusRequester)
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
+                BasicText(
+                    "ClickableText",
+                    modifier =
+                        Modifier.testTag("clickable")
+                            .focusRequester(focusRequester)
+                            .combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = null
+                            ) {}
                 )
             }
         }
@@ -2288,18 +2041,14 @@ class CombinedClickableTest {
         }
 
         val interactions = mutableListOf<Interaction>()
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
-        rule.onNodeWithTag("clickable").performKeyInput { pressKey(Key.Spacebar) }
-        rule.runOnIdle {
-            assertThat(interactions).isEmpty()
-        }
+        rule.onNodeWithTag("clickable").performKeyInput { pressKey(Key.Backspace) }
+        rule.runOnIdle { assertThat(interactions).isEmpty() }
     }
 
     @Test
-    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
+    @OptIn(ExperimentalTestApi::class)
     fun doubleEnterKey_emitsFurtherInteractions() {
         val interactionSource = MutableInteractionSource()
         val focusRequester = FocusRequester()
@@ -2309,14 +2058,15 @@ class CombinedClickableTest {
             scope = rememberCoroutineScope()
             inputModeManager = LocalInputModeManager.current
             Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .focusRequester(focusRequester)
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {}
+                BasicText(
+                    "ClickableText",
+                    modifier =
+                        Modifier.testTag("clickable")
+                            .focusRequester(focusRequester)
+                            .combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = null
+                            ) {}
                 )
             }
         }
@@ -2326,9 +2076,7 @@ class CombinedClickableTest {
         }
 
         val interactions = mutableListOf<Interaction>()
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
         val clickableNode = rule.onNodeWithTag("clickable")
 
@@ -2361,7 +2109,7 @@ class CombinedClickableTest {
     }
 
     @Test
-    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
+    @OptIn(ExperimentalTestApi::class)
     fun repeatKeyEvents_doNotEmitFurtherInteractions() {
         val interactionSource = MutableInteractionSource()
         val focusRequester = FocusRequester()
@@ -2372,19 +2120,19 @@ class CombinedClickableTest {
             scope = rememberCoroutineScope()
             inputModeManager = LocalInputModeManager.current
             Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .focusRequester(focusRequester)
-                        .onKeyEvent {
-                            if (it.nativeKeyEvent.repeatCount != 0)
-                                repeatCounter++
-                            false
-                        }
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null,
-                        ) {}
+                BasicText(
+                    "ClickableText",
+                    modifier =
+                        Modifier.testTag("clickable")
+                            .focusRequester(focusRequester)
+                            .onKeyEvent {
+                                if (it.nativeKeyEvent.repeatCount != 0) repeatCounter++
+                                false
+                            }
+                            .combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                            ) {}
                 )
             }
         }
@@ -2394,9 +2142,7 @@ class CombinedClickableTest {
         }
 
         val interactions = mutableListOf<Interaction>()
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
         rule.onNodeWithTag("clickable").performKeyInput {
             keyDown(Key.Enter)
@@ -2422,7 +2168,7 @@ class CombinedClickableTest {
     }
 
     @Test
-    @OptIn(ExperimentalComposeUiApi::class, ExperimentalTestApi::class)
+    @OptIn(ExperimentalTestApi::class)
     fun interruptedClick_emitsCancelIndication() {
         val interactionSource = MutableInteractionSource()
         val focusRequester = FocusRequester()
@@ -2433,15 +2179,16 @@ class CombinedClickableTest {
             scope = rememberCoroutineScope()
             inputModeManager = LocalInputModeManager.current
             Box(Modifier.padding(10.dp)) {
-                BasicText("ClickableText",
-                    modifier = Modifier
-                        .testTag("clickable")
-                        .focusRequester(focusRequester)
-                        .combinedClickable(
-                            interactionSource = interactionSource,
-                            indication = null,
-                            enabled = enabled.value
-                        ) {}
+                BasicText(
+                    "ClickableText",
+                    modifier =
+                        Modifier.testTag("clickable")
+                            .focusRequester(focusRequester)
+                            .combinedClickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                                enabled = enabled.value
+                            ) {}
                 )
             }
         }
@@ -2451,9 +2198,7 @@ class CombinedClickableTest {
         }
 
         val interactions = mutableListOf<Interaction>()
-        scope.launch {
-            interactionSource.interactions.collect { interactions.add(it) }
-        }
+        scope.launch { interactionSource.interactions.collect { interactions.add(it) } }
 
         val clickableNode = rule.onNodeWithTag("clickable")
 
@@ -2496,10 +2241,10 @@ class CombinedClickableTest {
             val content = remember {
                 movableContentOf {
                     BoxWithConstraints {
-                        BasicText("ClickableText",
-                            modifier = Modifier
-                                .testTag("clickable")
-                                .combinedClickable(
+                        BasicText(
+                            "ClickableText",
+                            modifier =
+                                Modifier.testTag("clickable").combinedClickable(
                                     role = if (moveContent) Role.Button else Role.Checkbox,
                                     onClickLabel = moveContent.toString(),
                                     onLongClick = {},
@@ -2510,30 +2255,38 @@ class CombinedClickableTest {
                 }
             }
 
-            key(moveContent) {
-                content()
-            }
+            key(moveContent) { content() }
         }
 
-        rule.onNodeWithTag("clickable")
+        rule
+            .onNodeWithTag("clickable")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))
             .assertOnClickLabelMatches("false")
             .assertOnLongClickLabelMatches("false")
 
-        rule.runOnIdle {
-            moveContent = true
-        }
+        rule.runOnIdle { moveContent = true }
 
-        rule.onNodeWithTag("clickable")
+        rule
+            .onNodeWithTag("clickable")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
             .assertOnClickLabelMatches("true")
             .assertOnLongClickLabelMatches("true")
     }
 }
 
-private fun SemanticsNodeInteraction.assertOnLongClickLabelMatches(expectedValue: String):
-    SemanticsNodeInteraction {
-    return assert(SemanticsMatcher("onLongClickLabel = '$expectedValue'") {
-        it.config.getOrElseNullable(SemanticsActions.OnLongClick) { null }?.label == expectedValue
-    })
+private fun SemanticsNodeInteraction.assertOnLongClickLabelMatches(
+    expectedValue: String
+): SemanticsNodeInteraction {
+    return assert(
+        SemanticsMatcher("onLongClickLabel = '$expectedValue'") {
+            it.config.getOrElseNullable(SemanticsActions.OnLongClick) { null }?.label ==
+                expectedValue
+        }
+    )
+}
+
+private fun KeyInjectionScope.longPressKey(key: Key) {
+    // The press duration is 100ms longer than the minimum required for a long press.
+    val durationMillis: Long = viewConfiguration.longPressTimeoutMillis + 100
+    pressKey(key, durationMillis)
 }

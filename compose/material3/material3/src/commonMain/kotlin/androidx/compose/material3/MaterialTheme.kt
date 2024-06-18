@@ -33,16 +33,15 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * default values.
  *
  * All values may be set by providing this component with the [colorScheme][ColorScheme],
- * [typography][Typography] and [shapes][Shapes] attributes. Use this to configure the overall
- * theme of elements within this MaterialTheme.
+ * [typography][Typography] and [shapes][Shapes] attributes. Use this to configure the overall theme
+ * of elements within this MaterialTheme.
  *
  * Any values that are not set will inherit the current value from the theme, falling back to the
- * defaults if there is no parent MaterialTheme. This allows using a MaterialTheme at the top
- * of your application, and then separate MaterialTheme(s) for different screens / parts of your
- * UI, overriding only the parts of the theme definition that need to change.
+ * defaults if there is no parent MaterialTheme. This allows using a MaterialTheme at the top of
+ * your application, and then separate MaterialTheme(s) for different screens / parts of your UI,
+ * overriding only the parts of the theme definition that need to change.
  *
  * @sample androidx.compose.material3.samples.MaterialThemeSample
- *
  * @param colorScheme A complete definition of the Material Color theme for this hierarchy
  * @param typography A set of text styles to be used as this hierarchy's typography system
  * @param shapes A set of corner shapes to be used as this hierarchy's shape system
@@ -54,14 +53,11 @@ fun MaterialTheme(
     typography: Typography = MaterialTheme.typography,
     content: @Composable () -> Unit
 ) {
-    val rippleIndication = rippleOrFallbackImplementation()
+    val rippleIndication = ripple()
     val selectionColors = rememberTextSelectionColors(colorScheme)
-    @Suppress("DEPRECATION_ERROR")
     CompositionLocalProvider(
         LocalColorScheme provides colorScheme,
         LocalIndication provides rippleIndication,
-        // TODO: b/304985887 - remove after one stable release
-        androidx.compose.material.ripple.LocalRippleTheme provides CompatRippleTheme,
         LocalShapes provides shapes,
         LocalTextSelectionColors provides selectionColors,
         LocalTypography provides typography,
@@ -71,8 +67,8 @@ fun MaterialTheme(
 }
 
 /**
- * Contains functions to access the current theme values provided at the call site's position in
- * the hierarchy.
+ * Contains functions to access the current theme values provided at the call site's position in the
+ * hierarchy.
  */
 object MaterialTheme {
     /**
@@ -81,9 +77,7 @@ object MaterialTheme {
      * @sample androidx.compose.material3.samples.ThemeColorSample
      */
     val colorScheme: ColorScheme
-        @Composable
-        @ReadOnlyComposable
-        get() = LocalColorScheme.current
+        @Composable @ReadOnlyComposable get() = LocalColorScheme.current
 
     /**
      * Retrieves the current [Typography] at the call site's position in the hierarchy.
@@ -91,9 +85,7 @@ object MaterialTheme {
      * @sample androidx.compose.material3.samples.ThemeTextStyleSample
      */
     val typography: Typography
-        @Composable
-        @ReadOnlyComposable
-        get() = LocalTypography.current
+        @Composable @ReadOnlyComposable get() = LocalTypography.current
 
     /**
      * Retrieves the current [Shapes] at the call site's position in the hierarchy.
@@ -101,9 +93,7 @@ object MaterialTheme {
      * @sample androidx.compose.material3.samples.ThemeShapeSample
      */
     val shapes: Shapes
-        @Composable
-        @ReadOnlyComposable
-        get() = LocalShapes.current
+        @Composable @ReadOnlyComposable get() = LocalShapes.current
 }
 
 // TODO: Create a sample androidx.compose.material3.samples.MaterialExpressiveThemeSample
@@ -115,17 +105,16 @@ object MaterialTheme {
  * default values.
  *
  * All values may be set by providing this component with the [colorScheme][ColorScheme],
- * [typography][Typography], [shapes][Shapes] attributes. Use this to configure the overall
- * theme of elements within this MaterialTheme.
+ * [typography][Typography], [shapes][Shapes] attributes. Use this to configure the overall theme of
+ * elements within this MaterialTheme.
  *
  * Any values that are not set will fall back to the defaults. To inherit the current value from the
  * theme, pass them into subsequent calls and override only the parts of the theme definition that
  * need to change.
  *
- * Alternatively, only call this function at the top
- * of your application, and then call [MaterialTheme] to specify separate MaterialTheme(s) for
- * different screens / parts of your UI, overriding only the parts of the theme definition that need
- * to change.
+ * Alternatively, only call this function at the top of your application, and then call
+ * [MaterialTheme] to specify separate MaterialTheme(s) for different screens / parts of your UI,
+ * overriding only the parts of the theme definition that need to change.
  *
  * @param colorScheme A complete definition of the Material Color theme for this hierarchy
  * @param typography A set of text styles to be used as this hierarchy's typography system

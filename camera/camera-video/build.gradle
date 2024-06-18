@@ -64,6 +64,7 @@ dependencies {
     }
     androidTestImplementation(libs.kotlinStdlib)
     androidTestImplementation(libs.kotlinCoroutinesAndroid)
+    androidTestImplementation(libs.atomicFu)
     androidTestImplementation(project(":concurrent:concurrent-futures-ktx"))
     androidTestImplementation(project(":internal-testutils-truth"))
     androidTestImplementation(project(":camera:camera-camera2-pipe-integration"))
@@ -95,4 +96,5 @@ androidx {
             "consistent and reliable camera foundation that enables great camera driven " +
             "experiences across all of Android."
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

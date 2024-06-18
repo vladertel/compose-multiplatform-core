@@ -16,16 +16,13 @@
 
 package androidx.compose.foundation.lazy.layout
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.Composable
 
 /**
  * Remembers the platform-specific implementation for scheduling lazy layout item prefetch
  * (pre-composing next items in advance during the scrolling).
  */
-@ExperimentalFoundationApi
-@Composable
-internal expect fun rememberDefaultPrefetchScheduler(): PrefetchScheduler
+@Composable internal expect fun rememberDefaultPrefetchScheduler(): PrefetchScheduler
 
 /**
  * Implementations of this interface accept prefetch requests via [schedulePrefetch] and decide when
@@ -37,7 +34,6 @@ internal expect fun rememberDefaultPrefetchScheduler(): PrefetchScheduler
  * when it still has more to do but doesn't think it can complete it within
  * [PrefetchRequestScope.availableTimeNanos].
  */
-@ExperimentalFoundationApi
 interface PrefetchScheduler {
 
     /**
@@ -51,7 +47,6 @@ interface PrefetchScheduler {
  * A request for prefetch which can be submitted to a [PrefetchScheduler] to execute during idle
  * time.
  */
-@ExperimentalFoundationApi
 sealed interface PrefetchRequest {
 
     /**
@@ -59,16 +54,16 @@ sealed interface PrefetchRequest {
      * finish it within [PrefetchRequestScope.availableTimeNanos].
      *
      * @return whether this request has more work it wants to do, but ran out of time. `true`
-     * indicates this request wants to have [execute] called again to do more work, while `false`
-     * indicates its work is complete.
+     *   indicates this request wants to have [execute] called again to do more work, while `false`
+     *   indicates its work is complete.
      */
     fun PrefetchRequestScope.execute(): Boolean
 }
 
 /**
- * Scope for [PrefetchRequest.execute], supplying info about how much time it has to execute requests.
+ * Scope for [PrefetchRequest.execute], supplying info about how much time it has to execute
+ * requests.
  */
-@ExperimentalFoundationApi
 interface PrefetchRequestScope {
 
     /**

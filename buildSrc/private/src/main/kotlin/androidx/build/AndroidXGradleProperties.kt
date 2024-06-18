@@ -136,17 +136,14 @@ const val XCODEGEN_DOWNLOAD_URI = "androidx.benchmark.darwin.xcodeGenDownloadUri
 /** If true, don't restrict usage of compileSdk property. */
 const val ALLOW_CUSTOM_COMPILE_SDK = "androidx.allowCustomCompileSdk"
 
-/** Comma-delimited list of project path prefixes which have been opted-in to ktfmt migration. */
-const val KTFMT_OPT_IN = "androidx.ktfmt.optin"
-
 /** If true, include Jetpack library projects that live outside of `frameworks/support`. */
 const val INCLUDE_OPTIONAL_PROJECTS = "androidx.includeOptionalProjects"
 
 /**
- * If true, build compose compiler from source. Should be kept to "false" unless we are upgrading
- * the Kotlin version in order to release a new stable Compose Compiler.
+ * If true, enable the ArrayNullnessMigration lint check to transition to type-use nullness
+ * annotations. Defaults to false.
  */
-const val UNPIN_COMPOSE_COMPILER = "androidx.unpinComposeCompiler"
+const val MIGRATE_ARRAY_ANNOTATIONS = "androidx.migrateArrayAnnotations"
 
 val ALL_ANDROIDX_PROPERTIES =
     setOf(
@@ -154,7 +151,6 @@ val ALL_ANDROIDX_PROPERTIES =
         ALTERNATIVE_PROJECT_URL,
         VERSION_EXTRA_CHECK_ENABLED,
         VALIDATE_PROJECT_STRUCTURE,
-        UNPIN_COMPOSE_COMPILER,
         ENABLE_COMPOSE_COMPILER_METRICS,
         ENABLE_COMPOSE_COMPILER_REPORTS,
         DISPLAY_TEST_OUTPUT,
@@ -182,9 +178,8 @@ val ALL_ANDROIDX_PROPERTIES =
         FilteredAnchorTask.PROP_TASK_NAME,
         FilteredAnchorTask.PROP_PATH_PREFIX,
         INCLUDE_OPTIONAL_PROJECTS,
+        MIGRATE_ARRAY_ANNOTATIONS,
     ) + AndroidConfigImpl.GRADLE_PROPERTIES
-
-val PREFIXED_ANDROIDX_PROPERTIES = setOf(KTFMT_OPT_IN)
 
 /**
  * Whether to enable constraints for projects in same-version groups See the property definition for
@@ -217,10 +212,7 @@ fun Project.isValidateProjectStructureEnabled(): Boolean =
 fun Project.validateAllAndroidxArgumentsAreRecognized() {
     for (propertyName in project.properties.keys) {
         if (propertyName.startsWith("androidx")) {
-            if (
-                !ALL_ANDROIDX_PROPERTIES.contains(propertyName) &&
-                    PREFIXED_ANDROIDX_PROPERTIES.none { propertyName.startsWith(it) }
-            ) {
+            if (!ALL_ANDROIDX_PROPERTIES.contains(propertyName)) {
                 val message =
                     "Unrecognized Androidx property '$propertyName'.\n" +
                         "\n" +
@@ -264,9 +256,6 @@ fun Project.usingMaxDepVersions(): Boolean {
 fun Project.enableComposeCompilerMetrics() =
     findBooleanProperty(ENABLE_COMPOSE_COMPILER_METRICS) ?: false
 
-/** Returns whether we export compose compiler metrics */
-fun Project.isComposeCompilerUnpinned() = findBooleanProperty(UNPIN_COMPOSE_COMPILER) ?: false
-
 /** Returns whether we export compose compiler reports */
 fun Project.enableComposeCompilerReports() =
     findBooleanProperty(ENABLE_COMPOSE_COMPILER_REPORTS) ?: false
@@ -282,20 +271,14 @@ fun Project.allowMissingLintProject() =
 fun Project.isCustomCompileSdkAllowed(): Boolean =
     findBooleanProperty(ALLOW_CUSTOM_COMPILE_SDK) ?: true
 
+/**
+ * Whether to enable the ArrayNullnessMigration lint check for moving nullness annotations on arrays
+ * when switching a project to type-use nullness annotations.
+ */
+fun Project.migrateArrayAnnotations() = findBooleanProperty(MIGRATE_ARRAY_ANNOTATIONS) ?: false
+
 fun Project.findBooleanProperty(propName: String) = booleanPropertyProvider(propName).get()
 
 fun Project.booleanPropertyProvider(propName: String): Provider<Boolean> {
     return project.providers.gradleProperty(propName).map { s -> s.toBoolean() }.orElse(false)
 }
-
-/** List of project path prefixes which have been opted-in to the ktfmt migration. */
-fun Project.getKtfmtOptInPathPrefixes(): List<String> = aggregatePropertyPrefix(KTFMT_OPT_IN)
-
-internal fun Project.aggregatePropertyPrefix(prefix: String): List<String> =
-    properties.flatMap { (name, value) ->
-        if (name.startsWith(prefix)) {
-            (value as? String)?.split(",") ?: emptyList()
-        } else {
-            emptyList()
-        }
-    }

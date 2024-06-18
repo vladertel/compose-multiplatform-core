@@ -110,6 +110,21 @@ public class CameraQuirks {
         if (TorchFlashRequiredFor3aUpdateQuirk.load(cameraCharacteristicsCompat)) {
             quirks.add(new TorchFlashRequiredFor3aUpdateQuirk(cameraCharacteristicsCompat));
         }
+        if (PreviewStretchWhenVideoCaptureIsBoundQuirk.load()) {
+            quirks.add(new PreviewStretchWhenVideoCaptureIsBoundQuirk());
+        }
+        if (PreviewDelayWhenVideoCaptureIsBoundQuirk.load()) {
+            quirks.add(new PreviewDelayWhenVideoCaptureIsBoundQuirk());
+        }
+        if (ImageCaptureFailedWhenVideoCaptureIsBoundQuirk.load()) {
+            quirks.add(new ImageCaptureFailedWhenVideoCaptureIsBoundQuirk());
+        }
+        if (TemporalNoiseQuirk.load(cameraCharacteristicsCompat)) {
+            quirks.add(new TemporalNoiseQuirk());
+        }
+        if (ImageCaptureFailedForVideoSnapshotQuirk.load()) {
+            quirks.add(new ImageCaptureFailedForVideoSnapshotQuirk());
+        }
 
         return new Quirks(quirks);
     }

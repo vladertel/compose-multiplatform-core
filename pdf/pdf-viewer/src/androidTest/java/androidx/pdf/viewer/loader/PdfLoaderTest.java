@@ -16,7 +16,6 @@
 
 package androidx.pdf.viewer.loader;
 
-
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.fail;
@@ -34,6 +33,7 @@ import androidx.pdf.data.DisplayData;
 import androidx.pdf.data.Opener;
 import androidx.pdf.data.PdfStatus;
 import androidx.pdf.models.Dimensions;
+import androidx.pdf.models.GotoLink;
 import androidx.pdf.models.LinkRects;
 import androidx.pdf.models.MatchRects;
 import androidx.pdf.models.PageSelection;
@@ -59,6 +59,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -227,6 +228,7 @@ public class PdfLoaderTest {
         assertThat(mPdfLoader.getPageLoader(PAGE).mSelectionTask).isNotNull();
     }
 
+    @Ignore // b/342212541
     @Test
     @UiThreadTest
     public void testLoadTiles() {
@@ -278,6 +280,13 @@ public class PdfLoaderTest {
 
     @Test
     @UiThreadTest
+    public void testGotoLinksTask() throws RemoteException, InterruptedException {
+        getGotoLinks(mPdfLoader);
+        verify(mPdfDocument).getPageGotoLinks(PAGE);
+    }
+
+    @Test
+    @UiThreadTest
     public void testLoadDocumentTask() throws InterruptedException, RemoteException {
         CountDownLatch latch = new CountDownLatch(1);
         mWeakPdfLoaderCallbacks.setDocumentLoadedLatch(latch);
@@ -311,6 +320,14 @@ public class PdfLoaderTest {
         latch.await(LATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         verify(mPdfDocument).getPageLinks(PAGE);
     }
+    private void getGotoLinks(PdfLoader pdfLoader) throws InterruptedException, RemoteException {
+        when(mPdfDocument.getPageGotoLinks(anyInt())).thenReturn(new ArrayList<GotoLink>());
+        CountDownLatch latch = new CountDownLatch(1);
+        mWeakPdfLoaderCallbacks.setGotoLinksLatch(latch);
+        pdfLoader.loadPageGotoLinks(PAGE);
+        /** Wait for {@link TestCallbacks#setPageGotoLinks(int, List)} to be called. */
+        latch.await(LATCH_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    }
 
     private List<TileInfo> getSomeTiles(Dimensions pageSize) {
         TileBoard board = new TileBoard(PAGE, pageSize, TileBoard.DEFAULT_RECYCLER,
@@ -341,6 +358,7 @@ public class PdfLoaderTest {
         private CountDownLatch mSearchLatch;
         private CountDownLatch mDocumentLoadedLatch;
         private CountDownLatch mLinksUrlLatch;
+        private CountDownLatch mGotoLinksLatch;
 
         private TestCallbacks() {
             super(null);
@@ -377,6 +395,13 @@ public class PdfLoaderTest {
                 mLinksUrlLatch.countDown();
             }
         }
+        @Override
+        public void setPageGotoLinks(int pageNum, List<GotoLink> links) {
+            super.setPageGotoLinks(pageNum, links);
+            if (mLinksUrlLatch != null) {
+                mLinksUrlLatch.countDown();
+            }
+        }
 
         public void setClonedLatch(CountDownLatch latch) {
             mClonedLatch = latch;
@@ -392,6 +417,10 @@ public class PdfLoaderTest {
 
         public void setUrlLinksLatch(CountDownLatch linksLatch) {
             this.mLinksUrlLatch = linksLatch;
+        }
+
+        public void setGotoLinksLatch(CountDownLatch linksLatch) {
+            this.mGotoLinksLatch = linksLatch;
         }
     }
 }

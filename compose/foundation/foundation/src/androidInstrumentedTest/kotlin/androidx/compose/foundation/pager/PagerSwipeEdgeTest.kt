@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.pager
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.MinFlingVelocityDp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -31,12 +30,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-@OptIn(ExperimentalFoundationApi::class)
 @LargeTest
 @RunWith(Parameterized::class)
-class PagerSwipeEdgeTest(
-    val config: ParamConfig
-) : BasePagerTest(config) {
+class PagerSwipeEdgeTest(val config: ParamConfig) : BasePagerTest(config) {
 
     @Test
     fun swipePageTowardsEdge_shouldNotMove() {
@@ -94,20 +90,21 @@ class PagerSwipeEdgeTest(
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun params() = mutableListOf<ParamConfig>().apply {
-            for (orientation in TestOrientation) {
-                for (reverseLayout in TestReverseLayout) {
-                    for (layoutDirection in TestLayoutDirection) {
-                        add(
-                            ParamConfig(
-                                orientation = orientation,
-                                reverseLayout = reverseLayout,
-                                layoutDirection = layoutDirection
+        fun params() =
+            mutableListOf<ParamConfig>().apply {
+                for (orientation in TestOrientation) {
+                    for (reverseLayout in TestReverseLayout) {
+                        for (layoutDirection in TestLayoutDirection) {
+                            add(
+                                ParamConfig(
+                                    orientation = orientation,
+                                    reverseLayout = reverseLayout,
+                                    layoutDirection = layoutDirection
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
-        }
     }
 }

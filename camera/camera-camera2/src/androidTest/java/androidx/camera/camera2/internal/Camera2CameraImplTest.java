@@ -23,6 +23,7 @@ import static android.graphics.ImageFormat.YUV_420_888;
 import static androidx.camera.camera2.internal.Camera2CameraImplTest.TestUseCase.SurfaceOption;
 import static androidx.camera.camera2.internal.Camera2CameraImplTest.TestUseCase.SurfaceOption.NON_REPEATING;
 import static androidx.camera.camera2.internal.Camera2CameraImplTest.TestUseCase.SurfaceOption.REPEATING;
+import static androidx.camera.camera2.internal.compat.quirk.CaptureIntentPreviewQuirk.workaroundByCaptureIntentPreview;
 import static androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA;
 import static androidx.camera.core.concurrent.CameraCoordinator.CAMERA_OPERATING_MODE_CONCURRENT;
 import static androidx.camera.core.concurrent.CameraCoordinator.CAMERA_OPERATING_MODE_SINGLE;
@@ -1112,6 +1113,11 @@ public final class Camera2CameraImplTest {
     public void attachUseCaseWithTemplateRecord() throws InterruptedException {
         UseCase preview = createUseCase(CameraDevice.TEMPLATE_PREVIEW);
         UseCase record = createUseCase(CameraDevice.TEMPLATE_RECORD);
+        int expectedCaptureIntent = CaptureRequest.CONTROL_CAPTURE_INTENT_VIDEO_RECORD;
+        if (workaroundByCaptureIntentPreview(
+                mCamera2CameraImpl.getCameraInfoInternal().getCameraQuirks())) {
+            expectedCaptureIntent = CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW;
+        }
 
         mCamera2CameraImpl.attachUseCases(asList(preview, record));
         mCamera2CameraImpl.onUseCaseActive(preview);
@@ -1127,7 +1133,7 @@ public final class Camera2CameraImplTest {
                 ((Camera2CameraCaptureResult) captor.getValue()).getCaptureResult();
 
         assertThat(captureResult.get(CaptureResult.CONTROL_CAPTURE_INTENT))
-                .isEqualTo(CaptureRequest.CONTROL_CAPTURE_INTENT_VIDEO_RECORD);
+                .isEqualTo(expectedCaptureIntent);
 
         mCamera2CameraImpl.detachUseCases(asList(preview, record));
     }
@@ -1176,6 +1182,11 @@ public final class Camera2CameraImplTest {
         UseCase preview = createUseCase(CameraDevice.TEMPLATE_PREVIEW, PRIVATE);
         UseCase record = createUseCase(CameraDevice.TEMPLATE_RECORD, YUV_420_888);
         UseCase zsl = createUseCase(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG, NON_REPEATING, JPEG);
+        int expectedCaptureIntent = CaptureRequest.CONTROL_CAPTURE_INTENT_VIDEO_RECORD;
+        if (workaroundByCaptureIntentPreview(
+                mCamera2CameraImpl.getCameraInfoInternal().getCameraQuirks())) {
+            expectedCaptureIntent = CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW;
+        }
 
         mCamera2CameraImpl.attachUseCases(asList(preview, record, zsl));
         mCamera2CameraImpl.onUseCaseActive(preview);
@@ -1192,7 +1203,7 @@ public final class Camera2CameraImplTest {
                 ((Camera2CameraCaptureResult) captor.getValue()).getCaptureResult();
 
         assertThat(captureResult.get(CaptureResult.CONTROL_CAPTURE_INTENT))
-                .isEqualTo(CaptureRequest.CONTROL_CAPTURE_INTENT_VIDEO_RECORD);
+                .isEqualTo(expectedCaptureIntent);
         assertThat(
                 mCamera2CameraImpl.getCameraControlInternal().isZslDisabledByByUserCaseConfig())
                 .isTrue();

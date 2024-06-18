@@ -42,6 +42,7 @@ import static androidx.camera.core.impl.utils.TransformUtils.within360;
 import static androidx.camera.core.internal.TargetConfig.OPTION_TARGET_CLASS;
 import static androidx.camera.core.internal.TargetConfig.OPTION_TARGET_NAME;
 import static androidx.camera.core.internal.ThreadConfig.OPTION_BACKGROUND_EXECUTOR;
+import static androidx.camera.core.internal.compat.quirk.SurfaceProcessingQuirk.workaroundBySurfaceProcessing;
 import static androidx.camera.core.internal.utils.SizeUtil.getArea;
 import static androidx.camera.video.QualitySelector.getQualityToResolutionMap;
 import static androidx.camera.video.StreamInfo.STREAM_ID_ERROR;
@@ -60,7 +61,6 @@ import static java.util.Objects.requireNonNull;
 
 import android.annotation.SuppressLint;
 import android.graphics.Rect;
-import android.hardware.camera2.CameraDevice;
 import android.media.MediaCodec;
 import android.os.SystemClock;
 import android.util.Pair;
@@ -89,6 +89,7 @@ import androidx.camera.core.UseCase;
 import androidx.camera.core.ViewPort;
 import androidx.camera.core.impl.CameraCaptureCallback;
 import androidx.camera.core.impl.CameraCaptureResult;
+import androidx.camera.core.impl.CameraControlInternal;
 import androidx.camera.core.impl.CameraInfoInternal;
 import androidx.camera.core.impl.CameraInternal;
 import androidx.camera.core.impl.CaptureConfig;
@@ -119,18 +120,13 @@ import androidx.camera.core.internal.ThreadConfig;
 import androidx.camera.core.processing.DefaultSurfaceProcessor;
 import androidx.camera.core.processing.SurfaceEdge;
 import androidx.camera.core.processing.SurfaceProcessorNode;
+import androidx.camera.core.processing.util.OutConfig;
 import androidx.camera.core.resolutionselector.ResolutionSelector;
 import androidx.camera.video.StreamInfo.StreamState;
 import androidx.camera.video.impl.VideoCaptureConfig;
 import androidx.camera.video.internal.VideoValidatedEncoderProfilesProxy;
 import androidx.camera.video.internal.compat.quirk.DeviceQuirks;
-import androidx.camera.video.internal.compat.quirk.ExtraSupportedResolutionQuirk;
-import androidx.camera.video.internal.compat.quirk.ImageCaptureFailedWhenVideoCaptureIsBoundQuirk;
-import androidx.camera.video.internal.compat.quirk.PreviewDelayWhenVideoCaptureIsBoundQuirk;
-import androidx.camera.video.internal.compat.quirk.PreviewStretchWhenVideoCaptureIsBoundQuirk;
 import androidx.camera.video.internal.compat.quirk.SizeCannotEncodeVideoQuirk;
-import androidx.camera.video.internal.compat.quirk.TemporalNoiseQuirk;
-import androidx.camera.video.internal.compat.quirk.VideoQualityQuirk;
 import androidx.camera.video.internal.config.VideoMimeInfo;
 import androidx.camera.video.internal.encoder.SwappedVideoEncoderInfo;
 import androidx.camera.video.internal.encoder.VideoEncoderConfig;
@@ -178,34 +174,6 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     private static final String SURFACE_UPDATE_KEY =
             "androidx.camera.video.VideoCapture.streamUpdate";
     private static final Defaults DEFAULT_CONFIG = new Defaults();
-    @VisibleForTesting
-    static boolean sEnableSurfaceProcessingByQuirk;
-    private static final boolean USE_TEMPLATE_PREVIEW_BY_QUIRK;
-
-    static {
-        boolean hasPreviewStretchQuirk =
-                DeviceQuirks.get(PreviewStretchWhenVideoCaptureIsBoundQuirk.class) != null;
-        boolean hasPreviewDelayQuirk =
-                DeviceQuirks.get(PreviewDelayWhenVideoCaptureIsBoundQuirk.class) != null;
-        ImageCaptureFailedWhenVideoCaptureIsBoundQuirk imageCaptureFailedQuirk =
-                DeviceQuirks.get(ImageCaptureFailedWhenVideoCaptureIsBoundQuirk.class);
-        boolean useTemplatePreviewByImageCaptureFailedQuirk = imageCaptureFailedQuirk != null
-                && imageCaptureFailedQuirk.workaroundByTemplatePreview();
-        boolean enableSurfaceProcessingByImageCaptureFailedQuirk = imageCaptureFailedQuirk != null
-                && imageCaptureFailedQuirk.workaroundBySurfaceProcessing();
-        boolean hasVideoQualityQuirkAndWorkaroundBySurfaceProcessing =
-                hasVideoQualityQuirkAndWorkaroundBySurfaceProcessing();
-        boolean hasExtraSupportedResolutionQuirk =
-                DeviceQuirks.get(ExtraSupportedResolutionQuirk.class) != null;
-        boolean hasTemporalNoiseQuirk = DeviceQuirks.get(TemporalNoiseQuirk.class) != null;
-        USE_TEMPLATE_PREVIEW_BY_QUIRK =
-                hasPreviewStretchQuirk || hasPreviewDelayQuirk
-                        || useTemplatePreviewByImageCaptureFailedQuirk || hasTemporalNoiseQuirk;
-        sEnableSurfaceProcessingByQuirk =
-                hasPreviewDelayQuirk || enableSurfaceProcessingByImageCaptureFailedQuirk
-                        || hasVideoQualityQuirkAndWorkaroundBySurfaceProcessing
-                        || hasExtraSupportedResolutionQuirk;
-    }
 
     @SuppressWarnings("WeakerAccess") // Synthetic access
     DeferrableSurface mDeferrableSurface;
@@ -227,6 +195,8 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     private Rect mCropRect;
     private int mRotationDegrees;
     private boolean mHasCompensatingTransformation = false;
+    @Nullable
+    private SourceStreamRequirementObserver mSourceStreamRequirementObserver;
 
     /**
      * Create a VideoCapture associated with the given {@link VideoOutput}.
@@ -409,6 +379,9 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     @Override
     public void onStateAttached() {
         super.onStateAttached();
+
+        Logger.d(TAG, "VideoCapture#onStateAttached: cameraID = " + getCameraId());
+
         Preconditions.checkNotNull(getAttachedStreamSpec(), "The suggested stream "
                 + "specification should be already updated and shouldn't be null.");
         Preconditions.checkState(mSurfaceRequest == null, "The surface request should be null "
@@ -425,6 +398,15 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         notifyActive();
         getOutput().getStreamInfo().addObserver(CameraXExecutors.mainThreadExecutor(),
                 mStreamInfoObserver);
+        if (mSourceStreamRequirementObserver != null) {
+            // In case a previous observer was not closed, close it first
+            mSourceStreamRequirementObserver.close();
+        }
+        // Camera should be already bound by now, so calling getCameraControl() is ok
+        mSourceStreamRequirementObserver = new SourceStreamRequirementObserver(getCameraControl());
+        // Should automatically trigger once for latest data
+        getOutput().isSourceStreamRequired().addObserver(CameraXExecutors.mainThreadExecutor(),
+                mSourceStreamRequirementObserver);
         setSourceState(VideoOutput.SourceState.ACTIVE_NON_STREAMING);
     }
 
@@ -444,9 +426,22 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     @RestrictTo(Scope.LIBRARY_GROUP)
     @Override
     public void onStateDetached() {
+        Logger.d(TAG, "VideoCapture#onStateDetached");
+
         checkState(isMainThread(), "VideoCapture can only be detached on the main thread.");
+
+        // It's safer to remove and close mSourceStreamRequirementObserver before stopping recorder
+        // in case there is some bug leading to double video usage decrement updates (e.g. once for
+        // recorder stop and once for observer close)
+        if (mSourceStreamRequirementObserver != null) {
+            getOutput().isSourceStreamRequired().removeObserver(mSourceStreamRequirementObserver);
+            mSourceStreamRequirementObserver.close();
+            mSourceStreamRequirementObserver = null;
+        }
+
         setSourceState(VideoOutput.SourceState.INACTIVE);
         getOutput().getStreamInfo().removeObserver(mStreamInfoObserver);
+
         if (mSurfaceUpdateFuture != null) {
             if (mSurfaceUpdateFuture.cancel(false)) {
                 Logger.d(TAG, "VideoCapture is detached from the camera. Surface update "
@@ -671,8 +666,7 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
                 shouldMirror(camera));
         mCameraEdge.addOnInvalidatedListener(onSurfaceInvalidated);
         if (mNode != null) {
-            SurfaceProcessorNode.OutConfig outConfig =
-                    SurfaceProcessorNode.OutConfig.of(mCameraEdge);
+            OutConfig outConfig = OutConfig.of(mCameraEdge);
             SurfaceProcessorNode.In nodeInput = SurfaceProcessorNode.In.of(
                     mCameraEdge,
                     singletonList(outConfig));
@@ -709,9 +703,6 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
         sessionConfigBuilder.setVideoStabilization(config.getVideoStabilizationMode());
         sessionConfigBuilder.addErrorListener(
                 (sessionConfig, error) -> resetPipeline(cameraId, config, streamSpec));
-        if (USE_TEMPLATE_PREVIEW_BY_QUIRK) {
-            sessionConfigBuilder.setTemplateType(CameraDevice.TEMPLATE_PREVIEW);
-        }
         if (streamSpec.getImplementationOptions() != null) {
             sessionConfigBuilder.addImplementationOptions(streamSpec.getImplementationOptions());
         }
@@ -888,6 +879,74 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             Logger.w(TAG, "Receive onError from StreamState observer", t);
         }
     };
+
+    /**
+     * Observes whether the source stream is required and updates source i.e. camera layer
+     * accordingly.
+     */
+    static class SourceStreamRequirementObserver implements Observer<Boolean> {
+        @Nullable
+        private CameraControlInternal mCameraControl;
+
+        private boolean mIsSourceStreamRequired = false;
+
+        SourceStreamRequirementObserver(@NonNull CameraControlInternal cameraControl) {
+            mCameraControl = cameraControl;
+        }
+
+        @MainThread
+        @Override
+        public void onNewData(@Nullable Boolean value) {
+            checkState(isMainThread(),
+                    "SourceStreamRequirementObserver can be updated from main thread only");
+            updateVideoUsageInCamera(Boolean.TRUE.equals(value));
+        }
+
+        @Override
+        public void onError(@NonNull Throwable t) {
+            Logger.w(TAG, "SourceStreamRequirementObserver#onError", t);
+        }
+
+        private void updateVideoUsageInCamera(boolean isRequired) {
+            if (mIsSourceStreamRequired == isRequired) {
+                return;
+            }
+            mIsSourceStreamRequired = isRequired;
+            if (mCameraControl != null) {
+                if (mIsSourceStreamRequired) {
+                    mCameraControl.incrementVideoUsage();
+                } else {
+                    mCameraControl.decrementVideoUsage();
+                }
+            } else {
+                Logger.d(TAG,
+                        "SourceStreamRequirementObserver#isSourceStreamRequired: Received"
+                                + " new data despite being closed already");
+            }
+        }
+
+        /**
+         * Closes this object to detach the association with camera and updates recording status if
+         * required.
+         */
+        @MainThread
+        public void close() {
+            checkState(isMainThread(),
+                    "SourceStreamRequirementObserver can be closed from main thread only");
+
+            Logger.d(TAG, "SourceStreamRequirementObserver#close: mIsSourceStreamRequired = "
+                    + mIsSourceStreamRequired);
+
+            if (mCameraControl == null) {
+                Logger.d(TAG, "SourceStreamRequirementObserver#close: Already closed!");
+                return;
+            }
+
+            // Before removing the camera, it should be updated about recording status
+            updateVideoUsageInCamera(false);
+            mCameraControl = null;
+        }
+    }
 
     @MainThread
     @SuppressWarnings("WeakerAccess") /* synthetic accessor */
@@ -1142,7 +1201,8 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
     private static boolean shouldEnableSurfaceProcessingByQuirk(@NonNull CameraInternal camera) {
         // If there has been a buffer copy, it means the surface processing is already enabled on
         // input stream. Otherwise, enable it as needed.
-        return camera.getHasTransform() && sEnableSurfaceProcessingByQuirk;
+        return camera.getHasTransform() && (workaroundBySurfaceProcessing(DeviceQuirks.getAll())
+                || workaroundBySurfaceProcessing(camera.getCameraInfoInternal().getCameraQuirks()));
     }
 
     private static int alignDown(int length, int alignment,
@@ -1467,16 +1527,6 @@ public final class VideoCapture<T extends VideoOutput> extends UseCase {
             }
         }
         return sizeLargestVideoEncoderInfo;
-    }
-
-    private static boolean hasVideoQualityQuirkAndWorkaroundBySurfaceProcessing() {
-        List<VideoQualityQuirk> quirks = DeviceQuirks.getAll(VideoQualityQuirk.class);
-        for (VideoQualityQuirk quirk : quirks) {
-            if (quirk.workaroundBySurfaceProcessing()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

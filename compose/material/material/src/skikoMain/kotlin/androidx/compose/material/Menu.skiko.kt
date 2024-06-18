@@ -24,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
@@ -59,12 +58,10 @@ actual fun DropdownMenu(
     if (expandedStates.currentState || expandedStates.targetState) {
         val transformOriginState = remember { mutableStateOf(TransformOrigin.Center) }
         val density = LocalDensity.current
-        val popupPositionProvider = DropdownMenuPositionProvider(
-            offset,
-            density
-        ) { parentBounds, menuBounds ->
-            transformOriginState.value = calculateTransformOrigin(parentBounds, menuBounds)
-        }
+        val popupPositionProvider =
+            DropdownMenuPositionProvider(offset, density) { parentBounds, menuBounds ->
+                transformOriginState.value = calculateTransformOrigin(parentBounds, menuBounds)
+            }
 
         var focusManager: FocusManager? by mutableStateOf(null)
         var inputModeManager: InputModeManager? by mutableStateOf(null)
@@ -72,9 +69,7 @@ actual fun DropdownMenu(
             onDismissRequest = onDismissRequest,
             popupPositionProvider = popupPositionProvider,
             properties = properties,
-            onKeyEvent = {
-                handlePopupOnKeyEvent(it, focusManager, inputModeManager)
-            },
+            onKeyEvent = { handlePopupOnKeyEvent(it, focusManager, inputModeManager) },
         ) {
             focusManager = LocalFocusManager.current
             inputModeManager = LocalInputModeManager.current
@@ -95,25 +90,25 @@ internal actual val DefaultMenuProperties =
         // TODO: Add a flag to not block clicks outside while being focusable
     )
 
-@OptIn(ExperimentalComposeUiApi::class)
 internal fun handlePopupOnKeyEvent(
     keyEvent: KeyEvent,
     focusManager: FocusManager?,
     inputModeManager: InputModeManager?
-): Boolean = if (keyEvent.type == KeyEventType.KeyDown) {
-    when (keyEvent.key) {
-        Key.DirectionDown -> {
-            inputModeManager?.requestInputMode(InputMode.Keyboard)
-            focusManager?.moveFocus(FocusDirection.Next)
-            true
+): Boolean =
+    if (keyEvent.type == KeyEventType.KeyDown) {
+        when (keyEvent.key) {
+            Key.DirectionDown -> {
+                inputModeManager?.requestInputMode(InputMode.Keyboard)
+                focusManager?.moveFocus(FocusDirection.Next)
+                true
+            }
+            Key.DirectionUp -> {
+                inputModeManager?.requestInputMode(InputMode.Keyboard)
+                focusManager?.moveFocus(FocusDirection.Previous)
+                true
+            }
+            else -> false
         }
-        Key.DirectionUp -> {
-            inputModeManager?.requestInputMode(InputMode.Keyboard)
-            focusManager?.moveFocus(FocusDirection.Previous)
-            true
-        }
-        else -> false
+    } else {
+        false
     }
-} else {
-    false
-}

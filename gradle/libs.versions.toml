@@ -2,24 +2,22 @@
 # -----------------------------------------------------------------------------
 # All of the following should be updated in sync.
 # -----------------------------------------------------------------------------
-androidGradlePlugin = "8.6.0-alpha03"
+androidGradlePlugin = "8.6.0-alpha05"
 # NOTE: When updating the lint version we also need to update the `api` version
 # supported by `IssueRegistry`'s.' For e.g. r.android.com/1331903
-androidLint = "31.6.0-alpha03"
+androidLint = "31.6.0-alpha05"
 # Once you have a chosen version of AGP to upgrade to, go to
 # https://developer.android.com/studio/archive and find the matching version of Studio.
-androidStudio = "2024.1.2.3"
+androidStudio = "2024.1.2.5"
 # -----------------------------------------------------------------------------
 
-androidGradlePluginMin = "7.0.4"
-androidLintMin = "30.0.4"
-androidLintMinCompose = "30.0.0"
-androidxTestRunner = "1.6.0-beta01"
-androidxTestRules = "1.6.0-beta01"
-androidxTestMonitor = "1.7.0-beta01"
-androidxTestCore = "1.6.0-beta01"
-androidxTestExtJunit = "1.2.0-beta01"
-androidxTestExtTruth = "1.6.0-beta01"
+androidLintMin = "31.1.0"
+androidxTestRunner = "1.6.0-rc01"
+androidxTestRules = "1.6.0-rc01"
+androidxTestMonitor = "1.7.0-rc01"
+androidxTestCore = "1.6.0-rc01"
+androidxTestExtJunit = "1.2.0-rc01"
+androidxTestExtTruth = "1.6.0-rc01"
 annotationVersion = "1.7.0"
 atomicFu = "0.17.0"
 autoService = "1.0-rc6"
@@ -33,8 +31,8 @@ dagger = "2.49"
 dependencyAnalysisGradlePlugin = "1.32.0"
 dexmaker = "2.28.3"
 dokka = "1.8.20-dev-214"
-espresso = "3.6.0-beta01"
-espressoDevice = "1.0.0-beta01"
+espresso = "3.6.0-rc01"
+espressoDevice = "1.0.0-rc01"
 grpc = "1.52.0"
 guavaJre = "31.1-jre"
 hilt = "2.49"
@@ -50,8 +48,7 @@ kotlinCompileTesting = "1.4.9"
 kotlinCoroutines = "1.7.3"
 kotlinSerialization = "1.6.3"
 ksp = "1.9.24-1.0.20"
-ktfmt = "0.49"
-ktlint = "0.49.1"
+ktfmt = "0.50"
 leakcanary = "2.13"
 media3 = "1.1.0"
 metalava = "1.0.0-alpha10"
@@ -68,7 +65,6 @@ core = "1.12.0"
 [libraries]
 agpTestingPlatformCoreProto =  { module = "com.google.testing.platform:core-proto", version = "0.0.8-alpha08" }
 androidAccessibilityFramework = { module = "com.google.android.apps.common.testing.accessibility.framework:accessibility-test-framework", version = { strictly = "2.1" } }
-androidBuilderModelMin = { module = "com.android.tools.build:builder-model", version.ref = "androidGradlePluginMin" }
 androidGradlePluginApi = { module = "com.android.tools.build:gradle-api", version.ref = "androidGradlePlugin" }
 androidGradlePluginz = { module = "com.android.tools.build:gradle", version.ref = "androidGradlePlugin" }
 androidLayoutlibApi = { module = "com.android.tools.layoutlib:layoutlib-api", version.ref = "androidLint" }
@@ -76,7 +72,6 @@ androidLint = { module = "com.android.tools.lint:lint", version.ref = "androidLi
 androidLintMin = { module = "com.android.tools.lint:lint", version.ref = "androidLintMin" }
 androidLintApi = { module = "com.android.tools.lint:lint-api", version.ref = "androidLint" }
 androidLintMinApi = { module = "com.android.tools.lint:lint-api", version.ref = "androidLintMin" }
-androidLintMinComposeApi = { module = "com.android.tools.lint:lint-api", version.ref = "androidLintMinCompose" }
 androidLintChecks = { module = "com.android.tools.lint:lint-checks", version.ref = "androidLint" }
 androidLintChecksMin = { module = "com.android.tools.lint:lint-checks", version.ref = "androidLintMin" }
 androidLintTests = { module = "com.android.tools.lint:lint-tests", version.ref = "androidLint" }
@@ -109,7 +104,7 @@ byteBuddyAgent = { module = "net.bytebuddy:byte-buddy-agent", version.ref = "byt
 checkerframework = { module = "org.checkerframework:checker-qual", version = "2.5.3" }
 checkmark = { module = "net.saff.checkmark:checkmark", version = "0.1.6" }
 constraintLayout = { module = "androidx.constraintlayout:constraintlayout", version = "2.0.1"}
-dackka = { module = "com.google.devsite:dackka", version = "1.6.0" }
+dackka = { module = "com.google.devsite:dackka", version = "1.6.1" }
 dagger = { module = "com.google.dagger:dagger", version.ref = "dagger" }
 dependency-analysis-gradle-plugin = { module = "com.autonomousapps:dependency-analysis-gradle-plugin", version.ref = "dependencyAnalysisGradlePlugin" }
 daggerCompiler = { module = "com.google.dagger:dagger-compiler", version.ref = "dagger" }

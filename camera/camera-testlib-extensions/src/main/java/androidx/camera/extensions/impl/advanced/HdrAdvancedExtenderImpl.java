@@ -24,8 +24,17 @@ import android.graphics.ImageFormat;
  *
  * @since 1.2
  */
-public class HdrAdvancedExtenderImpl extends LongCaptureAdvancedExtenderImpl {
+public class HdrAdvancedExtenderImpl extends ConfigurableAdvancedExtenderImpl {
     public HdrAdvancedExtenderImpl() {
-        super(/* postviewFormat */ ImageFormat.JPEG);
+        super(/* longDurationCapture */ false,
+                /* postviewFormat */ ImageFormat.JPEG,
+                /* invokeOnCaptureCompleted */ true);
     }
+
+    /**
+     * This method is used to check if test lib is running. If OEM implementation exists, invoking
+     * this method will throw {@link NoSuchMethodError}. This can be used to determine if OEM
+     * implementation is used or not.
+     */
+    public static void checkTestlibRunning() {}
 }

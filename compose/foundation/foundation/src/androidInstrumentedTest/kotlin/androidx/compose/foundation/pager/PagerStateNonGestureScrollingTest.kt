@@ -17,7 +17,6 @@
 package androidx.compose.foundation.pager
 
 import androidx.compose.foundation.AutoTestFrameClock
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.calculateDistanceToDesiredSnapPosition
@@ -55,7 +54,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-@OptIn(ExperimentalFoundationApi::class)
 @LargeTest
 @RunWith(Parameterized::class)
 class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest(config) {
@@ -73,10 +71,10 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
         rule.setContent {
             HorizontalOrVerticalPager(
                 state = state,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag(PagerTestTag)
-                    .onSizeChanged { pagerSize = if (vertical) it.height else it.width },
+                modifier =
+                    Modifier.fillMaxSize().testTag(PagerTestTag).onSizeChanged {
+                        pagerSize = if (vertical) it.height else it.width
+                    },
                 pageSize = PageSize.Fill,
                 reverseLayout = config.reverseLayout,
                 pageSpacing = config.pageSpacing,
@@ -99,25 +97,24 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
     @Test
     fun pageSizeIsZero_offsetFractionShouldNotBeNan() {
         // Arrange
-        val zeroPageSize = object : PageSize {
-            override fun Density.calculateMainAxisPageSize(
-                availableSpace: Int,
-                pageSpacing: Int
-            ): Int {
-                return 0
+        val zeroPageSize =
+            object : PageSize {
+                override fun Density.calculateMainAxisPageSize(
+                    availableSpace: Int,
+                    pageSpacing: Int
+                ): Int {
+                    return 0
+                }
             }
-        }
 
         rule.setContent {
-            pagerState = rememberPagerState {
-                DefaultPageCount
-            }
+            pagerState = rememberPagerState { DefaultPageCount }
             HorizontalOrVerticalPager(
                 state = pagerState,
-                modifier = Modifier
-                    .size(0.dp)
-                    .testTag(PagerTestTag)
-                    .onSizeChanged { pagerSize = if (vertical) it.height else it.width },
+                modifier =
+                    Modifier.size(0.dp).testTag(PagerTestTag).onSizeChanged {
+                        pagerSize = if (vertical) it.height else it.width
+                    },
                 pageSize = zeroPageSize,
                 reverseLayout = config.reverseLayout,
                 pageSpacing = config.pageSpacing,
@@ -127,9 +124,7 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
             }
         }
 
-        rule.runOnIdle {
-            Truth.assertThat(pagerState.currentPageOffsetFraction).isNotNaN()
-        }
+        rule.runOnIdle { Truth.assertThat(pagerState.currentPageOffsetFraction).isNotNaN() }
     }
 
     @Test
@@ -154,20 +149,11 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
         tester.setContent {
             state = rememberPagerState(pageCount = { DefaultPageCount })
             scope = rememberCoroutineScope()
-            HorizontalOrVerticalPager(
-                state = state,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Page(it)
-            }
+            HorizontalOrVerticalPager(state = state, modifier = Modifier.fillMaxSize()) { Page(it) }
         }
 
         // Act
-        rule.runOnIdle {
-            scope.launch {
-                state.scrollToPage(5, 0.2f)
-            }
-        }
+        rule.runOnIdle { scope.launch { state.scrollToPage(5, 0.2f) } }
 
         val previousPage = state.currentPage
         val previousOffset = state.currentPageOffsetFraction
@@ -186,9 +172,7 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
             val state = rememberPagerState(pageCount = { 10 })
             // Read state in composition, should never be Nan
             assertFalse { state.currentPageOffsetFraction.isNaN() }
-            HorizontalOrVerticalPager(state = state) {
-                Page(index = it)
-            }
+            HorizontalOrVerticalPager(state = state) { Page(index = it) }
         }
     }
 
@@ -197,17 +181,9 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
         // Arrange
         class Data(val id: Int, val item: String)
 
-        val data = mutableListOf(
-            Data(3, "A"),
-            Data(4, "B"),
-            Data(5, "C")
-        )
+        val data = mutableListOf(Data(3, "A"), Data(4, "B"), Data(5, "C"))
 
-        val extraData = mutableListOf(
-            Data(0, "D"),
-            Data(1, "E"),
-            Data(2, "F")
-        )
+        val extraData = mutableListOf(Data(0, "D"), Data(1, "E"), Data(2, "F"))
 
         val dataset = mutableStateOf<List<Data>>(data)
 
@@ -215,16 +191,12 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
             modifier = Modifier.fillMaxSize(),
             initialPage = 1,
             key = { dataset.value[it].id },
-            pageCount = {
-                dataset.value.size
-            }, pageContent = {
+            pageCount = { dataset.value.size },
+            pageContent = {
                 val item = dataset.value[it]
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag(item.item)
-                )
-            })
+                Box(modifier = Modifier.fillMaxSize().testTag(item.item))
+            }
+        )
 
         Truth.assertThat(dataset.value[pagerState.currentPage].item).isEqualTo("B")
 
@@ -257,11 +229,9 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
     @Test
     fun scrollToPage_usingLaunchedEffect() {
 
-        createPager(additionalContent = {
-            LaunchedEffect(pagerState) {
-                pagerState.scrollToPage(10)
-            }
-        })
+        createPager(
+            additionalContent = { LaunchedEffect(pagerState) { pagerState.scrollToPage(10) } }
+        )
 
         Truth.assertThat(pagerState.currentPage).isEqualTo(10)
         confirmPageIsInCorrectPosition(10)
@@ -269,11 +239,9 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
 
     @Test
     fun scrollToPageWithOffset_usingLaunchedEffect() {
-        createPager(additionalContent = {
-            LaunchedEffect(pagerState) {
-                pagerState.scrollToPage(10, 0.4f)
-            }
-        })
+        createPager(
+            additionalContent = { LaunchedEffect(pagerState) { pagerState.scrollToPage(10, 0.4f) } }
+        )
 
         Truth.assertThat(pagerState.currentPage).isEqualTo(10)
         confirmPageIsInCorrectPosition(10, pageOffset = 0.4f)
@@ -282,11 +250,11 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
     @Test
     fun animatedScrollToPage_usingLaunchedEffect() {
 
-        createPager(additionalContent = {
-            LaunchedEffect(pagerState) {
-                pagerState.animateScrollToPage(10)
+        createPager(
+            additionalContent = {
+                LaunchedEffect(pagerState) { pagerState.animateScrollToPage(10) }
             }
-        })
+        )
 
         Truth.assertThat(pagerState.currentPage).isEqualTo(10)
         confirmPageIsInCorrectPosition(10)
@@ -294,22 +262,23 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
 
     @Test
     fun animatedScrollToPage_emptyPager_shouldNotReact() {
-        createPager(pageCount = { 0 }, additionalContent = {
-            LaunchedEffect(pagerState) {
-                pagerState.animateScrollToPage(10)
+        createPager(
+            pageCount = { 0 },
+            additionalContent = {
+                LaunchedEffect(pagerState) { pagerState.animateScrollToPage(10) }
             }
-        })
+        )
         Truth.assertThat(pagerState.currentPage).isEqualTo(0)
     }
 
     @Test
     fun animatedScrollToPageWithOffset_usingLaunchedEffect() {
 
-        createPager(additionalContent = {
-            LaunchedEffect(pagerState) {
-                pagerState.animateScrollToPage(10, 0.4f)
+        createPager(
+            additionalContent = {
+                LaunchedEffect(pagerState) { pagerState.animateScrollToPage(10, 0.4f) }
             }
-        })
+        )
 
         Truth.assertThat(pagerState.currentPage).isEqualTo(10)
         confirmPageIsInCorrectPosition(10, pageOffset = 0.4f)
@@ -318,11 +287,11 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
     @Test
     fun animatedScrollToPage_viewPortNumberOfPages_usingLaunchedEffect_shouldNotPlaceALlPages() {
 
-        createPager(additionalContent = {
-            LaunchedEffect(pagerState) {
-                pagerState.animateScrollToPage(DefaultPageCount - 1)
+        createPager(
+            additionalContent = {
+                LaunchedEffect(pagerState) { pagerState.animateScrollToPage(DefaultPageCount - 1) }
             }
-        })
+        )
 
         // Assert
         rule.runOnIdle {
@@ -341,11 +310,10 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
         rule.mainClock.autoAdvance = false
 
         // Act
-        createPager(modifier = Modifier.fillMaxSize(), additionalContent = {
-            LaunchedEffect(pagerState) {
-                pagerState.scrollToPage(5)
-            }
-        })
+        createPager(
+            modifier = Modifier.fillMaxSize(),
+            additionalContent = { LaunchedEffect(pagerState) { pagerState.scrollToPage(5) } }
+        )
 
         // Assert
         Truth.assertThat(pagerState.currentPage).isEqualTo(5)
@@ -357,19 +325,9 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
 
         Truth.assertThat(pagerState.currentPage).isEqualTo(0)
 
-        rule.runOnUiThread {
-            scope.launch {
-                with(pagerState) {
-                    scroll {
-                        updateCurrentPage(5)
-                    }
-                }
-            }
-        }
+        rule.runOnUiThread { scope.launch { with(pagerState) { scroll { updateCurrentPage(5) } } } }
 
-        rule.runOnIdle {
-            Truth.assertThat(pagerState.currentPage).isEqualTo(5)
-        }
+        rule.runOnIdle { Truth.assertThat(pagerState.currentPage).isEqualTo(5) }
     }
 
     @Test
@@ -379,13 +337,7 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
         Truth.assertThat(pagerState.currentPage).isEqualTo(0)
 
         rule.runOnUiThread {
-            scope.launch {
-                with(pagerState) {
-                    scroll {
-                        updateCurrentPage(5, 0.3f)
-                    }
-                }
-            }
+            scope.launch { with(pagerState) { scroll { updateCurrentPage(5, 0.3f) } } }
         }
 
         rule.runOnIdle {
@@ -423,20 +375,19 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
     @Test
     fun currentPage_shouldUpdateWithSnapPositionInLayout() {
         // snap position is 200dp from edge of Pager
-        val customSnapPosition = object : SnapPosition {
-            override fun position(
-                layoutSize: Int,
-                itemSize: Int,
-                beforeContentPadding: Int,
-                afterContentPadding: Int,
-                itemIndex: Int,
-                itemCount: Int
-            ): Int {
-                return with(rule.density) {
-                    200.dp.roundToPx()
+        val customSnapPosition =
+            object : SnapPosition {
+                override fun position(
+                    layoutSize: Int,
+                    itemSize: Int,
+                    beforeContentPadding: Int,
+                    afterContentPadding: Int,
+                    itemIndex: Int,
+                    itemCount: Int
+                ): Int {
+                    return with(rule.density) { 200.dp.roundToPx() }
                 }
             }
-        }
 
         createPager(
             modifier = Modifier.fillMaxSize(),
@@ -452,20 +403,25 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
 
         with(pagerState.layoutInfo) {
             val viewPortSize = if (vertical) viewportSize.height else viewportSize.width
-            assertThat(pagerState.currentPage).isEqualTo(visiblePagesInfo.fastMaxBy {
-                -abs(
-                    calculateDistanceToDesiredSnapPosition(
-                        mainAxisViewPortSize = viewPortSize,
-                        beforeContentPadding = beforeContentPadding,
-                        afterContentPadding = afterContentPadding,
-                        itemSize = pageSize,
-                        itemOffset = it.offset,
-                        itemIndex = it.index,
-                        snapPosition = customSnapPosition,
-                        itemCount = pagerState.pageCount
-                    )
+            assertThat(pagerState.currentPage)
+                .isEqualTo(
+                    visiblePagesInfo
+                        .fastMaxBy {
+                            -abs(
+                                calculateDistanceToDesiredSnapPosition(
+                                    mainAxisViewPortSize = viewPortSize,
+                                    beforeContentPadding = beforeContentPadding,
+                                    afterContentPadding = afterContentPadding,
+                                    itemSize = pageSize,
+                                    itemOffset = it.offset,
+                                    itemIndex = it.index,
+                                    snapPosition = customSnapPosition,
+                                    itemCount = pagerState.pageCount
+                                )
+                            )
+                        }
+                        ?.index
                 )
-            }?.index)
         }
     }
 
@@ -493,8 +449,7 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
                 .isEqualTo(pagerState.layoutInfo.visiblePagesInfo.first().index)
 
             // offset should be zero
-            Truth.assertThat(pagerState.layoutInfo.visiblePagesInfo.first().offset)
-                .isEqualTo(0)
+            Truth.assertThat(pagerState.layoutInfo.visiblePagesInfo.first().offset).isEqualTo(0)
         }
     }
 
@@ -516,9 +471,10 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
 
         rule.runOnIdle {
             // find page whose offset is closest to the centre
-            val candidatePage = pagerState.layoutInfo.visiblePagesInfo.fastMaxBy {
-                -(abs(it.offset - pagerSize / 2))
-            }
+            val candidatePage =
+                pagerState.layoutInfo.visiblePagesInfo.fastMaxBy {
+                    -(abs(it.offset - pagerSize / 2))
+                }
 
             // check we moved
             Truth.assertThat(pagerState.firstVisiblePage).isNotEqualTo(0)
@@ -556,13 +512,15 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
         val pageSizeDp = with(rule.density) { pageSizePx.toDp() }
         createPager(
             modifier = Modifier.size(pageSizeDp * 1.5f),
-            pageSize = { PageSize.Fixed(pageSizeDp) })
+            pageSize = { PageSize.Fixed(pageSizeDp) }
+        )
 
         val delta = (pageSizePx / 3f).roundToInt()
 
         runBlocking {
             withContext(Dispatchers.Main + AutoTestFrameClock()) {
-                // small enough scroll to not cause any new items to be composed or old ones disposed.
+                // small enough scroll to not cause any new items to be composed or old ones
+                // disposed.
                 pagerState.scrollBy(delta.toFloat())
             }
             rule.runOnIdle {
@@ -587,13 +545,15 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
         val pageSizeDp = with(rule.density) { pageSizePx.toDp() }
         createPager(
             modifier = Modifier.size(pageSizeDp * 1.5f),
-            pageSize = { PageSize.Fixed(pageSizeDp) })
+            pageSize = { PageSize.Fixed(pageSizeDp) }
+        )
         val delta = -(pageSizePx / 3f).roundToInt()
         runBlocking {
             withContext(Dispatchers.Main + AutoTestFrameClock()) {
                 // scroll to the end of the list.
                 pagerState.scrollToPage(DefaultPageCount)
-                // small enough scroll to not cause any new items to be composed or old ones disposed.
+                // small enough scroll to not cause any new items to be composed or old ones
+                // disposed.
                 pagerState.scrollBy(delta.toFloat())
             }
             rule.runOnIdle {
@@ -631,7 +591,8 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
                 assertThat(pagerState.canScrollForward).isFalse()
                 assertThat(pagerState.canScrollBackward).isTrue()
 
-                // small enough scroll to not cause any new pages to be composed or old ones disposed.
+                // small enough scroll to not cause any new pages to be composed or old ones
+                // disposed.
                 pagerState.scrollBy(delta.toFloat())
             }
             rule.runOnIdle {
@@ -652,10 +613,11 @@ class PagerStateNonGestureScrollingTest(val config: ParamConfig) : BasePagerTest
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun params() = mutableListOf<ParamConfig>().apply {
-            for (orientation in TestOrientation) {
-                add(ParamConfig(orientation = orientation))
+        fun params() =
+            mutableListOf<ParamConfig>().apply {
+                for (orientation in TestOrientation) {
+                    add(ParamConfig(orientation = orientation))
+                }
             }
-        }
     }
 }

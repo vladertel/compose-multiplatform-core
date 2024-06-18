@@ -31,7 +31,6 @@ import android.os.Handler;
 import android.os.Parcelable;
 import android.os.SystemClock;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
@@ -40,6 +39,7 @@ import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.OverScroller;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.VisibleForTesting;
@@ -217,11 +217,11 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
         mGestureTracker.setDelegateHandler(mGestureHandler);
     }
 
-    public ZoomView(Context context, AttributeSet attrs) {
+    public ZoomView(@NonNull Context context, @NonNull AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public ZoomView(Context context, AttributeSet attrs, int defStyle) {
+    public ZoomView(@NonNull Context context, @NonNull AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
 
         TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.ZoomView, defStyle,
@@ -299,6 +299,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
      * Configure how this view fits the content into the screen. See {@link FitMode}. Default is
      * FitMode.FIT_TO_BOTH - the content is fit so both its width and height fit on screen.
      */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setFitMode(int fitMode) {
         this.mFitMode = fitMode;
@@ -309,6 +310,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
      * Configure which zoom this view starts at, from a value in {@link InitialZoomMode}. Default is
      * InitialZoomMode.CONSTANT with a constant of 1, meaning 100% zoom.
      */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setInitialZoomMode(int initialZoomMode) {
         this.mInitialZoomMode = initialZoomMode;
@@ -319,6 +321,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
      * Configure how the zoom changes when device rotates, from a value in {@link RotateMode}.
      * Default is RotateMode.KEEP_SAME_ZOOM - the zoom level doesn't change on rotation.
      */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setRotateMode(int rotateMode) {
         this.mRotateMode = rotateMode;
@@ -329,6 +332,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
      * Configure how the viewport moves when the content changes size. Default is that the viewport
      * tracks the same point in absolute terms, before and after the change.
      */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setContentResizedMode(int contentResizedMode) {
         mContentResizedModeX = mContentResizedModeY = mContentResizedModeZoom = contentResizedMode;
@@ -340,6 +344,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
      * grows as it is loaded, you might want the view to stay centered as it widens (so X mode is
      * relative) but not to lose the page as it gets taller (so Y mode is absolute).
      */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setContentResizedModeX(int contentResizedMode) {
         this.mContentResizedModeX = contentResizedMode;
@@ -347,6 +352,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     }
 
     /** Set value of contentResizedModeY. */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setContentResizedModeY(int contentResizedMode) {
         this.mContentResizedModeY = contentResizedMode;
@@ -354,6 +360,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     }
 
     /** Set value of contentResizedModeZoom. */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setContentResizedModeZoom(int contentResizedMode) {
         this.mContentResizedModeZoom = contentResizedMode;
@@ -366,6 +373,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
      * zoom by an apparently arbitrary amount, depending on the exact screen and content dimensions.
      * If the content does not currently exactly fit the screen, the RotateMode is honored.
      */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setKeepFitZoomOnRotate(boolean keepFitZoomOnRotate) {
         this.mKeepFitZoomOnRotate = keepFitZoomOnRotate;
@@ -373,6 +381,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     }
 
     /** Allows zooming out further than min zoom if this is needed to fit content on screen. */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setOverrideMinZoomToFit(boolean overrideMinZoomToFit) {
         this.mOverrideMinZoomToFit = overrideMinZoomToFit;
@@ -380,6 +389,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     }
 
     /** Allows zooming in further than max zoom if this is needed to make content fill screen. */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setOverrideMaxZoomToFit(boolean overrideMaxZoomToFit) {
         this.mOverrideMaxZoomToFit = overrideMaxZoomToFit;
@@ -387,6 +397,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     }
 
     /** If true, parent must handle scaling/zooming gestures by calling {@link #setZoom(float)}. */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setAllowParentToHandleScaleEvents(boolean allowParentToHandleScaleEvents) {
         this.mAllowParentToHandleScaleEvents = allowParentToHandleScaleEvents;
@@ -394,6 +405,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     }
 
     /** Enables/Disables double tap to zoom. */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setEnableDoubleTap(boolean doubleTapEnabled) {
         this.mDoubleTapEnabled = doubleTapEnabled;
@@ -401,15 +413,15 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     }
 
     /** Exposes this view's position as an observable value. */
+    @NonNull
     public ObservableValue<ZoomScroll> zoomScroll() {
         return mPosition;
     }
 
     /** Reports the current position to listeners. */
-    private void reportPosition(boolean stable, String logCause) {
+    private void reportPosition(boolean stable) {
         ZoomScroll newPos = new ZoomScroll(getZoom(), getScrollX(), getScrollY(), stable);
         if (!Objects.equals(mPosition.get(), newPos)) {
-            Log.v(TAG, String.format("Report position %s: %s", logCause, newPos));
             mPosition.set(newPos);
         }
     }
@@ -481,7 +493,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
 
         // Need to flip this to true if we think onLayout changed the position of anything.
         boolean shouldConstrainPosition = false;
-        String reportPositionCause = null;
 
         // 1) Changes to the contents (e.g. init, new contents appended):
         // Update contentRawBounds in all cases (even when !changed) because contentView's layout
@@ -492,12 +503,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
             int prevWidth = mContentRawBounds.width();
             int prevHeight = mContentRawBounds.height();
             mContentRawBounds.set(0, 0, mContentView.getWidth(), mContentView.getHeight());
-
-            Log.v(
-                    TAG,
-                    String.format(
-                            "Layout: Content changed Raw bounds = %s Scale = %s Scroll = %s %s",
-                            mContentRawBounds, getZoom(), getScrollX(), getScrollY()));
 
             if (!mViewport.isEmpty() && prevWidth > 0 && prevHeight > 0) {
                 // Might need to move the viewport depending on the ContentResizedMode
@@ -524,14 +529,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
                 // No need to adjust v-scroll when height changes (ie more pages are added to the
                 // bottom).
                 shouldConstrainPosition = true;
-                reportPositionCause =
-                        String.format(
-                                Locale.US,
-                                "Content size changed from (%d x %d) to (%d x %d)",
-                                prevWidth,
-                                prevHeight,
-                                mContentRawBounds.width(),
-                                mContentRawBounds.height());
             }
         }
 
@@ -550,10 +547,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
                         right - getPaddingRight() - getPaddingLeft() - left,
                         bottom - getPaddingBottom() - getPaddingTop() - top);
                 shouldConstrainPosition = true;
-                reportPositionCause =
-                        String.format(
-                                "Viewport init = %s Scale = %s Scroll = %s %s",
-                                mViewport, getZoom(), getScrollX(), getScrollY());
 
                 mViewportInitialized = true;
             } else { // Some other layout trigger - could be a configuration change (rotation)
@@ -584,10 +577,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
 
                 centerAt(lookAtPoint.x, lookAtPoint.y);
                 shouldConstrainPosition = true;
-                reportPositionCause =
-                        String.format(
-                                "Viewport changed = %s Scale = %s Scroll = %s %s",
-                                mViewport, getZoom(), getScrollX(), getScrollY());
             }
         }
 
@@ -598,20 +587,17 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
                 if (!mInitialZoomDone) {
                     setZoom(getInitialZoom(), 0, 0); // Stay at the top of the document.
                     shouldConstrainPosition = true;
-                    reportPositionCause = String.format("Initial zoom: %s", getZoom());
                 }
             } else if (restoreSavedPosition()) {
                 shouldConstrainPosition = true;
-                reportPositionCause = String.format("Restored");
             }
             mInitialZoomDone = true;
         }
 
         if (shouldConstrainPosition) {
             constrainPosition();
-            final String cause = reportPositionCause;
             // Report position needs to be posted because it may trigger requestLayout().
-            ThreadUtils.postOnUiThread(() -> reportPosition(STABLE, cause));
+            ThreadUtils.postOnUiThread(() -> reportPosition(STABLE));
         }
     }
 
@@ -633,6 +619,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     }
 
     /** Configure which zoom this view starts at. Default is 1, meaning 100% zoom. */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setInitialZoom(float initialZoom) {
         setInitialZoomMode(InitialZoomMode.CONSTANT);
@@ -649,6 +636,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     }
 
     /** Set the minimum zoom - also configurable in XML. Returns this. */
+    @NonNull
     @CanIgnoreReturnValue
     public ZoomView setMinZoom(float minZoom) {
         this.mMinZoom = minZoom;
@@ -701,12 +689,12 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
         if (mScroller.computeScrollOffset()) {
             // Fling does not support overscroll. It will simply not scroll past an edge.
             mScroller.apply(this);
-            reportPosition(UNSTABLE, "computeScroll");
+            reportPosition(UNSTABLE);
 
             // Need to invalidate even when delta == 0 to let the scroller properly finish.
             invalidate();
         } else if (mIsFling) {
-            reportPosition(STABLE, "Finish Fling");
+            reportPosition(STABLE);
             mIsFling = false;
         }
     }
@@ -726,6 +714,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
      * view's padding) in co-ordinates of the content. The result is relative to
      * (0, 0)-(rawContentWidth, rawContentHeight).
      */
+    @NonNull
     public Rect getUsableAreaInContentCoords() {
         return new Rect(
                 (int) toContentX(0),
@@ -739,6 +728,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
      * view's padding) in co-ordinates of the content. The result is relative to (0,
      * 0)-(rawContentWidth, rawContentHeight).
      */
+    @NonNull
     public Rect getVisibleAreaInContentCoords() {
         return new Rect(
                 (int) toContentX(-getPaddingLeft()),
@@ -758,7 +748,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
 
         scrollTo(left, top);
         constrainPosition();
-        reportPosition(STABLE, "centerAt");
+        reportPosition(STABLE);
     }
 
     /**
@@ -767,7 +757,8 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
      * co-ordinate system of the content, before scaling is applied by the zoom factor.
      */
     public void zoomAndCenterAtAnimated(
-            float x, float y, float newZoom, ValueAnimator.AnimatorUpdateListener updateListener) {
+            float x, float y, float newZoom,
+            @NonNull ValueAnimator.AnimatorUpdateListener updateListener) {
         if (newZoom > getMaxZoom() || newZoom < getMinZoom()) {
             return;
         }
@@ -833,7 +824,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
                     public void onAnimationEnd(Animator animation) {
                         mZoomScrollAnimation = null;
                         constrainPosition();
-                        reportPosition(STABLE, "zoomScrollAnimation end");
+                        reportPosition(STABLE);
                     }
                 });
         mZoomScrollAnimation = animatorSet;
@@ -844,7 +835,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
     public void scrollTo(int left, int top, boolean stable) {
         scrollTo(left, top);
         constrainPosition();
-        reportPosition(stable, "scrollTo" + (stable ? "Stable" : "Transient"));
+        reportPosition(stable);
     }
 
     public float getZoom() {
@@ -868,7 +859,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
         mContentView.setScaleX(zoom);
         mContentView.setScaleY(zoom);
         scrollBy(deltaX, deltaY);
-        Log.v(TAG, String.format("After zoom (%s): (%s)", zoom, mContentRawBounds));
     }
 
     /**
@@ -942,7 +932,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
             lookAtY = 0; // Stick to the top of the document if the layout changes while there.
         }
 
-        Log.v(TAG, String.format("lookAtPoint (%s %s)", lookAtX, lookAtY));
         return new PointF(lookAtX, lookAtY);
     }
 
@@ -959,13 +948,13 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
         return contentPosition;
     }
 
+    @NonNull
     @Override
     protected Parcelable onSaveInstanceState() {
         Bundle bundle = new Bundle();
         bundle.putParcelable(KEY_SUPER, super.onSaveInstanceState());
         if (mSaveState) {
             bundle.putBundle(KEY_POSITION, mPosition.get().asBundle());
-            Log.v(TAG, String.format("Saving position %s", mPosition.get()));
         }
         return bundle;
     }
@@ -996,7 +985,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
         // availableHeight will keep increasing with successive calls of this method. If we can't
         // restore now, we wait for the next call.
         int availableHeight = (int) (mContentRawBounds.height() * mPositionToRestore.zoom);
-        Log.v(TAG, String.format("Try Restore %s in %s", mPositionToRestore, availableHeight));
         if (mRestorePositionRunnable != null) {
             mHandler.removeCallbacks(mRestorePositionRunnable);
             mRestorePositionRunnable = null;
@@ -1012,12 +1000,11 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
             mRestorePositionRunnable =
                     () -> {
                         restorePosition();
-                        reportPosition(STABLE, "Finish delayed Restore");
+                        reportPosition(STABLE);
                     };
             mHandler.postDelayed(mRestorePositionRunnable, 200);
             return false;
         } else {
-            Log.v(TAG, String.format("Restore %s in %s", mPositionToRestore, availableHeight));
             // That's a perfect restore, do it.
             restorePosition();
             return true;
@@ -1026,7 +1013,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
 
     /** Restores the given position and reports it. */
     private void restorePosition() {
-        Log.v(TAG, String.format("Restoring position %s", mPositionToRestore));
         ZoomScroll restore = mPositionToRestore;
         mPositionToRestore = null;
         mRestorePositionRunnable = null;
@@ -1042,13 +1028,13 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
 
     /** Attempt to restore to the given {@link ZoomScroll} as faithfully as possible. */
     @Override
-    public void attemptRestorePosition(ZoomScroll position) {
+    public void attemptRestorePosition(@NonNull ZoomScroll position) {
         mPositionToRestore = position;
         requestLayout();
     }
 
     @Override
-    protected boolean interceptGesture(GestureTracker gestureTracker) {
+    protected boolean interceptGesture(@NonNull GestureTracker gestureTracker) {
         if (gestureTracker.matches(GestureTracker.Gesture.DOUBLE_TAP) && mDoubleTapEnabled) {
             // We have to send a CANCEL to any child that might track this gesture and would
             // otherwise think it was a single tap.
@@ -1134,7 +1120,8 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
         }
 
         /** Get ZoomScroll position from bundle. */
-        public static ZoomScroll fromBundle(Bundle bundle) {
+        @NonNull
+        public static ZoomScroll fromBundle(@androidx.annotation.NonNull Bundle bundle) {
             ZoomScroll position =
                     new ZoomScroll(
                             bundle.getFloat(KEY_ZOOM),
@@ -1152,6 +1139,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
         }
 
         /** Save and return ZoomScroll position in a Bundle object. */
+        @NonNull
         public Bundle asBundle() {
             Bundle bundle = new Bundle();
             bundle.putInt(KEY_SCROLL_X, scrollX);
@@ -1306,7 +1294,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
                 if (totalScrollLength() > mMinScrollToSwitch
                         && Math.abs(mTotalY / mTotalX) < SCROLL_CORRECTION_RATIO) {
                     mStraightenCurrentVerticalScroll = false;
-                    Log.v(TAG, "Scroll correction switch");
                 } else {
                     // Ignore the horizontal component of the scroll.
                     dx = 0;
@@ -1315,7 +1302,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
 
             scrollBy(dx, dy);
             constrainPosition();
-            reportPosition(UNSTABLE, "onScroll");
+            reportPosition(UNSTABLE);
 
             // For a pure scroll gesture (no zoom), if it reaches somewhat past an edge, pass the
             // gesture on to the parents.
@@ -1326,8 +1313,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
                 if (shareOverscroll(axis, mOverScrollX, mOverScrollY)) {
                     // Scrolling past the bounds, so let the parent handle further scrolling if
                     // they want to.
-                    Log.v(TAG, String.format("Scroll past edge by (%s %s): ", mOverScrollX,
-                            mOverScrollY));
                     releaseGesture();
                     return false;
                 }
@@ -1354,7 +1339,7 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
             if (newZoom != zoom) {
                 setZoom(newZoom, detector.getFocusX(), detector.getFocusY());
                 constrainPosition();
-                reportPosition(UNSTABLE, "onScale");
+                reportPosition(UNSTABLE);
             }
             return true;
         }
@@ -1370,12 +1355,12 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
             switch (gesture) {
                 case ZOOM:
                     constrainPosition();
-                    reportPosition(STABLE, "Finish Scale");
+                    reportPosition(STABLE);
                     break;
                 case DRAG:
                 case DRAG_Y:
                 case DRAG_X:
-                    reportPosition(STABLE, "Finish scroll");
+                    reportPosition(STABLE);
                     break;
                 default:
                     // Double-tap is reported at the end of the animation. Nothing else. Keeps
@@ -1434,10 +1419,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
             Rect content = contentPosition();
             if (mViewport.contains(content)) {
                 // content fits into the viewport: pan/fling are disabled.
-                Log.v(
-                        TAG,
-                        String.format("Abort fling at (%s %s) with v (%s %s) ", x, y, -velocityX,
-                                -velocityY));
                 return true;
             }
 
@@ -1458,12 +1439,6 @@ public class ZoomView extends GestureTrackingView implements ZoomScrollRestorer 
                 minY = 0;
                 maxY = Math.max(0, content.height() - mViewport.height());
             }
-
-            Log.v(
-                    TAG,
-                    String.format(
-                            "Start fling at (%s %s) with v (%s %s) min (%s, %s) max (%s, %s)",
-                            x, y, -velocityX, -velocityY, minX, minY, maxX, maxY));
 
             mIsFling = true;
             mScroller.fling(x, y, (int) -velocityX, (int) -velocityY, minX, maxX, minY, maxY);

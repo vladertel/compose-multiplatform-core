@@ -1499,6 +1499,33 @@ class BaselineProfileConsumerPluginTest(private val agpVersion: TestAgpVersion) 
             assertThat(notFound).isEqualTo(requiredLines)
         }
     }
+
+    @Test
+    fun testMergeArtAndStartupProfilesShouldDependOnProfileGeneration() {
+        projectSetup.producer.setupWithFreeAndPaidFlavors(
+            freeReleaseProfileLines = listOf(Fixtures.CLASS_1_METHOD_1, Fixtures.CLASS_1),
+            paidReleaseProfileLines = listOf(Fixtures.CLASS_2_METHOD_1, Fixtures.CLASS_2),
+        )
+
+        arrayOf(
+                Pair(true, true),
+                Pair(true, false),
+                Pair(false, true),
+            )
+            .forEach { (saveInSrc, automaticGenerationDuringBuild) ->
+                projectSetup.consumer.setup(
+                    androidPlugin = ANDROID_APPLICATION_PLUGIN,
+                    flavors = true,
+                    baselineProfileBlock =
+                        """
+                saveInSrc = $saveInSrc
+                automaticGenerationDuringBuild = $automaticGenerationDuringBuild
+            """
+                            .trimIndent()
+                )
+                gradleRunner.build("generateFreeReleaseBaselineProfile", "assembleFreeRelease") {}
+            }
+    }
 }
 
 @RunWith(JUnit4::class)
@@ -1939,6 +1966,75 @@ class BaselineProfileConsumerPluginTestWithAgp81(private val agpVersion: TestAgp
                 Fixtures.CLASS_2,
                 Fixtures.CLASS_2_METHOD_1,
             )
+    }
+
+    @Test
+    fun testExperimentalPropertyHideVariantInAndroidStudio() {
+        projectSetup.producer.setupWithFreeAndPaidFlavors(
+            freeReleaseProfileLines = listOf(Fixtures.CLASS_1_METHOD_1, Fixtures.CLASS_1),
+            paidReleaseProfileLines = listOf(Fixtures.CLASS_2_METHOD_1, Fixtures.CLASS_2)
+        )
+
+        val taskList =
+            listOf(
+                "printExperimentalPropertiesForVariantFreeNonMinifiedRelease",
+                "printExperimentalPropertiesForVariantFreeBenchmarkRelease",
+                "printExperimentalPropertiesForVariantPaidNonMinifiedRelease",
+                "printExperimentalPropertiesForVariantPaidBenchmarkRelease",
+                "printExperimentalPropertiesForVariantFreeNonMinifiedAnotherRelease",
+                "printExperimentalPropertiesForVariantFreeBenchmarkAnotherRelease",
+                "printExperimentalPropertiesForVariantPaidNonMinifiedAnotherRelease",
+                "printExperimentalPropertiesForVariantPaidBenchmarkAnotherRelease",
+            )
+
+        // Setup consumer module with DEFAULT configuration
+        projectSetup.consumer.setup(
+            androidPlugin = ANDROID_APPLICATION_PLUGIN,
+            dependencyOnProducerProject = true,
+            flavors = true,
+            buildTypeAnotherRelease = true,
+        )
+        taskList.forEach {
+            projectSetup.consumer.gradleRunner.buildAndAssertThatOutput(it) {
+                contains("androidx.baselineProfile.hideInStudio=true")
+            }
+        }
+
+        // Setup consumer module NOT HIDING the build types
+        projectSetup.consumer.setup(
+            androidPlugin = ANDROID_APPLICATION_PLUGIN,
+            dependencyOnProducerProject = true,
+            flavors = true,
+            buildTypeAnotherRelease = true,
+            baselineProfileBlock =
+                """
+                hideSyntheticBuildTypesInAndroidStudio = false
+            """
+                    .trimIndent()
+        )
+        taskList.forEach {
+            projectSetup.consumer.gradleRunner.buildAndAssertThatOutput(it) {
+                doesNotContain("androidx.baselineProfile.hideInStudio=")
+            }
+        }
+
+        // Setup consumer module HIDING the build types
+        projectSetup.consumer.setup(
+            androidPlugin = ANDROID_APPLICATION_PLUGIN,
+            dependencyOnProducerProject = true,
+            flavors = true,
+            buildTypeAnotherRelease = true,
+            baselineProfileBlock =
+                """
+                hideSyntheticBuildTypesInAndroidStudio = true
+            """
+                    .trimIndent()
+        )
+        taskList.forEach {
+            projectSetup.consumer.gradleRunner.buildAndAssertThatOutput(it) {
+                contains("androidx.baselineProfile.hideInStudio=true")
+            }
+        }
     }
 }
 

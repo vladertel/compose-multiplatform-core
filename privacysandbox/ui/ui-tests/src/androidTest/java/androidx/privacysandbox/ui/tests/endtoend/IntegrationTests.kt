@@ -57,8 +57,7 @@ import org.junit.runners.Parameterized
 @MediumTest
 class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
 
-    @get:Rule
-    var activityScenarioRule = ActivityScenarioRule(MainActivity::class.java)
+    @get:Rule var activityScenarioRule = ActivityScenarioRule(MainActivity::class.java)
 
     companion object {
         const val INITIAL_HEIGHT = 100
@@ -66,10 +65,11 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
 
         @JvmStatic
         @Parameterized.Parameters(name = "invokeBackwardsCompatFlow={0}")
-        fun data(): Array<Any> = arrayOf(
-            arrayOf(true),
-            arrayOf(false),
-        )
+        fun data(): Array<Any> =
+            arrayOf(
+                arrayOf(true),
+                arrayOf(false),
+            )
     }
 
     private val context = InstrumentationRegistry.getInstrumentation().context
@@ -99,10 +99,11 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
             stateChangeListener = TestStateChangeListener(errorLatch)
             view.addStateChangedListener(stateChangeListener)
             linearLayout = LinearLayout(context)
-            linearLayout.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
+            linearLayout.layoutParams =
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                )
             linearLayout.setBackgroundColor(Color.RED)
             setContentView(linearLayout)
             view.layoutParams = LinearLayout.LayoutParams(INITIAL_WIDTH, INITIAL_HEIGHT)
@@ -118,14 +119,14 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         val layoutChangeLatch = CountDownLatch(1)
         val childAddedLatch = CountDownLatch(1)
 
-        val hierarchyChangeListener = object : ViewGroup.OnHierarchyChangeListener {
-            override fun onChildViewAdded(parent: View, child: View) {
-                childAddedLatch.countDown()
-            }
+        val hierarchyChangeListener =
+            object : ViewGroup.OnHierarchyChangeListener {
+                override fun onChildViewAdded(parent: View, child: View) {
+                    childAddedLatch.countDown()
+                }
 
-            override fun onChildViewRemoved(p0: View?, p1: View?) {
+                override fun onChildViewRemoved(p0: View?, p1: View?) {}
             }
-        }
         view.setOnHierarchyChangeListener(hierarchyChangeListener)
 
         val onLayoutChangeListener: OnLayoutChangeListener =
@@ -176,13 +177,12 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         }
 
         val testSession = sdkAdapter.session as TestSandboxedUiAdapter.TestSession
-        assertWithMessage("Configuration changed").that(testSession.config?.orientation)
-                .isEqualTo(Configuration.ORIENTATION_LANDSCAPE)
+        assertWithMessage("Configuration changed")
+            .that(testSession.config?.orientation)
+            .isEqualTo(Configuration.ORIENTATION_LANDSCAPE)
     }
 
-    /**
-     * Tests that the provider receives Z-order change updates.
-     */
+    /** Tests that the provider receives Z-order change updates. */
     @Test
     @Ignore("b/302090927")
     fun testZOrderChanged() {
@@ -193,9 +193,7 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         assertThat(testSession.zOrderChanged).isTrue()
     }
 
-    /**
-     * Tests that the provider does not receive Z-order updates if the Z-order is unchanged.
-     */
+    /** Tests that the provider does not receive Z-order updates if the Z-order is unchanged. */
     @Test
     fun testZOrderUnchanged() {
         val adapter = sessionManager.createAdapterAndEstablishSession(viewForSession = view)
@@ -210,10 +208,11 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         // TODO(b/301976432): Stop skipping this for backwards compat flow
         assumeTrue(!invokeBackwardsCompatFlow)
 
-        val adapter = sessionManager.createAdapterAndWaitToBeActive(
-            viewForSession = view,
-            initialZOrder = true
-        )
+        val adapter =
+            sessionManager.createAdapterAndWaitToBeActive(
+                viewForSession = view,
+                initialZOrder = true
+            )
         injectInputEventOnView()
         // the injected touch should be handled by the provider in Z-above mode
         assertThat(adapter.touchedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
@@ -225,10 +224,11 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         // TODO(b/300396631): Skip for backward compat
         assumeTrue(!invokeBackwardsCompatFlow)
 
-        val adapter = sessionManager.createAdapterAndWaitToBeActive(
-            viewForSession = view,
-            initialZOrder = false
-        )
+        val adapter =
+            sessionManager.createAdapterAndWaitToBeActive(
+                viewForSession = view,
+                initialZOrder = false
+            )
         injectInputEventOnView()
         // the injected touch should not reach the provider in Z-below mode
         assertThat(adapter.touchedLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isFalse()
@@ -246,13 +246,16 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
     }
 
     /**
-     * Tests that a provider-initiated resize is accepted if the view's parent does not impose
-     * exact restrictions on the view's size.
+     * Tests that a provider-initiated resize is accepted if the view's parent does not impose exact
+     * restrictions on the view's size.
      */
     @Test
     fun testResizeRequested_requestedAccepted_atMostMeasureSpec() {
-        view.layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        view.layoutParams =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         val sdkAdapter = sessionManager.createAdapterAndWaitToBeActive(viewForSession = view)
 
         val testSession = sdkAdapter.session as TestSandboxedUiAdapter.TestSession
@@ -266,7 +269,8 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         assertWithMessage("Resized width").that(testSession.resizedHeight).isEqualTo(newHeight)
         testSession.assertResizeOccurred(
             /* expectedWidth=*/ newWidth,
-            /* expectedHeight=*/ newHeight)
+            /* expectedHeight=*/ newHeight
+        )
     }
 
     /**
@@ -295,13 +299,12 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         }
 
         val testSession = sdkAdapter.session as TestSandboxedUiAdapter.TestSession
-        assertWithMessage("Resized width").that(testSession.resizedWidth)
-            .isEqualTo(newWidth)
-        assertWithMessage("Resized height").that(testSession.resizedHeight)
-            .isEqualTo(newHeight)
+        assertWithMessage("Resized width").that(testSession.resizedWidth).isEqualTo(newWidth)
+        assertWithMessage("Resized height").that(testSession.resizedHeight).isEqualTo(newHeight)
         testSession.assertResizeOccurred(
             /* expectedWidth=*/ newWidth,
-            /* expectedHeight=*/ newHeight)
+            /* expectedHeight=*/ newHeight
+        )
     }
 
     @Test
@@ -310,15 +313,18 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         assumeTrue(invokeBackwardsCompatFlow)
 
         val testSessionClient = TestSessionClient()
-        val sdkAdapter = sessionManager.createAdapterAndEstablishSession(
-            viewForSession = null,
-            testSessionClient = testSessionClient
-        )
+        val sdkAdapter =
+            sessionManager.createAdapterAndEstablishSession(
+                viewForSession = null,
+                testSessionClient = testSessionClient
+            )
 
         // Verify toString, hashCode and equals have been implemented for dynamic proxy
         val testSession = sdkAdapter.session as TestSandboxedUiAdapter.TestSession
         val client = testSession.sessionClient
-        assertThat(client.toString()).isEqualTo(testSessionClient.toString())
+
+        // TODO(b/329468679): We cannot assert this as we wrap the client on the provider side.
+        // assertThat(client.toString()).isEqualTo(testSessionClient.toString())
 
         assertThat(client.equals(client)).isTrue()
         assertThat(client).isNotEqualTo(testSessionClient)
@@ -331,9 +337,11 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
      */
     @Test
     fun testViewGroup_ChildViewIsLaidOut() {
-        val adapter = sessionManager.createAdapterAndWaitToBeActive(
-            viewForSession = view,
-            placeViewInsideFrameLayout = true)
+        val adapter =
+            sessionManager.createAdapterAndWaitToBeActive(
+                viewForSession = view,
+                placeViewInsideFrameLayout = true
+            )
         val session = adapter.session as TestSandboxedUiAdapter.TestSession
 
         // Force a layout pass by changing the size of the view
@@ -343,20 +351,150 @@ class IntegrationTests(private val invokeBackwardsCompatFlow: Boolean) {
         session.assertViewWasLaidOut()
     }
 
+    @Test
+    fun testAddSessionObserverFactory_ObserverIsCreated() {
+        val factory = TestSessionManager.SessionObserverFactoryImpl()
+        sessionManager.createAdapterAndWaitToBeActive(
+            viewForSession = view,
+            sessionObserverFactories = listOf(factory)
+        )
+        assertThat(factory.sessionObservers.size).isEqualTo(1)
+    }
+
+    @Test
+    fun testAddSessionObserverFactory_OnSessionOpenedIsSent() {
+        val factory = TestSessionManager.SessionObserverFactoryImpl()
+        sessionManager.createAdapterAndWaitToBeActive(
+            viewForSession = view,
+            sessionObserverFactories = listOf(factory)
+        )
+        assertThat(factory.sessionObservers.size).isEqualTo(1)
+        val sessionObserver = factory.sessionObservers[0]
+        sessionObserver.assertSessionOpened()
+    }
+
+    @Test
+    fun testAddSessionObserverFactory_NoObserverCreatedForAlreadyOpenSession() {
+        val adapter = sessionManager.createAdapterAndWaitToBeActive(viewForSession = view)
+        val factory = TestSessionManager.SessionObserverFactoryImpl()
+        adapter.addObserverFactory(factory)
+        factory.assertNoSessionsAreCreated()
+    }
+
+    @Test
+    fun testAddSessionObserverFactory_MultipleFactories() {
+        val factory1 = TestSessionManager.SessionObserverFactoryImpl()
+        val factory2 = TestSessionManager.SessionObserverFactoryImpl()
+        sessionManager.createAdapterAndWaitToBeActive(
+            viewForSession = view,
+            sessionObserverFactories = listOf(factory1, factory2)
+        )
+        assertThat(factory1.sessionObservers.size).isEqualTo(1)
+        assertThat(factory2.sessionObservers.size).isEqualTo(1)
+    }
+
+    @Test
+    fun testAddSessionObserverFactory_SessionObserverContextIsCorrect() {
+        val factory = TestSessionManager.SessionObserverFactoryImpl()
+        val adapter =
+            sessionManager.createAdapterAndWaitToBeActive(
+                viewForSession = view,
+                sessionObserverFactories = listOf(factory)
+            )
+        assertThat(factory.sessionObservers.size).isEqualTo(1)
+        val sessionObserver = factory.sessionObservers[0]
+        sessionObserver.assertSessionOpened()
+        assertThat(sessionObserver.sessionObserverContext).isNotNull()
+        assertThat(sessionObserver.sessionObserverContext?.view).isEqualTo(adapter.session.view)
+    }
+
+    @Test
+    fun testRegisterSessionObserverFactory_OnUiContainerChangedSentWhenSessionOpened() {
+        val factory = TestSessionManager.SessionObserverFactoryImpl()
+        sessionManager.createAdapterAndWaitToBeActive(
+            viewForSession = view,
+            sessionObserverFactories = listOf(factory)
+        )
+        assertThat(factory.sessionObservers.size).isEqualTo(1)
+        val sessionObserver = factory.sessionObservers[0]
+        sessionObserver.assertOnUiContainerChangedSent()
+    }
+
+    @Test
+    fun testRemoveSessionObserverFactory_DoesNotImpactExistingObservers() {
+        val factory = TestSessionManager.SessionObserverFactoryImpl()
+        val adapter =
+            sessionManager.createAdapterAndWaitToBeActive(
+                viewForSession = view,
+                sessionObserverFactories = listOf(factory)
+            )
+        assertThat(factory.sessionObservers.size).isEqualTo(1)
+        adapter.removeObserverFactory(factory)
+        val sessionObserver = factory.sessionObservers[0]
+        // Setting a new adapter on the SandboxedSdKView will cause the current session to close.
+        activityScenarioRule.withActivity { view.setAdapter(TestSandboxedUiAdapter()) }
+        // onSessionClosed is still sent for the observer
+        sessionObserver.assertSessionClosed()
+    }
+
+    @Test
+    fun testRemoveSessionObserverFactory_DoesNotCreateObserverForNewSession() {
+        val factory = TestSessionManager.SessionObserverFactoryImpl()
+        val adapter =
+            sessionManager.createAdapterAndWaitToBeActive(
+                viewForSession = view,
+                sessionObserverFactories = listOf(factory)
+            )
+        assertThat(factory.sessionObservers.size).isEqualTo(1)
+        adapter.removeObserverFactory(factory)
+        val sandboxedSdkView2 = SandboxedSdkView(context)
+        activityScenarioRule.withActivity { linearLayout.addView(sandboxedSdkView2) }
+        // create a new session and wait to be active
+        sandboxedSdkView2.setAdapter(adapter)
+
+        val activeLatch = CountDownLatch(1)
+        sandboxedSdkView2.addStateChangedListener { state ->
+            if (state is SandboxedSdkUiSessionState.Active) {
+                activeLatch.countDown()
+            }
+        }
+        assertThat(activeLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)).isTrue()
+        // The session observers size should remain 1, showing that no new observers have been
+        // created for the new session.
+        assertThat(factory.sessionObservers.size).isEqualTo(1)
+    }
+
+    @Test
+    fun testSessionObserver_OnClosedSentWhenSessionClosed() {
+        val factory = TestSessionManager.SessionObserverFactoryImpl()
+        sessionManager.createAdapterAndWaitToBeActive(
+            viewForSession = view,
+            sessionObserverFactories = listOf(factory)
+        )
+        assertThat(factory.sessionObservers.size).isEqualTo(1)
+        val sessionObserver = factory.sessionObservers[0]
+        // Setting a new adapter on the SandboxedSdKView will cause the current session to close.
+        activityScenarioRule.withActivity { view.setAdapter(TestSandboxedUiAdapter()) }
+        sessionObserver.assertSessionClosed()
+    }
+
     private fun injectInputEventOnView() {
         activityScenarioRule.withActivity {
             val location = IntArray(2)
             view.getLocationOnScreen(location)
-            InstrumentationRegistry.getInstrumentation().uiAutomation.injectInputEvent(
-                MotionEvent.obtain(
-                    SystemClock.uptimeMillis(),
-                    SystemClock.uptimeMillis(),
-                    MotionEvent.ACTION_DOWN,
-                    (location[0] + 1).toFloat(),
-                    (location[1] + 1).toFloat(),
-                    0
-                ), false
-            )
+            InstrumentationRegistry.getInstrumentation()
+                .uiAutomation
+                .injectInputEvent(
+                    MotionEvent.obtain(
+                        SystemClock.uptimeMillis(),
+                        SystemClock.uptimeMillis(),
+                        MotionEvent.ACTION_DOWN,
+                        (location[0] + 1).toFloat(),
+                        (location[1] + 1).toFloat(),
+                        0
+                    ),
+                    false
+                )
         }
     }
 

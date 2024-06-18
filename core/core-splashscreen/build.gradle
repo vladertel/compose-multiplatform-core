@@ -30,10 +30,6 @@ plugins {
 }
 
 android {
-    defaultConfig {
-        minSdkVersion 21
-        testInstrumentationRunner("androidx.test.runner.AndroidJUnitRunner")
-    }
     namespace "androidx.core.splashscreen"
 }
 
@@ -59,4 +55,5 @@ androidx {
     description = "This library provides the compatibility APIs for SplashScreen " +
             "and helper method to enable a splashscreen on devices prior Android 12"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

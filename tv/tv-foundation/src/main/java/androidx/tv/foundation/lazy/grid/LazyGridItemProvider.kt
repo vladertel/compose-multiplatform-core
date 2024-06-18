@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.tv.foundation.lazy.grid
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -41,18 +43,20 @@ internal fun rememberLazyGridItemProviderLambda(
 ): () -> LazyGridItemProvider {
     val latestContent = rememberUpdatedState(content)
     return remember(state) {
-        val intervalContentState = derivedStateOf(referentialEqualityPolicy()) {
-            LazyGridIntervalContent(latestContent.value)
-        }
-        val itemProviderState = derivedStateOf(referentialEqualityPolicy()) {
-            val intervalContent = intervalContentState.value
-            val map = NearestRangeKeyIndexMap(state.nearestRange, intervalContent)
-            LazyGridItemProviderImpl(
-                state = state,
-                intervalContent = intervalContent,
-                keyIndexMap = map
-            )
-        }
+        val intervalContentState =
+            derivedStateOf(referentialEqualityPolicy()) {
+                LazyGridIntervalContent(latestContent.value)
+            }
+        val itemProviderState =
+            derivedStateOf(referentialEqualityPolicy()) {
+                val intervalContent = intervalContentState.value
+                val map = NearestRangeKeyIndexMap(state.nearestRange, intervalContent)
+                LazyGridItemProviderImpl(
+                    state = state,
+                    intervalContent = intervalContent,
+                    keyIndexMap = map
+                )
+            }
         itemProviderState::value
     }
 }
@@ -64,7 +68,8 @@ private class LazyGridItemProviderImpl(
     override val keyIndexMap: LazyLayoutKeyIndexMap,
 ) : LazyGridItemProvider {
 
-    override val itemCount: Int get() = intervalContent.itemCount
+    override val itemCount: Int
+        get() = intervalContent.itemCount
 
     override fun getKey(index: Int): Any =
         keyIndexMap.getKey(index) ?: intervalContent.getKey(index)

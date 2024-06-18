@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.tv.foundation.lazy.grid
 
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -26,6 +28,7 @@ import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 
+@Suppress("OVERRIDE_DEPRECATION")
 @OptIn(ExperimentalFoundationApi::class)
 internal object TvLazyGridItemScopeImpl : TvLazyGridItemScope {
     @ExperimentalFoundationApi
@@ -33,9 +36,8 @@ internal object TvLazyGridItemScopeImpl : TvLazyGridItemScope {
         this then AnimateItemPlacementElement(animationSpec)
 }
 
-private class AnimateItemPlacementElement(
-    val animationSpec: FiniteAnimationSpec<IntOffset>
-) : ModifierNodeElement<AnimateItemPlacementNode>() {
+private class AnimateItemPlacementElement(val animationSpec: FiniteAnimationSpec<IntOffset>) :
+    ModifierNodeElement<AnimateItemPlacementNode>() {
 
     override fun create(): AnimateItemPlacementNode = AnimateItemPlacementNode(animationSpec)
 
@@ -59,9 +61,8 @@ private class AnimateItemPlacementElement(
     }
 }
 
-private class AnimateItemPlacementNode(
-    animationSpec: FiniteAnimationSpec<IntOffset>
-) : DelegatingNode(), ParentDataModifierNode {
+private class AnimateItemPlacementNode(animationSpec: FiniteAnimationSpec<IntOffset>) :
+    DelegatingNode(), ParentDataModifierNode {
 
     val delegatingNode = delegate(LazyLayoutAnimateItemModifierNode(animationSpec))
 

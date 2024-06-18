@@ -42,9 +42,11 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material3.TextButtonDefaults.DefaultButtonSize
@@ -55,18 +57,12 @@ import org.junit.Rule
 import org.junit.Test
 
 class TextButtonTest {
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
     @Test
     fun supports_testtag() {
         rule.setContentWithTheme {
-            TextButton(
-                modifier = Modifier.testTag(TEST_TAG),
-                onClick = {}
-            ) {
-                Text("Test")
-            }
+            TextButton(modifier = Modifier.testTag(TEST_TAG), onClick = {}) { Text("Test") }
         }
 
         rule.onNodeWithTag(TEST_TAG).assertExists()
@@ -103,11 +99,7 @@ class TextButtonTest {
     @Test
     fun has_click_action_when_enabled() {
         rule.setContentWithTheme {
-            TextButton(
-                onClick = {},
-                enabled = true,
-                modifier = Modifier.testTag(TEST_TAG)
-            ) {
+            TextButton(onClick = {}, enabled = true, modifier = Modifier.testTag(TEST_TAG)) {
                 Text("Test")
             }
         }
@@ -118,11 +110,7 @@ class TextButtonTest {
     @Test
     fun has_click_action_when_disabled() {
         rule.setContentWithTheme {
-            TextButton(
-                onClick = {},
-                enabled = false,
-                modifier = Modifier.testTag(TEST_TAG)
-            ) {
+            TextButton(onClick = {}, enabled = false, modifier = Modifier.testTag(TEST_TAG)) {
                 Text("Test")
             }
         }
@@ -133,11 +121,7 @@ class TextButtonTest {
     @Test
     fun is_correctly_enabled() {
         rule.setContentWithTheme {
-            TextButton(
-                onClick = {},
-                enabled = true,
-                modifier = Modifier.testTag(TEST_TAG)
-            ) {
+            TextButton(onClick = {}, enabled = true, modifier = Modifier.testTag(TEST_TAG)) {
                 Text("Test")
             }
         }
@@ -148,11 +132,7 @@ class TextButtonTest {
     @Test
     fun is_correctly_disabled() {
         rule.setContentWithTheme {
-            TextButton(
-                onClick = {},
-                enabled = false,
-                modifier = Modifier.testTag(TEST_TAG)
-            ) {
+            TextButton(onClick = {}, enabled = false, modifier = Modifier.testTag(TEST_TAG)) {
                 Text("Test")
             }
         }
@@ -176,9 +156,45 @@ class TextButtonTest {
 
         rule.onNodeWithTag(TEST_TAG).performClick()
 
-        rule.runOnIdle {
-            assertEquals(true, clicked)
+        rule.runOnIdle { assertEquals(true, clicked) }
+    }
+
+    @Test
+    fun responds_to_long_click_when_enabled() {
+        var longClicked = false
+
+        rule.setContentWithTheme {
+            TextButton(
+                onClick = { /* Do nothing */ },
+                onLongClick = { longClicked = true },
+                enabled = true,
+                modifier = Modifier.testTag(TEST_TAG)
+            ) {
+                Text("Test")
+            }
         }
+
+        rule.onNodeWithTag(TEST_TAG).performTouchInput { longClick() }
+
+        rule.runOnIdle { assertEquals(true, longClicked) }
+    }
+
+    @Test
+    fun onLongClickLabel_includedInSemantics() {
+        val testLabel = "Long click action"
+
+        rule.setContentWithTheme {
+            TextButton(
+                modifier = Modifier.testTag(TEST_TAG),
+                onClick = {},
+                onLongClick = {},
+                onLongClickLabel = testLabel
+            ) {
+                Text("Button")
+            }
+        }
+
+        rule.onNodeWithTag(TEST_TAG).assertOnLongClickLabelMatches(testLabel)
     }
 
     @Test
@@ -197,29 +213,38 @@ class TextButtonTest {
 
         rule.onNodeWithTag(TEST_TAG).performClick()
 
-        rule.runOnIdle {
-            assertEquals(false, clicked)
-        }
+        rule.runOnIdle { assertEquals(false, clicked) }
     }
 
     @Test
-    fun has_role_button() {
+    fun does_not_respond_to_long_click_when_disabled() {
+        var longClicked = false
+
         rule.setContentWithTheme {
             TextButton(
-                onClick = {},
+                onClick = { /* Do nothing */ },
+                onLongClick = { longClicked = true },
+                enabled = false,
                 modifier = Modifier.testTag(TEST_TAG)
             ) {
                 Text("Test")
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG)
-            .assert(
-                SemanticsMatcher.expectValue(
-                    SemanticsProperties.Role,
-                    Role.Button
-                )
-            )
+        rule.onNodeWithTag(TEST_TAG).performTouchInput { longClick() }
+
+        rule.runOnIdle { assertEquals(false, longClicked) }
+    }
+
+    @Test
+    fun has_role_button() {
+        rule.setContentWithTheme {
+            TextButton(onClick = {}, modifier = Modifier.testTag(TEST_TAG)) { Text("Test") }
+        }
+
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
     }
 
     @Test
@@ -229,20 +254,15 @@ class TextButtonTest {
         rule.setContentWithTheme {
             TextButton(
                 onClick = {},
-                modifier = Modifier
-                    .testTag(TEST_TAG)
-                    .semantics { role = overrideRole }
+                modifier = Modifier.testTag(TEST_TAG).semantics { role = overrideRole }
             ) {
                 Text("Test")
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG).assert(
-            SemanticsMatcher.expectValue(
-                SemanticsProperties.Role,
-                overrideRole
-            )
-        )
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, overrideRole))
     }
 
     @Test
@@ -265,10 +285,7 @@ class TextButtonTest {
     @Test
     fun gives_default_button_correct_tap_size() {
         rule.verifyTapSize(DefaultButtonSize) { modifier ->
-            TextButton(
-                onClick = {},
-                modifier = modifier.touchTargetAwareSize(DefaultButtonSize)
-            ) {
+            TextButton(onClick = {}, modifier = modifier.touchTargetAwareSize(DefaultButtonSize)) {
                 Text("ABC")
             }
         }
@@ -277,10 +294,7 @@ class TextButtonTest {
     @Test
     fun gives_large_button_correct_tap_size() {
         rule.verifyTapSize(LargeButtonSize) { modifier ->
-            TextButton(
-                onClick = {},
-                modifier = modifier.touchTargetAwareSize(LargeButtonSize)
-            ) {
+            TextButton(onClick = {}, modifier = modifier.touchTargetAwareSize(LargeButtonSize)) {
                 Text("Large")
             }
         }
@@ -289,10 +303,7 @@ class TextButtonTest {
     @Test
     fun gives_small_button_correct_tap_size() {
         rule.verifyTapSize(SmallButtonSize) { modifier ->
-            TextButton(
-                onClick = {},
-                modifier = modifier.touchTargetAwareSize(SmallButtonSize)
-            ) {
+            TextButton(onClick = {}, modifier = modifier.touchTargetAwareSize(SmallButtonSize)) {
                 Text("abc")
             }
         }
@@ -305,10 +316,7 @@ class TextButtonTest {
             expectedShape = CircleShape,
             colors = { TextButtonDefaults.textButtonColors() }
         ) { modifier ->
-            TextButton(
-                onClick = {},
-                modifier = modifier
-            ) {
+            TextButton(onClick = {}, modifier = modifier) {
                 // omit content to allow us to validate the shape by pixel checking.
             }
         }
@@ -319,15 +327,9 @@ class TextButtonTest {
     fun allows_custom_shape_override() {
         val shape = CutCornerShape(4.dp)
 
-        rule.isShape(
-            expectedShape = shape,
-            colors = { TextButtonDefaults.textButtonColors() }
-        ) { modifier ->
-            TextButton(
-                onClick = {},
-                modifier = modifier,
-                shape = shape
-            ) {
+        rule.isShape(expectedShape = shape, colors = { TextButtonDefaults.textButtonColors() }) {
+            modifier ->
+            TextButton(onClick = {}, modifier = modifier, shape = shape) {
                 // omit content to allow us to validate the shape by pixel checking.
             }
         }
@@ -351,9 +353,9 @@ class TextButtonTest {
             status = Status.Disabled,
             colors = { TextButtonDefaults.textButtonColors() },
             expectedContainerColor = { Color.Transparent },
-            expectedContentColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContentAlpha
-            ) }
+            expectedContentColor = {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledContentAlpha)
+            }
         )
     }
 
@@ -374,12 +376,12 @@ class TextButtonTest {
         rule.verifyTextButtonColors(
             status = Status.Disabled,
             colors = { TextButtonDefaults.filledTextButtonColors() },
-            expectedContainerColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContainerAlpha
-            ) },
-            expectedContentColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContentAlpha
-            ) }
+            expectedContainerColor = {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledContainerAlpha)
+            },
+            expectedContentColor = {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledContentAlpha)
+            }
         )
     }
 
@@ -400,12 +402,12 @@ class TextButtonTest {
         rule.verifyTextButtonColors(
             status = Status.Disabled,
             colors = { TextButtonDefaults.filledTonalTextButtonColors() },
-            expectedContainerColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContainerAlpha
-            ) },
-            expectedContentColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContentAlpha
-            ) }
+            expectedContainerColor = {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledContainerAlpha)
+            },
+            expectedContentColor = {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledContentAlpha)
+            }
         )
     }
 
@@ -427,9 +429,9 @@ class TextButtonTest {
             status = Status.Disabled,
             colors = { TextButtonDefaults.outlinedTextButtonColors() },
             expectedContainerColor = { Color.Transparent },
-            expectedContentColor = { MaterialTheme.colorScheme.onSurface.copy(
-                alpha = DisabledContentAlpha
-            ) }
+            expectedContentColor = {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = DisabledContentAlpha)
+            }
         )
     }
 
@@ -466,7 +468,6 @@ class TextButtonTest {
                     enabled = status.enabled(),
                     colors = TextButtonDefaults.outlinedTextButtonColors(),
                     border = ButtonDefaults.outlinedButtonBorder(enabled = status.enabled())
-
                 ) {}
             }
         )
@@ -483,11 +484,12 @@ class TextButtonTest {
                     onClick = {},
                     modifier = modifier,
                     enabled = status.enabled(),
-                    border = ButtonDefaults.outlinedButtonBorder(
-                        enabled = status.enabled(),
-                        borderColor = Color.Green,
-                        disabledBorderColor = Color.Red
-                    )
+                    border =
+                        ButtonDefaults.outlinedButtonBorder(
+                            enabled = status.enabled(),
+                            borderColor = Color.Green,
+                            disabledBorderColor = Color.Red
+                        )
                 ) {}
             }
         )
@@ -538,11 +540,7 @@ private fun ComposeContentTestRule.isShape(
             if (buttonColor == Color.Transparent) {
                 buttonColor = background
             }
-            content(
-                Modifier
-                    .testTag(TEST_TAG)
-                    .padding(padding)
-            )
+            content(Modifier.testTag(TEST_TAG).padding(padding))
         }
     }
 

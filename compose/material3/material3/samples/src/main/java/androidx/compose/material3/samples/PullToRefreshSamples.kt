@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -97,9 +98,7 @@ fun PullToRefreshSample() {
             onRefresh = onRefresh,
         ) {
             LazyColumn(Modifier.fillMaxSize()) {
-                items(itemCount) {
-                    ListItem({ Text(text = "Item ${itemCount - it}") })
-                }
+                items(itemCount) { ListItem({ Text(text = "Item ${itemCount - it}") }) }
             }
         }
     }
@@ -147,7 +146,8 @@ fun PullToRefreshViewModelSample() {
                 actions = {
                     IconButton(
                         enabled = !viewModel.isRefreshing,
-                        onClick = { viewModel.refresh() }) {
+                        onClick = { viewModel.refresh() }
+                    ) {
                         Icon(Icons.Filled.Refresh, "Trigger Refresh")
                     }
                 }
@@ -190,16 +190,17 @@ fun PullToRefreshScalingSample() {
     }
 
     val scaleFraction = {
-        if (isRefreshing) 1f else
-            LinearOutSlowInEasing.transform(state.distanceFraction).coerceIn(0f, 1f)
+        if (isRefreshing) 1f
+        else LinearOutSlowInEasing.transform(state.distanceFraction).coerceIn(0f, 1f)
     }
 
     Scaffold(
-        modifier = Modifier.pullToRefresh(
-            state = state,
-            isRefreshing = isRefreshing,
-            onRefresh = onRefresh
-        ),
+        modifier =
+            Modifier.pullToRefresh(
+                state = state,
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh
+            ),
         topBar = {
             TopAppBar(
                 title = { Text("TopAppBar") },
@@ -215,18 +216,14 @@ fun PullToRefreshScalingSample() {
         Box(Modifier.padding(it)) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (!isRefreshing) {
-                    items(itemCount) {
-                        ListItem({ Text(text = "Item ${itemCount - it}") })
-                    }
+                    items(itemCount) { ListItem({ Text(text = "Item ${itemCount - it}") }) }
                 }
             }
             Box(
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .graphicsLayer {
-                        scaleX = scaleFraction()
-                        scaleY = scaleFraction()
-                    }
+                Modifier.align(Alignment.TopCenter).graphicsLayer {
+                    scaleX = scaleFraction()
+                    scaleY = scaleFraction()
+                }
             ) {
                 PullToRefreshDefaults.Indicator(state = state, isRefreshing = isRefreshing)
             }
@@ -254,11 +251,12 @@ fun PullToRefreshLinearProgressIndicatorSample() {
     }
 
     Scaffold(
-        modifier = Modifier.pullToRefresh(
-            state = state,
-            isRefreshing = isRefreshing,
-            onRefresh = onRefresh
-        ),
+        modifier =
+            Modifier.pullToRefresh(
+                state = state,
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh
+            ),
         topBar = {
             TopAppBar(
                 title = { Text("TopAppBar") },
@@ -274,9 +272,7 @@ fun PullToRefreshLinearProgressIndicatorSample() {
         Box(Modifier.padding(it)) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (!isRefreshing) {
-                    items(itemCount) {
-                        ListItem({ Text(text = "Item ${itemCount - it}") })
-                    }
+                    items(itemCount) { ListItem({ Text(text = "Item ${itemCount - it}") }) }
                 }
             }
             if (isRefreshing) {
@@ -351,10 +347,64 @@ fun PullToRefreshSampleCustomState() {
         ) {
             LazyColumn(Modifier.fillMaxSize()) {
                 if (!isRefreshing) {
-                    items(itemCount) {
-                        ListItem({ Text(text = "Item ${itemCount - it}") })
+                    items(itemCount) { ListItem({ Text(text = "Item ${itemCount - it}") }) }
+                }
+            }
+        }
+    }
+}
+
+@Sampled
+@Composable
+@Preview
+@OptIn(ExperimentalMaterial3Api::class)
+fun PullToRefreshCustomIndicatorWithDefaultTransform() {
+    var itemCount by remember { mutableIntStateOf(15) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val state = rememberPullToRefreshState()
+    val coroutineScope = rememberCoroutineScope()
+    val onRefresh: () -> Unit = {
+        isRefreshing = true
+        coroutineScope.launch {
+            delay(1500)
+            itemCount += 5
+            isRefreshing = false
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Title") },
+                // Provide an accessible alternative to trigger refresh.
+                actions = {
+                    IconButton(onClick = onRefresh) {
+                        Icon(Icons.Filled.Refresh, "Trigger Refresh")
                     }
                 }
+            )
+        }
+    ) {
+        PullToRefreshBox(
+            modifier = Modifier.padding(it),
+            state = state,
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            indicator = {
+                PullToRefreshDefaults.IndicatorBox(state = state, isRefreshing = isRefreshing) {
+                    if (isRefreshing) {
+                        CircularProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    } else {
+                        CircularProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            progress = { state.distanceFraction }
+                        )
+                    }
+                }
+            }
+        ) {
+            LazyColumn(Modifier.fillMaxSize()) {
+                items(itemCount) { ListItem({ Text(text = "Item ${itemCount - it}") }) }
             }
         }
     }

@@ -24,7 +24,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.testutils.assertAgainstGolden
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -32,7 +31,6 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -52,20 +50,18 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
-@OptIn(ExperimentalTestApi::class)
 class RadioButtonScreenshotTest {
 
-    @get:Rule
-    val rule = createComposeRule()
+    @get:Rule val rule = createComposeRule()
 
-    @get:Rule
-    val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL3)
+    @get:Rule val screenshotRule = AndroidXScreenshotTestRule(GOLDEN_MATERIAL3)
 
     // TODO(b/267253920): Add a compose test API to set/reset InputMode.
     @After
-    fun resetTouchMode() = with(InstrumentationRegistry.getInstrumentation()) {
-        if (SDK_INT < 33) setInTouchMode(true) else resetInTouchMode()
-    }
+    fun resetTouchMode() =
+        with(InstrumentationRegistry.getInstrumentation()) {
+            if (SDK_INT < 33) setInTouchMode(true) else resetInTouchMode()
+        }
 
     private val wrap = Modifier.wrapContentSize(Alignment.TopStart)
     private val wrapperTestTag = "radioButtonWrapper"
@@ -73,9 +69,7 @@ class RadioButtonScreenshotTest {
     @Test
     fun radioButton_lightTheme_selected() {
         rule.setMaterialContent(lightColorScheme()) {
-            Box(wrap.testTag(wrapperTestTag)) {
-                RadioButton(selected = true, onClick = {})
-            }
+            Box(wrap.testTag(wrapperTestTag)) { RadioButton(selected = true, onClick = {}) }
         }
         assertSelectableAgainstGolden("radioButton_lightTheme_selected")
     }
@@ -83,9 +77,7 @@ class RadioButtonScreenshotTest {
     @Test
     fun radioButton_darkTheme_selected() {
         rule.setMaterialContent(darkColorScheme()) {
-            Box(wrap.testTag(wrapperTestTag)) {
-                RadioButton(selected = true, onClick = {})
-            }
+            Box(wrap.testTag(wrapperTestTag)) { RadioButton(selected = true, onClick = {}) }
         }
         assertSelectableAgainstGolden("radioButton_darkTheme_selected")
     }
@@ -93,9 +85,7 @@ class RadioButtonScreenshotTest {
     @Test
     fun radioButton_lightTheme_notSelected() {
         rule.setMaterialContent(lightColorScheme()) {
-            Box(wrap.testTag(wrapperTestTag)) {
-                RadioButton(selected = false, onClick = {})
-            }
+            Box(wrap.testTag(wrapperTestTag)) { RadioButton(selected = false, onClick = {}) }
         }
         assertSelectableAgainstGolden("radioButton_lightTheme_notSelected")
     }
@@ -103,9 +93,7 @@ class RadioButtonScreenshotTest {
     @Test
     fun radioButton_darkTheme_notSelected() {
         rule.setMaterialContent(darkColorScheme()) {
-            Box(wrap.testTag(wrapperTestTag)) {
-                RadioButton(selected = false, onClick = {})
-            }
+            Box(wrap.testTag(wrapperTestTag)) { RadioButton(selected = false, onClick = {}) }
         }
         assertSelectableAgainstGolden("radioButton_darkTheme_notSelected")
     }
@@ -113,14 +101,11 @@ class RadioButtonScreenshotTest {
     @Test
     fun radioButton_lightTheme_pressed() {
         rule.setMaterialContent(lightColorScheme()) {
-            Box(wrap.testTag(wrapperTestTag)) {
-                RadioButton(selected = false, onClick = {})
-            }
+            Box(wrap.testTag(wrapperTestTag)) { RadioButton(selected = false, onClick = {}) }
         }
 
         rule.mainClock.autoAdvance = false
-        rule.onNode(isSelectable())
-            .performTouchInput { down(center) }
+        rule.onNode(isSelectable()).performTouchInput { down(center) }
 
         rule.mainClock.advanceTimeByFrame()
         rule.waitForIdle() // Wait for measure
@@ -136,14 +121,11 @@ class RadioButtonScreenshotTest {
     @Test
     fun radioButton_darkTheme_pressed() {
         rule.setMaterialContent(darkColorScheme()) {
-            Box(wrap.testTag(wrapperTestTag)) {
-                RadioButton(selected = false, onClick = {})
-            }
+            Box(wrap.testTag(wrapperTestTag)) { RadioButton(selected = false, onClick = {}) }
         }
 
         rule.mainClock.autoAdvance = false
-        rule.onNode(isSelectable())
-            .performTouchInput { down(center) }
+        rule.onNode(isSelectable()).performTouchInput { down(center) }
 
         rule.mainClock.advanceTimeByFrame()
         rule.waitForIdle() // Wait for measure
@@ -159,13 +141,9 @@ class RadioButtonScreenshotTest {
     @Test
     fun radioButton_lightTheme_hovered() {
         rule.setMaterialContent(lightColorScheme()) {
-            Box(wrap.testTag(wrapperTestTag)) {
-                RadioButton(selected = false, onClick = {})
-            }
+            Box(wrap.testTag(wrapperTestTag)) { RadioButton(selected = false, onClick = {}) }
         }
-        rule.onNodeWithTag(wrapperTestTag).performMouseInput {
-            enter(center)
-        }
+        rule.onNodeWithTag(wrapperTestTag).performMouseInput { enter(center) }
 
         assertSelectableAgainstGolden("radioButton_lightTheme_hovered")
     }
@@ -173,13 +151,9 @@ class RadioButtonScreenshotTest {
     @Test
     fun radioButton_darkTheme_hovered() {
         rule.setMaterialContent(darkColorScheme()) {
-            Box(wrap.testTag(wrapperTestTag)) {
-                RadioButton(selected = false, onClick = {})
-            }
+            Box(wrap.testTag(wrapperTestTag)) { RadioButton(selected = false, onClick = {}) }
         }
-        rule.onNodeWithTag(wrapperTestTag).performMouseInput {
-            enter(center)
-        }
+        rule.onNodeWithTag(wrapperTestTag).performMouseInput { enter(center) }
 
         assertSelectableAgainstGolden("radioButton_darkTheme_hovered")
     }
@@ -195,14 +169,12 @@ class RadioButtonScreenshotTest {
                 RadioButton(
                     selected = false,
                     onClick = {},
-                    modifier = Modifier
-                        .focusRequester(focusRequester)
+                    modifier = Modifier.focusRequester(focusRequester)
                 )
             }
         }
 
         rule.runOnIdle {
-            @OptIn(ExperimentalComposeUiApi::class)
             localInputModeManager!!.requestInputMode(InputMode.Keyboard)
             focusRequester.requestFocus()
         }
@@ -221,14 +193,12 @@ class RadioButtonScreenshotTest {
                 RadioButton(
                     selected = false,
                     onClick = {},
-                    modifier = Modifier
-                        .focusRequester(focusRequester)
+                    modifier = Modifier.focusRequester(focusRequester)
                 )
             }
         }
 
         rule.runOnIdle {
-            @OptIn(ExperimentalComposeUiApi::class)
             localInputModeManager!!.requestInputMode(InputMode.Keyboard)
             focusRequester.requestFocus()
         }
@@ -290,10 +260,14 @@ class RadioButtonScreenshotTest {
 
         rule.mainClock.autoAdvance = false
 
-        rule.onNode(isSelectable())
+        rule
+            .onNode(isSelectable())
             // split click into (down) and (move, up) to enforce a composition in between
             .performTouchInput { down(center) }
-            .performTouchInput { move(); up() }
+            .performTouchInput {
+                move()
+                up()
+            }
 
         rule.mainClock.advanceTimeByFrame()
         rule.waitForIdle() // Wait for measure
@@ -320,10 +294,14 @@ class RadioButtonScreenshotTest {
 
         rule.mainClock.autoAdvance = false
 
-        rule.onNode(isSelectable())
+        rule
+            .onNode(isSelectable())
             // split click into (down) and (move, up) to enforce a composition in between
             .performTouchInput { down(center) }
-            .performTouchInput { move(); up() }
+            .performTouchInput {
+                move()
+                up()
+            }
 
         rule.mainClock.advanceTimeByFrame()
         rule.waitForIdle() // Wait for measure
@@ -350,10 +328,14 @@ class RadioButtonScreenshotTest {
 
         rule.mainClock.autoAdvance = false
 
-        rule.onNode(isSelectable())
+        rule
+            .onNode(isSelectable())
             // split click into (down) and (move, up) to enforce a composition in between
             .performTouchInput { down(center) }
-            .performTouchInput { move(); up() }
+            .performTouchInput {
+                move()
+                up()
+            }
 
         rule.mainClock.advanceTimeByFrame()
         rule.waitForIdle() // Wait for measure
@@ -380,10 +362,14 @@ class RadioButtonScreenshotTest {
 
         rule.mainClock.autoAdvance = false
 
-        rule.onNode(isSelectable())
+        rule
+            .onNode(isSelectable())
             // split click into (down) and (move, up) to enforce a composition in between
             .performTouchInput { down(center) }
-            .performTouchInput { move(); up() }
+            .performTouchInput {
+                move()
+                up()
+            }
 
         rule.mainClock.advanceTimeByFrame()
         rule.waitForIdle() // Wait for measure
@@ -397,7 +383,8 @@ class RadioButtonScreenshotTest {
     }
 
     private fun assertSelectableAgainstGolden(goldenName: String) {
-        rule.onNodeWithTag(wrapperTestTag)
+        rule
+            .onNodeWithTag(wrapperTestTag)
             .captureToImage()
             .assertAgainstGolden(screenshotRule, goldenName)
     }
