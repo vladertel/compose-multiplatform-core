@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("DEPRECATION")
+
 package androidx.tv.foundation.lazy.grid
 
 import androidx.compose.foundation.gestures.ScrollScope
@@ -23,25 +25,27 @@ import androidx.tv.foundation.lazy.layout.LazyAnimateScrollScope
 import kotlin.math.abs
 import kotlin.math.max
 
-internal class LazyGridAnimateScrollScope(
-    private val state: TvLazyGridState
-) : LazyAnimateScrollScope {
-    override val density: Density get() = state.density
+internal class LazyGridAnimateScrollScope(private val state: TvLazyGridState) :
+    LazyAnimateScrollScope {
+    override val density: Density
+        get() = state.density
 
-    override val firstVisibleItemIndex: Int get() = state.firstVisibleItemIndex
+    override val firstVisibleItemIndex: Int
+        get() = state.firstVisibleItemIndex
 
-    override val firstVisibleItemScrollOffset: Int get() = state.firstVisibleItemScrollOffset
+    override val firstVisibleItemScrollOffset: Int
+        get() = state.firstVisibleItemScrollOffset
 
     override val lastVisibleItemIndex: Int
         get() = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-    override val itemCount: Int get() = state.layoutInfo.totalItemsCount
+    override val itemCount: Int
+        get() = state.layoutInfo.totalItemsCount
 
     override fun getTargetItemOffset(index: Int): Int? =
         state.layoutInfo.visibleItemsInfo
-            .fastFirstOrNull {
-                it.index == index
-            }?.let { item ->
+            .fastFirstOrNull { it.index == index }
+            ?.let { item ->
                 if (state.isVertical) {
                     item.offset.y
                 } else {
@@ -55,10 +59,8 @@ internal class LazyGridAnimateScrollScope(
 
     override fun expectedDistanceTo(index: Int, targetScrollOffset: Int): Float {
         val slotsPerLine = state.slotsPerLine
-        val averageLineMainAxisSize = calculateLineAverageMainAxisSize(
-            state.layoutInfo,
-            state.isVertical
-        )
+        val averageLineMainAxisSize =
+            calculateLineAverageMainAxisSize(state.layoutInfo, state.isVertical)
         val before = index < firstVisibleItemIndex
         val linesDiff =
             (index - firstVisibleItemIndex + (slotsPerLine - 1) * if (before) -1 else 1) /
@@ -66,11 +68,12 @@ internal class LazyGridAnimateScrollScope(
 
         var coercedOffset = minOf(abs(targetScrollOffset), averageLineMainAxisSize)
         if (targetScrollOffset < 0) coercedOffset *= -1
-        return (averageLineMainAxisSize * linesDiff).toFloat() +
-            coercedOffset - firstVisibleItemScrollOffset
+        return (averageLineMainAxisSize * linesDiff).toFloat() + coercedOffset -
+            firstVisibleItemScrollOffset
     }
 
-    override val numOfItemsForTeleport: Int get() = 100 * state.slotsPerLine
+    override val numOfItemsForTeleport: Int
+        get() = 100 * state.slotsPerLine
 
     private fun calculateLineAverageMainAxisSize(
         layoutInfo: TvLazyGridLayoutInfo,
@@ -96,14 +99,15 @@ internal class LazyGridAnimateScrollScope(
             var lineMainAxisSize = 0
             var lineEndIndex = lineStartIndex
             while (lineEndIndex < visibleItems.size && lineOf(lineEndIndex) == currentLine) {
-                lineMainAxisSize = max(
-                    lineMainAxisSize,
-                    if (isVertical) {
-                        visibleItems[lineEndIndex].size.height
-                    } else {
-                        visibleItems[lineEndIndex].size.width
-                    }
-                )
+                lineMainAxisSize =
+                    max(
+                        lineMainAxisSize,
+                        if (isVertical) {
+                            visibleItems[lineEndIndex].size.height
+                        } else {
+                            visibleItems[lineEndIndex].size.width
+                        }
+                    )
                 ++lineEndIndex
             }
 

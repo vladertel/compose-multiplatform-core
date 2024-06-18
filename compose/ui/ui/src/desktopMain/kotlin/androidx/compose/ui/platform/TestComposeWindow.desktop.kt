@@ -20,7 +20,6 @@ package androidx.compose.ui.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ComposeScene
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -46,9 +45,10 @@ import org.jetbrains.skia.Surface
 import org.jetbrains.skiko.FrameDispatcher
 
 @PublishedApi
-internal val EmptyDispatcher = object : CoroutineDispatcher() {
-    override fun dispatch(context: CoroutineContext, block: Runnable) = Unit
-}
+internal val EmptyDispatcher =
+    object : CoroutineDispatcher() {
+        override fun dispatch(context: CoroutineContext, block: Runnable) = Unit
+    }
 
 /**
  * A virtual window for testing purposes.
@@ -58,7 +58,6 @@ internal val EmptyDispatcher = object : CoroutineDispatcher() {
  * It doesn't dispatch frames by default. If frame dispatching is needed, pass appropriate
  * dispatcher as coroutineContext (for example, Dispatchers.Swing)
  */
-@OptIn(ExperimentalComposeUiApi::class)
 class TestComposeWindow(
     val width: Int,
     val height: Int,
@@ -66,18 +65,14 @@ class TestComposeWindow(
     private val nanoTime: () -> Long = System::nanoTime,
     coroutineContext: CoroutineContext = EmptyDispatcher
 ) {
-    /**
-     * Virtual surface on which the content will be drawn
-     */
+    /** Virtual surface on which the content will be drawn */
     val surface = Surface.makeRasterN32Premul(width, height)
 
     private val canvas = surface.canvas
 
     private val coroutineScope = CoroutineScope(coroutineContext + Job())
-    private val frameDispatcher: FrameDispatcher = FrameDispatcher(
-        onFrame = { onFrame() },
-        context = coroutineScope.coroutineContext
-    )
+    private val frameDispatcher: FrameDispatcher =
+        FrameDispatcher(onFrame = { onFrame() }, context = coroutineScope.coroutineContext)
 
     private fun onFrame() {
         canvas.clear(Color.Transparent.toArgb())
@@ -86,40 +81,33 @@ class TestComposeWindow(
     }
 
     internal val component = DummyPlatformComponent
-    private val scene = ComposeScene(
-        coroutineScope.coroutineContext,
-        component,
-        density,
-        invalidate = frameDispatcher::scheduleFrame
-    ).apply {
-        constraints = Constraints(maxWidth = width, maxHeight = height)
-    }
+    private val scene =
+        ComposeScene(
+                coroutineScope.coroutineContext,
+                component,
+                density,
+                invalidate = frameDispatcher::scheduleFrame
+            )
+            .apply { constraints = Constraints(maxWidth = width, maxHeight = height) }
 
     val currentCursor
         get() = component.componentCursor
 
-    /**
-     * All currently registered [RootForTest]s
-     */
+    /** All currently registered [RootForTest]s */
     @OptIn(InternalComposeUiApi::class)
-    val roots: Set<RootForTest> get() = scene.roots
+    val roots: Set<RootForTest>
+        get() = scene.roots
 
-    /**
-     * Clear-up all acquired resources and stop all pending work
-     */
+    /** Clear-up all acquired resources and stop all pending work */
     fun dispose() {
         scene.close()
         coroutineScope.cancel()
     }
 
-    /**
-     * Returns true if there are pending work scheduled by this window
-     */
+    /** Returns true if there are pending work scheduled by this window */
     fun hasInvalidations(): Boolean = scene.hasInvalidations()
 
-    /**
-     * Compose [content] immediately and draw it on a [surface]
-     */
+    /** Compose [content] immediately and draw it on a [surface] */
     fun setContent(content: @Composable () -> Unit) {
         scene.constraints = Constraints(maxWidth = width, maxHeight = height)
         scene.setContent(content = content)
@@ -131,47 +119,45 @@ class TestComposeWindow(
         scene.render(canvas, nanoTime = nanoTime())
     }
 
-    /**
-     * Process mouse scroll event
-     */
-    @OptIn(ExperimentalComposeUiApi::class)
+    /** Process mouse scroll event */
     fun onMouseScroll(x: Int, y: Int, event: MouseScrollEvent) {
-        val delta = when (event.delta) {
-            is MouseScrollUnit.Line -> event.delta.value
-            is MouseScrollUnit.Page -> event.delta.value
-        }
+        val delta =
+            when (event.delta) {
+                is MouseScrollUnit.Line -> event.delta.value
+                is MouseScrollUnit.Page -> event.delta.value
+            }
         val wheelRotation = sign(delta)
         scene.sendPointerEvent(
             eventType = PointerEventType.Scroll,
             position = Offset(x.toFloat(), y.toFloat()),
-            scrollDelta = if (event.orientation == MouseScrollOrientation.Vertical) {
-                Offset(0f, wheelRotation)
-            } else {
-                Offset(wheelRotation, 0f)
-            },
-            nativeEvent = MouseWheelEvent(
-                EventComponent,
-                MouseWheelEvent.MOUSE_WHEEL,
-                0,
-                0,
-                0,
-                0,
-                0,
-                false,
-                if (event.delta is MouseScrollUnit.Line) {
-                    MouseWheelEvent.WHEEL_UNIT_SCROLL
+            scrollDelta =
+                if (event.orientation == MouseScrollOrientation.Vertical) {
+                    Offset(0f, wheelRotation)
                 } else {
-                    MouseWheelEvent.WHEEL_BLOCK_SCROLL
+                    Offset(wheelRotation, 0f)
                 },
-                abs(delta.roundToInt()),
-                wheelRotation.roundToInt()
-            )
+            nativeEvent =
+                MouseWheelEvent(
+                    EventComponent,
+                    MouseWheelEvent.MOUSE_WHEEL,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    false,
+                    if (event.delta is MouseScrollUnit.Line) {
+                        MouseWheelEvent.WHEEL_UNIT_SCROLL
+                    } else {
+                        MouseWheelEvent.WHEEL_BLOCK_SCROLL
+                    },
+                    abs(delta.roundToInt()),
+                    wheelRotation.roundToInt()
+                )
         )
     }
 
-    /**
-     * Process mouse move event
-     */
+    /** Process mouse move event */
     fun onMouseMoved(x: Int, y: Int) {
         scene.sendPointerEvent(
             eventType = PointerEventType.Move,
@@ -179,9 +165,7 @@ class TestComposeWindow(
         )
     }
 
-    /**
-     * Process mouse enter event
-     */
+    /** Process mouse enter event */
     fun onMouseEntered(x: Int, y: Int) {
         scene.sendPointerEvent(
             eventType = PointerEventType.Enter,
@@ -189,14 +173,9 @@ class TestComposeWindow(
         )
     }
 
-    /**
-     * Process mouse exit event
-     */
+    /** Process mouse exit event */
     fun onMouseExited() {
-        scene.sendPointerEvent(
-            eventType = PointerEventType.Exit,
-            position = Offset(-1f, -1f)
-        )
+        scene.sendPointerEvent(eventType = PointerEventType.Exit, position = Offset(-1f, -1f))
     }
 
     companion object {

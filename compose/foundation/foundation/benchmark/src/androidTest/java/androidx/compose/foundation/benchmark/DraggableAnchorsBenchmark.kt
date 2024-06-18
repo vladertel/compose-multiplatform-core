@@ -18,7 +18,6 @@ package androidx.compose.foundation.benchmark
 
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
@@ -26,16 +25,20 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private enum class DraggableAnchorsSampleValue { Start, HalfStart, Center, HalfEnd, End }
+private enum class DraggableAnchorsSampleValue {
+    Start,
+    HalfStart,
+    Center,
+    HalfEnd,
+    End
+}
 
-@OptIn(ExperimentalFoundationApi::class)
 @RunWith(AndroidJUnit4::class)
 @Suppress("unused")
 @MediumTest
 class DraggableAnchorsBenchmark {
 
-    @get:Rule
-    val benchmarkRule = BenchmarkRule()
+    @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test
     fun constructAnchors() {
@@ -59,9 +62,7 @@ class DraggableAnchorsBenchmark {
             DraggableAnchorsSampleValue.HalfEnd at 300f
             DraggableAnchorsSampleValue.End at 400f
         }
-        benchmarkRule.measureRepeated {
-            anchors.positionOf(DraggableAnchorsSampleValue.Center)
-        }
+        benchmarkRule.measureRepeated { anchors.positionOf(DraggableAnchorsSampleValue.Center) }
     }
 
     @Test
@@ -73,9 +74,7 @@ class DraggableAnchorsBenchmark {
             DraggableAnchorsSampleValue.HalfEnd at 300f
             DraggableAnchorsSampleValue.End at 400f
         }
-        benchmarkRule.measureRepeated {
-            anchors.closestAnchor(250f, searchUpwards = true)
-        }
+        benchmarkRule.measureRepeated { anchors.closestAnchor(250f, searchUpwards = true) }
     }
 
     @Test
@@ -87,9 +86,7 @@ class DraggableAnchorsBenchmark {
             DraggableAnchorsSampleValue.HalfEnd at 300f
             DraggableAnchorsSampleValue.End at 400f
         }
-        benchmarkRule.measureRepeated {
-            anchors.closestAnchor(250f, searchUpwards = false)
-        }
+        benchmarkRule.measureRepeated { anchors.closestAnchor(250f, searchUpwards = false) }
     }
 
     @Test
@@ -101,9 +98,7 @@ class DraggableAnchorsBenchmark {
             DraggableAnchorsSampleValue.HalfEnd at 300f
             DraggableAnchorsSampleValue.End at 400f
         }
-        benchmarkRule.measureRepeated {
-            anchors.closestAnchor(250f)
-        }
+        benchmarkRule.measureRepeated { anchors.closestAnchor(250f) }
     }
 
     @Test
@@ -115,9 +110,7 @@ class DraggableAnchorsBenchmark {
             DraggableAnchorsSampleValue.HalfEnd at 300f
             DraggableAnchorsSampleValue.End at 400f
         }
-        benchmarkRule.measureRepeated {
-            anchors.hasAnchorFor(DraggableAnchorsSampleValue.Center)
-        }
+        benchmarkRule.measureRepeated { anchors.hasAnchorFor(DraggableAnchorsSampleValue.Center) }
     }
 
     @Test
@@ -129,9 +122,7 @@ class DraggableAnchorsBenchmark {
             DraggableAnchorsSampleValue.HalfEnd at 300f
             DraggableAnchorsSampleValue.End at 400f
         }
-        benchmarkRule.measureRepeated {
-            anchors.minAnchor()
-        }
+        benchmarkRule.measureRepeated { anchors.minAnchor() }
     }
 
     @Test
@@ -143,8 +134,6 @@ class DraggableAnchorsBenchmark {
             DraggableAnchorsSampleValue.HalfEnd at 300f
             DraggableAnchorsSampleValue.End at 400f
         }
-        benchmarkRule.measureRepeated {
-            anchors.maxAnchor()
-        }
+        benchmarkRule.measureRepeated { anchors.maxAnchor() }
     }
 }

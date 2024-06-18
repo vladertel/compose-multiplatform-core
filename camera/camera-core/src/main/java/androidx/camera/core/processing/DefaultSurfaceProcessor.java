@@ -45,6 +45,7 @@ import androidx.camera.core.SurfaceRequest;
 import androidx.camera.core.impl.utils.MatrixExt;
 import androidx.camera.core.impl.utils.executor.CameraXExecutors;
 import androidx.camera.core.impl.utils.futures.Futures;
+import androidx.camera.core.processing.util.GLUtils.InputFormat;
 import androidx.concurrent.futures.CallbackToFutureAdapter;
 
 import com.google.auto.value.AutoValue;
@@ -135,7 +136,17 @@ public class DefaultSurfaceProcessor implements SurfaceProcessorInternal,
             surfaceTexture.setDefaultBufferSize(surfaceRequest.getResolution().getWidth(),
                     surfaceRequest.getResolution().getHeight());
             Surface surface = new Surface(surfaceTexture);
+            surfaceRequest.setTransformationInfoListener(mGlExecutor, transformationInfo -> {
+                InputFormat inputFormat = InputFormat.DEFAULT;
+                if (surfaceRequest.getDynamicRange().is10BitHdr()
+                        && transformationInfo.hasCameraTransform()) {
+                    inputFormat = InputFormat.YUV;
+                }
+
+                mGlRenderer.setInputFormat(inputFormat);
+            });
             surfaceRequest.provideSurface(surface, mGlExecutor, result -> {
+                surfaceRequest.clearTransformationInfoListener();
                 surfaceTexture.setOnFrameAvailableListener(null);
                 surfaceTexture.release();
                 surface.release();

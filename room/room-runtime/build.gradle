@@ -70,6 +70,8 @@ android {
 }
 
 androidXMultiplatform {
+    enableBinaryCompatibilityValidator = true
+
     android()
     ios() {
         // Link to sqlite3 available in iOS
@@ -224,4 +226,5 @@ androidx {
     type = LibraryType.PUBLISHED_LIBRARY
     inceptionYear = "2017"
     description = "Android Room-Runtime"
+    legacyDisableKotlinStrictApiMode = true
 }

@@ -52,7 +52,6 @@ dependencies {
 
 android {
     defaultConfig {
-        minSdkVersion 21
         vectorDrawables.useSupportLibrary = true
     }
     sourceSets {
@@ -70,4 +69,5 @@ androidx {
     description = "This library provides the latest emoji support and emoji picker UI to input " +
             "emoji in current and older devices"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

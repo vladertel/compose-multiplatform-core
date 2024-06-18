@@ -50,7 +50,7 @@ import org.junit.runner.RunWith
  *
  * Note: [Call] is package-private so we still need to leverage Telecom to create calls on our
  * behalf for testing. The call properties and extras fields aren't mutable so we need to ensure
- * that we wait for them to become av.ailable before accessing them.
+ * that we wait for them to become available before accessing them.
  */
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.O)
 @RequiresApi(Build.VERSION_CODES.O)
@@ -74,7 +74,7 @@ class InCallServiceCompatTest : BaseTelecomTest() {
     @Before
     fun setUp() {
         Utils.resetUtils()
-        setInCallService(InCallServiceType.ICS_WITH_EXTENSIONS)
+        setInCallService(InCallServiceType.ICS_WITH_EXTENSIONS, emptySet())
     }
 
     @After
@@ -129,7 +129,7 @@ class InCallServiceCompatTest : BaseTelecomTest() {
             TestUtils.OUTGOING_CALL_ATTRIBUTES,
             InCallServiceCompat.CAPABILITY_EXCHANGE,
             // Waiting is not required for U+ testing
-            waitForCallDetailExtras = !TestUtils.buildIsAtLeastU(),
+            waitForCallDetailExtras = !Utils.hasPlatformV2Apis(),
             extraToInclude = backwardsCompatExtra,
         )
     }
@@ -223,7 +223,7 @@ class InCallServiceCompatTest : BaseTelecomTest() {
     }
 
     private fun configureCapabilityExchangeTypeTest(): Pair<String, Boolean>? {
-        if (TestUtils.buildIsAtLeastU()) {
+        if (Utils.hasPlatformV2Apis()) {
             Log.w(CallCompatTest.TAG, "Setting up v2 tests for U+ device")
             setUpV2TestWithExtensions()
         } else {
@@ -232,7 +232,7 @@ class InCallServiceCompatTest : BaseTelecomTest() {
         }
 
         // Add EXTRA_VOIP_BACKWARDS_COMPATIBILITY_SUPPORTED for pre-U testing
-        return if (!TestUtils.buildIsAtLeastU())
+        return if (!Utils.hasPlatformV2Apis())
             Pair(CallsManager.EXTRA_VOIP_BACKWARDS_COMPATIBILITY_SUPPORTED, true)
         else null
     }

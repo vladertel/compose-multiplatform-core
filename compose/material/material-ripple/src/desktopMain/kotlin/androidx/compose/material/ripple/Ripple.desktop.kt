@@ -1,4 +1,3 @@
-// ktlint-disable filename
 /*
  * Copyright 2021 The Android Open Source Project
  *
@@ -22,9 +21,7 @@ import androidx.compose.ui.graphics.ColorProducer
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.unit.Dp
 
-/**
- * Desktop ripple implementation using the Compose-rendered [CommonRippleNode] implementation.
- */
+/** Desktop ripple implementation using the Compose-rendered [CommonRippleNode] implementation. */
 internal actual fun createPlatformRippleNode(
     interactionSource: InteractionSource,
     bounded: Boolean,
@@ -35,9 +32,7 @@ internal actual fun createPlatformRippleNode(
     return CommonRippleNode(interactionSource, bounded, radius, color, rippleAlpha)
 }
 
-/**
- * Desktop ripple implementation using the Compose-rendered [CommonRipple] implementation.
- */
+/** Desktop ripple implementation using the Compose-rendered [CommonRipple] implementation. */
 @Suppress("DEPRECATION")
 @Deprecated("Replaced by the new RippleNode implementation")
 internal actual typealias PlatformRipple = CommonRipple

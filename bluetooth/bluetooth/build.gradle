@@ -50,11 +50,9 @@ androidx {
     inceptionYear = "2022"
     description = "AndroidX Bluetooth Library"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }
 
 android {
     namespace "androidx.bluetooth"
-    defaultConfig {
-        minSdkVersion 21
-    }
 }

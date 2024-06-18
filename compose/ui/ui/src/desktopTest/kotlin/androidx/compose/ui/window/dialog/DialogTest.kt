@@ -29,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.ComposeDialog
 import androidx.compose.ui.focus.FocusRequester
@@ -54,7 +53,6 @@ import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import org.junit.Test
 
-@OptIn(ExperimentalComposeUiApi::class)
 class DialogTest {
     @Test
     fun `open and close custom dialog`() = runApplicationTest {
@@ -63,21 +61,21 @@ class DialogTest {
         launchApplication {
             var isOpen by remember { mutableStateOf(true) }
 
-            fun createWindow() = ComposeDialog().apply {
-                size = Dimension(300, 200)
+            fun createWindow() =
+                ComposeDialog().apply {
+                    size = Dimension(300, 200)
 
-                addWindowListener(object : WindowAdapter() {
-                    override fun windowClosing(e: WindowEvent) {
-                        isOpen = false
-                    }
-                })
-            }
+                    addWindowListener(
+                        object : WindowAdapter() {
+                            override fun windowClosing(e: WindowEvent) {
+                                isOpen = false
+                            }
+                        }
+                    )
+                }
 
             if (isOpen) {
-                DialogWindow(
-                    create = ::createWindow,
-                    dispose = ComposeDialog::dispose
-                ) {
+                DialogWindow(create = ::createWindow, dispose = ComposeDialog::dispose) {
                     window = this.window
                     Box(Modifier.size(32.dp).background(Color.Red))
                 }
@@ -98,15 +96,18 @@ class DialogTest {
         var title by mutableStateOf("Title1")
 
         launchApplication {
-            fun createWindow() = ComposeDialog().apply {
-                size = Dimension(300, 200)
+            fun createWindow() =
+                ComposeDialog().apply {
+                    size = Dimension(300, 200)
 
-                addWindowListener(object : WindowAdapter() {
-                    override fun windowClosing(e: WindowEvent) {
-                        isOpen = false
-                    }
-                })
-            }
+                    addWindowListener(
+                        object : WindowAdapter() {
+                            override fun windowClosing(e: WindowEvent) {
+                                isOpen = false
+                            }
+                        }
+                    )
+                }
 
             if (isOpen) {
                 DialogWindow(
@@ -156,11 +157,7 @@ class DialogTest {
 
         launchApplication {
             if (isOpen) {
-                DialogWindow(
-                    onCloseRequest = {
-                        isCloseCalled = true
-                    }
-                ) {
+                DialogWindow(onCloseRequest = { isCloseCalled = true }) {
                     window = this.window
                     Box(Modifier.size(32.dp).background(Color.Red))
                 }
@@ -261,9 +258,10 @@ class DialogTest {
             if (isOpen) {
                 DialogWindow(
                     onCloseRequest = {},
-                    state = rememberDialogState(
-                        size = DpSize(600.dp, 600.dp),
-                    )
+                    state =
+                        rememberDialogState(
+                            size = DpSize(600.dp, 600.dp),
+                        )
                 ) {
                     window1 = this.window
                     Box(Modifier.size(32.dp).background(Color.Red))
@@ -271,9 +269,10 @@ class DialogTest {
                     if (isNestedOpen) {
                         DialogWindow(
                             onCloseRequest = {},
-                            state = rememberDialogState(
-                                size = DpSize(300.dp, 300.dp),
-                            )
+                            state =
+                                rememberDialogState(
+                                    size = DpSize(300.dp, 300.dp),
+                                )
                         ) {
                             window2 = this.window
                             Box(Modifier.size(32.dp).background(Color.Blue))
@@ -317,18 +316,20 @@ class DialogTest {
                 CompositionLocalProvider(localTestValue provides testValue) {
                     DialogWindow(
                         onCloseRequest = {},
-                        state = rememberDialogState(
-                            size = DpSize(600.dp, 600.dp),
-                        )
+                        state =
+                            rememberDialogState(
+                                size = DpSize(600.dp, 600.dp),
+                            )
                     ) {
                         actualValue1 = localTestValue.current
                         Box(Modifier.size(32.dp).background(Color.Red))
 
                         DialogWindow(
                             onCloseRequest = {},
-                            state = rememberDialogState(
-                                size = DpSize(300.dp, 300.dp),
-                            )
+                            state =
+                                rememberDialogState(
+                                    size = DpSize(300.dp, 300.dp),
+                                )
                         ) {
                             actualValue2 = localTestValue.current
                             Box(Modifier.size(32.dp).background(Color.Blue))
@@ -362,9 +363,7 @@ class DialogTest {
                 DialogWindow(onCloseRequest = {}) {
                     DisposableEffect(Unit) {
                         initCount++
-                        onDispose {
-                            disposeCount++
-                        }
+                        onDispose { disposeCount++ }
                     }
                 }
             }
@@ -459,13 +458,10 @@ class DialogTest {
                 window = this.window
 
                 val focusRequester = remember(::FocusRequester)
-                LaunchedEffect(Unit) {
-                    focusRequester.requestFocus()
-                }
+                LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
                 Box(
-                    Modifier
-                        .focusRequester(focusRequester)
+                    Modifier.focusRequester(focusRequester)
                         .focusTarget()
                         .onPreviewKeyEvent {
                             onNodePreviewKeyEventKeys.add(it.key)

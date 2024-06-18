@@ -24,9 +24,6 @@ dependencies {
 }
 
 android {
-    defaultConfig {
-        minSdkVersion 21
-    }
     namespace "androidx.glance.material3"
 }
 
@@ -37,5 +34,6 @@ androidx {
     description = "Glance Material integration library." +
             " This library provides interop APIs with Material 3."
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }
 

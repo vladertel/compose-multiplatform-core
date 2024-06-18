@@ -38,7 +38,6 @@ import com.google.common.util.concurrent.ListenableFuture
  * A worker which can delegate to an instance of RemoteListenableWorker but importantly only
  * constructs an instance of the RemoteListenableWorker in the remote process.
  */
-@RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 class RemoteListenableDelegatingWorker(
     private val context: Context,
     private val workerParameters: WorkerParameters
@@ -66,13 +65,15 @@ class RemoteListenableDelegatingWorker(
                 "Need to specify a class name for the RemoteListenableWorker to delegate to."
             }
             componentName = ComponentName(servicePackageName, serviceClassName)
-            val response = client.execute(componentName!!) { iListenableWorkerImpl, callback ->
-                val remoteWorkRequest = ParcelableRemoteWorkRequest(
-                    workerClassName, workerParameters
-                )
-                val requestPayload = ParcelConverters.marshall(remoteWorkRequest)
-                iListenableWorkerImpl.startWork(requestPayload, callback)
-            }.awaitWithin(this@RemoteListenableDelegatingWorker)
+            val response =
+                client
+                    .execute(componentName!!) { iListenableWorkerImpl, callback ->
+                        val remoteWorkRequest =
+                            ParcelableRemoteWorkRequest(workerClassName, workerParameters)
+                        val requestPayload = ParcelConverters.marshall(remoteWorkRequest)
+                        iListenableWorkerImpl.startWork(requestPayload, callback)
+                    }
+                    .awaitWithin(this@RemoteListenableDelegatingWorker)
             val parcelableResult = ParcelConverters.unmarshall(response, ParcelableResult.CREATOR)
             Logger.get().debug(TAG, "Cleaning up")
             client.unbindService()
@@ -98,9 +99,7 @@ class RemoteListenableDelegatingWorker(
 
         // The RemoteListenableWorker class to delegate to.
         @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-        /* ktlint-disable max-line-length */
         const val ARGUMENT_REMOTE_LISTENABLE_WORKER_NAME =
             "androidx.work.multiprocess.RemoteListenableDelegatingWorker.ARGUMENT_REMOTE_LISTENABLE_WORKER_NAME"
-        /* ktlint-enable max-line-length */
     }
 }

@@ -62,9 +62,6 @@ dependencies {
 
 android {
     namespace "androidx.tv.material"
-    defaultConfig {
-        minSdkVersion 21
-    }
     sourceSets.androidTest.assets.srcDirs +=
              project.rootDir.absolutePath + "/../../golden/tv/compose/material3"
 }
@@ -75,5 +72,6 @@ androidx {
     mavenVersion = LibraryVersions.TV_MATERIAL
     inceptionYear = "2022"
     description = "build TV applications using controls that adhere to Material Design Language."
+    legacyDisableKotlinStrictApiMode = true
     samples(project(":tv:tv-material-samples"))
 }

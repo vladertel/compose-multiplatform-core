@@ -33,10 +33,8 @@ internal actual fun createInputDispatcher(
     return DesktopInputDispatcher(testContext, root as SkiaRootForTest)
 }
 
-internal class DesktopInputDispatcher(
-    testContext: TestContext,
-    val root: SkiaRootForTest
-) : InputDispatcher(testContext, root) {
+internal class DesktopInputDispatcher(testContext: TestContext, val root: SkiaRootForTest) :
+    InputDispatcher(testContext, root) {
     companion object {
         var gesturePointerId = 0L
     }
@@ -49,6 +47,7 @@ internal class DesktopInputDispatcher(
         isMousePressed = true
         enqueueEvent(pointerInputEvent(isMousePressed))
     }
+
     override fun PartialGesture.enqueueMove() {
         enqueueEvent(pointerInputEvent(isMousePressed))
     }
@@ -95,7 +94,6 @@ internal class DesktopInputDispatcher(
         TODO("Not yet implemented")
     }
 
-    @OptIn(ExperimentalTestApi::class)
     override fun MouseInputState.enqueueScroll(delta: Float, scrollWheel: ScrollWheel) {
         TODO("Not yet implemented")
     }
@@ -121,14 +119,8 @@ internal class DesktopInputDispatcher(
     private fun PartialGesture.pointerInputEvent(down: Boolean): List<TestPointerInputEventData> {
         val time = currentTime
         val offset = lastPositions[lastPositions.keys.sorted()[0]]!!
-        val event = listOf(
-            TestPointerInputEventData(
-                PointerId(gesturePointerId),
-                time,
-                offset,
-                down
-            )
-        )
+        val event =
+            listOf(TestPointerInputEventData(PointerId(gesturePointerId), time, offset, down))
         return event
     }
 

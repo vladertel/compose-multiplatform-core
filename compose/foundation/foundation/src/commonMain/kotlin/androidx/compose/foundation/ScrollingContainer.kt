@@ -25,10 +25,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.Modifier
 
 // TODO b/316559454 to remove @Composable from it and make it public
-/**
- * Scrolling related information to transform a layout into a "Scrollable Container"
- */
-@ExperimentalFoundationApi
+/** Scrolling related information to transform a layout into a "Scrollable Container" */
 internal fun Modifier.scrollingContainer(
     state: ScrollableState,
     orientation: Orientation,

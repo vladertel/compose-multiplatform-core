@@ -37,91 +37,7 @@ import org.junit.Rule
 import org.junit.Test
 
 class ToggleControlsTest {
-    @get:Rule
-    val rule = createComposeRule()
-
-    @Test
-    fun checkbox_supports_testtag() {
-        rule.setContentWithTheme {
-            with(ToggleControlScope(isEnabled = true, isChecked = true)) {
-                Checkbox(modifier = Modifier.testTag(TEST_TAG))
-            }
-        }
-
-        rule.onNodeWithTag(TEST_TAG).assertExists()
-    }
-
-    @Test
-    fun checkbox_is_expected_size() {
-        rule
-            .setContentWithThemeForSizeAssertions {
-                with(ToggleControlScope(isEnabled = true, isChecked = true)) {
-                    Checkbox(modifier = Modifier.testTag(TEST_TAG))
-                }
-            }
-            .assertHeightIsEqualTo(TOGGLE_CONTROL_HEIGHT)
-            .assertWidthIsEqualTo(TOGGLE_CONTROL_WIDTH)
-    }
-
-    @Test
-    fun checkbox_has_role_checkbox_when_oncheckedchange_defined() {
-        rule.setContentWithTheme {
-            with(ToggleControlScope(isEnabled = true, isChecked = true)) {
-                Checkbox(modifier = Modifier.testTag(TEST_TAG))
-            }
-        }
-
-        rule.onNodeWithTag(TEST_TAG)
-            .assert(
-                SemanticsMatcher.expectValue(
-                    SemanticsProperties.Role,
-                    Role.Checkbox
-                )
-            )
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    @Test
-    fun checkbox_checked_colors_are_customisable() {
-        val boxColor = Color.Green
-        val checkmarkColor = Color.Blue
-        rule.setContentWithTheme {
-            with(ToggleControlScope(isEnabled = true, isChecked = true)) {
-                Checkbox(
-                    colors = CheckboxDefaults.colors(
-                        checkedBoxColor = boxColor,
-                        checkedCheckmarkColor = checkmarkColor
-                    ),
-                    modifier = Modifier.testTag(TEST_TAG)
-                )
-            }
-        }
-
-        val checkboxImage = rule.onNodeWithTag(TEST_TAG).captureToImage()
-        checkboxImage.assertContainsColor(boxColor)
-        checkboxImage.assertContainsColor(checkmarkColor)
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    @Test
-    fun checkbox_unchecked_colors_are_customisable() {
-        // NB checkmark is erased during animation, so we don't test uncheckedCheckmarkColor
-        // as it is just used as a target color for the animation.
-        val boxColor = Color.Green
-        rule.setContentWithTheme {
-            with(ToggleControlScope(isEnabled = true, isChecked = false)) {
-                Checkbox(
-                    colors = CheckboxDefaults.colors(
-                        uncheckedBoxColor = boxColor,
-                    ),
-                    modifier = Modifier.testTag(TEST_TAG)
-                )
-            }
-        }
-
-        val checkboxImage = rule.onNodeWithTag(TEST_TAG).captureToImage()
-        checkboxImage.assertContainsColor(boxColor)
-    }
+    @get:Rule val rule = createComposeRule()
 
     @Test
     fun switch_supports_testtag() {
@@ -154,13 +70,9 @@ class ToggleControlsTest {
             }
         }
 
-        rule.onNodeWithTag(TEST_TAG)
-            .assert(
-                SemanticsMatcher.expectValue(
-                    SemanticsProperties.Role,
-                    Role.Switch
-                )
-            )
+        rule
+            .onNodeWithTag(TEST_TAG)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
     }
 
     @Test
@@ -184,12 +96,13 @@ class ToggleControlsTest {
         rule.setContentWithTheme {
             with(ToggleControlScope(isEnabled = true, isChecked = true)) {
                 Switch(
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = thumbColor,
-                        checkedThumbIconColor = thumbIconColor,
-                        checkedTrackColor = trackColor,
-                        checkedTrackBorderColor = trackStrokeColor
-                    ),
+                    colors =
+                        SwitchDefaults.colors(
+                            checkedThumbColor = thumbColor,
+                            checkedThumbIconColor = thumbIconColor,
+                            checkedTrackColor = trackColor,
+                            checkedTrackBorderColor = trackStrokeColor
+                        ),
                     modifier = Modifier.testTag(TEST_TAG)
                 )
             }
@@ -212,12 +125,13 @@ class ToggleControlsTest {
         rule.setContentWithTheme {
             with(ToggleControlScope(isEnabled = true, isChecked = false)) {
                 Switch(
-                    colors = SwitchDefaults.colors(
-                        uncheckedThumbColor = thumbColor,
-                        uncheckedThumbIconColor = thumbIconColor,
-                        uncheckedTrackColor = trackColor,
-                        uncheckedTrackBorderColor = trackStrokeColor
-                    ),
+                    colors =
+                        SwitchDefaults.colors(
+                            uncheckedThumbColor = thumbColor,
+                            uncheckedThumbIconColor = thumbIconColor,
+                            uncheckedTrackColor = trackColor,
+                            uncheckedTrackBorderColor = trackStrokeColor
+                        ),
                     modifier = Modifier.testTag(TEST_TAG)
                 )
             }

@@ -47,6 +47,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.tasks.TaskContainer
 
 /**
  * This is the consumer plugin for baseline profile generation. In order to generate baseline
@@ -167,10 +168,7 @@ private class BaselineProfileConsumerAgpPlugin(private val project: Project) :
         // in case the benchmark and nonMinified variants have been disabled.
 
         val isBaselineProfilePluginCreatedBuildType =
-            variantBuilder.buildType?.let {
-                it.startsWith(BUILD_TYPE_BASELINE_PROFILE_PREFIX) ||
-                    it.startsWith(BUILD_TYPE_BENCHMARK_PREFIX)
-            } ?: false
+            isBaselineProfilePluginCreatedBuildType(variantBuilder.buildType)
 
         // Note that the callback should be remove at the end, after all the variants
         // have been processed. This is because the benchmark and nonMinified variants can be
@@ -196,7 +194,20 @@ private class BaselineProfileConsumerAgpPlugin(private val project: Project) :
     @Suppress("UnstableApiUsage")
     override fun onVariants(variant: Variant) {
 
-        // Process only the non debuggable build types we previously selected.
+        // For test only: this registers a print task with the experimental properties of the
+        // variant. This task is hidden from the `tasks` command.
+        PrintMapPropertiesForVariantTask.registerForVariant(project = project, variant = variant)
+
+        // Controls whether Android Studio should see this variant. Variants created by the
+        // baseline profile gradle plugin are hidden by default.
+        if (
+            baselineProfileExtension.hideSyntheticBuildTypesInAndroidStudio &&
+                isBaselineProfilePluginCreatedBuildType(variant.buildType)
+        ) {
+            variant.experimentalProperties.put("androidx.baselineProfile.hideInStudio", true)
+        }
+
+        // From here on, process only the non debuggable build types we previously selected.
         if (variant.buildType !in nonDebuggableBuildTypes) return
 
         // This allows quick access to this variant configuration according to the override
@@ -204,12 +215,12 @@ private class BaselineProfileConsumerAgpPlugin(private val project: Project) :
         val variantConfiguration = perVariantBaselineProfileExtensionManager.variant(variant)
 
         // For test only: this registers a print task with the configuration of the variant.
+        // This task is hidden from the `tasks` command.
         PrintConfigurationForVariantTask.registerForVariant(
             project = project,
             variant = variant,
             variantConfig = variantConfiguration
         )
-        PrintMapPropertiesForVariantTask.registerForVariant(project = project, variant = variant)
 
         // Sets the r8 rewrite baseline profile for the non debuggable variant.
         variantConfiguration.baselineProfileRulesRewrite?.let {
@@ -426,16 +437,23 @@ private class BaselineProfileConsumerAgpPlugin(private val project: Project) :
                 if (isApplicationModule()) {
                     // Defines a function to apply the baseline profile source sets to a variant.
                     fun applySourceSets(variantName: String) {
-                        val taskName = camelCase("merge", variantName, "artProfile")
-                        project.tasks.namedOrNull<Task>(taskName)?.configure { t ->
-                            // This causes a circular task dependency when the producer points to
-                            // a consumer that does not have the appTarget plugin. (b/272851616)
-                            if (automaticGeneration) {
-                                t.dependsOn(copyTaskProvider)
-                            } else {
-                                t.mustRunAfter(copyTaskProvider)
+
+                        // These dependencies causes a circular task dependency when the producer
+                        // points to a consumer that does not have the appTarget plugin.
+                        // Note that on old versions of AGP these tasks may not exist.
+                        listOfNotNull(
+                                project.tasks.taskMergeArtProfile(variantName),
+                                project.tasks.taskMergeStartupProfile(variantName)
+                            )
+                            .forEach {
+                                it.configure { t ->
+                                    if (automaticGeneration) {
+                                        t.dependsOn(copyTaskProvider)
+                                    } else {
+                                        t.mustRunAfter(copyTaskProvider)
+                                    }
+                                }
                             }
-                        }
                     }
 
                     afterVariants {
@@ -582,6 +600,12 @@ private class BaselineProfileConsumerAgpPlugin(private val project: Project) :
         }
     }
 
+    fun TaskContainer.taskMergeArtProfile(variantName: String) =
+        project.tasks.namedOrNull<Task>("merge", variantName, "artProfile")
+
+    fun TaskContainer.taskMergeStartupProfile(variantName: String) =
+        project.tasks.namedOrNull<Task>("merge", variantName, "startupProfile")
+
     private fun createConfigurationForVariant(variant: Variant, mainConfiguration: Configuration) =
         configurationManager.maybeCreate(
             nameParts = listOf(variant.name, CONFIGURATION_NAME_BASELINE_PROFILES),
@@ -591,4 +615,10 @@ private class BaselineProfileConsumerAgpPlugin(private val project: Project) :
             buildType = variant.buildType ?: "",
             productFlavors = variant.productFlavors
         )
+
+    private fun isBaselineProfilePluginCreatedBuildType(buildType: String?) =
+        buildType?.let {
+            it.startsWith(BUILD_TYPE_BASELINE_PROFILE_PREFIX) ||
+                it.startsWith(BUILD_TYPE_BENCHMARK_PREFIX)
+        } ?: false
 }

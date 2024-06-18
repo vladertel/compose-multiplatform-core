@@ -54,6 +54,7 @@ dependencies {
     androidTestImplementation(libs.multidex)
     androidTestImplementation(libs.testUiautomator)
     androidTestImplementation project(path: ':appcompat:appcompat')
+    androidTestImplementation project(":privacysandbox:ui:ui-provider")
 }
 
 android {
@@ -70,4 +71,5 @@ androidx {
     inceptionYear = "2022"
     description = "show UI from an SDKRuntime aware SDK"
     metalavaK2UastEnabled = true
+    legacyDisableKotlinStrictApiMode = true
 }

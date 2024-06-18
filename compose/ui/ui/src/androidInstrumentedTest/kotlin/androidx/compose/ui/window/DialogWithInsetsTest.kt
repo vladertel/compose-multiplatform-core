@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.TextField
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.background
 import androidx.compose.ui.focus.FocusRequester
@@ -52,13 +51,9 @@ import org.junit.runner.RunWith
 @MediumTest
 @RunWith(AndroidJUnit4::class)
 class DialogWithInsetsTest {
-    @get:Rule
-    val rule = createAndroidComposeRule<ActivityWithInsets>()
+    @get:Rule val rule = createAndroidComposeRule<ActivityWithInsets>()
 
-    /**
-     * Make sure that insets are available in the Dialog.
-     */
-    @OptIn(ExperimentalComposeUiApi::class)
+    /** Make sure that insets are available in the Dialog. */
     @Test
     fun dialogSupportsWindowInsets() {
         var dialogSize = IntSize.Zero
@@ -78,30 +73,20 @@ class DialogWithInsetsTest {
                     }
                 }
                 val density = LocalDensity.current
-                imeInsets = Insets.of(
-                    WindowInsets.ime.getLeft(density, LayoutDirection.Ltr),
-                    WindowInsets.ime.getTop(density),
-                    WindowInsets.ime.getRight(density, LayoutDirection.Ltr),
-                    WindowInsets.ime.getBottom(density),
-                )
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color.White)
-                        .imePadding()
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .onSizeChanged {
-                                dialogSize = it
-                            }) {
+                imeInsets =
+                    Insets.of(
+                        WindowInsets.ime.getLeft(density, LayoutDirection.Ltr),
+                        WindowInsets.ime.getTop(density),
+                        WindowInsets.ime.getRight(density, LayoutDirection.Ltr),
+                        WindowInsets.ime.getBottom(density),
+                    )
+                Box(Modifier.fillMaxSize().background(Color.White).imePadding()) {
+                    Box(Modifier.fillMaxSize().onSizeChanged { dialogSize = it }) {
                         TextField(
                             value = "Hello World",
-                            onValueChange = { },
-                            modifier = Modifier
-                                .focusRequester(focusRequester)
-                                .align(Alignment.Center)
+                            onValueChange = {},
+                            modifier =
+                                Modifier.focusRequester(focusRequester).align(Alignment.Center)
                         )
                     }
                 }
@@ -125,14 +110,10 @@ class DialogWithInsetsTest {
         }
 
         // show the IME
-        rule.runOnUiThread {
-            focusRequester.requestFocus()
-        }
+        rule.runOnUiThread { focusRequester.requestFocus() }
 
         rule.waitForIdle()
-        rule.runOnUiThread {
-            controller.show(WindowInsetsCompat.Type.ime())
-        }
+        rule.runOnUiThread { controller.show(WindowInsetsCompat.Type.ime()) }
 
         val applied = insetsAppliedLatch.await(1, TimeUnit.SECONDS)
 
@@ -143,9 +124,7 @@ class DialogWithInsetsTest {
             return
         }
 
-        rule.waitUntil {
-            dialogSize != originalSize
-        }
+        rule.waitUntil { dialogSize != originalSize }
         rule.waitForIdle()
         assertNotEquals(Insets.NONE, imeInsets)
     }

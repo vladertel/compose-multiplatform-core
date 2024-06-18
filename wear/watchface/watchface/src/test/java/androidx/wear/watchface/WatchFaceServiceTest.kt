@@ -3024,7 +3024,7 @@ public class WatchFaceServiceTest {
     public fun updateComplicationData_interactive_loadsAsync() {
         initWallpaperInteractiveWatchFaceInstance(complicationSlots = listOf(mockComplication))
         interactiveWatchFaceInstance.setWatchUiState(
-            WatchUiState(/* inAmbientMode = */ false, /* interruptionFilter= */ 0)
+            WatchUiState(/* inAmbientMode= */ false, /* interruptionFilter= */ 0)
         )
         val data =
             WireComplicationData.Builder(WireComplicationData.TYPE_LONG_TEXT)
@@ -3043,7 +3043,7 @@ public class WatchFaceServiceTest {
     public fun updateComplicationData_interactive_loadsSync() {
         initWallpaperInteractiveWatchFaceInstance(complicationSlots = listOf(mockComplication))
         interactiveWatchFaceInstance.setWatchUiState(
-            WatchUiState(/* inAmbientMode = */ true, /* interruptionFilter= */ 0)
+            WatchUiState(/* inAmbientMode= */ true, /* interruptionFilter= */ 0)
         )
         val data =
             WireComplicationData.Builder(WireComplicationData.TYPE_LONG_TEXT)
@@ -3556,6 +3556,43 @@ public class WatchFaceServiceTest {
         }
 
         instance2.release()
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.O_MR1])
+    public fun timeline_tapAction() {
+        initWallpaperInteractiveWatchFaceInstance(complicationSlots = listOf(leftComplication))
+        val basePendingIntent = mock<PendingIntent>()
+        val timelineOverridePendingIntent = mock<PendingIntent>()
+        val baseComplication =
+            WireComplicationData.Builder(WireComplicationData.TYPE_SHORT_TEXT)
+                .setShortText(WireComplicationText.plainText("A"))
+                .setTapAction(basePendingIntent)
+                .build()
+        val timelineOverride =
+            WireComplicationData.Builder(WireComplicationData.TYPE_SHORT_TEXT)
+                .setShortText(WireComplicationText.plainText("B"))
+                .setTapAction(timelineOverridePendingIntent)
+                .build()
+        timelineOverride.timelineStartEpochSecond = 2
+        timelineOverride.timelineEndEpochSecond = Long.MAX_VALUE
+        baseComplication.setTimelineEntryCollection(listOf(timelineOverride))
+        interactiveWatchFaceInstance.updateComplicationData(
+            listOf(IdAndComplicationDataWireFormat(LEFT_COMPLICATION_ID, baseComplication))
+        )
+
+        // Tap left complication.
+        tapAt(30, 50)
+
+        // We expect the default intent to have been sent.
+        verify(basePendingIntent).send()
+
+        // Simulate tapping again after 2 seconds.
+        runPostedTasksFor(2000)
+        tapAt(30, 50)
+
+        // We expect the timeline override intent to have been sent.
+        verify(timelineOverridePendingIntent).send()
     }
 
     @Test
@@ -6339,26 +6376,30 @@ public class WatchFaceServiceTest {
 
         // In initEngine we fill initial complication data using
         // setComplicationViaWallpaperCommand, that's why lastComplications initially is not empty
-        assertThat(engineWrapper.complicationsFlow.value).containsAtLeast(
-            leftComplication1.id, leftComplication1.complicationData.toApiComplicationData()
-        )
+        assertThat(engineWrapper.complicationsFlow.value)
+            .containsAtLeast(
+                leftComplication1.id,
+                leftComplication1.complicationData.toApiComplicationData()
+            )
 
         // Check merges are working as expected.
         engineWrapper.setComplicationDataList(listOf(rightComplication1))
-        assertThat(engineWrapper.complicationsFlow.value).containsExactly(
-            leftComplication1.id,
-            leftComplication1.complicationData.toApiComplicationData(),
-            rightComplication1.id,
-            rightComplication1.complicationData.toApiComplicationData()
-        )
+        assertThat(engineWrapper.complicationsFlow.value)
+            .containsExactly(
+                leftComplication1.id,
+                leftComplication1.complicationData.toApiComplicationData(),
+                rightComplication1.id,
+                rightComplication1.complicationData.toApiComplicationData()
+            )
 
         engineWrapper.setComplicationDataList(listOf(leftComplication2))
-        assertThat(engineWrapper.complicationsFlow.value).containsExactly(
-            leftComplication2.id,
-            leftComplication2.complicationData.toApiComplicationData(),
-            rightComplication1.id,
-            rightComplication1.complicationData.toApiComplicationData()
-        )
+        assertThat(engineWrapper.complicationsFlow.value)
+            .containsExactly(
+                leftComplication2.id,
+                leftComplication2.complicationData.toApiComplicationData(),
+                rightComplication1.id,
+                rightComplication1.complicationData.toApiComplicationData()
+            )
     }
 
     @Test
@@ -6379,21 +6420,23 @@ public class WatchFaceServiceTest {
             )
         )
 
-        assertThat(engineWrapper.complicationsFlow.value).containsExactly(
-            leftComplication2.id,
-            leftComplication2.complicationData.toApiComplicationData(),
-            rightComplication2.id,
-            rightComplication2.complicationData.toApiComplicationData()
-        )
+        assertThat(engineWrapper.complicationsFlow.value)
+            .containsExactly(
+                leftComplication2.id,
+                leftComplication2.complicationData.toApiComplicationData(),
+                rightComplication2.id,
+                rightComplication2.complicationData.toApiComplicationData()
+            )
 
         engineWrapper.onEditSessionFinished()
 
-        assertThat(engineWrapper.complicationsFlow.value).containsExactly(
-            leftComplication1.id,
-            leftComplication1.complicationData.toApiComplicationData(),
-            rightComplication1.id,
-            rightComplication1.complicationData.toApiComplicationData()
-        )
+        assertThat(engineWrapper.complicationsFlow.value)
+            .containsExactly(
+                leftComplication1.id,
+                leftComplication1.complicationData.toApiComplicationData(),
+                rightComplication1.id,
+                rightComplication1.complicationData.toApiComplicationData()
+            )
     }
 
     @Test
@@ -6415,21 +6458,23 @@ public class WatchFaceServiceTest {
         // This should not change the value of the complicationsFlow
         engineWrapper.setComplicationDataList(listOf(rightComplication1))
 
-        assertThat(engineWrapper.complicationsFlow.value).containsExactly(
-            leftComplication2.id,
-            leftComplication2.complicationData.toApiComplicationData(),
-            rightComplication2.id,
-            rightComplication2.complicationData.toApiComplicationData()
-        )
+        assertThat(engineWrapper.complicationsFlow.value)
+            .containsExactly(
+                leftComplication2.id,
+                leftComplication2.complicationData.toApiComplicationData(),
+                rightComplication2.id,
+                rightComplication2.complicationData.toApiComplicationData()
+            )
 
         engineWrapper.onEditSessionFinished()
 
-        assertThat(engineWrapper.complicationsFlow.value).containsExactly(
-            leftComplication1.id,
-            leftComplication1.complicationData.toApiComplicationData(),
-            rightComplication1.id,
-            rightComplication1.complicationData.toApiComplicationData()
-        )
+        assertThat(engineWrapper.complicationsFlow.value)
+            .containsExactly(
+                leftComplication1.id,
+                leftComplication1.complicationData.toApiComplicationData(),
+                rightComplication1.id,
+                rightComplication1.complicationData.toApiComplicationData()
+            )
     }
 
     @Test

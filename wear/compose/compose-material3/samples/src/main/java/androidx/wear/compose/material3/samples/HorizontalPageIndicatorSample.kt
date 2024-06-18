@@ -20,7 +20,6 @@ import androidx.annotation.Sampled
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -30,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.SwipeToDismissBoxState
 import androidx.wear.compose.foundation.edgeSwipeToDismiss
 import androidx.wear.compose.material3.ExperimentalWearMaterial3Api
@@ -47,15 +45,13 @@ fun HorizontalPageIndicatorSample() {
     val pageCount = 9
     var selectedPage by remember { mutableStateOf(0) }
 
-    val animatedSelectedPage by animateFloatAsState(
-        targetValue = selectedPage.toFloat(), label = "animateSelectedPage",
-    )
+    val animatedSelectedPage by
+        animateFloatAsState(
+            targetValue = selectedPage.toFloat(),
+            label = "animateSelectedPage",
+        )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(6.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         InlineSlider(
             modifier = Modifier.align(Alignment.Center),
             value = selectedPage,
@@ -80,19 +76,11 @@ fun HorizontalPageIndicatorWithPagerSample(swipeState: SwipeToDismissBoxState) {
 
     Box {
         HorizontalPager(
-            modifier = Modifier
-                .fillMaxSize()
-                .edgeSwipeToDismiss(swipeState),
+            modifier = Modifier.fillMaxSize().edgeSwipeToDismiss(swipeState),
             state = pagerState,
         ) { page ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                Text(
-                    modifier = Modifier.align(Alignment.Center),
-                    text = "Page #$page"
-                )
+            Box(modifier = Modifier.fillMaxSize()) {
+                Text(modifier = Modifier.align(Alignment.Center), text = "Page #$page")
             }
         }
         HorizontalPageIndicator(

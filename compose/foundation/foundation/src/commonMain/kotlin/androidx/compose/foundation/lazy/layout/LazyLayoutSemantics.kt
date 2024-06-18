@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.lazy.layout
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -36,7 +35,6 @@ import androidx.compose.ui.semantics.scrollToIndex
 import androidx.compose.ui.semantics.verticalScrollAxisRange
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun Modifier.lazyLayoutSemantics(
     itemProviderLambda: () -> LazyLayoutItemProvider,
@@ -44,15 +42,16 @@ internal fun Modifier.lazyLayoutSemantics(
     orientation: Orientation,
     userScrollEnabled: Boolean,
     reverseScrolling: Boolean,
-): Modifier = this then LazyLayoutSemanticsModifier(
-    itemProviderLambda = itemProviderLambda,
-    state = state,
-    orientation = orientation,
-    userScrollEnabled = userScrollEnabled,
-    reverseScrolling = reverseScrolling,
-)
+): Modifier =
+    this then
+        LazyLayoutSemanticsModifier(
+            itemProviderLambda = itemProviderLambda,
+            state = state,
+            orientation = orientation,
+            userScrollEnabled = userScrollEnabled,
+            reverseScrolling = reverseScrolling,
+        )
 
-@OptIn(ExperimentalFoundationApi::class)
 private class LazyLayoutSemanticsModifier(
     val itemProviderLambda: () -> LazyLayoutItemProvider,
     val state: LazyLayoutSemanticState,
@@ -60,13 +59,14 @@ private class LazyLayoutSemanticsModifier(
     val userScrollEnabled: Boolean,
     val reverseScrolling: Boolean,
 ) : ModifierNodeElement<LazyLayoutSemanticsModifierNode>() {
-    override fun create(): LazyLayoutSemanticsModifierNode = LazyLayoutSemanticsModifierNode(
-        itemProviderLambda = itemProviderLambda,
-        state = state,
-        orientation = orientation,
-        userScrollEnabled = userScrollEnabled,
-        reverseScrolling = reverseScrolling,
-    )
+    override fun create(): LazyLayoutSemanticsModifierNode =
+        LazyLayoutSemanticsModifierNode(
+            itemProviderLambda = itemProviderLambda,
+            state = state,
+            orientation = orientation,
+            userScrollEnabled = userScrollEnabled,
+            reverseScrolling = reverseScrolling,
+        )
 
     override fun update(node: LazyLayoutSemanticsModifierNode) {
         node.update(
@@ -105,7 +105,6 @@ private class LazyLayoutSemanticsModifier(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 private class LazyLayoutSemanticsModifierNode(
     private var itemProviderLambda: () -> LazyLayoutItemProvider,
     private var state: LazyLayoutSemanticState,
@@ -116,8 +115,13 @@ private class LazyLayoutSemanticsModifierNode(
 
     override val shouldAutoInvalidate: Boolean
         get() = false
-    private val isVertical get() = orientation == Orientation.Vertical
-    private val collectionInfo get() = state.collectionInfo()
+
+    private val isVertical
+        get() = orientation == Orientation.Vertical
+
+    private val collectionInfo
+        get() = state.collectionInfo()
+
     private lateinit var scrollAxisRange: ScrollAxisRange
 
     private val indexForKeyMapping: (Any) -> Int = { needle ->
@@ -158,8 +162,8 @@ private class LazyLayoutSemanticsModifierNode(
 
         // These values are used to build different cached values. If they, we need to rebuild the
         // cache.
-        if (this.userScrollEnabled != userScrollEnabled ||
-            this.reverseScrolling != reverseScrolling
+        if (
+            this.userScrollEnabled != userScrollEnabled || this.reverseScrolling != reverseScrolling
         ) {
             this.userScrollEnabled = userScrollEnabled
             this.reverseScrolling = reverseScrolling
@@ -178,9 +182,7 @@ private class LazyLayoutSemanticsModifierNode(
             horizontalScrollAxisRange = scrollAxisRange
         }
 
-        scrollToIndexAction?.let {
-            scrollToIndex(action = it)
-        }
+        scrollToIndexAction?.let { scrollToIndex(action = it) }
 
         getScrollViewportLength { (state.viewport - state.contentPadding).toFloat() }
 
@@ -188,27 +190,27 @@ private class LazyLayoutSemanticsModifierNode(
     }
 
     private fun updateCachedSemanticsValues() {
-        scrollAxisRange = ScrollAxisRange(
-            value = { state.scrollOffset },
-            maxValue = { state.maxScrollOffset },
-            reverseScrolling = reverseScrolling
-        )
+        scrollAxisRange =
+            ScrollAxisRange(
+                value = { state.scrollOffset },
+                maxValue = { state.maxScrollOffset },
+                reverseScrolling = reverseScrolling
+            )
 
-        scrollToIndexAction = if (userScrollEnabled) {
-            { index ->
-                val itemProvider = itemProviderLambda()
-                require(index >= 0 && index < itemProvider.itemCount) {
-                    "Can't scroll to index $index, it is out of " +
-                        "bounds [0, ${itemProvider.itemCount})"
+        scrollToIndexAction =
+            if (userScrollEnabled) {
+                { index ->
+                    val itemProvider = itemProviderLambda()
+                    require(index >= 0 && index < itemProvider.itemCount) {
+                        "Can't scroll to index $index, it is out of " +
+                            "bounds [0, ${itemProvider.itemCount})"
+                    }
+                    coroutineScope.launch { state.scrollToItem(index) }
+                    true
                 }
-                coroutineScope.launch {
-                    state.scrollToItem(index)
-                }
-                true
+            } else {
+                null
             }
-        } else {
-            null
-        }
     }
 }
 
@@ -219,6 +221,7 @@ internal interface LazyLayoutSemanticState {
     val maxScrollOffset: Float
 
     fun collectionInfo(): CollectionInfo
+
     suspend fun scrollToItem(index: Int)
 }
 
@@ -250,11 +253,12 @@ internal fun estimatedLazyMaxScrollOffset(
     canScrollForward: Boolean
 ): Float {
     return if (canScrollForward) {
-        // If we can scroll further, indicate that by setting it slightly higher than
-        // the current value
-        estimatedLazyScrollOffset(firstVisibleItemIndex, firstVisibleItemScrollOffset) + 100
-    } else {
-        // If we can't scroll further, the current value is the max
-        estimatedLazyScrollOffset(firstVisibleItemIndex, firstVisibleItemScrollOffset)
-    }.toFloat()
+            // If we can scroll further, indicate that by setting it slightly higher than
+            // the current value
+            estimatedLazyScrollOffset(firstVisibleItemIndex, firstVisibleItemScrollOffset) + 100
+        } else {
+            // If we can't scroll further, the current value is the max
+            estimatedLazyScrollOffset(firstVisibleItemIndex, firstVisibleItemScrollOffset)
+        }
+        .toFloat()
 }

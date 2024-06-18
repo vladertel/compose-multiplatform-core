@@ -64,6 +64,7 @@ import androidx.camera.core.impl.ImageOutputConfig
 import androidx.camera.core.impl.MutableOptionsBundle
 import androidx.camera.core.impl.MutableStateObservable
 import androidx.camera.core.impl.Observable
+import androidx.camera.core.impl.Quirk
 import androidx.camera.core.impl.StreamSpec
 import androidx.camera.core.impl.Timebase
 import androidx.camera.core.impl.utils.CameraOrientationUtil.surfaceRotationToDegrees
@@ -74,6 +75,7 @@ import androidx.camera.core.impl.utils.TransformUtils.within360
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.directExecutor
 import androidx.camera.core.impl.utils.executor.CameraXExecutors.mainThreadExecutor
 import androidx.camera.core.internal.CameraUseCaseAdapter
+import androidx.camera.core.internal.compat.quirk.SurfaceProcessingQuirk
 import androidx.camera.core.processing.DefaultSurfaceProcessor
 import androidx.camera.testing.fakes.FakeAppConfig
 import androidx.camera.testing.fakes.FakeCamera
@@ -143,7 +145,7 @@ class VideoCaptureTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private lateinit var cameraUseCaseAdapter: CameraUseCaseAdapter
     private lateinit var cameraFactory: CameraFactory
-    private lateinit var cameraInfo: CameraInfoInternal
+    private lateinit var cameraInfo: FakeCameraInfoInternal
     private lateinit var surfaceManager: FakeCameraDeviceSurfaceManager
     private lateinit var camera: FakeCamera
     private var surfaceRequestsToRelease = mutableListOf<SurfaceRequest>()
@@ -944,8 +946,7 @@ class VideoCaptureTest {
     @Test
     fun hasSurfaceProcessingQuirk_nodeIsNeeded() {
         // Arrange.
-        VideoCapture.sEnableSurfaceProcessingByQuirk = true
-        setupCamera()
+        setupCamera(cameraQuirks = listOf(object : SurfaceProcessingQuirk {}))
         createCameraUseCaseAdapter()
 
         // Act.
@@ -953,17 +954,13 @@ class VideoCaptureTest {
         addAndAttachUseCases(videoCapture)
 
         // Assert.
-        assertThat(videoCapture.node).isNotNull()
-
-        // Clean-up.
-        VideoCapture.sEnableSurfaceProcessingByQuirk = false
+        assertThat(videoCapture.isSurfaceProcessingEnabled()).isTrue()
     }
 
     @Test
     fun hasSurfaceProcessingQuirkButNoCameraTransform_nodeIsNotNeeded() {
         // Arrange.
-        VideoCapture.sEnableSurfaceProcessingByQuirk = true
-        setupCamera(hasTransform = false)
+        setupCamera(hasTransform = false, cameraQuirks = listOf(object : SurfaceProcessingQuirk {}))
         createCameraUseCaseAdapter()
 
         // Act.
@@ -971,10 +968,49 @@ class VideoCaptureTest {
         addAndAttachUseCases(videoCapture)
 
         // Assert.
-        assertThat(videoCapture.node).isNull()
+        assertThat(videoCapture.isSurfaceProcessingEnabled()).isFalse()
+    }
 
-        // Clean-up.
-        VideoCapture.sEnableSurfaceProcessingByQuirk = false
+    @Test
+    fun hasCameraSurfaceProcessingQuirk_withTrueFlag() {
+        // Arrange.
+        setupCamera()
+        cameraInfo.addCameraQuirk(
+            object : SurfaceProcessingQuirk {
+                override fun workaroundBySurfaceProcessing(): Boolean {
+                    return true
+                }
+            }
+        )
+        createCameraUseCaseAdapter()
+
+        // Act.
+        val videoCapture = createVideoCapture(createVideoOutput())
+        addAndAttachUseCases(videoCapture)
+
+        // Assert.
+        assertThat(videoCapture.isSurfaceProcessingEnabled()).isTrue()
+    }
+
+    @Test
+    fun hasCameraSurfaceProcessingQuirk_withFalseFlag() {
+        // Arrange.
+        setupCamera()
+        cameraInfo.addCameraQuirk(
+            object : SurfaceProcessingQuirk {
+                override fun workaroundBySurfaceProcessing(): Boolean {
+                    return false
+                }
+            }
+        )
+        createCameraUseCaseAdapter()
+
+        // Act.
+        val videoCapture = createVideoCapture(createVideoOutput())
+        addAndAttachUseCases(videoCapture)
+
+        // Assert.
+        assertThat(videoCapture.isSurfaceProcessingEnabled()).isFalse()
     }
 
     @Test
@@ -1012,7 +1048,7 @@ class VideoCaptureTest {
         addAndAttachUseCases(videoCapture)
 
         // Assert.
-        assertThat(videoCapture.node).isNotNull()
+        assertThat(videoCapture.isSurfaceProcessingEnabled()).isTrue()
     }
 
     @Test
@@ -1026,7 +1062,7 @@ class VideoCaptureTest {
         addAndAttachUseCases(videoCapture)
 
         // Assert: the input stream should already be mirrored.
-        assertThat(videoCapture.node).isNull()
+        assertThat(videoCapture.isSurfaceProcessingEnabled()).isFalse()
     }
 
     @Test
@@ -1307,7 +1343,7 @@ class VideoCaptureTest {
         var videoContentDegrees: Int
         var metadataDegrees: Int
         cameraInfo.getRelativeRotation(initialTargetRotation, requireMirroring).let {
-            if (videoCapture.node != null) {
+            if (videoCapture.isSurfaceProcessingEnabled()) {
                 // If effect is enabled, the rotation is applied on video content but not metadata.
                 videoContentDegrees = it
                 metadataDegrees = 0
@@ -1332,7 +1368,7 @@ class VideoCaptureTest {
             // Assert.
             val requiredDegrees = cameraInfo.getRelativeRotation(targetRotation, requireMirroring)
             val expectedDegrees =
-                if (videoCapture.node != null) {
+                if (videoCapture.isSurfaceProcessingEnabled()) {
                     // If effect is enabled, the rotation should eliminate the video content
                     // rotation.
                     within360(requiredDegrees - videoContentDegrees)
@@ -1834,6 +1870,7 @@ class VideoCaptureTest {
         supportedResolutions: Map<Int, List<Size>> = SUPPORTED_RESOLUTION_MAP,
         profiles: Map<Int, EncoderProfilesProxy> = CAMERA_0_PROFILES,
         timebase: Timebase = Timebase.UPTIME,
+        cameraQuirks: List<Quirk>? = null,
     ) {
         cameraInfo =
             FakeCameraInfoInternal(cameraId, sensorRotation, lensFacing).apply {
@@ -1843,6 +1880,7 @@ class VideoCaptureTest {
                 encoderProfilesProvider =
                     FakeEncoderProfilesProvider.Builder().addAll(profiles).build()
                 setTimebase(timebase)
+                cameraQuirks?.forEach { quirk -> addCameraQuirk(quirk) }
             }
         camera = FakeCamera(cameraId, null, cameraInfo)
         camera.hasTransform = hasTransform
@@ -1872,6 +1910,8 @@ class VideoCaptureTest {
                 within360(-it)
             } else it
         }
+
+    private fun VideoCapture<*>.isSurfaceProcessingEnabled() = node != null
 
     companion object {
         private val CAMERA_0_QUALITY_SIZE: Map<Quality, Size> =

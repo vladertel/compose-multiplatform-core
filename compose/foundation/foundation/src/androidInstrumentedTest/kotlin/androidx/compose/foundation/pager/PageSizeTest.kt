@@ -16,7 +16,6 @@
 
 package androidx.compose.foundation.pager
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
@@ -29,7 +28,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-@OptIn(ExperimentalFoundationApi::class)
 @LargeTest
 @RunWith(Parameterized::class)
 class PageSizeTest(val config: ParamConfig) : BasePagerTest(config) {
@@ -50,14 +48,15 @@ class PageSizeTest(val config: ParamConfig) : BasePagerTest(config) {
     @Test
     fun pagerSizeCustom_visibleItemsAreWithinViewport() {
         // Arrange
-        val pagerMode = object : PageSize {
-            override fun Density.calculateMainAxisPageSize(
-                availableSpace: Int,
-                pageSpacing: Int
-            ): Int {
-                return 100.dp.roundToPx() + pageSpacing
+        val pagerMode =
+            object : PageSize {
+                override fun Density.calculateMainAxisPageSize(
+                    availableSpace: Int,
+                    pageSpacing: Int
+                ): Int {
+                    return 100.dp.roundToPx() + pageSpacing
+                }
             }
-        }
 
         // Act
         createPager(
@@ -70,9 +69,8 @@ class PageSizeTest(val config: ParamConfig) : BasePagerTest(config) {
         // Assert
         rule.runOnIdle {
             val visibleItems = pagerState.layoutInfo.visiblePagesInfo.size
-            val pageCount = with(rule.density) {
-                (pagerSize / (pageSize + config.pageSpacing.roundToPx()))
-            } + 1
+            val pageCount =
+                with(rule.density) { (pagerSize / (pageSize + config.pageSpacing.roundToPx())) } + 1
             Truth.assertThat(visibleItems).isEqualTo(pageCount)
         }
 
@@ -84,17 +82,13 @@ class PageSizeTest(val config: ParamConfig) : BasePagerTest(config) {
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun params() = mutableListOf<ParamConfig>().apply {
-            for (orientation in TestOrientation) {
-                for (pageSpacing in TestPageSpacing) {
-                    add(
-                        ParamConfig(
-                            orientation = orientation,
-                            pageSpacing = pageSpacing
-                        )
-                    )
+        fun params() =
+            mutableListOf<ParamConfig>().apply {
+                for (orientation in TestOrientation) {
+                    for (pageSpacing in TestPageSpacing) {
+                        add(ParamConfig(orientation = orientation, pageSpacing = pageSpacing))
+                    }
                 }
             }
-        }
     }
 }

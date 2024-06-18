@@ -16,7 +16,6 @@
 
 package androidx.compose.ui.demos.focus
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -34,7 +33,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusRequester.Companion.Default
@@ -48,19 +46,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
 @Preview(widthDp = 200, heightDp = 400)
 @Composable
 fun LazyListChildFocusDemos() {
     LazyColumn {
         stickyHeader { Text("Default Compose Behavior") }
-        item {
-            LazyRow {
-                items(10) {
-                    FocusableBox()
-                }
-            }
-        }
+        item { LazyRow { items(10) { FocusableBox() } } }
 
         stickyHeader { Text("Direct Focus to First Child") }
         item {
@@ -69,44 +60,36 @@ fun LazyListChildFocusDemos() {
             val coroutineScope = rememberCoroutineScope()
             val state = rememberLazyListState()
             LazyRow(
-                Modifier
-                    .onFocusChanged {
-                        if (it.isFocused) coroutineScope.launch {
-                            state.animateScrollToItem(0)
-                            firstItem.requestFocus()
-                        }
+                Modifier.onFocusChanged {
+                        if (it.isFocused)
+                            coroutineScope.launch {
+                                state.animateScrollToItem(0)
+                                firstItem.requestFocus()
+                            }
                     }
                     .focusable(),
                 state,
             ) {
-                items(10) {
-                    FocusableBox(if (it == 0) firstItemModifier else Modifier)
-                }
+                items(10) { FocusableBox(if (it == 0) firstItemModifier else Modifier) }
             }
         }
 
         stickyHeader { Text("Direct Focus to previously Focused Child") }
         item {
             var previouslyFocusedItem: FocusRequester? by remember { mutableStateOf(null) }
-            LazyRow(
-                Modifier
-                    .focusProperties {
-                        @OptIn(ExperimentalComposeUiApi::class)
-                        enter = { previouslyFocusedItem ?: Default }
-                    }
-            ) {
+            LazyRow(Modifier.focusProperties { enter = { previouslyFocusedItem ?: Default } }) {
                 items(10) { index ->
                     val focusRequester = remember(index) { FocusRequester() }
                     val pinnableContainer = LocalPinnableContainer.current
                     var pinnedHandle: PinnableContainer.PinnedHandle? = null
-                    FocusableBox(Modifier
-                        .onFocusChanged {
-                            if (it.isFocused) {
-                                previouslyFocusedItem = focusRequester
-                                pinnedHandle = pinnableContainer?.pin()
+                    FocusableBox(
+                        Modifier.onFocusChanged {
+                                if (it.isFocused) {
+                                    previouslyFocusedItem = focusRequester
+                                    pinnedHandle = pinnableContainer?.pin()
+                                }
                             }
-                        }
-                        .focusRequester(focusRequester)
+                            .focusRequester(focusRequester)
                     )
                     DisposableEffect(pinnableContainer) {
                         onDispose {
@@ -127,12 +110,13 @@ private fun FocusableBox(
 ) {
     var borderColor by remember { mutableStateOf(Color.Black) }
     Box(
-        modifier = modifier
-            .size(100.dp)
-            .padding(2.dp)
-            .onFocusChanged { borderColor = if (it.isFocused) Color.Red else Color.Black }
-            .border(2.dp, borderColor)
-            .focusable(),
+        modifier =
+            modifier
+                .size(100.dp)
+                .padding(2.dp)
+                .onFocusChanged { borderColor = if (it.isFocused) Color.Red else Color.Black }
+                .border(2.dp, borderColor)
+                .focusable(),
         content = content
     )
 }
