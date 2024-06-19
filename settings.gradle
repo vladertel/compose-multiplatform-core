@@ -1187,6 +1187,13 @@ includeProject(":placeholder-tests")
 // Add includedBuild for b/203825166
 includeBuild("placeholder")
 
+
+includeProject(":compose:compiler:compiler")
+includeProject(":compose:compiler:compiler-hosted")
+includeProject(":compose:compiler:compiler-hosted:integration-tests")
+includeProject(":compose:compiler:compiler-hosted:integration-tests:protobuf-test-classes")
+includeProject(":compose:compiler:compiler-hosted:integration-tests:kotlin-compiler-repackaged")
+
 // ---------------------------------------------------------------------
 // --- there should be no includeProject additions after this line -----
 // ---------------------------------------------------------------------
