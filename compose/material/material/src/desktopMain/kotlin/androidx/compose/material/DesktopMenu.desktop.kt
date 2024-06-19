@@ -485,7 +485,7 @@ class DropdownMenuState(initialStatus: Status = Status.Closed) {
 
 /**
  * A [Modifier] that detects events that should typically open a context menu (mouse right-clicks)
- * and modify the given [DropdownMenuState] accordingly.
+ * and modifies the given [DropdownMenuState] accordingly.
  */
 @ExperimentalMaterialApi
 @OptIn(ExperimentalFoundationApi::class)
@@ -499,6 +499,7 @@ fun Modifier.contextMenuOpenDetector(
             enabled = state.status is DropdownMenuState.Status.Closed
         ) { pointerPosition ->
             state.status = DropdownMenuState.Status.Open(pointerPosition)
+            true
         }
     } else {
         this

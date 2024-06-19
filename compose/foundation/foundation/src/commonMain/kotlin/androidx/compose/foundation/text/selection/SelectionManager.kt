@@ -927,19 +927,6 @@ internal class SelectionManager(private val selectionRegistrar: SelectionRegistr
     @VisibleForTesting
     internal fun shouldPerformHaptics(): Boolean =
         isInTouchMode && selectionRegistrar.selectables.fastAny { it.getText().isNotEmpty() }
-
-    fun contextMenuOpenAdjustment(position: Offset) {
-        val isEmptySelection = selection?.toTextRange()?.collapsed ?: true
-        // TODO(b/209483184) the logic should be more complex here, it should check that current
-        //  selection doesn't include click position
-        if (isEmptySelection) {
-            startSelection(
-                position = position,
-                isStartHandle = true,
-                adjustment = SelectionAdjustment.Word
-            )
-        }
-    }
 }
 
 internal expect fun isCopyKeyEvent(keyEvent: KeyEvent): Boolean

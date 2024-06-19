@@ -39,7 +39,7 @@ import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastForEach
 import kotlin.coroutines.cancellation.CancellationException
@@ -53,7 +53,8 @@ private interface CupertinoTextDragObserver {
 
 internal actual fun SelectionRegistrar.makeSelectionModifier(
     selectableId: Long,
-    layoutCoordinates: () -> LayoutCoordinates?
+    layoutCoordinates: () -> LayoutCoordinates?,
+    textLayoutResult: () -> TextLayoutResult?
 ): Modifier {
     val longPressDragObserver = object : CupertinoTextDragObserver {
         /**

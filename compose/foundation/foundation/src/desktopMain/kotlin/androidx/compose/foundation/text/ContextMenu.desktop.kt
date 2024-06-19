@@ -19,7 +19,6 @@ package androidx.compose.foundation.text
 import androidx.compose.foundation.ContextMenuArea
 import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ContextMenuState
-import androidx.compose.foundation.DesktopPlatform
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.JPopupContextMenuRepresentation
 import androidx.compose.foundation.LocalContextMenuRepresentation
@@ -51,10 +50,8 @@ internal actual fun ContextMenuArea(
     content: @Composable () -> Unit
 ) {
     val state = remember { ContextMenuState() }
-    if (DesktopPlatform.Current == DesktopPlatform.MacOS) {
-        OpenMenuAdjuster(state) { manager.contextMenuOpenAdjustment(it) }
-    }
-    LocalTextContextMenu.current.Area(manager.textManager, state, content)
+    val textManager = remember(manager) { manager.textManager }
+    LocalTextContextMenu.current.Area(textManager, state, content)
 }
 
 @Composable
@@ -74,10 +71,8 @@ internal actual fun ContextMenuArea(
     content: @Composable () -> Unit
 ) {
     val state = remember { ContextMenuState() }
-    if (DesktopPlatform.Current == DesktopPlatform.MacOS) {
-        OpenMenuAdjuster(state) { manager.contextMenuOpenAdjustment(it) }
-    }
-    LocalTextContextMenu.current.Area(manager.textManager, state, content)
+    val textManager = remember(manager) { manager.textManager }
+    LocalTextContextMenu.current.Area(textManager, state, content)
 }
 
 @Composable

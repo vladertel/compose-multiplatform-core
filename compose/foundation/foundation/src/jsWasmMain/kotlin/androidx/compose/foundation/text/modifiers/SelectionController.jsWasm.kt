@@ -19,8 +19,10 @@ package androidx.compose.foundation.text.modifiers
 import androidx.compose.foundation.text.selection.SelectionRegistrar
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.text.TextLayoutResult
 
 internal actual fun SelectionRegistrar.makeSelectionModifier(
     selectableId: Long,
-    layoutCoordinates: () -> LayoutCoordinates?
+    layoutCoordinates: () -> LayoutCoordinates?,
+    textLayoutResult: () -> TextLayoutResult?
 ): Modifier = makeDefaultSelectionModifier(selectableId, layoutCoordinates)

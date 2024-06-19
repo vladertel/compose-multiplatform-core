@@ -31,6 +31,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
@@ -105,22 +106,26 @@ private val LocalContextMenuData = staticCompositionLocalOf<ContextMenuData?> {
  * @param key The pointer input handling coroutine will be cancelled and **re-started** when
  * [contextMenuOpenDetector] is recomposed with a different [key].
  * @param enabled Whether to enable the detection.
+ * @param pass The [PointerEventPass] to react to.
  * @param onOpen Invoked when a context menu opening event is detected, with the local offset it
- * should be opened at.
+ * should be opened at. Returns whether the event should be consumed.
  */
 @ExperimentalFoundationApi
 fun Modifier.contextMenuOpenDetector(
     key: Any? = Unit,
     enabled: Boolean = true,
-    onOpen: (Offset) -> Unit
+    pass: PointerEventPass = PointerEventPass.Main,
+    onOpen: (Offset) -> Boolean
 ): Modifier {
     return if (enabled) {
         this.pointerInput(key) {
             awaitEachGesture {
-                val event = awaitEventFirstDown()
+                val event = awaitEventFirstDown(pass)
                 if (event.buttons.isSecondaryPressed) {
-                    event.changes.forEach { it.consume() }
-                    onOpen(event.changes[0].position)
+                    val consume = onOpen(event.changes[0].position)
+                    if (consume) {
+                        event.changes.forEach { it.consume() }
+                    }
                 }
             }
         }
@@ -138,12 +143,15 @@ private fun Modifier.contextMenuOpenDetector(
     enabled = enabled && (state.status is ContextMenuState.Status.Closed),
 ) { pointerPosition ->
     state.status = ContextMenuState.Status.Open(Rect(pointerPosition, 0f))
+    true
 }
 
-private suspend fun AwaitPointerEventScope.awaitEventFirstDown(): PointerEvent {
+private suspend fun AwaitPointerEventScope.awaitEventFirstDown(
+    pass: PointerEventPass
+): PointerEvent {
     var event: PointerEvent
     do {
-        event = awaitPointerEvent()
+        event = awaitPointerEvent(pass)
     } while (
         !event.changes.fastAll { it.changedToDown() }
     )
@@ -196,7 +204,7 @@ class ContextMenuData(
         allItemsSeq.toList()
     }
 
-    internal val allItemsSeq: Sequence<ContextMenuItem>
+    private val allItemsSeq: Sequence<ContextMenuItem>
         get() = sequence {
             yieldAll(items())
             next?.let { yieldAll(it.allItemsSeq) }
@@ -251,7 +259,7 @@ class ContextMenuState {
             }
         }
 
-        object Closed : Status()
+        data object Closed : Status()
     }
 
     var status: Status by mutableStateOf(Status.Closed)

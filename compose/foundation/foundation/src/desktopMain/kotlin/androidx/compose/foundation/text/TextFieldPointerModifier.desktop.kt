@@ -18,6 +18,7 @@ package androidx.compose.foundation.text
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
+import androidx.compose.foundation.text.selection.macOsSelectWordOnRightClick
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -32,12 +33,16 @@ internal actual fun Modifier.textFieldPointer(
     focusRequester: FocusRequester,
     readOnly: Boolean,
     offsetMapping: OffsetMapping
-): Modifier = Modifier.defaultTextFieldPointer(
-    manager,
-    enabled,
-    interactionSource,
-    state,
-    focusRequester,
-    readOnly,
-    offsetMapping,
-)
+): Modifier = this
+    .defaultTextFieldPointer(
+        manager = manager,
+        enabled = enabled,
+        interactionSource = interactionSource,
+        state = state,
+        focusRequester = focusRequester,
+        readOnly = readOnly,
+        offsetMapping = offsetMapping,
+    )
+    .macOsSelectWordOnRightClick(
+        manager = manager
+    )
