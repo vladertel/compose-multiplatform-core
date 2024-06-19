@@ -255,3 +255,8 @@ includeProject(":internal-testutils-mockito", "testutils/testutils-mockito")
 includeBuild("placeholder")
 
 includeProject(":mpp")
+includeProject(":compose:compiler:compiler")
+includeProject(":compose:compiler:compiler-hosted")
+includeProject(":compose:compiler:compiler-hosted:integration-tests")
+includeProject(":compose:compiler:compiler-hosted:integration-tests:protobuf-test-classes")
+includeProject(":compose:compiler:compiler-hosted:integration-tests:kotlin-compiler-repackaged")
