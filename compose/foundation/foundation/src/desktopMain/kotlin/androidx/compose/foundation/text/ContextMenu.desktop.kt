@@ -28,14 +28,11 @@ import androidx.compose.foundation.text.selection.SelectionManager
 import androidx.compose.foundation.text.selection.TextFieldSelectionManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.awt.ComposePanel
 import androidx.compose.ui.awt.ComposeWindow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalLocalization
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -73,17 +70,6 @@ internal actual fun ContextMenuArea(
     val state = remember { ContextMenuState() }
     val textManager = remember(manager) { manager.textManager }
     LocalTextContextMenu.current.Area(textManager, state, content)
-}
-
-@Composable
-internal fun OpenMenuAdjuster(state: ContextMenuState, adjustAction: (Offset) -> Unit) {
-    LaunchedEffect(state) {
-        snapshotFlow { state.status }.collect { status ->
-            if (status is ContextMenuState.Status.Open) {
-                adjustAction(status.rect.center)
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

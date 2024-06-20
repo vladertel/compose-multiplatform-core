@@ -26,13 +26,12 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 
 
-private inline fun Modifier.onMacOsOnly(crossinline modifier: Modifier.() -> Modifier) = this.then(
+private inline fun Modifier.onMacOsOnly(crossinline modifier: Modifier.() -> Modifier) =
     if (DesktopPlatform.Current == DesktopPlatform.MacOS) {
         this.modifier()
     } else {
-        Modifier
+        this
     }
-)
 
 /**
  * Returns whether the given pixel position is inside the selection.
