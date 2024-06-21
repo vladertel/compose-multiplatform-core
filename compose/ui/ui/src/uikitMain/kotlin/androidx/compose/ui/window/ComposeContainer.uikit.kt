@@ -190,6 +190,7 @@ internal class ComposeContainer(
     override fun traitCollectionDidChange(previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         systemThemeState.value = traitCollection.userInterfaceStyle.asComposeSystemTheme()
+        view.setNeedsLayout()
     }
 
     override fun viewWillLayoutSubviews() {
