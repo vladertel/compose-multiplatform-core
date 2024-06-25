@@ -17,10 +17,14 @@
 package androidx.wear.compose.material3.demos
 
 import android.content.Context
+import android.os.Build
 import android.widget.Toast
 import androidx.wear.compose.integration.demos.common.Centralize
 import androidx.wear.compose.integration.demos.common.ComposableDemo
 import androidx.wear.compose.integration.demos.common.Material3DemoCategory
+import androidx.wear.compose.material3.samples.AnimatedTextSample
+import androidx.wear.compose.material3.samples.AnimatedTextSampleButtonResponse
+import androidx.wear.compose.material3.samples.AnimatedTextSampleSharedFontRegistry
 import androidx.wear.compose.material3.samples.EdgeSwipeForSwipeToDismiss
 import androidx.wear.compose.material3.samples.FixedFontSize
 import androidx.wear.compose.material3.samples.HorizontalPageIndicatorSample
@@ -54,13 +58,12 @@ val WearMaterial3Demos =
             ComposableDemo("Icon Button") { IconButtonDemo() },
             ComposableDemo("Text Toggle Button") { TextToggleButtonDemo() },
             ComposableDemo("Icon Toggle Button") { IconToggleButtonDemo() },
-            ComposableDemo("Switch") { SwitchDemos() },
             ComposableDemo("Checkbox Button") { CheckboxButtonDemo() },
             ComposableDemo("Split Checkbox Button") { SplitCheckboxButtonDemo() },
             ComposableDemo("Radio Button") { RadioButtonDemo() },
             ComposableDemo("Split Radio Button") { SplitRadioButtonDemo() },
-            ComposableDemo("Toggle Button") { ToggleButtonDemo() },
-            ComposableDemo("Split Toggle Button") { SplitToggleButtonDemo() },
+            ComposableDemo("Switch Button") { SwitchButtonDemo() },
+            ComposableDemo("Split Switch Button") { SplitSwitchButtonDemo() },
             Material3DemoCategory(
                 "Stepper",
                 listOf(
@@ -102,6 +105,22 @@ val WearMaterial3Demos =
                         HorizontalPageIndicatorWithPagerSample(it.swipeToDismissBoxState)
                     },
                 )
+            ),
+            Material3DemoCategory(
+                "Animated Text",
+                if (Build.VERSION.SDK_INT > 31) {
+                    listOf(
+                        ComposableDemo("Simple animation") { Centralize { AnimatedTextSample() } },
+                        ComposableDemo("Animation with button click") {
+                            Centralize { AnimatedTextSampleButtonResponse() }
+                        },
+                        ComposableDemo("Shared Font Registry") {
+                            Centralize { AnimatedTextSampleSharedFontRegistry() }
+                        },
+                    )
+                } else {
+                    emptyList()
+                }
             ),
             ComposableDemo("Settings Demo") { SettingsDemo() }
         )

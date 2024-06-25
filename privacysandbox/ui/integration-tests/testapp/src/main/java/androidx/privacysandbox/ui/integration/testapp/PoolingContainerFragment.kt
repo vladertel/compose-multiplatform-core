@@ -32,17 +32,24 @@ class PoolingContainerFragment : BaseFragment() {
     private lateinit var inflatedView: View
     private lateinit var recyclerView: RecyclerView
 
+    override fun getSandboxedSdkViews(): List<SandboxedSdkView> {
+        return (recyclerView.adapter as CustomAdapter).sandboxedSdkViewSet.toList()
+    }
+
     override fun handleDrawerStateChange(isDrawerOpen: Boolean) {
-        (recyclerView.adapter as CustomAdapter).handleDrawerStateChange(isDrawerOpen)
+        super.handleDrawerStateChange(isDrawerOpen)
+        (recyclerView.adapter as CustomAdapter).zOrderOnTop = !isDrawerOpen && isZOrderOnTop
     }
 
     override fun handleLoadAdFromDrawer(
         @AdType adType: Int,
-        @MediationOption mediationOption: Int
+        @MediationOption mediationOption: Int,
+        drawViewabilityLayer: Boolean
     ) {
         currentAdType = adType
         currentMediationOption = mediationOption
-        val recyclerViewAdapter = CustomAdapter(adType, mediationOption, zOrder = false)
+        shouldDrawViewabilityLayer = drawViewabilityLayer
+        val recyclerViewAdapter = CustomAdapter(adType, mediationOption, zOrderOnTop = false)
         recyclerView.adapter = recyclerViewAdapter
     }
 
@@ -66,17 +73,11 @@ class PoolingContainerFragment : BaseFragment() {
     private inner class CustomAdapter(
         @AdType val adType: Int,
         @MediationOption val mediationOption: Int,
-        zOrder: Boolean = true
+        var zOrderOnTop: Boolean = true
     ) : RecyclerView.Adapter<CustomAdapter.ViewHolder>() {
 
-        private val sandboxedSdkViewSet = mutableSetOf<SandboxedSdkView>()
+        val sandboxedSdkViewSet = mutableSetOf<SandboxedSdkView>()
         private val childCount = 3
-        private var zOrderOnTop = zOrder
-
-        fun handleDrawerStateChange(isDrawerOpen: Boolean) {
-            zOrderOnTop = !isDrawerOpen
-            sandboxedSdkViewSet.forEach { view -> view.orderProviderUiAboveClientUi(!isDrawerOpen) }
-        }
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val sandboxedSdkView: SandboxedSdkView = view.findViewById(R.id.recyclerview_ad_view)
@@ -94,7 +95,12 @@ class PoolingContainerFragment : BaseFragment() {
             childSandboxedSdkView.orderProviderUiAboveClientUi(zOrderOnTop)
             if (!sandboxedSdkViewSet.contains(childSandboxedSdkView)) {
                 try {
-                    loadBannerAd(adType, mediationOption, childSandboxedSdkView)
+                    loadBannerAd(
+                        adType,
+                        mediationOption,
+                        childSandboxedSdkView,
+                        shouldDrawViewabilityLayer
+                    )
                 } catch (e: Exception) {
                     Log.w(TAG, "Ad not loaded $e")
                 }

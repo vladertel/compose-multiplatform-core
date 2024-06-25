@@ -21,9 +21,8 @@ CARDVIEW = "1.1.0-alpha01"
 CAR_APP = "1.7.0-beta01"
 COLLECTION = "1.5.0-alpha01"
 COMPOSE = "1.8.0-alpha01"
-COMPOSE_COMPILER = "1.5.14"  # Update when preparing for a release
 COMPOSE_MATERIAL3 = "1.4.0-alpha01"
-COMPOSE_MATERIAL3_ADAPTIVE = "1.0.0-beta03"
+COMPOSE_MATERIAL3_ADAPTIVE = "1.0.0-beta04"
 COMPOSE_MATERIAL3_COMMON = "1.0.0-alpha01"
 COMPOSE_RUNTIME_TRACING = "1.0.0-beta01"
 CONSTRAINTLAYOUT = "2.2.0-alpha13"
@@ -98,7 +97,7 @@ LOADER = "1.2.0-alpha01"
 MEDIA = "1.7.0-rc01"
 MEDIAROUTER = "1.8.0-alpha01"
 METRICS = "1.0.0-beta02"
-NAVIGATION = "2.8.0-beta03"
+NAVIGATION = "2.8.0-beta04"
 PAGING = "3.4.0-alpha01"
 PALETTE = "1.1.0-alpha01"
 PDF = "1.0.0-alpha01"
@@ -109,8 +108,8 @@ PRIVACYSANDBOX_ACTIVITY = "1.0.0-alpha01"
 PRIVACYSANDBOX_ADS = "1.1.0-beta08"
 PRIVACYSANDBOX_PLUGINS = "1.0.0-alpha03"
 PRIVACYSANDBOX_SDKRUNTIME = "1.0.0-alpha13"
-PRIVACYSANDBOX_TOOLS = "1.0.0-alpha08"
-PRIVACYSANDBOX_UI = "1.0.0-alpha08"
+PRIVACYSANDBOX_TOOLS = "1.0.0-alpha09"
+PRIVACYSANDBOX_UI = "1.0.0-alpha09"
 PROFILEINSTALLER = "1.4.0-alpha01"
 RECOMMENDATION = "1.1.0-alpha01"
 RECYCLERVIEW = "1.4.0-alpha01"
@@ -147,7 +146,7 @@ TRACING_PERFETTO = "1.0.0"
 TRANSITION = "1.5.0-rc01"
 TV = "1.0.0-alpha11"
 TVPROVIDER = "1.1.0-alpha02"
-TV_MATERIAL = "1.0.0-beta01"
+TV_MATERIAL = "1.0.0-rc01"
 VECTORDRAWABLE = "1.2.0"
 VECTORDRAWABLE_ANIMATED = "1.2.0"
 VECTORDRAWABLE_SEEKABLE = "1.0.0"
@@ -199,8 +198,6 @@ CARDVIEW = { group = "androidx.cardview", atomicGroupVersion = "versions.CARDVIE
 CAR_APP = { group = "androidx.car.app", atomicGroupVersion = "versions.CAR_APP" }
 COLLECTION = { group = "androidx.collection", atomicGroupVersion = "versions.COLLECTION" }
 COMPOSE_ANIMATION = { group = "androidx.compose.animation", atomicGroupVersion = "versions.COMPOSE" }
-COMPOSE_COMPILER = { group = "androidx.compose.compiler", atomicGroupVersion = "versions.COMPOSE_COMPILER" }
-COMPOSE_DESKTOP = { group = "androidx.compose.desktop", atomicGroupVersion = "versions.COMPOSE" }
 COMPOSE_FOUNDATION = { group = "androidx.compose.foundation", atomicGroupVersion = "versions.COMPOSE" }
 COMPOSE_MATERIAL = { group = "androidx.compose.material" }
 COMPOSE_MATERIAL3 = { group = "androidx.compose.material3", atomicGroupVersion = "versions.COMPOSE_MATERIAL3" }

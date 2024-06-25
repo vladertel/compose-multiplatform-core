@@ -208,13 +208,16 @@ public class SurfaceProcessorNode implements
     private void createAndSendSurfaceOutput(@NonNull SurfaceEdge input,
             Map.Entry<OutConfig, SurfaceEdge> output) {
         SurfaceEdge outputEdge = output.getValue();
-        ListenableFuture<SurfaceOutput> future = outputEdge.createSurfaceOutputFuture(
+        SurfaceOutput.CameraInputInfo cameraInputInfo = SurfaceOutput.CameraInputInfo.of(
                 input.getStreamSpec().getResolution(),
-                output.getKey().getFormat(),
                 output.getKey().getCropRect(),
+                input.hasCameraTransform() ? mCameraInternal : null,
                 output.getKey().getRotationDegrees(),
-                output.getKey().isMirroring(),
-                input.hasCameraTransform() ? mCameraInternal : null);
+                output.getKey().isMirroring());
+        ListenableFuture<SurfaceOutput> future = outputEdge.createSurfaceOutputFuture(
+                output.getKey().getFormat(),
+                cameraInputInfo,
+                null);
         Futures.addCallback(future, new FutureCallback<SurfaceOutput>() {
             @Override
             public void onSuccess(@Nullable SurfaceOutput output) {

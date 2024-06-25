@@ -31,9 +31,8 @@ class ScrollFragment : BaseFragment() {
     private lateinit var clippingBoundBannerView: SandboxedSdkView
     private lateinit var inflatedView: View
 
-    override fun handleDrawerStateChange(isDrawerOpen: Boolean) {
-        bottomBannerView.orderProviderUiAboveClientUi(!isDrawerOpen)
-        clippingBoundBannerView.orderProviderUiAboveClientUi(!isDrawerOpen)
+    override fun getSandboxedSdkViews(): List<SandboxedSdkView> {
+        return listOf(bottomBannerView, clippingBoundBannerView)
     }
 
     override fun onCreateView(
@@ -51,12 +50,14 @@ class ScrollFragment : BaseFragment() {
 
     override fun handleLoadAdFromDrawer(
         @AdType adType: Int,
-        @MediationOption mediationOption: Int
+        @MediationOption mediationOption: Int,
+        drawViewabilityLayer: Boolean
     ) {
         currentAdType = adType
         currentMediationOption = mediationOption
-        loadBannerAd(adType, mediationOption, clippingBoundBannerView)
-        loadBannerAd(adType, mediationOption, bottomBannerView)
+        shouldDrawViewabilityLayer = drawViewabilityLayer
+        loadBannerAd(adType, mediationOption, clippingBoundBannerView, drawViewabilityLayer)
+        loadBannerAd(adType, mediationOption, bottomBannerView, drawViewabilityLayer)
     }
 
     private fun loadBottomBannerAd() {
@@ -68,10 +69,20 @@ class ScrollFragment : BaseFragment() {
                 .findViewById<LinearLayout>(R.id.bottom_banner_container)
                 .addView(bottomBannerView)
         }
-        loadBannerAd(currentAdType, currentMediationOption, bottomBannerView)
+        loadBannerAd(
+            currentAdType,
+            currentMediationOption,
+            bottomBannerView,
+            shouldDrawViewabilityLayer
+        )
     }
 
     private fun loadClippingBoundBannerAd() {
-        loadBannerAd(currentAdType, currentMediationOption, clippingBoundBannerView)
+        loadBannerAd(
+            currentAdType,
+            currentMediationOption,
+            clippingBoundBannerView,
+            shouldDrawViewabilityLayer
+        )
     }
 }

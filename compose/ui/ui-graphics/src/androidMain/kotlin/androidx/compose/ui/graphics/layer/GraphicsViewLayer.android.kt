@@ -102,10 +102,6 @@ internal class ViewLayer(
         this.parentLayer = parentLayer
     }
 
-    fun resetDrawBlock() {
-        drawBlock = DefaultDrawBlock
-    }
-
     init {
         setWillNotDraw(false) // we WILL draw
         this.clipBounds = null
@@ -157,6 +153,7 @@ internal class ViewLayer(
 
 internal class GraphicsViewLayer(
     private val layerContainer: DrawChildContainer,
+    override val ownerId: Long,
     val canvasHolder: CanvasHolder = CanvasHolder(),
     canvasDrawScope: CanvasDrawScope = CanvasDrawScope()
 ) : GraphicsLayerImpl {
@@ -445,8 +442,6 @@ internal class GraphicsViewLayer(
         }
     }
 
-    override val supportsSoftwareRendering: Boolean = mayRenderInSoftware
-
     private fun recordDrawingOperations() {
         try {
             canvasHolder.drawInto(PlaceholderCanvas) {
@@ -489,12 +484,6 @@ internal class GraphicsViewLayer(
 
     override fun discardDisplayList() {
         layerContainer.removeViewInLayout(viewLayer)
-    }
-
-    override fun onReused() {
-        viewLayer.resetDrawBlock()
-        // it was removed in discardDisplayList()
-        layerContainer.addView(viewLayer)
     }
 
     companion object {

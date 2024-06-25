@@ -32,17 +32,25 @@ class ResizeFragment : BaseFragment() {
     private lateinit var resizeFromSdkButton: Button
     private lateinit var inflatedView: View
 
-    override fun handleDrawerStateChange(isDrawerOpen: Boolean) {
-        resizableBannerView.orderProviderUiAboveClientUi(!isDrawerOpen)
+    override fun getSandboxedSdkViews(): List<SandboxedSdkView> {
+        return listOf(resizableBannerView)
     }
 
     override fun handleLoadAdFromDrawer(
         @AdType adType: Int,
-        @MediationOption mediationOption: Int
+        @MediationOption mediationOption: Int,
+        drawViewabilityLayer: Boolean
     ) {
         currentAdType = adType
         currentMediationOption = mediationOption
-        loadBannerAd(adType, mediationOption, resizableBannerView, waitInsideOnDraw = true)
+        shouldDrawViewabilityLayer = drawViewabilityLayer
+        loadBannerAd(
+            adType,
+            mediationOption,
+            resizableBannerView,
+            drawViewabilityLayer,
+            waitInsideOnDraw = true
+        )
     }
 
     override fun onCreateView(
@@ -64,6 +72,7 @@ class ResizeFragment : BaseFragment() {
             currentAdType,
             currentMediationOption,
             resizableBannerView,
+            shouldDrawViewabilityLayer,
             waitInsideOnDraw = true
         )
 
