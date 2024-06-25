@@ -48,10 +48,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var currentFragment: BaseFragment
     private lateinit var triggerSandboxDeathButton: Button
     private lateinit var webViewToggleButton: SwitchMaterial
+    private lateinit var zOrderToggleButton: SwitchMaterial
     private lateinit var contentFromAssetsToggleButton: SwitchMaterial
+    private lateinit var viewabilityToggleButton: SwitchMaterial
     private lateinit var mediationDropDownMenu: Spinner
     @AdType private var adType = AdType.NON_WEBVIEW
     @MediationOption private var mediationOption = MediationOption.NON_MEDIATED
+    private var drawViewabilityLayer = false
 
     // TODO(b/257429573): Remove this line once fixed.
     @RequiresExtension(extension = SdkExtensions.AD_SERVICES, version = 5)
@@ -61,7 +64,9 @@ class MainActivity : AppCompatActivity() {
         drawerLayout = findViewById(R.id.drawer)
         navigationView = findViewById(R.id.navigation_view)
         contentFromAssetsToggleButton = findViewById(R.id.content_from_assets_switch)
+        zOrderToggleButton = findViewById(R.id.zorder_below_switch)
         webViewToggleButton = findViewById(R.id.load_webview)
+        viewabilityToggleButton = findViewById(R.id.display_viewability_switch)
         triggerSandboxDeathButton = findViewById(R.id.trigger_sandbox_death)
         mediationDropDownMenu = findViewById(R.id.mediation_dropdown_menu)
 
@@ -104,9 +109,7 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
-        initializeWebViewToggleSwitch()
-        initializeContentFromAssetsToggleButton()
-        initializeMediationDropDown()
+        initializeToggles()
     }
 
     override fun onDestroy() {
@@ -128,16 +131,28 @@ class MainActivity : AppCompatActivity() {
         currentFragment.getSdkApi().triggerProcessDeath()
     }
 
+    private fun initializeToggles() {
+        initializeWebViewToggleSwitch()
+        initializeContentFromAssetsToggleButton()
+        initializeViewabilityToggleButton()
+        initializeMediationDropDown()
+        initializeZOrderToggleButton()
+    }
+
     private fun disableAllControls() {
         webViewToggleButton.isEnabled = false
         contentFromAssetsToggleButton.isEnabled = false
         mediationDropDownMenu.isEnabled = false
+        viewabilityToggleButton.isEnabled = false
+        zOrderToggleButton.isEnabled = false
     }
 
     private fun enableAllControls() {
         webViewToggleButton.isEnabled = true
         contentFromAssetsToggleButton.isEnabled = webViewToggleButton.isChecked
         mediationDropDownMenu.isEnabled = true
+        viewabilityToggleButton.isEnabled = true
+        zOrderToggleButton.isEnabled = true
     }
 
     private fun initializeWebViewToggleSwitch() {
@@ -154,7 +169,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     AdType.NON_WEBVIEW
                 }
-            currentFragment.handleLoadAdFromDrawer(adType, mediationOption)
+            loadAllAds()
         }
     }
 
@@ -166,7 +181,14 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     AdType.WEBVIEW
                 }
-            currentFragment.handleLoadAdFromDrawer(adType, mediationOption)
+            loadAllAds()
+        }
+    }
+
+    private fun initializeViewabilityToggleButton() {
+        viewabilityToggleButton.setOnCheckedChangeListener { _, isChecked ->
+            drawViewabilityLayer = isChecked
+            loadAllAds()
         }
     }
 
@@ -216,11 +238,17 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             MediationOption.NON_MEDIATED
                         }
-                    currentFragment.handleLoadAdFromDrawer(adType, mediationOption)
+                    loadAllAds()
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>?) {}
             }
+    }
+
+    private fun initializeZOrderToggleButton() {
+        zOrderToggleButton.setOnCheckedChangeListener { _, isChecked ->
+            BaseFragment.isZOrderOnTop = !isChecked
+        }
     }
 
     private fun initializeOptionsButton() {
@@ -276,6 +304,11 @@ class MainActivity : AppCompatActivity() {
         currentFragment = fragment
         title?.let { runOnUiThread { setTitle(it) } }
         return true
+    }
+
+    /** Loads all ads in the current fragment. */
+    private fun loadAllAds() {
+        currentFragment.handleLoadAdFromDrawer(adType, mediationOption, drawViewabilityLayer)
     }
 
     companion object {

@@ -69,33 +69,45 @@ abstract class BaseFragment : Fragment() {
     }
 
     /**
-     * Called when the app's drawer layout state changes. When called, change the Z-order of any
-     * [SandboxedSdkView] owned by the fragment to ensure that the remote UI is not drawn over the
-     * drawer. If the drawer is open, move all remote views to Z-below, otherwise move them to
-     * Z-above.
+     * Returns the list of [SandboxedSdkView]s that are currently displayed inside this fragment.
+     *
+     * This will be called when the drawer is opened or closed, to automatically flip the Z-ordering
+     * of any remote views.
      */
-    // TODO(b/343436839) : Handle this automatically
-    abstract fun handleDrawerStateChange(isDrawerOpen: Boolean)
+    abstract fun getSandboxedSdkViews(): List<SandboxedSdkView>
 
     /**
      * Called when the @AdType or @MediationOption of any [SandboxedSdkView] inside the fragment is
      * changed using the toggle switches in the drawer.
      *
-     * Set the value of [currentAdType] and [currentMediationOption] inside the method using the
-     * parameters passed to it, then call [loadBannerAd] method using the parameters along with the
-     * [SandboxedSdkView] for which the new Ad needs to be loaded.
+     * Set the value of [currentAdType], [currentMediationOption] and [shouldDrawViewabilityLayer]
+     * inside the method using the parameters passed to it, then call [loadBannerAd] method using
+     * the parameters along with the [SandboxedSdkView] for which the new Ad needs to be loaded.
      */
     // TODO(b/343436839) : Handle this automatically
-    abstract fun handleLoadAdFromDrawer(adType: Int, mediationOption: Int)
+    // TODO(b/348194843): Clean up the options
+    abstract fun handleLoadAdFromDrawer(
+        adType: Int,
+        mediationOption: Int,
+        drawViewabilityLayer: Boolean
+    )
 
     fun loadBannerAd(
         @AdType adType: Int,
         @MediationOption mediationOption: Int,
         sandboxedSdkView: SandboxedSdkView,
+        drawViewabilityLayer: Boolean,
         waitInsideOnDraw: Boolean = false
     ) {
-        val sdkBundle = sdkApi.loadBannerAd(adType, mediationOption, waitInsideOnDraw)
+        val sdkBundle =
+            sdkApi.loadBannerAd(adType, mediationOption, waitInsideOnDraw, drawViewabilityLayer)
         sandboxedSdkView.setAdapter(SandboxedUiAdapterFactory.createFromCoreLibInfo(sdkBundle))
+    }
+
+    open fun handleDrawerStateChange(isDrawerOpen: Boolean) {
+        getSandboxedSdkViews().forEach {
+            it.orderProviderUiAboveClientUi(!isDrawerOpen && isZOrderOnTop)
+        }
     }
 
     private inner class StateChangeListener(val view: SandboxedSdkView) :
@@ -122,7 +134,9 @@ abstract class BaseFragment : Fragment() {
         private const val MEDIATEE_SDK_NAME =
             "androidx.privacysandbox.ui.integration.mediateesdkprovider"
         const val TAG = "TestSandboxClient"
+        var isZOrderOnTop = true
         @AdType var currentAdType = AdType.NON_WEBVIEW
         @MediationOption var currentMediationOption = MediationOption.NON_MEDIATED
+        var shouldDrawViewabilityLayer = false
     }
 }
