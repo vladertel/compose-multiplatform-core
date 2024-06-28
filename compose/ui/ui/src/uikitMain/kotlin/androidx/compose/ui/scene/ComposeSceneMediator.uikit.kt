@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.round
 import androidx.compose.ui.unit.roundToIntRect
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.unit.toOffset
+import androidx.compose.ui.viewinterop.InteropView
 import androidx.compose.ui.window.ComposeSceneKeyboardOffsetManager
 import androidx.compose.ui.window.ApplicationForegroundStateListener
 import androidx.compose.ui.window.FocusStack
@@ -354,10 +355,10 @@ internal class ComposeSceneMediator(
 
     private val touchesDelegate: InteractionUIView.Delegate by lazy {
         object : InteractionUIView.Delegate {
-            override fun pointInside(point: CValue<CGPoint>, event: UIEvent?): Boolean =
+            override fun hitTestInteropView(point: CValue<CGPoint>, event: UIEvent?): InteropView? =
                 point.useContents {
-                    val position = this.asDpOffset().toOffset(density)
-                    !scene.hitTestInteropView(position)
+                    val position = asDpOffset().toOffset(density)
+                    scene.hitTestInteropView(position)
                 }
 
             override fun onTouchesEvent(view: UIView, event: UIEvent, phase: CupertinoTouchesPhase) {

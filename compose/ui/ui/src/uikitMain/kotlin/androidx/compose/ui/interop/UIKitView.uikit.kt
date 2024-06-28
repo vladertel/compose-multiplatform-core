@@ -56,6 +56,7 @@ import platform.UIKit.willMoveToParentViewController
 import androidx.compose.ui.uikit.utils.CMPInteropWrappingView
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.roundToIntRect
+import androidx.compose.ui.viewinterop.InteropView
 import kotlinx.cinterop.readValue
 import platform.CoreGraphics.CGRectZero
 
@@ -64,6 +65,10 @@ private val DefaultViewResize: UIView.(CValue<CGRect>) -> Unit = { rect -> this.
 private val DefaultViewControllerResize: UIViewController.(CValue<CGRect>) -> Unit =
     { rect -> this.view.setFrame(rect) }
 
+/**
+ * A UIView that contains underlying interop element, such as an independent UIView
+ * or UIViewController root UIView.
+ */
 internal class InteropWrappingView : CMPInteropWrappingView(frame = CGRectZero.readValue()) {
     var actualAccessibilityContainer: Any? = null
 
@@ -108,9 +113,11 @@ private fun Modifier.interopSemantics(
         this
     }
 
-private fun Modifier.catchInteropPointer(isInteractive: Boolean): Modifier =
+private fun Modifier.catchInteropPointer(isInteractive: Boolean, wrappingView: InteropWrappingView): Modifier =
     if (isInteractive) {
-        this then InteropViewCatchPointerModifier()
+        this then InteropViewCatchPointerModifier(
+            interopView = InteropView(wrappingView)
+        )
     } else {
         this
     }
@@ -154,7 +161,7 @@ private fun <T : Any> UIKitInteropLayout(
             )
         }
         .trackUIKitInterop(interopContainer, componentHandler.wrappingView)
-        .catchInteropPointer(interactive)
+        .catchInteropPointer(interactive, componentHandler.wrappingView)
         .interopSemantics(accessibilityEnabled, componentHandler.wrappingView)
 
     EmptyLayout(
