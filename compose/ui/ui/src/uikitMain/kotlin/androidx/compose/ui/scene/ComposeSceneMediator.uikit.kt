@@ -247,7 +247,7 @@ internal class ComposeSceneMediator(
 
     val focusManager get() = scene.focusManager
 
-    private val renderingView by lazy {
+    private val renderingView: RenderingUIView by lazy {
         renderingUIViewFactory(interopContainer, renderDelegate)
     }
 
@@ -265,24 +265,12 @@ internal class ComposeSceneMediator(
      */
     private val rootView = ComposeSceneMediatorRootUIView()
 
-    /**
-     * Container for managing UIKitView and UIKitViewController
-     */
-    private val interopContainer = UIKitInteropContainer(
-        requestRedraw = ::onComposeSceneInvalidate
-    )
-
-    private val interactionBounds: IntRect get() {
-        val boundsLayout = _layout as? SceneLayout.Bounds
-        return boundsLayout?.interactionBounds ?: renderingViewBoundsInPx
-    }
-
-    private val interactionView by lazy {
+    private val interactionView: InteractionUIView by lazy {
         InteractionUIView(
             keyboardEventHandler = keyboardEventHandler,
             touchesDelegate = touchesDelegate,
             updateTouchesCount = { count ->
-                val needHighFrequencyPolling = count > 0
+                val needHighFrequencyPolling: Boolean = count > 0
                 renderingView.redrawer.needsProactiveDisplayLink = needHighFrequencyPolling
             },
             inBounds = { point ->
@@ -292,6 +280,19 @@ internal class ComposeSceneMediator(
                 interactionBounds.contains(positionInContainer)
             }
         )
+    }
+
+    /**
+     * Container for managing UIKitView and UIKitViewController
+     */
+    private val interopContainer = UIKitInteropContainer(
+        containerView = interactionView,
+        requestRedraw = ::onComposeSceneInvalidate
+    )
+
+    private val interactionBounds: IntRect get() {
+        val boundsLayout = _layout as? SceneLayout.Bounds
+        return boundsLayout?.interactionBounds ?: renderingViewBoundsInPx
     }
 
     @OptIn(ExperimentalComposeApi::class)
@@ -425,12 +426,6 @@ internal class ComposeSceneMediator(
         container.addSubview(rootView)
         NSLayoutConstraint.activateConstraints(
             getConstraintsToFillParent(rootView, container)
-        )
-
-        interopContainer.containerView.translatesAutoresizingMaskIntoConstraints = false
-        rootView.addSubview(interopContainer.containerView)
-        NSLayoutConstraint.activateConstraints(
-            getConstraintsToFillParent(interopContainer.containerView, rootView)
         )
 
         interactionView.translatesAutoresizingMaskIntoConstraints = false
