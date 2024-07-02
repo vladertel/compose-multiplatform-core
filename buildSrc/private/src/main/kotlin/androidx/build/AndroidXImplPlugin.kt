@@ -337,7 +337,7 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
                 ) {
                     task.kotlinOptions.jvmTarget = "17"
                 } else {
-                    task.kotlinOptions.jvmTarget = "1.8"
+                    task.kotlinOptions.jvmTarget = "11"
                 }
                 val kotlinCompilerArgs = mutableListOf(
                     "-Xskip-metadata-version-check",
@@ -571,8 +571,8 @@ class AndroidXImplPlugin @Inject constructor(val componentFactory: SoftwareCompo
                 }
             } else {
                 javaExtension.apply {
-                    sourceCompatibility = VERSION_1_8
-                    targetCompatibility = VERSION_1_8
+                    sourceCompatibility = VERSION_11
+                    targetCompatibility = VERSION_11
                 }
             }
             if (!project.plugins.hasPlugin(KotlinBasePluginWrapper::class.java)) {
