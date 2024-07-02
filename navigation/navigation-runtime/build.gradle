@@ -67,13 +67,13 @@ kotlin {
             dependencies {
                 api project(":annotation:annotation")
                 implementation project(":collection:collection")
-                api project(":core:core-bundle")
-                api project(":lifecycle:lifecycle-common")
-                api project(":lifecycle:lifecycle-runtime")
-                api project(":lifecycle:lifecycle-viewmodel")
-                api project(":lifecycle:lifecycle-viewmodel-savedstate")
+                api "org.jetbrains.androidx.core:core-bundle:1.0.0"
+                api "org.jetbrains.androidx.lifecycle:lifecycle-common:2.8.0"
+                api "org.jetbrains.androidx.lifecycle:lifecycle-runtime:2.8.0"
+                api "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel:2.8.0"
+                api "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.0"
                 api project(":navigation:navigation-common")
-                api project(":savedstate:savedstate")
+                api "org.jetbrains.androidx.savedstate:savedstate:1.2.0"
 
                 api(libs.kotlinStdlib)
                 implementation(libs.kotlinSerializationCore)
