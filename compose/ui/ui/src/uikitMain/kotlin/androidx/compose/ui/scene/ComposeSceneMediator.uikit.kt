@@ -379,7 +379,7 @@ internal class ComposeSceneMediator(
                     density.density
                 )
             )
-        } ?: emptyList()
+        }
 
         scene.sendPointerEvent(
             eventType = phase.toPointerEventType(),
