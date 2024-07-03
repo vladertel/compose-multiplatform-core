@@ -36,7 +36,9 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
+import androidx.compose.ui.input.pointer.PointerInputEventProcessResult
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.toPointerInputEventProcessResult
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.RootNodeOwner
 import androidx.compose.ui.platform.PlatformContext
@@ -227,20 +229,26 @@ private class MultiLayerComposeSceneImpl(
         return mainOwner.hitTestInteropView(position)
     }
 
-    override fun processPointerInputEvent(event: PointerInputEvent) {
-        when (event.eventType) {
+    override fun processPointerInputEvent(event: PointerInputEvent): PointerInputEventProcessResult {
+        val result = when (event.eventType) {
             PointerEventType.Press -> processPress(event)
-            PointerEventType.Release -> processRelease(event)
+            PointerEventType.Release -> {
+                processRelease(event)
+                PointerInputEventProcessResult()
+            }
             PointerEventType.Move -> processMove(event)
             PointerEventType.Enter -> processMove(event)
             PointerEventType.Exit -> processMove(event)
             PointerEventType.Scroll -> processScroll(event)
+            else -> PointerInputEventProcessResult()
         }
 
         // Clean gestureOwner when there is no pressed pointers/buttons
         if (!event.isGestureInProgress) {
             gestureOwner = null
         }
+
+        return result
     }
 
     override fun processKeyEvent(keyEvent: KeyEvent): Boolean =
@@ -283,11 +291,11 @@ private class MultiLayerComposeSceneImpl(
         return true
     }
 
-    private fun processPress(event: PointerInputEvent) {
+    private fun processPress(event: PointerInputEvent): PointerInputEventProcessResult {
         val currentGestureOwner = gestureOwner
         if (currentGestureOwner != null) {
             currentGestureOwner.onPointerInput(event)
-            return
+            return PointerInputEventProcessResult()
         }
         val position = event.pointers.first().position
         forEachLayerReversed { layer ->
@@ -298,7 +306,7 @@ private class MultiLayerComposeSceneImpl(
                 // convert event coordinates here.
                 layer.owner.onPointerInput(event)
                 gestureOwner = layer.owner
-                return
+                return PointerInputEventProcessResult()
             }
 
             // Input event is out of bounds - send click outside notification
@@ -306,11 +314,13 @@ private class MultiLayerComposeSceneImpl(
 
             // if the owner is in focus, do not pass the event to underlying owners
             if (layer == focusedLayer) {
-                return
+                return PointerInputEventProcessResult()
             }
         }
-        mainOwner.onPointerInput(event)
+        val result = mainOwner.onPointerInput(event)
         gestureOwner = mainOwner
+
+        return result
     }
 
     private fun processRelease(event: PointerInputEvent) {
@@ -320,6 +330,7 @@ private class MultiLayerComposeSceneImpl(
             val owner = hoveredOwner(event)
             if (isInteractive(owner)) {
                 processHover(event, owner)
+
             } else if (gestureOwner == null) {
                 // If hovered owner is not interactive, then it means that
                 // - It's not focusedOwner
@@ -330,7 +341,7 @@ private class MultiLayerComposeSceneImpl(
         }
     }
 
-    private fun processMove(event: PointerInputEvent) {
+    private fun processMove(event: PointerInputEvent): PointerInputEventProcessResult {
         var owner = when {
             // All touch events or mouse with pressed button(s)
             event.isGestureInProgress -> gestureOwner
@@ -347,9 +358,10 @@ private class MultiLayerComposeSceneImpl(
             owner = null
         }
         if (processHover(event, owner)) {
-            return
+            return PointerInputEventProcessResult()
         }
-        owner?.onPointerInput(event.copy(eventType = PointerEventType.Move))
+        val result = owner?.onPointerInput(event.copy(eventType = PointerEventType.Move))
+        return result ?: PointerInputEventProcessResult()
     }
 
     /**
@@ -378,10 +390,13 @@ private class MultiLayerComposeSceneImpl(
         return true
     }
 
-    private fun processScroll(event: PointerInputEvent) {
+    private fun processScroll(event: PointerInputEvent): PointerInputEventProcessResult {
         val owner = hoveredOwner(event)
-        if (isInteractive(owner)) {
+
+        return if (isInteractive(owner)) {
             owner.onPointerInput(event)
+        } else {
+            PointerInputEventProcessResult()
         }
     }
 

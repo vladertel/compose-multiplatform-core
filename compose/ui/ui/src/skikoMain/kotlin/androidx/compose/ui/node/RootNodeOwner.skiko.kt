@@ -52,10 +52,13 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerIconService
 import androidx.compose.ui.input.pointer.PointerInputEvent
+import androidx.compose.ui.input.pointer.PointerInputEventProcessResult
 import androidx.compose.ui.input.pointer.PointerInputEventProcessor
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.PositionCalculator
+import androidx.compose.ui.input.pointer.ProcessResult
+import androidx.compose.ui.input.pointer.toPointerInputEventProcessResult
 import androidx.compose.ui.layout.RootMeasurePolicy
 import androidx.compose.ui.modifier.ModifierLocalManager
 import androidx.compose.ui.platform.DefaultAccessibilityManager
@@ -234,17 +237,17 @@ internal class RootNodeOwner(
     }
 
     @OptIn(InternalCoreApi::class)
-    fun onPointerInput(event: PointerInputEvent) {
+    fun onPointerInput(event: PointerInputEvent): PointerInputEventProcessResult {
         if (event.button != null) {
             platformContext.inputModeManager.requestInputMode(InputMode.Touch)
         }
         val isInBounds = event.eventType != PointerEventType.Exit &&
             event.pointers.fastAll { isInBounds(it.position) }
-        pointerInputEventProcessor.process(
+        return pointerInputEventProcessor.process(
             event,
             IdentityPositionCalculator,
             isInBounds = isInBounds
-        )
+        ).toPointerInputEventProcessResult()
     }
 
     fun onKeyEvent(keyEvent: KeyEvent): Boolean {

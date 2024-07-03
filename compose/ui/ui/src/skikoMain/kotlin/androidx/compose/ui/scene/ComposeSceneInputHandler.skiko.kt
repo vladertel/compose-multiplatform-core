@@ -30,8 +30,10 @@ import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputEvent
+import androidx.compose.ui.input.pointer.PointerInputEventProcessResult
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.ProcessResult
 import androidx.compose.ui.input.pointer.SyntheticEventSender
 import androidx.compose.ui.input.pointer.areAnyPressed
 import androidx.compose.ui.input.pointer.copy
@@ -49,7 +51,7 @@ import org.jetbrains.skiko.currentNanoTime
  */
 internal class ComposeSceneInputHandler(
     private val prepareForPointerInputEvent: () -> Unit,
-    processPointerInputEvent: (PointerInputEvent) -> Unit,
+    processPointerInputEvent: (PointerInputEvent) -> PointerInputEventProcessResult,
     private val processKeyEvent: (KeyEvent) -> Boolean,
 ) {
     private val defaultPointerStateTracker = DefaultPointerStateTracker()
@@ -79,14 +81,14 @@ internal class ComposeSceneInputHandler(
         keyboardModifiers: PointerKeyboardModifiers? = null,
         nativeEvent: Any? = null,
         button: PointerButton? = null
-    ) {
+    ): PointerInputEventProcessResult {
         defaultPointerStateTracker.onPointerEvent(button, eventType)
 
         val actualButtons = buttons ?: defaultPointerStateTracker.buttons
         val actualKeyboardModifiers =
             keyboardModifiers ?: defaultPointerStateTracker.keyboardModifiers
 
-        onPointerEvent(
+        return onPointerEvent(
             eventType,
             listOf(ComposeScenePointer(PointerId(0), position, actualButtons.areAnyPressed, type)),
             actualButtons,
@@ -107,7 +109,7 @@ internal class ComposeSceneInputHandler(
         timeMillis: Long = (currentNanoTime() / 1E6).toLong(),
         nativeEvent: Any? = null,
         button: PointerButton? = null,
-    ) {
+    ): PointerInputEventProcessResult {
         val event = PointerInputEvent(
             eventType,
             pointers,
@@ -120,8 +122,10 @@ internal class ComposeSceneInputHandler(
         )
         prepareForPointerInputEvent()
         updatePointerPosition()
-        syntheticEventSender.send(event)
+        val result = syntheticEventSender.send(event)
         updatePointerPositions(event)
+        println(result)
+        return result
     }
 
     fun onKeyEvent(keyEvent: KeyEvent): Boolean {

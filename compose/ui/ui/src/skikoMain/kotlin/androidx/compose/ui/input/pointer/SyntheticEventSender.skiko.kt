@@ -49,9 +49,9 @@ import androidx.compose.ui.util.fastAny
  * touch first. For example, iOS simulator can send 2 touches simultaneously.
  */
 internal class SyntheticEventSender(
-    send: (PointerInputEvent) -> Unit
+    send: (PointerInputEvent) -> PointerInputEventProcessResult
 ) {
-    private val _send: (PointerInputEvent) -> Unit = send
+    private val _send: (PointerInputEvent) -> PointerInputEventProcessResult = send
     private var previousEvent: PointerInputEvent? = null
 
     /**
@@ -72,11 +72,15 @@ internal class SyntheticEventSender(
     /**
      * Send [event] and synthetic events before it if needed. On each sent event we just call [send]
      */
-    fun send(event: PointerInputEvent) {
-        sendMissingMoveForHover(event)
-        sendMissingReleases(event)
-        sendMissingPresses(event)
-        sendInternal(event)
+    fun send(event: PointerInputEvent): PointerInputEventProcessResult {
+        val result = PointerInputEventProcessResult()
+
+        result.combineWith(sendMissingMoveForHover(event))
+        result.combineWith(sendMissingReleases(event))
+        result.combineWith(sendMissingPresses(event))
+        result.combineWith(sendInternal(event))
+
+        return result
     }
 
     fun updatePointerPosition() {
@@ -94,10 +98,11 @@ internal class SyntheticEventSender(
     /**
      * @param pointersSourceEvent the event which we treat as a source of the pointers
      */
-    private fun sendSyntheticMove(pointersSourceEvent: PointerInputEvent) {
-        val previousEvent = previousEvent ?: return
+    private fun sendSyntheticMove(pointersSourceEvent: PointerInputEvent): PointerInputEventProcessResult {
+        val previousEvent = previousEvent ?: return PointerInputEventProcessResult()
+
         val idToPosition = pointersSourceEvent.pointers.associate { it.id to it.position }
-        sendInternal(
+        return sendInternal(
             previousEvent.copySynthetic(
                 type = PointerEventType.Move,
                 copyPointer = { it.copySynthetic(position = idToPosition[it.id] ?: it.position) },
@@ -105,21 +110,24 @@ internal class SyntheticEventSender(
         )
     }
 
-    private fun sendMissingMoveForHover(currentEvent: PointerInputEvent) {
+    private fun sendMissingMoveForHover(currentEvent: PointerInputEvent): PointerInputEventProcessResult =
         // issuesEnterExit means that the pointer can issues hover events (enter/exit), and so we
         // should generate a synthetic Move (see why we need to do that in the class description)
         if (currentEvent.pointers.any { it.activeHover } &&
             isMoveEventMissing(previousEvent, currentEvent)) {
             sendSyntheticMove(currentEvent)
+        } else {
+            PointerInputEventProcessResult()
         }
-    }
 
-    private fun sendMissingReleases(currentEvent: PointerInputEvent) {
-        val previousEvent = previousEvent ?: return
+    private fun sendMissingReleases(currentEvent: PointerInputEvent): PointerInputEventProcessResult {
+        val previousEvent = previousEvent ?: return PointerInputEventProcessResult()
         val previousPressed = previousEvent.pressedIds()
         val currentPressed = currentEvent.pressedIds()
         val newReleased = (previousPressed - currentPressed.toSet()).toList()
         val sendingAsUp = HashSet<PointerId>(newReleased.size)
+
+        val result = PointerInputEventProcessResult()
 
         // Don't send the first released pointer
         // It will be sent as a real event. Here we only need to send synthetic events
@@ -127,55 +135,65 @@ internal class SyntheticEventSender(
         for (i in newReleased.size - 2 downTo 0) {
             sendingAsUp.add(newReleased[i])
 
-            sendInternal(
-                previousEvent.copySynthetic(
-                    type = PointerEventType.Release,
-                    copyPointer = {
-                        it.copySynthetic(
-                            // TODO is this a typo and it should be `it.id in newReleased`, as in sendMissingPresses?
-                            //  or maybe we can even write `down = !sendingAsUp.contains(it.id)` and `down = sendingAsDown.contains(it.id)`
-                            //  The test pass in both cases
-                            down = !sendingAsUp.contains(it.id)
-                        )
-                    }
+            result.combineWith(
+                sendInternal(
+                    previousEvent.copySynthetic(
+                        type = PointerEventType.Release,
+                        copyPointer = {
+                            it.copySynthetic(
+                                // TODO is this a typo and it should be `it.id in newReleased`, as in sendMissingPresses?
+                                //  or maybe we can even write `down = !sendingAsUp.contains(it.id)` and `down = sendingAsDown.contains(it.id)`
+                                //  The test pass in both cases
+                                down = !sendingAsUp.contains(it.id)
+                            )
+                        }
+                    )
                 )
             )
         }
+
+        return result
     }
 
-    private fun sendMissingPresses(currentEvent: PointerInputEvent) {
+    private fun sendMissingPresses(currentEvent: PointerInputEvent): PointerInputEventProcessResult {
         val previousPressed = previousEvent?.pressedIds().orEmpty()
         val currentPressed = currentEvent.pressedIds()
         val newPressed = (currentPressed - previousPressed.toSet()).toList()
         val sendingAsDown = HashSet<PointerId>(newPressed.size)
 
+        val result = PointerInputEventProcessResult()
         // Don't send the last pressed pointer (newPressed.size - 1)
         // It will be sent as a real event. Here we only need to send synthetic events
         // before a real one.
         for (i in 0..newPressed.size - 2) {
             sendingAsDown.add(newPressed[i])
 
-            sendInternal(
-                currentEvent.copySynthetic(
-                    type = PointerEventType.Press,
-                    copyPointer = {
-                        it.copySynthetic(
-                            down = sendingAsDown.contains(it.id)
-                        )
-                    }
+            result.combineWith(
+                sendInternal(
+                    currentEvent.copySynthetic(
+                        type = PointerEventType.Press,
+                        copyPointer = {
+                            it.copySynthetic(
+                                down = sendingAsDown.contains(it.id)
+                            )
+                        }
+                    )
                 )
             )
         }
+
+        return result
     }
 
     private fun PointerInputEvent.pressedIds(): Sequence<PointerId> =
         pointers.asSequence().filter { it.down }.map { it.id }
 
-    private fun sendInternal(event: PointerInputEvent) {
-        _send(event)
+    private fun sendInternal(event: PointerInputEvent): PointerInputEventProcessResult {
+        val result = _send(event)
         // We don't send nativeEvent for synthetic events.
         // Nullify to avoid memory leaks (native events can point to native views).
         previousEvent = event.copy(nativeEvent = null)
+        return result
     }
 
     private fun isMoveEventMissing(

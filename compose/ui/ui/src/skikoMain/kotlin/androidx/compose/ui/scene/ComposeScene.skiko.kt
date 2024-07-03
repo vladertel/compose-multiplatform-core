@@ -33,6 +33,7 @@ import androidx.compose.ui.input.pointer.InteropViewCatchPointerModifier
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerInputEventProcessResult
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -182,6 +183,7 @@ interface ComposeScene {
      * @param nativeEvent The original native event.
      * @param button Represents the index of a button which state changed in this event. It's null
      * when there was no change of the buttons state or when button is not applicable (e.g. touch event).
+     * @return The result of the pointer event processing.
      */
     fun sendPointerEvent(
         eventType: PointerEventType,
@@ -193,7 +195,7 @@ interface ComposeScene {
         keyboardModifiers: PointerKeyboardModifiers? = null,
         nativeEvent: Any? = null,
         button: PointerButton? = null
-    )
+    ): PointerInputEventProcessResult
 
     /**
      * Send pointer event to the content. The more detailed version of [sendPointerEvent] that can accept
@@ -224,7 +226,7 @@ interface ComposeScene {
         timeMillis: Long = currentTimeForEvent(),
         nativeEvent: Any? = null,
         button: PointerButton? = null,
-    )
+    ): PointerInputEventProcessResult
 
     /**
      * Send [KeyEvent] to the content.

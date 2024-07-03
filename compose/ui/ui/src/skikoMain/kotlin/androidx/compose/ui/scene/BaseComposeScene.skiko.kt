@@ -34,6 +34,7 @@ import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerButtons
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputEvent
+import androidx.compose.ui.input.pointer.PointerInputEventProcessResult
 import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.node.SnapshotInvalidationTracker
@@ -207,7 +208,6 @@ internal abstract class BaseComposeScene(
         )
     }
 
-    // TODO(demin): return Boolean (when it is consumed)
     // TODO(demin) verify that pressure is the same on Android and iOS
     override fun sendPointerEvent(
         eventType: PointerEventType,
@@ -242,7 +242,7 @@ internal abstract class BaseComposeScene(
 
     protected abstract fun createComposition(content: @Composable () -> Unit): Composition
 
-    protected abstract fun processPointerInputEvent(event: PointerInputEvent)
+    protected abstract fun processPointerInputEvent(event: PointerInputEvent): PointerInputEventProcessResult
 
     protected abstract fun processKeyEvent(keyEvent: KeyEvent): Boolean
 
