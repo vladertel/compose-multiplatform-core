@@ -115,6 +115,7 @@ internal class InteractionUIView(
         onTouchesCountChanged = { _touchesCount += it }
     )
 
+    private var latestHitTest: UIView? = null
     private val gestureRecognizer = CMPGestureRecognizer()
 
     /**
@@ -169,6 +170,7 @@ internal class InteractionUIView(
 
     override fun hitTest(point: CValue<CGPoint>, withEvent: UIEvent?): UIView? {
         if (!inInteractionBounds(point)) {
+            latestHitTest = null
             return null
         }
 
@@ -183,7 +185,9 @@ internal class InteractionUIView(
             point = convertPoint(point, toView = interopView),
             withEvent = withEvent)
 
-        return hitTestView ?: this
+        val result = hitTestView ?: this
+        latestHitTest = result
+        return result
     }
 
     /**
