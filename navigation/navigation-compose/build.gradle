@@ -51,11 +51,11 @@ kotlin {
                 api project(":compose:ui:ui")
                 api "org.jetbrains.androidx.lifecycle:lifecycle-common:2.8.0"
                 api "org.jetbrains.androidx.lifecycle:lifecycle-runtime:2.8.0"
-                implementation("org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:2.8.0") {
+                api("org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose:2.8.0") {
                     exclude group: "org.jetbrains.compose.runtime"
                 }
                 api "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel:2.8.0"
-                implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0") {
+                api("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0") {
                     exclude group: "org.jetbrains.compose.runtime"
                     exclude group: "org.jetbrains.compose.ui"
                 }
