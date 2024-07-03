@@ -24,6 +24,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (weak, nonatomic) id <CMPGestureRecognizerHandler> handler;
 
+/// Should be called by `handler` to move gesture recognizer to `began` state.
+- (void)begin;
+
+/// Should be called by `handler` to schedule a failure and pass delayed touches up the responder chain.
+- (void)scheduleFailure;
+
 @end
 
 NS_ASSUME_NONNULL_END
