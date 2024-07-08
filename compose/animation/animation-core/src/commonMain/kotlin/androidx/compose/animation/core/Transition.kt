@@ -691,9 +691,9 @@ class SeekableTransitionState<S>(
                     currentState = targetState
                     waitForComposition()
                     fraction = 0f
-                    transition.onTransitionEnd()
                 }
             }
+            transition.onTransitionEnd()
         }
     }
 
@@ -1106,6 +1106,7 @@ class Transition<S> internal constructor(
         }
         playTimeNanos = 0
         transitionState.isRunning = false
+        _transitions.fastForEach { it.onTransitionEnd() }
     }
 
     /**
