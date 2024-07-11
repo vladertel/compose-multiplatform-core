@@ -60,7 +60,6 @@ internal actual fun legacyPlatformTextInputServiceAdapter(): LegacyPlatformTextI
                 session?.updateState(oldValue, newValue)
             }
 
-
             override fun updateTextLayoutResult(
                 textFieldValue: TextFieldValue,
                 offsetMapping: OffsetMapping,
