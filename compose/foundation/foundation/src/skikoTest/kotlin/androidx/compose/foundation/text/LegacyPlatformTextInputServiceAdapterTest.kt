@@ -17,8 +17,13 @@
 package androidx.compose.foundation.text
 
 import androidx.compose.foundation.assertThat
-import androidx.compose.foundation.isTrue
+import androidx.compose.foundation.isEqualTo
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Matrix
@@ -37,6 +42,7 @@ import androidx.compose.ui.text.input.PlatformTextInputService
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TextInputService
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class LegacyPlatformTextInputServiceAdapterTest {
 
@@ -45,7 +51,7 @@ class LegacyPlatformTextInputServiceAdapterTest {
     @Test
     fun textLayoutResultIsProvided() = runComposeUiTest {
 
-        var isProvided = false
+        var textFromUpdateTextLayoutResult = ""
 
         val platformTextInputService = object : PlatformTextInputService {
 
@@ -72,17 +78,20 @@ class LegacyPlatformTextInputServiceAdapterTest {
                 innerTextFieldBounds: Rect,
                 decorationBoxBounds: Rect
             ) {
-                isProvided = true
+                textFromUpdateTextLayoutResult = textFieldValue.text
             }
         }
         val textInputService = TextInputService(platformTextInputService)
 
         setContent {
             CompositionLocalProvider(LocalTextInputService provides textInputService) {
+                var text by remember { mutableStateOf("") }
                 BasicTextField(
                     modifier = Modifier.testTag("input"),
-                    value = "",
-                    onValueChange = {}
+                    value = text,
+                    onValueChange = {
+                        text = it
+                    }
                 )
             }
         }
@@ -93,6 +102,6 @@ class LegacyPlatformTextInputServiceAdapterTest {
 
         waitForIdle()
 
-        assertThat(isProvided).isTrue()
+        assertThat(textFromUpdateTextLayoutResult).isEqualTo("abc")
     }
 }
