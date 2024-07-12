@@ -38,6 +38,10 @@ fun Bitmap.asComposeImageBitmap(): ImageBitmap = SkiaBackedImageBitmap(this)
  */
 fun Image.toComposeImageBitmap(): ImageBitmap = SkiaBackedImageBitmap(toBitmap())
 
+internal actual fun createImageBitmap(bytes: ByteArray): ImageBitmap {
+    return Image.makeFromEncoded(bytes).toComposeImageBitmap()
+}
+
 // Split into expect/actual to use a faster implementation for web
 // See web implementation for details and the reason.
 internal expect fun Image.toBitmap(): Bitmap

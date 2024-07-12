@@ -259,3 +259,12 @@ fun ImageBitmap(
     hasAlpha,
     colorSpace
 )
+
+/**
+ * Decodes a byte array of a Bitmap to an ImageBitmap.
+ *
+ * @return The converted ImageBitmap.
+ */
+fun ByteArray.decodeToImageBitmap(): ImageBitmap = createImageBitmap(this)
+
+internal expect fun createImageBitmap(bytes: ByteArray): ImageBitmap
