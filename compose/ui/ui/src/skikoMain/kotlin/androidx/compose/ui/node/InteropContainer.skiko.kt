@@ -124,7 +124,7 @@ private const val TRAVERSAL_NODE_KEY =
  *
  * @see TraversableNode
  */
-internal class TrackInteropModifierNode<T>(
+internal open class TrackInteropModifierNode<T>(
     var container: InteropContainer<T>?,
     var nativeView: T?,
 ) : Modifier.Node(), TraversableNode, LayoutAwareModifierNode, OnUnplacedModifierNode {
