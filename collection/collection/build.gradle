@@ -35,7 +35,10 @@ androidXMultiplatform {
     }
     mac()
     linux()
+    linuxArm64()
     ios()
+    watchos()
+    tvos()
 
     defaultPlatform(PlatformIdentifier.JVM)
 
@@ -48,7 +51,7 @@ androidXMultiplatform {
         commonMain {
             dependencies {
                 api(libs.kotlinStdlib)
-                api("androidx.annotation:annotation:1.7.0")
+                api("androidx.annotation:annotation:1.8.1")
             }
         }
 
