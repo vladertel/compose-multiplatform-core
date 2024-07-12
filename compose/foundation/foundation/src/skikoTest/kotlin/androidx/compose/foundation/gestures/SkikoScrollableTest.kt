@@ -16,8 +16,10 @@
 
 package androidx.compose.foundation.gestures
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -151,5 +153,29 @@ class SkikoScrollableTest {
          * it doesn't freeze. This was an issue previously, as inside the scroll animation, there
          * was a handler for the CancellationException that used to stop the scene from closing.
          */
+    }
+
+    @Test
+    fun clickableInScrollContainer() = runSkikoComposeUiTest {
+        var isClicked = false
+        setContent {
+            Row(modifier = Modifier.testTag("container")) {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Box(modifier = Modifier.size(100.dp).clickable {
+                       isClicked = true
+                    })
+                }
+            }
+        }
+
+        onNodeWithTag("container").performMouseInput {
+            moveBy(Offset(10f, 10f))
+            press()
+            moveBy(Offset(50f, 50f))
+            release()
+        }
+
+        runOnIdle { assertTrue(isClicked, "The Box is expected to receive a Click") }
+
     }
 }

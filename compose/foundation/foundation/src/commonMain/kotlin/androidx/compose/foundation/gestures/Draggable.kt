@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.util.fastAny
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.sign
 import kotlinx.coroutines.CoroutineScope
@@ -466,7 +467,9 @@ internal abstract class DragGestureNode(
         if (enabled && pointerInputNode == null) {
             pointerInputNode = delegate(initializePointerInputNode())
         }
-        pointerInputNode?.onPointerEvent(pointerEvent, pass, bounds)
+        if (pointerEvent.changes.fastAny { canDrag.invoke(it) }) {
+            pointerInputNode?.onPointerEvent(pointerEvent, pass, bounds)
+        }
     }
 
     private fun initializePointerInputNode(): SuspendingPointerInputModifierNode {
