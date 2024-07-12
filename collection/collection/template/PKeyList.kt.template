@@ -18,6 +18,7 @@
 
 package androidx.collection
 
+import androidx.annotation.IntRange
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 import kotlin.jvm.JvmField
@@ -59,20 +60,20 @@ public sealed class PKeyList(initialCapacity: Int) {
     /**
      * The number of elements in the [PKeyList].
      */
-    @get:androidx.annotation.IntRange(from = 0)
+    @get:IntRange(from = 0)
     public val size: Int
         get() = _size
 
     /**
      * Returns the last valid index in the [PKeyList]. This can be `-1` when the list is empty.
      */
-    @get:androidx.annotation.IntRange(from = -1)
+    @get:IntRange(from = -1)
     public inline val lastIndex: Int get() = _size - 1
 
     /**
      * Returns an [IntRange] of the valid indices for this [PKeyList].
      */
-    public inline val indices: IntRange get() = 0 until _size
+    public inline val indices: kotlin.ranges.IntRange get() = 0 until _size
 
     /**
      * Returns `true` if the collection has no elements in it.
@@ -301,7 +302,7 @@ public sealed class PKeyList(initialCapacity: Int) {
      * Returns the element at the given [index] or throws [IndexOutOfBoundsException] if
      * the [index] is out of bounds of this collection.
      */
-    public operator fun get(@androidx.annotation.IntRange(from = 0) index: Int): PKey {
+    public operator fun get(@IntRange(from = 0) index: Int): PKey {
         if (index !in 0 until _size) {
             throw IndexOutOfBoundsException("Index $index must be in 0..$lastIndex")
         }
@@ -312,7 +313,7 @@ public sealed class PKeyList(initialCapacity: Int) {
      * Returns the element at the given [index] or throws [IndexOutOfBoundsException] if
      * the [index] is out of bounds of this collection.
      */
-    public fun elementAt(@androidx.annotation.IntRange(from = 0) index: Int): PKey {
+    public fun elementAt(@IntRange(from = 0) index: Int): PKey {
         if (index !in 0 until _size) {
             throw IndexOutOfBoundsException("Index $index must be in 0..$lastIndex")
         }
@@ -327,7 +328,7 @@ public sealed class PKeyList(initialCapacity: Int) {
      * an index not in the list.
      */
     public inline fun elementAtOrElse(
-        @androidx.annotation.IntRange(from = 0) index: Int,
+        @IntRange(from = 0) index: Int,
         defaultValue: (index: Int) -> PKey
     ): PKey {
         if (index !in 0 until _size) {
@@ -563,7 +564,7 @@ public class MutablePKeyList(
      * elements at [index] and after, if any.
      * @throws IndexOutOfBoundsException if [index] isn't between 0 and [size], inclusive
      */
-    public fun add(@androidx.annotation.IntRange(from = 0) index: Int, element: PKey) {
+    public fun add(@IntRange(from = 0) index: Int, element: PKey) {
         if (index !in 0.._size) {
             throw IndexOutOfBoundsException("Index $index must be in 0..$_size")
         }
@@ -588,7 +589,7 @@ public class MutablePKeyList(
      * @throws IndexOutOfBoundsException if [index] isn't between 0 and [size], inclusive.
      */
     public fun addAll(
-        @androidx.annotation.IntRange(from = 0) index: Int,
+        @IntRange(from = 0) index: Int,
         elements: PKeyArray
     ): Boolean {
         if (index !in 0.._size) {
@@ -617,7 +618,7 @@ public class MutablePKeyList(
      * @throws IndexOutOfBoundsException if [index] isn't between 0 and [size], inclusive
      */
     public fun addAll(
-        @androidx.annotation.IntRange(from = 0) index: Int,
+        @IntRange(from = 0) index: Int,
         elements: PKeyList
     ): Boolean {
         if (index !in 0.._size) {
@@ -778,7 +779,7 @@ public class MutablePKeyList(
      * Removes the element at the given [index] and returns it.
      * @throws IndexOutOfBoundsException if [index] isn't between 0 and [lastIndex], inclusive
      */
-    public fun removeAt(@androidx.annotation.IntRange(from = 0) index: Int): PKey {
+    public fun removeAt(@IntRange(from = 0) index: Int): PKey {
         if (index !in 0 until _size) {
             throw IndexOutOfBoundsException("Index $index must be in 0..$lastIndex")
         }
@@ -802,8 +803,8 @@ public class MutablePKeyList(
      * @throws IllegalArgumentException if [start] is greater than [end]
      */
     public fun removeRange(
-        @androidx.annotation.IntRange(from = 0) start: Int,
-        @androidx.annotation.IntRange(from = 0) end: Int
+        @IntRange(from = 0) start: Int,
+        @IntRange(from = 0) end: Int
     ) {
         if (start !in 0.._size || end !in 0.._size) {
             throw IndexOutOfBoundsException("Start ($start) and end ($end) must be in 0..$_size")
@@ -862,7 +863,7 @@ public class MutablePKeyList(
      * @throws IndexOutOfBoundsException if [index] isn't between 0 and [lastIndex], inclusive
      */
     public operator fun set(
-        @androidx.annotation.IntRange(from = 0) index: Int,
+        @IntRange(from = 0) index: Int,
         element: PKey
     ): PKey {
         if (index !in 0 until _size) {
