@@ -199,6 +199,7 @@ class SkikoScrollableTest {
 
         onNodeWithTag("container").performTouchInput {
             down(Offset(10f, 10f))
+            // drag a bit
             moveBy(Offset(50f, 50f))
             up()
         }
@@ -207,6 +208,19 @@ class SkikoScrollableTest {
             assertFalse(
                 isClicked,
                 "The Box is NOT expected to receive a Click while dragging using touch"
+            )
+        }
+
+        onNodeWithTag("container").performTouchInput {
+            down(Offset(50f, 50f))
+            // no drag
+            up()
+        }
+
+        runOnIdle {
+            assertTrue(
+                isClicked,
+                "The Box is expected to receive a Click, because there was no dragging using touch"
             )
         }
     }
