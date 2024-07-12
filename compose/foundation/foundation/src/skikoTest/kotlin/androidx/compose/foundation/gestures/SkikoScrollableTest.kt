@@ -46,6 +46,7 @@ import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.dp
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.jetbrains.skiko.OS
 import org.jetbrains.skiko.hostOs
@@ -155,8 +156,8 @@ class SkikoScrollableTest {
          */
     }
 
-    @Test
-    fun clickableInScrollContainer() = runSkikoComposeUiTest {
+    @Test // https://youtrack.jetbrains.com/issue/CMP-5069
+    fun clickableInScrollContainerWithMouse() = runSkikoComposeUiTest {
         var isClicked = false
         setContent {
             Row(modifier = Modifier.testTag("container")) {
@@ -175,7 +176,38 @@ class SkikoScrollableTest {
             release()
         }
 
-        runOnIdle { assertTrue(isClicked, "The Box is expected to receive a Click") }
+        runOnIdle {
+            assertTrue(
+                isClicked,
+                "The Box is expected to receive a Click using Mouse"
+            )
+        }
+    }
 
+    @Test // https://youtrack.jetbrains.com/issue/CMP-5069
+    fun clickableInScrollContainerWithTouch() = runSkikoComposeUiTest {
+        var isClicked = false
+        setContent {
+            Row(modifier = Modifier.testTag("container")) {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Box(modifier = Modifier.size(100.dp).clickable {
+                        isClicked = true
+                    })
+                }
+            }
+        }
+
+        onNodeWithTag("container").performTouchInput {
+            down(Offset(10f, 10f))
+            moveBy(Offset(50f, 50f))
+            up()
+        }
+
+        runOnIdle {
+            assertFalse(
+                isClicked,
+                "The Box is NOT expected to receive a Click while dragging using touch"
+            )
+        }
     }
 }
