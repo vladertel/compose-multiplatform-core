@@ -40,7 +40,7 @@ import platform.darwin.NSObject
 
 private class CupertinoDragAndDropNode(
     container: InteropContainer<UIView>,
-    dragInteractionDelegate: CupertinoDragAndDropSource?,
+    dragInteractionDelegate: UIDragInteractionDelegateProtocol?,
     dropInteractionDelegate: UIDropInteractionDelegateProtocol?,
 ) : TrackInteropModifierNode<UIView>(
     container = container,
@@ -74,10 +74,10 @@ private class CupertinoDragAndDropNode(
 
         dragInteractionDelegate?.let { delegate ->
             // Store new interaction and add it to the view
-//            dragInteraction = UIDragInteraction(delegate = delegate)
-//                .also { interaction ->
-//                    view.addInteraction(interaction)
-//                }
+            dragInteraction = UIDragInteraction(delegate = delegate)
+                .also { interaction ->
+                    view.addInteraction(interaction)
+                }
         }
     }
 
@@ -99,7 +99,7 @@ private class CupertinoDragAndDropNode(
 
 private data class CupertinoDragAndDropElement(
     val container: InteropContainer<UIView>,
-    val dragInteractionDelegate: CupertinoDragAndDropSource?,
+    val dragInteractionDelegate: UIDragInteractionDelegateProtocol?,
     val dropInteractionDelegate: UIDropInteractionDelegateProtocol?,
 ) : ModifierNodeElement<CupertinoDragAndDropNode>() {
     override fun create() = CupertinoDragAndDropNode(
@@ -119,38 +119,16 @@ private data class CupertinoDragAndDropElement(
 }
 
 @ExperimentalComposeUiApi
-interface CupertinoDragAndDropSource {
+interface CupertinoDragSource {
     /**
      * https://developer.apple.com/documentation/uikit/uidraginteractiondelegate/2891010-draginteraction
      */
     fun itemsForBeginning(session: UIDragSessionProtocol): List<UIDragItem> = emptyList()
-
-    /**
-     * https://developer.apple.com/documentation/uikit/uidraginteractiondelegate/2890968-draginteraction
-     */
-    fun itemsForAdding(session: UIDragSessionProtocol, point: CValue<CGPoint>): List<UIDragItem> = emptyList()
 }
 
-private class CupertinoDragAndDropSourceBridge(
-    private val impl: CupertinoDragAndDropSource
-) {
-    private val delegate = object : NSObject(), UIDragInteractionDelegateProtocol {
-        @Suppress("CONFLICTING_OVERLOADS", "PARAMETER_NAME_CHANGED_ON_OVERRIDE")
-        override fun dragInteraction(
-            interaction: UIDragInteraction,
-            itemsForBeginningSession: UIDragSessionProtocol
-        ): List<*> {
-            return impl.itemsForBeginning(itemsForBeginningSession)
-        }
+@ExperimentalComposeUiApi
+interface CupertinoDropTarget {
 
-        override fun dragInteraction(
-            interaction: UIDragInteraction,
-            itemsForAddingToSession: UIDragSessionProtocol,
-            atPoint: CValue<CGPoint>
-        ): List<*> {
-            return impl.itemsForAdding(itemsForAddingToSession, atPoint)
-        }
-    }
 }
 
 /**
@@ -166,7 +144,7 @@ private class CupertinoDragAndDropSourceBridge(
  */
 @ExperimentalComposeUiApi
 fun Modifier.dragAndDrop(
-    dragInteractionDelegate: CupertinoDragAndDropSource? = null,
+    dragInteractionDelegate: UIDragInteractionDelegateProtocol? = null,
     dropInteractionDelegate: UIDropInteractionDelegateProtocol? = null
 ): Modifier = composed {
     val interopContainer = LocalUIKitInteropContainer.current
