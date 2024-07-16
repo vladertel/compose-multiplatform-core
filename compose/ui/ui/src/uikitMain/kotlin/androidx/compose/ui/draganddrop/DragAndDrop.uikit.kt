@@ -30,12 +30,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
-import androidx.compose.ui.uikit.utils.CMPDragInteractionProxyMeta
+import androidx.compose.ui.uikit.utils.itemWithString
 import androidx.compose.ui.viewinterop.interopViewAnchor
-import platform.Foundation.NSItemProvider
 import platform.UIKit.UIColor
 import platform.UIKit.UIDragInteraction
-import platform.UIKit.UIDragInteractionDelegateProtocol
 import platform.UIKit.UIDragItem
 import platform.UIKit.UIDragSessionProtocol
 import platform.UIKit.UIDropInteraction
@@ -44,6 +42,7 @@ import platform.UIKit.UIView
 import platform.UIKit.addInteraction
 import platform.UIKit.removeInteraction
 import platform.UIKit.UIEvent
+import platform.UIKit.UIImageView
 
 private class CupertinoDragAndDropNode(
     view: UIView,
@@ -67,7 +66,7 @@ private class CupertinoDragAndDropNode(
             }
         }
 
-    private var dragInteractionDelegate: UIDragInteractionDelegateProtocol? = null
+    private var dragInteractionDelegate: CupertinoDragSourceBridge? = null
     private var dragInteraction: UIDragInteraction? = null
 
     private var dropInteractionDelegate: UIDropInteractionDelegateProtocol? = null
@@ -128,6 +127,7 @@ private data class CupertinoDragAndDropElement(
     }
 }
 
+
 @ExperimentalComposeUiApi
 interface CupertinoDragSource {
     /**
@@ -151,13 +151,19 @@ interface CupertinoDropTarget {
 
 }
 
+@ExperimentalComposeUiApi
+fun String.toUIDragItem(): UIDragItem = UIDragItem.itemWithString(this)
+
 private class CupertinoDragSourceBridge(
-    private val dragSource: CupertinoDragSource
+    private val dragSource: CupertinoDragSource,
 ) : CMPDragInteractionProxy() {
+
     override fun itemsForBeginningDragSession(
         session: UIDragSessionProtocol,
         interaction: UIDragInteraction
-    ): List<UIDragItem> = dragSource.itemsForBeginning(session, interaction)
+    ): List<UIDragItem> {
+        return dragSource.itemsForBeginning(session, interaction)
+    }
 
     override fun dragSessionIsRestrictedToDraggingApplication(
         session: UIDragSessionProtocol,
@@ -170,11 +176,8 @@ private class CupertinoDragSourceBridge(
     ): Boolean = dragSource.dragSessionAllowsMoveOperation(session, interaction)
 }
 
-private fun CupertinoDragSource.toCupertinoDragSourceBridge() = CupertinoDragSourceBridge(this)
-
-@ExperimentalComposeUiApi
-fun String.toNSItemProvider(): NSItemProvider =
-    CMPDragInteractionProxy.itemProviderFromString(this)
+private fun CupertinoDragSource.toCupertinoDragSourceBridge() =
+    CupertinoDragSourceBridge(this)
 
 /**
  * Modifier that adds a drag and drop dummy view hovering above the element.
@@ -196,7 +199,8 @@ fun Modifier.dragAndDrop(
         val interopContainer = LocalUIKitInteropContainer.current
         val density = LocalDensity.current
         val view = remember {
-            UIView().apply {
+            UIImageView().apply {
+                setUserInteractionEnabled(true)
                 backgroundColor = UIColor.greenColor
             }
         }
@@ -204,7 +208,7 @@ fun Modifier.dragAndDrop(
         CupertinoDragAndDropElement(
             view = view,
             dragSource = dragSource,
-            dropInteractionDelegate = dropInteractionDelegate
+            dropInteractionDelegate = dropInteractionDelegate,
         ) then TrackInteropModifierElement(
             container = interopContainer,
             nativeView = view

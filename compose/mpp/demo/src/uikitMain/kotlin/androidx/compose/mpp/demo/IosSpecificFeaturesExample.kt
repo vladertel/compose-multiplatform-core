@@ -27,12 +27,10 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.CupertinoDragSource
 import androidx.compose.ui.draganddrop.dragAndDrop
-import androidx.compose.ui.draganddrop.toNSItemProvider
+import androidx.compose.ui.draganddrop.toUIDragItem
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import platform.Foundation.NSItemProvider
-import platform.Foundation.NSString
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIDragItem
 import platform.UIKit.UIDragSessionProtocol
@@ -69,9 +67,7 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                     ): List<UIDragItem> {
                         println("itemsForBeginning")
                         return listOf(
-                            UIDragItem(
-                                "Draggable test string".toNSItemProvider()
-                            )
+                            "Hello, world!".toUIDragItem()
                         )
                     }
                 }

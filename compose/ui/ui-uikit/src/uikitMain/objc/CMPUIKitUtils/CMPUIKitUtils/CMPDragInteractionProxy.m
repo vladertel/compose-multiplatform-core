@@ -48,3 +48,11 @@
 }
 
 @end
+
+@implementation UIDragItem (CMPInitializers)
+
++ (instancetype)itemWithString:(NSString *)string {
+    return [[UIDragItem alloc] initWithItemProvider:[[NSItemProvider alloc] initWithObject:string]];
+}
+
+@end
