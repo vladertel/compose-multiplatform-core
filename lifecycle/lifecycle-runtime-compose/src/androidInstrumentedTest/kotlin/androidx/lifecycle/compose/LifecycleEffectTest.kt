@@ -18,9 +18,15 @@ package androidx.lifecycle.compose
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.runComposeUiTest
+import androidx.kruth.assertThat
+import androidx.kruth.assertWithMessage
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.testing.TestLifecycleOwner
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -55,8 +61,129 @@ class LifecycleEffectTest {
         composeTestRule.waitForIdle()
         composeTestRule.setContent {
             CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
-                LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-                    stopCount++
+                LifecycleEventEffect(Lifecycle.Event.ON_STOP) { stopCount++ }
+            }
+        }
+
+        runOnIdle {
+            assertWithMessage("Lifecycle should not have been stopped").that(stopCount).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun lifecycleEventEffectTest_localLifecycleOwner() = runComposeUiTest {
+        val expectedEvent = Lifecycle.Event.ON_STOP
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                LifecycleEventEffect(expectedEvent) { stopCount++ }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(expectedEvent)
+            assertWithMessage("Lifecycle should have been stopped").that(stopCount).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun lifecycleEventEffectTest_customLifecycleOwner() = runComposeUiTest {
+        val expectedEvent = Lifecycle.Event.ON_STOP
+        var stopCount = 0
+
+        waitForIdle()
+        setContent { LifecycleEventEffect(expectedEvent, lifecycleOwner) { stopCount++ } }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(expectedEvent)
+            assertWithMessage("Lifecycle should have been stopped").that(stopCount).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun lifecycleEventEffectTest_onPause_beforeOnDispose_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            if (visible) {
+                LifecycleEventEffect(Lifecycle.Event.ON_PAUSE, lifecycleOwner) { stopCount++ }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+            visible = false
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
+    }
+
+    @Test
+    fun lifecycleEventEffectTest_onDestroy_beforeOnDispose_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            if (visible) {
+                LifecycleEventEffect(Lifecycle.Event.ON_PAUSE, lifecycleOwner) { stopCount++ }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+            visible = false
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
+    }
+
+    @Test
+    fun lifecycleEventEffectTest_onDispose_beforeOnDestroy_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            if (visible) {
+                LifecycleEventEffect(Lifecycle.Event.ON_PAUSE, lifecycleOwner) { stopCount++ }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            visible = false
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
+    }
+
+    @Test
+    fun lifecycleStartEffectTest() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+        var startCount = 0
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                LifecycleStartEffect(key1 = null) {
+                    startCount++
+
+                    onStopOrDispose { stopCount++ }
                 }
             }
         }
@@ -365,7 +492,82 @@ class LifecycleEffectTest {
     }
 
     @Test
-    fun lifecycleResumeEffectTest() {
+    fun lifecycleStartEffect_onStop_beforeOnDispose_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                if (visible) {
+                    LifecycleStartEffect(key1 = "key1") { onStopOrDispose { stopCount++ } }
+                }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+            visible = false
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
+    }
+
+    @Test
+    fun lifecycleStartEffect_onDestroy_beforeOnDispose_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                if (visible) {
+                    LifecycleStartEffect(key1 = "key1") { onStopOrDispose { stopCount++ } }
+                }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+            visible = false
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
+    }
+
+    @Test
+    fun lifecycleStartEffect_onDispose_beforeOnDestroy_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                if (visible) {
+                    LifecycleStartEffect(key1 = "key1") { onStopOrDispose { stopCount++ } }
+                }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            visible = false
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
+    }
+
+    @Test
+    fun lifecycleResumeEffectTest() = runComposeUiTest {
         var resumeCount = 0
         var pauseCount = 0
 
@@ -616,5 +818,105 @@ class LifecycleEffectTest {
             assertThat(state.value)
                 .isEqualTo("changed resumed disposed")
         }
+    }
+
+    @Test
+    fun lifecycleResumeEffect_onPause_beforeOnDispose_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                if (visible) {
+                    LifecycleResumeEffect(key1 = "key1") { onPauseOrDispose { stopCount++ } }
+                }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+            visible = false
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
+    }
+
+    @Test
+    fun lifecycleResumeEffect_onDispose_beforeOnPause_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                if (visible) {
+                    LifecycleResumeEffect(key1 = "key1") { onPauseOrDispose { stopCount++ } }
+                }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            visible = false
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
+    }
+
+    @Test
+    fun lifecycleResumeEffect_onDestroy_beforeOnDispose_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                if (visible) {
+                    LifecycleResumeEffect(key1 = "key1") { onPauseOrDispose { stopCount++ } }
+                }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+            visible = false
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
+    }
+
+    @Test
+    fun lifecycleResumeEffect_onDispose_beforeOnDestroy_isIdempotent() = runComposeUiTest {
+        lifecycleOwner = TestLifecycleOwner(Lifecycle.State.INITIALIZED)
+
+        var visible by mutableStateOf(true)
+        var stopCount = 0
+
+        waitForIdle()
+        setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                if (visible) {
+                    LifecycleResumeEffect(key1 = "key1") { onPauseOrDispose { stopCount++ } }
+                }
+            }
+        }
+
+        runOnIdle {
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            visible = false
+            lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        }
+
+        runOnIdle { assertThat(stopCount).isEqualTo(1) }
     }
 }
