@@ -39,6 +39,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -2479,6 +2480,35 @@ class SeekableTransitionStateTest {
             assertEquals(1000, animatedValue)
             assertFalse(transition.isRunning)
         }
+    }
+
+    @Test
+    fun testCleanupAfterDispose() {
+        fun isObserving(): Boolean {
+            var active = false
+            SeekableStateObserver.clearIf {
+                active = true
+                false
+            }
+            return active
+        }
+
+        var seekableState: SeekableTransitionState<*>?
+        var disposed by mutableStateOf(false)
+
+        rule.setContent {
+            seekableState = remember { SeekableTransitionState(true) }
+
+            if (!disposed) {
+                rememberTransition(transitionState = seekableState!!)
+            }
+        }
+        rule.waitForIdle()
+        assertTrue(isObserving())
+
+        disposed = true
+        rule.waitForIdle()
+        assertFalse(isObserving())
     }
 
     @OptIn(ExperimentalTransitionApi::class)
