@@ -15,16 +15,17 @@
  */
 
 
-#import "CMPDragInteractionDelegate.h"
+#import <UIKit/UIKit.h>
+#import "CMPMacros.h"
 
-@implementation CMPDragInteractionDelegate
+NS_ASSUME_NONNULL_BEGIN
 
-- (nonnull NSArray<UIDragItem *> *)dragInteraction:(nonnull UIDragInteraction *)interaction itemsForBeginningSession:(nonnull id<UIDragSession>)session {
-    return [self itemsForBeginningSession:session inDragInteraction:interaction];
-}
+@interface CMPDragInteractionProxy : NSObject <UIDragInteractionDelegate>
 
-- (nonnull NSArray<UIDragItem *> *)itemsForBeginningSession:(nonnull id<UIDragSession>)session inDragInteraction:(nonnull UIDragInteraction *)interaction {
-    return [NSArray new];
-}
+- (NSArray<UIDragItem *> *)itemsForBeginningDragSession:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction CMP_MUST_BE_OVERRIDED;
+- (BOOL)dragSessionIsRestrictedToDraggingApplication:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction CMP_MUST_BE_OVERRIDED;
+- (BOOL)dragSessionAllowsMoveOperation:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction CMP_MUST_BE_OVERRIDED;
 
 @end
+
+NS_ASSUME_NONNULL_END
