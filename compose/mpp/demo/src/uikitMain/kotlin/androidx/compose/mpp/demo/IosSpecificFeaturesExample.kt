@@ -18,14 +18,24 @@ package androidx.compose.mpp.demo
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.CupertinoDragSource
+import androidx.compose.ui.draganddrop.dragAndDrop
+import androidx.compose.ui.draganddrop.toNSItemProvider
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import platform.Foundation.NSItemProvider
+import platform.Foundation.NSString
+import platform.UIKit.UIDragInteraction
+import platform.UIKit.UIDragItem
+import platform.UIKit.UIDragSessionProtocol
 
 val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     val feedback = LocalHapticFeedback.current
@@ -47,6 +57,34 @@ val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
+val DragAndDropExample = Screen.Example("Drag and drop") {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Text(
+            modifier = Modifier.dragAndDrop(
+                dragSource = object : CupertinoDragSource {
+                    override fun itemsForBeginning(
+                        session: UIDragSessionProtocol,
+                        interaction: UIDragInteraction
+                    ): List<UIDragItem> {
+                        println("itemsForBeginning")
+                        return listOf(
+                            UIDragItem(
+                                "Draggable test string".toNSItemProvider()
+                            )
+                        )
+                    }
+                }
+            ),
+            text = "DragSource"
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(modifier = Modifier.dragAndDrop(), text = "DropTarget")
+    }
+}
+
 val IosSpecificFeatures = Screen.Selection(
     "iOS-specific features",
     NativeModalWithNaviationExample,
@@ -54,5 +92,6 @@ val IosSpecificFeatures = Screen.Selection(
     LazyColumnWithInteropViewsExample,
     AccessibilityLiveRegionExample,
     InteropViewAndSemanticsConfigMerge,
-    StatusBarStateExample
+    StatusBarStateExample,
+    DragAndDropExample
 )

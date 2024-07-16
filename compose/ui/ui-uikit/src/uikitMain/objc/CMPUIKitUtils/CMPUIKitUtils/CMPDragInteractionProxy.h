@@ -22,6 +22,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface CMPDragInteractionProxy : NSObject <UIDragInteractionDelegate>
 
++ (NSItemProvider *)itemProviderFromString:(NSString *)string;
+
 - (NSArray<UIDragItem *> *)itemsForBeginningDragSession:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction CMP_MUST_BE_OVERRIDED;
 - (BOOL)dragSessionIsRestrictedToDraggingApplication:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction CMP_MUST_BE_OVERRIDED;
 - (BOOL)dragSessionAllowsMoveOperation:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction CMP_MUST_BE_OVERRIDED;

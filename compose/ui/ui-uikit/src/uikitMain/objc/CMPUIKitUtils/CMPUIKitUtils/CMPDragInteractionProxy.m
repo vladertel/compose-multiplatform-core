@@ -19,6 +19,10 @@
 
 @implementation CMPDragInteractionProxy
 
++ (NSItemProvider *)itemProviderFromString:(NSString *)string {
+    return [[NSItemProvider alloc] initWithObject:string];
+}
+
 - (nonnull NSArray<UIDragItem *> *)dragInteraction:(nonnull UIDragInteraction *)interaction itemsForBeginningSession:(nonnull id<UIDragSession>)session {
     return [self itemsForBeginningDragSession:session interaction:interaction];
 }
