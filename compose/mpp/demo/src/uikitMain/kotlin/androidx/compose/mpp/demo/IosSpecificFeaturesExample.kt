@@ -79,7 +79,7 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
     Column(modifier = Modifier.fillMaxSize().padding(PaddingValues(top = 16.dp)), horizontalAlignment = Alignment.CenterHorizontally) {
         var text by remember { mutableStateOf("Hello world!") }
 
-        var logs = remember { mutableStateListOf<String>() }
+        val logs = remember { mutableStateListOf<String>() }
 
         val addLog = { log: String ->
             logs.add(0, log)
