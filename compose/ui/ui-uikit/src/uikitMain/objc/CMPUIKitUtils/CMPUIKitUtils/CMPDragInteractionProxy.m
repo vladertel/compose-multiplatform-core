@@ -24,26 +24,26 @@
 }
 
 - (nonnull NSArray<UIDragItem *> *)dragInteraction:(nonnull UIDragInteraction *)interaction itemsForBeginningSession:(nonnull id<UIDragSession>)session {
-    return [self itemsForBeginningDragSession:session interaction:interaction];
+    return [self itemsForBeginningSession:session interaction:interaction];
 }
 
-- (nonnull NSArray<UIDragItem *> *)itemsForBeginningDragSession:(nonnull id<UIDragSession>)session interaction:(nonnull UIDragInteraction *)interaction {
+- (nonnull NSArray<UIDragItem *> *)itemsForBeginningSession:(nonnull id<UIDragSession>)session interaction:(nonnull UIDragInteraction *)interaction {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
 - (BOOL)dragInteraction:(UIDragInteraction *)interaction sessionAllowsMoveOperation:(id<UIDragSession>)session {
-    return [self dragSessionAllowsMoveOperation:session interaction:interaction];
+    return [self doesSessionAllowMoveOperation:session interaction:interaction];
 }
 
-- (BOOL)dragSessionAllowsMoveOperation:(nonnull id<UIDragSession>)session interaction:(nonnull UIDragInteraction *)interaction {
+- (BOOL)doesSessionAllowMoveOperation:(nonnull id<UIDragSession>)session interaction:(nonnull UIDragInteraction *)interaction {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
 - (BOOL)dragInteraction:(UIDragInteraction *)interaction sessionIsRestrictedToDraggingApplication:(id<UIDragSession>)session {
-    return [self dragSessionIsRestrictedToDraggingApplication:session interaction:interaction];
+    return [self isSessionRestrictedToDraggingApplication:session interaction:interaction];
 }
 
-- (BOOL)dragSessionIsRestrictedToDraggingApplication:(nonnull id<UIDragSession>)session interaction:(nonnull UIDragInteraction *)interaction {
+- (BOOL)isSessionRestrictedToDraggingApplication:(nonnull id<UIDragSession>)session interaction:(nonnull UIDragInteraction *)interaction {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 

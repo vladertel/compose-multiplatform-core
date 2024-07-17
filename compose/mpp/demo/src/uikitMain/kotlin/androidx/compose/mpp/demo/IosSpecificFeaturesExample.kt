@@ -16,18 +16,28 @@
 
 package androidx.compose.mpp.demo
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draganddrop.CupertinoDragSource
-import androidx.compose.ui.draganddrop.dragAndDrop
-import androidx.compose.ui.draganddrop.toUIDragItem
+import androidx.compose.ui.draganddrop.cupertino.DragSource
+import androidx.compose.ui.draganddrop.cupertino.DropTarget
+import androidx.compose.ui.draganddrop.cupertino.dragAndDrop
+import androidx.compose.ui.draganddrop.cupertino.toUIDragItem
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -57,27 +67,57 @@ val HapticFeedbackExample = Screen.Example("Haptic feedback") {
 
 @OptIn(ExperimentalComposeUiApi::class)
 val DragAndDropExample = Screen.Example("Drag and drop") {
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        var text by remember { mutableStateOf("Hello world!") }
+
+        TextField(
+            value = text,
+            onValueChange = { text = it },
+            label = { Text("Payload content") },
+        )
+
         Text(
-            modifier = Modifier.dragAndDrop(
-                dragSource = object : CupertinoDragSource {
-                    override fun itemsForBeginning(
-                        session: UIDragSessionProtocol,
-                        interaction: UIDragInteraction
-                    ): List<UIDragItem> {
-                        println("itemsForBeginning")
-                        return listOf(
-                            "Hello, world!".toUIDragItem()
-                        )
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(1f)
+                .height(100.dp)
+                .background(Color.DarkGray)
+                .dragAndDrop(
+                    dragSource = object : DragSource {
+                        override fun UIDragInteraction.itemsForBeginningSession(session: UIDragSessionProtocol): List<UIDragItem> {
+                            return listOf(
+                                text.toUIDragItem()
+                            )
+                        }
                     }
-                }
-            ),
-            text = "DragSource"
+                )
+            ,
+            color = Color.White,
+            text = text
         )
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text(modifier = Modifier.dragAndDrop(), text = "DropTarget")
+        var dropText by remember { mutableStateOf("Drop here") }
+
+        Text(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(1f)
+                .height(100.dp)
+                .background(Color.DarkGray)
+                .dragAndDrop(
+                    dropTarget = object : DropTarget {
+                        override fun onDrop(event: DragAndDropEvent): Boolean {
+                            dropText = event.items.firstOrNull()?.stringRepresentation ?: "No data"
+                            return true
+                        }
+                    }
+                )
+            ,
+            color = Color.White,
+            text = dropText
+        )
     }
 }
 
