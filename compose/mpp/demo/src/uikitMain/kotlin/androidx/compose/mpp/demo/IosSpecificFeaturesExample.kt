@@ -18,15 +18,19 @@ package androidx.compose.mpp.demo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -72,8 +76,17 @@ val HapticFeedbackExample = Screen.Example("Haptic feedback") {
 
 @OptIn(ExperimentalComposeUiApi::class)
 val DragAndDropExample = Screen.Example("Drag and drop") {
-    Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = Modifier.fillMaxSize().padding(PaddingValues(top = 16.dp)), horizontalAlignment = Alignment.CenterHorizontally) {
         var text by remember { mutableStateOf("Hello world!") }
+
+        var logs = remember { mutableStateListOf<String>() }
+
+        val addLog = { log: String ->
+            logs.add(0, log)
+            while (logs.size > 10) {
+                logs.removeLast()
+            }
+        }
 
         TextField(
             value = text,
@@ -90,6 +103,8 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .dragAndDrop(
                     dragSource = object : DragSource {
                         override fun UIDragInteraction.itemsForBeginningSession(session: UIDragSessionProtocol): List<UIDragItem> {
+                            addLog("itemsForBeginningSession")
+
                             return listOf(
                                 text.toUIDragItem()
                             )
@@ -113,13 +128,18 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .background(Color.DarkGray)
                 .dragAndDrop(
                     dropTarget = object : DropTarget {
-                        override fun UIDropInteraction.canHandleSession(session: UIDropSessionProtocol): Boolean = true
+                        override fun UIDropInteraction.canHandleSession(session: UIDropSessionProtocol): Boolean {
+                            addLog("canHandleSession")
+                            return true
+                        }
 
                         override fun UIDropInteraction.proposalForSessionUpdate(session: UIDropSessionProtocol): UIDropProposal {
+                            addLog("proposalForSessionUpdate")
                             return UIDropProposal(UIDropOperationCopy)
                         }
 
                         override fun UIDropInteraction.performDropFromSession(session: UIDropSessionProtocol) {
+                            addLog("performDropFromSession")
                             for (item in session.items) {
                                 val dragItem = item as UIDragItem
                                 val progress = dragItem.loadString {
@@ -143,6 +163,12 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
             color = Color.White,
             text = dropText
         )
+
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(logs) { log ->
+                Text(log)
+            }
+        }
     }
 }
 
