@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -40,12 +41,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.cupertino.DragSource
 import androidx.compose.ui.draganddrop.cupertino.DropTarget
 import androidx.compose.ui.draganddrop.cupertino.dragAndDrop
+import androidx.compose.ui.draganddrop.cupertino.loadObject
 import androidx.compose.ui.draganddrop.cupertino.loadString
 import androidx.compose.ui.draganddrop.cupertino.toUIDragItem
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import kotlinx.cinterop.BetaInteropApi
+import kotlinx.coroutines.launch
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIDragItem
 import platform.UIKit.UIDragSessionProtocol
@@ -53,6 +57,7 @@ import platform.UIKit.UIDropInteraction
 import platform.UIKit.UIDropOperationCopy
 import platform.UIKit.UIDropProposal
 import platform.UIKit.UIDropSessionProtocol
+import platform.UIKit.UIImage
 
 val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     val feedback = LocalHapticFeedback.current
@@ -74,7 +79,7 @@ val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, BetaInteropApi::class)
 val DragAndDropExample = Screen.Example("Drag and drop") {
     Column(modifier = Modifier.fillMaxSize().padding(PaddingValues(top = 16.dp)), horizontalAlignment = Alignment.CenterHorizontally) {
         var text by remember { mutableStateOf("Hello world!") }
@@ -106,7 +111,8 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                             addLog("itemsForBeginningSession")
 
                             return listOf(
-                                text.toUIDragItem()
+                                text.toUIDragItem(),
+                                UIImage().toUIDragItem(UIImage)!!
                             )
                         }
                     }
@@ -119,6 +125,8 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
         Spacer(modifier = Modifier.height(20.dp))
 
         var dropText by remember { mutableStateOf("Drop here") }
+
+        val coroutineScope = rememberCoroutineScope()
 
         Text(
             modifier = Modifier
@@ -142,18 +150,20 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                             addLog("performDropFromSession")
                             for (item in session.items) {
                                 val dragItem = item as UIDragItem
-                                val progress = dragItem.loadString {
-                                    dropText = try {
-                                        it.getOrThrow()
-                                    } catch (e: Throwable) {
-                                        e.message ?: "Unknown error"
-                                    }
-                                }
 
-                                if (progress == null) {
-                                    dropText = "Unexpected type of item"
-                                } else {
-                                    // Do something with the NSProgress
+                                coroutineScope.launch {
+                                    val string = dragItem.loadString()
+
+                                    if (string != null) {
+                                        dropText = string
+
+                                        return@launch
+                                    }
+
+                                    val image = dragItem.loadObject<UIImage>(UIImage)
+                                    if (image != null) {
+                                        println("Image loaded: $image")
+                                    }
                                 }
                             }
                         }

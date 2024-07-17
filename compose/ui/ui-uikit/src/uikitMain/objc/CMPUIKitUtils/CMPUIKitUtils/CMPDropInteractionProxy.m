@@ -37,13 +37,25 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-@implementation UIDragItem (CMPUnpacking)
+@implementation UIDragItem (CMPLoading)
 
-- (NSProgress *_Nullable)cmp_loadString:(void (^)(NSString *result, NSError *error))completionHandler {
+- (BOOL)cmp_loadString:(void (^)(NSString *result, NSError *error))completionHandler {
     if ([self.itemProvider canLoadObjectOfClass:NSString.class]) {
-        return [self.itemProvider loadObjectOfClass:NSString.class completionHandler:completionHandler];
+        [self.itemProvider loadObjectOfClass:NSString.class completionHandler:completionHandler];
+        return YES;
     } else {
-        return nil;
+        return NO;
+    }
+}
+
+- (CMPDragItemLoadRequestResult)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(id result, NSError *error))completionHandler {
+    if (![objectClass conformsToProtocol:@protocol(NSItemProviderReading)]) {
+        return CMPDragItemLoadRequestResultUnsupportedType;
+    } else if ([self.itemProvider canLoadObjectOfClass:objectClass]) {
+        [self.itemProvider loadObjectOfClass:objectClass completionHandler:completionHandler];
+        return CMPDragItemLoadRequestResultSuccess;
+    } else {
+        return CMPDragItemLoadRequestResultWrongType;
     }
 }
 

@@ -30,12 +30,22 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
+import androidx.compose.ui.uikit.utils.CMPDragItemLoadRequestResult.CMPDragItemLoadRequestResultWrongType
+import androidx.compose.ui.uikit.utils.CMPDragItemLoadRequestResult.CMPDragItemLoadRequestResultUnsupportedType
+import androidx.compose.ui.uikit.utils.CMPDragItemLoadRequestResult.CMPDragItemLoadRequestResultSuccess
 import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
+import androidx.compose.ui.uikit.utils.cmp_itemWithAny
 import androidx.compose.ui.uikit.utils.cmp_itemWithString
+import androidx.compose.ui.uikit.utils.cmp_loadAny
 import androidx.compose.ui.uikit.utils.cmp_loadString
 import androidx.compose.ui.viewinterop.interopViewAnchor
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
+import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.ObjCClass
 import platform.Foundation.NSError
-import platform.Foundation.NSProgress
+import platform.Foundation.NSItemProviderWritingProtocol
 import platform.UIKit.UIColor
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIDragInteractionDelegateProtocol
@@ -48,8 +58,8 @@ import platform.UIKit.UIDropSessionProtocol
 import platform.UIKit.UIView
 import platform.UIKit.addInteraction
 import platform.UIKit.removeInteraction
-import platform.UIKit.UIEvent
 import platform.UIKit.UIImageView
+import platform.darwin.NSObject
 
 private class DragAndDropNode(
     view: UIView,
@@ -322,20 +332,71 @@ private fun NSError.asThrowable(): Throwable = ThrowableNSError(this)
 fun String.toUIDragItem(): UIDragItem = UIDragItem.cmp_itemWithString(this)
 
 /**
- * Loads the string from a [UIDragItem] asynchronously and returns [NSProgress] if the item
- * is a string to track the loading progress. If the item is not a string, the callback will not be
- * called and the function will return null.
- *
- * @param onCompletion a callback that will be called when the string is loaded or an error occurs
- * during the loading process.
- * @return [NSProgress] if the item is a string, otherwise null.
+ * Converts any [NSObject] to a [UIDragItem] for use in drag-and-drop operations considering if its
+ * class implements [NSItemProviderWritingProtocol].
+ */
+@OptIn(BetaInteropApi::class)
+@ExperimentalComposeUiApi
+fun <T: NSObject> T.toUIDragItem(objCClass: ObjCClass): UIDragItem =
+    requireNotNull(UIDragItem.cmp_itemWithAny(objCClass, this)) {
+        "Failed to create UIDragItem from $this, $objCClass doesn't implement NSItemProviderWritingProtocol"
+    }
+
+/**
+ * Loads a string from the [UIDragItem] if it's stored inside, otherwise returns null.
  */
 @ExperimentalComposeUiApi
-fun UIDragItem.loadString(onCompletion: (Result<String>) -> Unit): NSProgress? =
-    cmp_loadString { string, nsError ->
-        if (nsError == null) {
-            onCompletion(Result.success(requireNotNull(string)))
-        } else {
-            onCompletion(Result.failure(nsError.asThrowable()))
+suspend fun UIDragItem.loadString(): String? =
+    suspendCoroutine { continuation ->
+        val containsString = cmp_loadString { string, nsError ->
+            if (nsError != null) {
+                continuation.resumeWithException(nsError.asThrowable())
+            } else {
+                continuation.resume(string)
+            }
+        }
+
+        if (!containsString) {
+            continuation.resume(null as String?)
+        }
+    }
+
+/**
+ * Loads an object of type [T] from the [UIDragItem] if it's stored inside, otherwise returns null.
+ */
+@OptIn(BetaInteropApi::class)
+@ExperimentalComposeUiApi
+suspend fun <T: NSObject> UIDragItem.loadObject(objCClass: ObjCClass): T? =
+    suspendCoroutine { continuation ->
+        val loadRequestResult = cmp_loadAny(objCClass) { obj, nsError ->
+            if (nsError != null) {
+                continuation.resumeWithException(nsError.asThrowable())
+            } else {
+                val result = obj as? T
+
+                if (result != null) {
+                    continuation.resume(result)
+                } else {
+                    continuation.resumeWithException(IllegalStateException("Failed to cast $obj to expected type"))
+                }
+            }
+        }
+
+        when (loadRequestResult) {
+            CMPDragItemLoadRequestResultSuccess -> {
+                // continuation will be called from cmp_loadAny callback, no-op here
+            }
+
+            CMPDragItemLoadRequestResultWrongType -> {
+                // This item doesn't contain the expected type
+                continuation.resume(null as T?)
+            }
+
+            CMPDragItemLoadRequestResultUnsupportedType -> {
+                continuation.resumeWithException(
+                    IllegalArgumentException("Failed to load object, $objCClass doesn't implement NSItemProviderReadingProtocol")
+                )
+            }
+            else -> continuation.resumeWithException(IllegalStateException("Unexpected load request result: $loadRequestResult"))
         }
     }

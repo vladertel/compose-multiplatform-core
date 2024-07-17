@@ -54,7 +54,25 @@ NS_ASSUME_NONNULL_BEGIN
 @implementation UIDragItem (CMPInitializers)
 
 + (instancetype)cmp_itemWithString:(NSString *)string {
-    return [[UIDragItem alloc] initWithItemProvider:[[NSItemProvider alloc] initWithObject:string]];
+    UIDragItem *item = [[UIDragItem alloc] initWithItemProvider:[[NSItemProvider alloc] initWithObject:string]];
+    
+    item.localObject = string;
+    
+    return item;
+}
+
++ (instancetype _Nullable)cmp_itemWithAny:(Class)objectClass object:(id)object {
+    assert([object isKindOfClass:objectClass]);
+    
+    if ([objectClass conformsToProtocol:@protocol(NSItemProviderWriting)]) {
+        UIDragItem *item = [[UIDragItem alloc] initWithItemProvider:[[NSItemProvider alloc] initWithObject:object]];
+        
+        item.localObject = object;
+        
+        return item;
+    } else {
+        return nil;
+    }
 }
 
 @end
