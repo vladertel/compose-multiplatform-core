@@ -30,7 +30,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface UIDragItem (CMPInitializers)
 
-+ (instancetype)itemWithString:(NSString *)string;
++ (instancetype)cmp_itemWithString:(NSString *)string;
 
 @end
 

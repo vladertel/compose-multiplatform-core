@@ -17,17 +17,19 @@
 
 #import "CMPDragInteractionProxy.h"
 
+NS_ASSUME_NONNULL_BEGIN
+
 @implementation CMPDragInteractionProxy
 
 + (NSItemProvider *)itemProviderFromString:(NSString *)string {
     return [[NSItemProvider alloc] initWithObject:string];
 }
 
-- (nonnull NSArray<UIDragItem *> *)dragInteraction:(nonnull UIDragInteraction *)interaction itemsForBeginningSession:(nonnull id<UIDragSession>)session {
+- (NSArray<UIDragItem *> *)dragInteraction:(UIDragInteraction *)interaction itemsForBeginningSession:(id<UIDragSession>)session {
     return [self itemsForBeginningSession:session interaction:interaction];
 }
 
-- (nonnull NSArray<UIDragItem *> *)itemsForBeginningSession:(nonnull id<UIDragSession>)session interaction:(nonnull UIDragInteraction *)interaction {
+- (NSArray<UIDragItem *> *)itemsForBeginningSession:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
@@ -35,7 +37,7 @@
     return [self doesSessionAllowMoveOperation:session interaction:interaction];
 }
 
-- (BOOL)doesSessionAllowMoveOperation:(nonnull id<UIDragSession>)session interaction:(nonnull UIDragInteraction *)interaction {
+- (BOOL)doesSessionAllowMoveOperation:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
@@ -43,7 +45,7 @@
     return [self isSessionRestrictedToDraggingApplication:session interaction:interaction];
 }
 
-- (BOOL)isSessionRestrictedToDraggingApplication:(nonnull id<UIDragSession>)session interaction:(nonnull UIDragInteraction *)interaction {
+- (BOOL)isSessionRestrictedToDraggingApplication:(id<UIDragSession>)session interaction:(UIDragInteraction *)interaction {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
@@ -51,8 +53,10 @@
 
 @implementation UIDragItem (CMPInitializers)
 
-+ (instancetype)itemWithString:(NSString *)string {
++ (instancetype)cmp_itemWithString:(NSString *)string {
     return [[UIDragItem alloc] initWithItemProvider:[[NSItemProvider alloc] initWithObject:string]];
 }
 
 @end
+
+NS_ASSUME_NONNULL_END

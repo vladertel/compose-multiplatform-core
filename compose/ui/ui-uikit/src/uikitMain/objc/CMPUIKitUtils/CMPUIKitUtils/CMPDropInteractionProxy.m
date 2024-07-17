@@ -7,6 +7,8 @@
 
 #import "CMPDropInteractionProxy.h"
 
+NS_ASSUME_NONNULL_BEGIN
+
 @implementation CMPDropInteractionProxy
 
 - (BOOL)dropInteraction:(UIDropInteraction *)interaction canHandleSession:(id<UIDropSession>)session {
@@ -21,8 +23,22 @@
     [self performDropFromSession:session interaction:interaction];
 }
 
-- (void)performDropFromSession:(nonnull id<UIDropSession>)session interaction:(nonnull UIDropInteraction *)interaction {
+- (void)performDropFromSession:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction {
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
 @end
+
+@implementation UIDragItem (CMPUnpacking)
+
+- (NSProgress *_Nullable)cmp_loadString:(void (^)(NSString *result, NSError *error))completionHandler {
+    if ([self.itemProvider canLoadObjectOfClass:NSString.class]) {
+        return [self.itemProvider loadObjectOfClass:NSString.class completionHandler:completionHandler];
+    } else {
+        return nil;
+    }
+}
+
+@end
+
+NS_ASSUME_NONNULL_END

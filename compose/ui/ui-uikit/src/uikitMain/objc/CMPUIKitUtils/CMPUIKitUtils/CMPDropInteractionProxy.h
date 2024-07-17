@@ -17,4 +17,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@interface UIDragItem (CMPUnpacking)
+
+- (NSProgress *_Nullable)cmp_loadString:(void (^)(NSString *result, NSError *error))completionHandler;
+
+@end
+
 NS_ASSUME_NONNULL_END

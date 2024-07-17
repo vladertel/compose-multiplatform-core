@@ -31,8 +31,11 @@ import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
-import androidx.compose.ui.uikit.utils.itemWithString
+import androidx.compose.ui.uikit.utils.cmp_itemWithString
+import androidx.compose.ui.uikit.utils.cmp_loadString
 import androidx.compose.ui.viewinterop.interopViewAnchor
+import platform.Foundation.NSError
+import platform.Foundation.NSProgress
 import platform.UIKit.UIColor
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIDragInteractionDelegateProtocol
@@ -158,9 +161,6 @@ interface DragSource {
      */
     fun UIDragInteraction.doesSessionAllowMoveOperation(session: UIDragSessionProtocol): Boolean = true
 }
-
-@ExperimentalComposeUiApi
-fun String.toUIDragItem(): UIDragItem = UIDragItem.itemWithString(this)
 
 private class DragSourceToInteractionDelegateAdapter(
     private val dragSource: DragSource,
@@ -296,3 +296,32 @@ fun Modifier.dragAndDrop(
 
     return composedDragAndDropModifier
 }
+
+private class ThrowableNSError(error: NSError): Throwable(error.localizedDescription)
+
+private fun NSError.asThrowable(): Throwable = ThrowableNSError(this)
+
+/**
+ * Converts a string to a [UIDragItem] for use in drag-and-drop operations.
+ */
+@ExperimentalComposeUiApi
+fun String.toUIDragItem(): UIDragItem = UIDragItem.cmp_itemWithString(this)
+
+/**
+ * Loads the string from a [UIDragItem] asynchronously and returns [NSProgress] if the item
+ * is a string to track the loading progress. If the item is not a string, the callback will not be
+ * called and the function will return null.
+ *
+ * @param onCompletion a callback that will be called when the string is loaded or an error occurs
+ * during the loading process.
+ * @return [NSProgress] if the item is a string, otherwise null.
+ */
+@ExperimentalComposeUiApi
+fun UIDragItem.loadString(onCompletion: (Result<String>) -> Unit): NSProgress? =
+    cmp_loadString { string, nsError ->
+        if (nsError == null) {
+            onCompletion(Result.success(requireNotNull(string)))
+        } else {
+            onCompletion(Result.failure(nsError.asThrowable()))
+        }
+    }

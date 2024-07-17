@@ -30,3 +30,4 @@ FOUNDATION_EXPORT const unsigned char CMPUIKitUtilsVersionString[];
 #import "CMPMetalDrawablesHandler.h"
 #import "CMPGestureRecognizer.h"
 #import "CMPDragInteractionProxy.h"
+#import "CMPDropInteractionProxy.h"

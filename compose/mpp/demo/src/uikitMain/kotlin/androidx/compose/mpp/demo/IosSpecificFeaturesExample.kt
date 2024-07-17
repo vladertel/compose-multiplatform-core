@@ -36,14 +36,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.cupertino.DragSource
 import androidx.compose.ui.draganddrop.cupertino.DropTarget
 import androidx.compose.ui.draganddrop.cupertino.dragAndDrop
+import androidx.compose.ui.draganddrop.cupertino.loadString
 import androidx.compose.ui.draganddrop.cupertino.toUIDragItem
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import platform.Foundation.NSItemProvider
+import platform.Foundation.NSItemProviderReadingProtocol
+import platform.Foundation.NSItemProviderReadingProtocolMeta
+import platform.Foundation.NSString
+import platform.Foundation.NSStringMeta
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIDragItem
 import platform.UIKit.UIDragSessionProtocol
+import platform.UIKit.UIDropInteraction
+import platform.UIKit.UIDropSessionProtocol
 
 val HapticFeedbackExample = Screen.Example("Haptic feedback") {
     val feedback = LocalHapticFeedback.current
@@ -108,9 +116,25 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .background(Color.DarkGray)
                 .dragAndDrop(
                     dropTarget = object : DropTarget {
-                        override fun onDrop(event: DragAndDropEvent): Boolean {
-                            dropText = event.items.firstOrNull()?.stringRepresentation ?: "No data"
-                            return true
+                        override fun UIDropInteraction.canHandleSession(session: UIDropSessionProtocol): Boolean = true
+
+                        override fun UIDropInteraction.performDropFromSession(session: UIDropSessionProtocol) {
+                            for (item in session.items) {
+                                val dragItem = item as UIDragItem
+                                val progress = dragItem.loadString {
+                                    dropText = try {
+                                        it.getOrThrow()
+                                    } catch (e: Throwable) {
+                                        e.message ?: "Unknown error"
+                                    }
+                                }
+
+                                if (progress == null) {
+                                    dropText = "Unexpected type of item"
+                                } else {
+                                    // Do something with the NSProgress
+                                }
+                            }
                         }
                     }
                 )
