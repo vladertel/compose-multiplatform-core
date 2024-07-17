@@ -42,15 +42,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import platform.Foundation.NSItemProvider
-import platform.Foundation.NSItemProviderReadingProtocol
-import platform.Foundation.NSItemProviderReadingProtocolMeta
-import platform.Foundation.NSString
-import platform.Foundation.NSStringMeta
 import platform.UIKit.UIDragInteraction
 import platform.UIKit.UIDragItem
 import platform.UIKit.UIDragSessionProtocol
 import platform.UIKit.UIDropInteraction
+import platform.UIKit.UIDropOperationCopy
+import platform.UIKit.UIDropProposal
 import platform.UIKit.UIDropSessionProtocol
 
 val HapticFeedbackExample = Screen.Example("Haptic feedback") {
@@ -117,6 +114,10 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                 .dragAndDrop(
                     dropTarget = object : DropTarget {
                         override fun UIDropInteraction.canHandleSession(session: UIDropSessionProtocol): Boolean = true
+
+                        override fun UIDropInteraction.proposalForSessionUpdate(session: UIDropSessionProtocol): UIDropProposal {
+                            return UIDropProposal(UIDropOperationCopy)
+                        }
 
                         override fun UIDropInteraction.performDropFromSession(session: UIDropSessionProtocol) {
                             for (item in session.items) {

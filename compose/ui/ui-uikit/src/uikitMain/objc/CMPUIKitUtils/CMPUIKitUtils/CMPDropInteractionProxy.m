@@ -27,6 +27,14 @@ NS_ASSUME_NONNULL_BEGIN
     CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
 }
 
+- (UIDropProposal *)dropInteraction:(UIDropInteraction *)interaction sessionDidUpdate:(id<UIDropSession>)session {
+    return [self proposalForSessionUpdate:session interaction:interaction];
+}
+
+- (UIDropProposal *)proposalForSessionUpdate:(id<UIDropSession>)session interaction:(UIDropInteraction *)interaction {
+    CMP_MUST_BE_OVERRIDED_INVARIANT_VIOLATION
+}
+
 @end
 
 @implementation UIDragItem (CMPUnpacking)

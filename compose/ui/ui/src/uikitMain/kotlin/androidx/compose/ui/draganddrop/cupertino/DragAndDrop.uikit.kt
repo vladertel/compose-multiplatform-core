@@ -43,6 +43,7 @@ import platform.UIKit.UIDragItem
 import platform.UIKit.UIDragSessionProtocol
 import platform.UIKit.UIDropInteraction
 import platform.UIKit.UIDropInteractionDelegateProtocol
+import platform.UIKit.UIDropProposal
 import platform.UIKit.UIDropSessionProtocol
 import platform.UIKit.UIView
 import platform.UIKit.addInteraction
@@ -149,7 +150,7 @@ interface DragSource {
     /**
      * https://developer.apple.com/documentation/uikit/uidraginteractiondelegate/2891010-draginteraction
      */
-    fun UIDragInteraction.itemsForBeginningSession(session: UIDragSessionProtocol): List<UIDragItem> = emptyList()
+    fun UIDragInteraction.itemsForBeginningSession(session: UIDragSessionProtocol): List<UIDragItem>
 
     /**
      * https://developer.apple.com/documentation/uikit/uidraginteractiondelegate/2891063-draginteraction
@@ -165,7 +166,6 @@ interface DragSource {
 private class DragSourceToInteractionDelegateAdapter(
     private val dragSource: DragSource,
 ) : CMPDragInteractionProxy() {
-
 
     override fun itemsForBeginningSession(
         session: UIDragSessionProtocol,
@@ -206,12 +206,17 @@ interface DropTarget {
     /**
      * https://developer.apple.com/documentation/uikit/uidropinteractiondelegate/2891010-dropinteraction
      */
-    fun UIDropInteraction.canHandleSession(session: UIDropSessionProtocol): Boolean = false
+    fun UIDropInteraction.canHandleSession(session: UIDropSessionProtocol): Boolean
 
     /**
      * https://developer.apple.com/documentation/uikit/uidropinteractiondelegate/2890889-dropinteraction
      */
-    fun UIDropInteraction.performDropFromSession(session: UIDropSessionProtocol) = Unit
+    fun UIDropInteraction.performDropFromSession(session: UIDropSessionProtocol)
+
+    /**
+     * https://developer.apple.com/documentation/uikit/uidropinteractiondelegate/2890888-dropinteraction
+     */
+    fun UIDropInteraction.proposalForSessionUpdate(session: UIDropSessionProtocol): UIDropProposal
 }
 
 /**
@@ -221,25 +226,34 @@ private class DropTargetToInteractionDelegateAdapter(
     private val dropTarget: DropTarget
 ) : CMPDropInteractionProxy() {
 
-        override fun canHandleSession(
-            session: UIDropSessionProtocol,
-            interaction: UIDropInteraction
-        ): Boolean = delegating {
-            with(interaction) {
-                canHandleSession(session)
-            }
+    override fun canHandleSession(
+        session: UIDropSessionProtocol,
+        interaction: UIDropInteraction
+    ): Boolean = delegating {
+        with(interaction) {
+            canHandleSession(session)
         }
+    }
 
-        override fun performDropFromSession(
-            session: UIDropSessionProtocol,
-            interaction: UIDropInteraction
-        ) = delegating {
-            with(interaction) {
-                performDropFromSession(session)
-            }
+    override fun performDropFromSession(
+        session: UIDropSessionProtocol,
+        interaction: UIDropInteraction
+    ): Unit = delegating {
+        with(interaction) {
+            performDropFromSession(session)
         }
+    }
 
-        private fun <R> delegating(block: DropTarget.() -> R): R = dropTarget.run(block)
+    override fun proposalForSessionUpdate(
+        session: UIDropSessionProtocol,
+        interaction: UIDropInteraction
+    ): UIDropProposal = delegating {
+        with(interaction) {
+            proposalForSessionUpdate(session)
+        }
+    }
+
+    private fun <R> delegating(block: DropTarget.() -> R): R = dropTarget.run(block)
 }
 
 private fun DropTarget.toInteractionDelegate(): UIDropInteractionDelegateProtocol =
