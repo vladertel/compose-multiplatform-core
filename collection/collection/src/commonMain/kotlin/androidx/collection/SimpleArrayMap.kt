@@ -19,6 +19,7 @@ package androidx.collection
 import androidx.collection.internal.EMPTY_INTS
 import androidx.collection.internal.EMPTY_OBJECTS
 import androidx.collection.internal.binarySearch
+import androidx.collection.internal.requirePrecondition
 import kotlin.jvm.JvmName
 import kotlin.jvm.JvmOverloads
 
@@ -310,7 +311,7 @@ public open class SimpleArrayMap<K, V> @JvmOverloads public constructor(capacity
      * @throws IllegalArgumentException if [index] is not between 0 and [size]-1
      */
     public open fun keyAt(index: Int): K {
-        require(index in 0 until size) {
+        requirePrecondition(index in 0 until size) {
             "Expected index to be within 0..size()-1, but was $index"
         }
 
@@ -326,7 +327,7 @@ public open class SimpleArrayMap<K, V> @JvmOverloads public constructor(capacity
      * @throws IllegalArgumentException if [index] is not between 0 and [size]-1
      */
     public open fun valueAt(index: Int): V {
-        require(index in 0 until size) {
+        requirePrecondition(index in 0 until size) {
             "Expected index to be within 0..size()-1, but was $index"
         }
 
@@ -343,7 +344,7 @@ public open class SimpleArrayMap<K, V> @JvmOverloads public constructor(capacity
      * @throws IllegalArgumentException if [index] is not between 0 and [size]-1
      */
     public open fun setValueAt(index: Int, value: V): V {
-        require(index in 0 until size) {
+        requirePrecondition(index in 0 until size) {
             "Expected index to be within 0..size()-1, but was $index"
         }
 
@@ -512,7 +513,7 @@ public open class SimpleArrayMap<K, V> @JvmOverloads public constructor(capacity
      * @throws IllegalArgumentException if [index] is not between 0 and [size]-1
      */
     public open fun removeAt(index: Int): V {
-        require(index in 0 until size) {
+        requirePrecondition(index in 0 until size) {
             "Expected index to be within 0..size()-1, but was $index"
         }
 
