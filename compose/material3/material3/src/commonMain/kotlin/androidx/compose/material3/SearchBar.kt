@@ -509,24 +509,24 @@ object SearchBarDefaults {
             value = query,
             onValueChange = onQueryChange,
             modifier =
-            modifier
-                .sizeIn(
-                    minWidth = SearchBarMinWidth,
-                    maxWidth = SearchBarMaxWidth,
-                    minHeight = InputFieldHeight,
-                )
-                .focusRequester(focusRequester)
-                .onFocusChanged { if (it.isFocused) onExpandedChange(true) }
-                .semantics {
-                    contentDescription = searchSemantics
-                    if (expanded) {
-                        stateDescription = suggestionsAvailableSemantics
-                    }
-                    onClick {
-                        focusRequester.requestFocus()
-                        true
-                    }
-                },
+                modifier
+                    .sizeIn(
+                        minWidth = SearchBarMinWidth,
+                        maxWidth = SearchBarMaxWidth,
+                        minHeight = InputFieldHeight,
+                    )
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { if (it.isFocused) onExpandedChange(true) }
+                    .semantics {
+                        contentDescription = searchSemantics
+                        if (expanded) {
+                            stateDescription = suggestionsAvailableSemantics
+                        }
+                        onClick {
+                            focusRequester.requestFocus()
+                            true
+                        }
+                    },
             enabled = enabled,
             singleLine = true,
             textStyle = LocalTextStyle.current.merge(TextStyle(color = textColor)),
@@ -535,29 +535,29 @@ object SearchBarDefaults {
             keyboardActions = KeyboardActions(onSearch = { onSearch(query) }),
             interactionSource = interactionSource,
             decorationBox =
-            @Composable { innerTextField ->
-                TextFieldDefaults.DecorationBox(
-                    value = query,
-                    innerTextField = innerTextField,
-                    enabled = enabled,
-                    singleLine = true,
-                    visualTransformation = VisualTransformation.None,
-                    interactionSource = interactionSource,
-                    placeholder = placeholder,
-                    leadingIcon =
-                    leadingIcon?.let { leading ->
-                        { Box(Modifier.offset(x = SearchBarIconOffsetX)) { leading() } }
-                    },
-                    trailingIcon =
-                    trailingIcon?.let { trailing ->
-                        { Box(Modifier.offset(x = -SearchBarIconOffsetX)) { trailing() } }
-                    },
-                    shape = SearchBarDefaults.inputFieldShape,
-                    colors = colors,
-                    contentPadding = TextFieldDefaults.contentPaddingWithoutLabel(),
-                    container = {},
-                )
-            }
+                @Composable { innerTextField ->
+                    TextFieldDefaults.DecorationBox(
+                        value = query,
+                        innerTextField = innerTextField,
+                        enabled = enabled,
+                        singleLine = true,
+                        visualTransformation = VisualTransformation.None,
+                        interactionSource = interactionSource,
+                        placeholder = placeholder,
+                        leadingIcon =
+                            leadingIcon?.let { leading ->
+                                { Box(Modifier.offset(x = SearchBarIconOffsetX)) { leading() } }
+                            },
+                        trailingIcon =
+                            trailingIcon?.let { trailing ->
+                                { Box(Modifier.offset(x = -SearchBarIconOffsetX)) { trailing() } }
+                            },
+                        shape = SearchBarDefaults.inputFieldShape,
+                        colors = colors,
+                        contentPadding = TextFieldDefaults.contentPaddingWithoutLabel(),
+                        container = {},
+                    )
+                }
         )
 
         val shouldClearFocus = !expanded && focused
@@ -574,9 +574,9 @@ object SearchBarDefaults {
     @Suppress("DEPRECATION")
     @Deprecated(
         message =
-        "Search bars now take the input field as a parameter. `inputFieldColors` " +
-            "should be passed explicitly to the input field. This parameter will be removed in " +
-            "a future version of the library.",
+            "Search bars now take the input field as a parameter. `inputFieldColors` " +
+                "should be passed explicitly to the input field. This parameter will be removed in " +
+                "a future version of the library.",
         replaceWith = ReplaceWith("colors(containerColor, dividerColor)"),
     )
     @Composable
@@ -690,34 +690,34 @@ constructor(
 @Deprecated(
     message = "Use overload which takes inputField as a parameter",
     replaceWith =
-    ReplaceWith(
-        "SearchBar(\n" +
-            "    inputField = {\n" +
-            "        SearchBarDefaults.InputField(\n" +
-            "            query = query,\n" +
-            "            onQueryChange = onQueryChange,\n" +
-            "            onSearch = onSearch,\n" +
-            "            expanded = active,\n" +
-            "            onExpandedChange = onActiveChange,\n" +
-            "            enabled = enabled,\n" +
-            "            placeholder = placeholder,\n" +
-            "            leadingIcon = leadingIcon,\n" +
-            "            trailingIcon = trailingIcon,\n" +
-            "            colors = colors.inputFieldColors,\n" +
-            "            interactionSource = interactionSource,\n" +
-            "        )\n" +
-            "    },\n" +
-            "    expanded = active,\n" +
-            "    onExpandedChange = onActiveChange,\n" +
-            "    modifier = modifier,\n" +
-            "    shape = shape,\n" +
-            "    colors = colors,\n" +
-            "    tonalElevation = tonalElevation,\n" +
-            "    shadowElevation = shadowElevation,\n" +
-            "    windowInsets = windowInsets,\n" +
-            "    content = content,\n" +
-            ")"
-    ),
+        ReplaceWith(
+            "SearchBar(\n" +
+                "    inputField = {\n" +
+                "        SearchBarDefaults.InputField(\n" +
+                "            query = query,\n" +
+                "            onQueryChange = onQueryChange,\n" +
+                "            onSearch = onSearch,\n" +
+                "            expanded = active,\n" +
+                "            onExpandedChange = onActiveChange,\n" +
+                "            enabled = enabled,\n" +
+                "            placeholder = placeholder,\n" +
+                "            leadingIcon = leadingIcon,\n" +
+                "            trailingIcon = trailingIcon,\n" +
+                "            colors = colors.inputFieldColors,\n" +
+                "            interactionSource = interactionSource,\n" +
+                "        )\n" +
+                "    },\n" +
+                "    expanded = active,\n" +
+                "    onExpandedChange = onActiveChange,\n" +
+                "    modifier = modifier,\n" +
+                "    shape = shape,\n" +
+                "    colors = colors,\n" +
+                "    tonalElevation = tonalElevation,\n" +
+                "    shadowElevation = shadowElevation,\n" +
+                "    windowInsets = windowInsets,\n" +
+                "    content = content,\n" +
+                ")"
+        ),
 )
 @ExperimentalMaterial3Api
 @Composable
@@ -772,33 +772,33 @@ fun SearchBar(
 @Deprecated(
     message = "Use overload which takes inputField as a parameter",
     replaceWith =
-    ReplaceWith(
-        "DockedSearchBar(\n" +
-            "    inputField = {\n" +
-            "        SearchBarDefaults.InputField(\n" +
-            "            query = query,\n" +
-            "            onQueryChange = onQueryChange,\n" +
-            "            onSearch = onSearch,\n" +
-            "            expanded = active,\n" +
-            "            onExpandedChange = onActiveChange,\n" +
-            "            enabled = enabled,\n" +
-            "            placeholder = placeholder,\n" +
-            "            leadingIcon = leadingIcon,\n" +
-            "            trailingIcon = trailingIcon,\n" +
-            "            colors = colors.inputFieldColors,\n" +
-            "            interactionSource = interactionSource,\n" +
-            "        )\n" +
-            "    },\n" +
-            "    expanded = active,\n" +
-            "    onExpandedChange = onActiveChange,\n" +
-            "    modifier = modifier,\n" +
-            "    shape = shape,\n" +
-            "    colors = colors,\n" +
-            "    tonalElevation = tonalElevation,\n" +
-            "    shadowElevation = shadowElevation,\n" +
-            "    content = content,\n" +
-            ")"
-    ),
+        ReplaceWith(
+            "DockedSearchBar(\n" +
+                "    inputField = {\n" +
+                "        SearchBarDefaults.InputField(\n" +
+                "            query = query,\n" +
+                "            onQueryChange = onQueryChange,\n" +
+                "            onSearch = onSearch,\n" +
+                "            expanded = active,\n" +
+                "            onExpandedChange = onActiveChange,\n" +
+                "            enabled = enabled,\n" +
+                "            placeholder = placeholder,\n" +
+                "            leadingIcon = leadingIcon,\n" +
+                "            trailingIcon = trailingIcon,\n" +
+                "            colors = colors.inputFieldColors,\n" +
+                "            interactionSource = interactionSource,\n" +
+                "        )\n" +
+                "    },\n" +
+                "    expanded = active,\n" +
+                "    onExpandedChange = onActiveChange,\n" +
+                "    modifier = modifier,\n" +
+                "    shape = shape,\n" +
+                "    colors = colors,\n" +
+                "    tonalElevation = tonalElevation,\n" +
+                "    shadowElevation = shadowElevation,\n" +
+                "    content = content,\n" +
+                ")"
+        ),
 )
 @ExperimentalMaterial3Api
 @Composable
@@ -943,12 +943,12 @@ private fun SearchBarLayout(
     val unconsumedInsets = remember { MutableWindowInsets() }
     Layout(
         modifier =
-        modifier
-            .zIndex(1f)
-            .onConsumedWindowInsetsChanged { consumedInsets ->
-                unconsumedInsets.insets = windowInsets.exclude(consumedInsets)
-            }
-            .consumeWindowInsets(windowInsets),
+            modifier
+                .zIndex(1f)
+                .onConsumedWindowInsetsChanged { consumedInsets ->
+                    unconsumedInsets.insets = windowInsets.exclude(consumedInsets)
+                }
+                .consumeWindowInsets(windowInsets),
         content = {
             Box(Modifier.layoutId(LayoutIdSurface), propagateMinConstraints = true) { surface() }
             Box(Modifier.layoutId(LayoutIdInputField), propagateMinConstraints = true) {
@@ -1030,13 +1030,13 @@ private fun SearchBarLayout(
                     maxWidth = width,
                     minHeight = 0,
                     maxHeight =
-                    if (constraints.hasBoundedHeight) {
-                        (constraints.maxHeight -
-                            (topPadding + defaultStartHeight + bottomPadding))
-                            .coerceAtLeast(0)
-                    } else {
-                        constraints.maxHeight
-                    }
+                        if (constraints.hasBoundedHeight) {
+                            (constraints.maxHeight -
+                                    (topPadding + defaultStartHeight + bottomPadding))
+                                .coerceAtLeast(0)
+                        } else {
+                            constraints.maxHeight
+                        }
                 )
             )
 
@@ -1104,7 +1104,7 @@ private fun calculatePredictiveBackOffsetX(
     if (currentBackEvent == null || predictiveBackMultiplier == 0f) {
         return 0
     }
-    val directionMultiplier = 1 // if (currentBackEvent.swipeEdge == BackEventCompat.EDGE_LEFT) 1 else -1
+    val directionMultiplier = if (currentBackEvent.swipeEdge == BackEventCompat.EDGE_LEFT) 1 else -1
     val rtlMultiplier = if (layoutDirection == LayoutDirection.Ltr) 1 else -1
     val maxOffsetX = (constraints.maxWidth * SearchBarPredictiveBackMaxOffsetXRatio) - minMargin
     val interpolatedOffsetX = maxOffsetX * (1 - progress)
