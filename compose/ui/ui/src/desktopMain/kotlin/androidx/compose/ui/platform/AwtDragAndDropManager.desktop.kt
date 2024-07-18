@@ -36,7 +36,6 @@ import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.layout.onPlaced
-import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -308,22 +307,6 @@ internal class AwtDragAndDropManager(
         true
     )
 
-}
-
-private class DragAndDropModifier(
-    val dragAndDropNode: DragAndDropNode
-) : ModifierNodeElement<DragAndDropNode>() {
-    override fun create() = dragAndDropNode
-
-    override fun update(node: DragAndDropNode) = Unit
-
-    override fun InspectorInfo.inspectableProperties() {
-        name = "RootDragAndDropNode"
-    }
-
-    override fun hashCode(): Int = dragAndDropNode.hashCode()
-
-    override fun equals(other: Any?) = other === this
 }
 
 /**

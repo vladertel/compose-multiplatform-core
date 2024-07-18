@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.platform.PlatformDragAndDropManager
 import androidx.compose.ui.platform.PlatformInsets
 import androidx.compose.ui.platform.PlatformWindowContext
+import androidx.compose.ui.platform.UIKitDragAndDropManager
 import androidx.compose.ui.platform.UIKitTextInputService
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
@@ -704,28 +705,8 @@ internal class ComposeSceneMediator(
         override fun convertScreenToLocalPosition(positionOnScreen: Offset): Offset =
             windowContext.convertScreenToLocalPosition(viewForKeyboardOffsetTransform, positionOnScreen)
 
-        override fun createDragAndDropManager(): PlatformDragAndDropManager {
-            return object : PlatformDragAndDropManager {
-                override val modifier: Modifier
-                    get() = Modifier
-
-                override fun drag(
-                    transferData: DragAndDropTransferData,
-                    decorationSize: Size,
-                    drawDragDecoration: DrawScope.() -> Unit
-                ): Boolean {
-                    TODO("Drag&drop isn't implemented")
-                }
-
-                override fun registerNodeInterest(node: DragAndDropModifierNode) {
-                    TODO("Drag&drop isn't implemented")
-                }
-
-                override fun isInterestedNode(node: DragAndDropModifierNode): Boolean {
-                    TODO("Drag&drop isn't implemented")
-                }
-            }
-        }
+        override fun createDragAndDropManager() =
+            UIKitDragAndDropManager()
 
         override val measureDrawLayerBounds get() = this@ComposeSceneMediator.measureDrawLayerBounds
         override val viewConfiguration get() = this@ComposeSceneMediator.viewConfiguration
