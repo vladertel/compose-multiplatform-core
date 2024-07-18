@@ -730,6 +730,7 @@ internal constructor(
         roundRectOutlineTopLeft = Offset.Zero
         roundRectCornerRadius = 0f
         outlineDirty = true
+        usePathForClip = false
     }
 
     /**
@@ -760,9 +761,11 @@ internal constructor(
      * @sample androidx.compose.ui.graphics.samples.GraphicsLayerRoundRectOutline
      */
     actual fun setRoundRectOutline(topLeft: Offset, size: Size, cornerRadius: Float) {
-        if (this.roundRectOutlineTopLeft != topLeft ||
-            this.roundRectOutlineSize != size ||
-            this.roundRectCornerRadius != cornerRadius
+        if (
+            this.roundRectOutlineTopLeft != topLeft ||
+                this.roundRectOutlineSize != size ||
+                this.roundRectCornerRadius != cornerRadius ||
+                this.outlinePath != null
         ) {
             resetOutlineParams()
             this.roundRectOutlineTopLeft = topLeft
