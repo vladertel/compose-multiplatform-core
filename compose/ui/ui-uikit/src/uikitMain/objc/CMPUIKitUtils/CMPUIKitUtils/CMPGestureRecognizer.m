@@ -34,24 +34,39 @@
     }
 }
 
-- (BOOL)shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRequireFailureOfGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    NSLog(@"is not required to fail %@", otherGestureRecognizer);
+    
+    return NO;
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
     UIView *view = self.view;
     UIView *otherView = otherGestureRecognizer.view;
+    
+    NSLog(@"%@", otherGestureRecognizer);
     
     if (view == nil || otherView == nil) {
         return NO;
     }
     
+    if (otherView == view) {
+        NSLog(@"is allowed to run with %@", otherGestureRecognizer);
+        return YES;
+    }
+    
     // Allow simultaneous recognition only if otherGestureRecognizer is attached to the view up in the hierarchy
     return ![otherView isDescendantOfView:view];
+    
 }
 
-- (BOOL)shouldRequireFailureOfGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-    return NO;
-}
-
-- (BOOL)shouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-    return YES;
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    if (otherGestureRecognizer.view == self.view) {
+        NSLog(@"is not required to be failed by %@", otherGestureRecognizer);
+        return NO;
+    } else {
+        return YES;
+    }
 }
 
 - (void)cancelFailure {

@@ -16,16 +16,36 @@
 
 package androidx.compose.ui.window
 
+import androidx.compose.ui.draganddrop.cupertino.load
+import androidx.compose.ui.draganddrop.cupertino.loadString
+import androidx.compose.ui.draganddrop.cupertino.toUIDragItem
 import androidx.compose.ui.platform.CUPERTINO_TOUCH_SLOP
+import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
+import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPGestureRecognizer
 import androidx.compose.ui.uikit.utils.CMPGestureRecognizerHandlerProtocol
 import androidx.compose.ui.viewinterop.InteropView
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import platform.CoreGraphics.CGPoint
 import platform.CoreGraphics.CGPointMake
 import platform.CoreGraphics.CGRectZero
+import platform.UIKit.UIDragInteraction
+import platform.UIKit.UIDragInteractionDelegateProtocol
+import platform.UIKit.UIDragItem
+import platform.UIKit.UIDragSessionProtocol
+import platform.UIKit.UIDropInteraction
+import platform.UIKit.UIDropInteractionDelegateProtocol
+import platform.UIKit.UIDropOperationForbidden
+import platform.UIKit.UIDropProposal
+import platform.UIKit.UIDropSessionProtocol
 import platform.UIKit.UIEvent
 import platform.UIKit.UIGestureRecognizer
 import platform.UIKit.UIGestureRecognizerState
@@ -40,6 +60,7 @@ import platform.UIKit.UIPressesEvent
 import platform.UIKit.UITouch
 import platform.UIKit.UITouchPhase
 import platform.UIKit.UIView
+import platform.UIKit.addInteraction
 import platform.UIKit.setState
 import platform.darwin.NSObject
 
@@ -423,6 +444,60 @@ internal class InteractionUIView(
     private var inInteractionBounds: (CValue<CGPoint>) -> Boolean,
     private var onKeyboardPresses: (Set<*>) -> Unit,
 ) : UIView(CGRectZero.readValue()) {
+    private val dragInteractionProxy = object : CMPDragInteractionProxy() {
+        override fun isSessionRestrictedToDraggingApplication(
+            session: UIDragSessionProtocol,
+            interaction: UIDragInteraction
+        ): Boolean {
+            return false
+        }
+
+        override fun itemsForBeginningSession(
+            session: UIDragSessionProtocol,
+            interaction: UIDragInteraction
+        ): List<*> {
+            return listOf(
+                "TestItem".toUIDragItem()
+            )
+        }
+
+        override fun doesSessionAllowMoveOperation(
+            session: UIDragSessionProtocol,
+            interaction: UIDragInteraction
+        ): Boolean {
+            return true
+        }
+    }
+
+    private val dropInteractionProxy = object : CMPDropInteractionProxy() {
+        override fun canHandleSession(
+            session: UIDropSessionProtocol,
+            interaction: UIDropInteraction
+        ): Boolean {
+            return false
+        }
+
+        override fun performDropFromSession(
+            session: UIDropSessionProtocol,
+            interaction: UIDropInteraction
+        ) {
+            CoroutineScope(Dispatchers.Main).launch {
+                for (item in session.items) {
+                    if (item !is UIDragItem) return@launch
+                    val text = item.loadString()
+                    println("Dropped string: $text")
+                }
+            }
+        }
+
+        override fun proposalForSessionUpdate(
+            session: UIDropSessionProtocol,
+            interaction: UIDropInteraction
+        ): UIDropProposal {
+            return UIDropProposal(UIDropOperationForbidden)
+        }
+    }
+
     private val gestureRecognizerHandler = GestureRecognizerHandlerImpl(
         view = this,
         onTouchesEvent = onTouchesEvent,
@@ -447,7 +522,7 @@ internal class InteractionUIView(
         userInteractionEnabled = true
 
         // When CMPGestureRecognizer is recognized, immediately cancel all touches in the subviews.
-        gestureRecognizer.cancelsTouchesInView = true
+        gestureRecognizer.cancelsTouchesInView = false
 
         // Delays touches reception by underlying views until the gesture recognizer is explicitly
         // stated as failed (aka, the touch sequence is targeted to the interop view).
@@ -456,6 +531,9 @@ internal class InteractionUIView(
         addGestureRecognizer(gestureRecognizer)
         gestureRecognizer.handler = gestureRecognizerHandler
         gestureRecognizerHandler.gestureRecognizer = gestureRecognizer
+
+        addInteraction(UIDragInteraction(delegate = dragInteractionProxy))
+        addInteraction(UIDropInteraction(delegate = dropInteractionProxy))
     }
 
     override fun canBecomeFirstResponder() = true
