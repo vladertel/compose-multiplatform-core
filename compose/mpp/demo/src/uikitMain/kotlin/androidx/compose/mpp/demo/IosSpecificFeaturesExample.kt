@@ -41,7 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.cupertino.DragSource
 import androidx.compose.ui.draganddrop.cupertino.DropTarget
 import androidx.compose.ui.draganddrop.cupertino.dragAndDrop
-import androidx.compose.ui.draganddrop.cupertino.loadObject
+import androidx.compose.ui.draganddrop.cupertino.load
 import androidx.compose.ui.draganddrop.cupertino.loadString
 import androidx.compose.ui.draganddrop.cupertino.toUIDragItem
 import androidx.compose.ui.graphics.Color
@@ -152,16 +152,12 @@ val DragAndDropExample = Screen.Example("Drag and drop") {
                                 val dragItem = item as UIDragItem
 
                                 coroutineScope.launch {
-                                    val string = dragItem.loadString()
-
-                                    if (string != null) {
+                                    dragItem.loadString()?.let { string ->
                                         dropText = string
-
-                                        return@launch
+                                        return@launch // Early return from the coroutine if string is loaded
                                     }
 
-                                    val image = dragItem.loadObject<UIImage>(UIImage)
-                                    if (image != null) {
+                                    dragItem.load<UIImage>(UIImage)?.let { image ->
                                         println("Image loaded: $image")
                                     }
                                 }

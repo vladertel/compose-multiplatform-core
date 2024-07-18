@@ -18,17 +18,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-typedef enum CMPDragItemLoadRequestResult {
-    CMPDragItemLoadRequestResultSuccess,
-    CMPDragItemLoadRequestResultWrongType,
-    CMPDragItemLoadRequestResultUnsupportedType
-} CMPDragItemLoadRequestResult;
-
 @interface UIDragItem (CMPLoading)
 
-- (BOOL)cmp_loadString:(void (^)(NSString *result, NSError *error))completionHandler;
+- (void)cmp_loadString:(void (^)(NSString  * _Nullable result, NSError *error))completionHandler;
 
-- (CMPDragItemLoadRequestResult)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(id result, NSError *error))completionHandler;
+- (void)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(id _Nullable result, NSError *_Nullable error))completionHandler;
 
 @end
 

@@ -39,23 +39,21 @@ NS_ASSUME_NONNULL_BEGIN
 
 @implementation UIDragItem (CMPLoading)
 
-- (BOOL)cmp_loadString:(void (^)(NSString *result, NSError *error))completionHandler {
+- (void)cmp_loadString:(void (^)(NSString  * _Nullable result, NSError *_Nullable error))completionHandler {
     if ([self.itemProvider canLoadObjectOfClass:NSString.class]) {
         [self.itemProvider loadObjectOfClass:NSString.class completionHandler:completionHandler];
-        return YES;
     } else {
-        return NO;
+        completionHandler(nil, nil);
     }
 }
 
-- (CMPDragItemLoadRequestResult)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(id result, NSError *error))completionHandler {
+- (void)cmp_loadAny:(Class)objectClass onCompletion:(void (^)(id _Nullable result, NSError *_Nullable error))completionHandler {
     if (![objectClass conformsToProtocol:@protocol(NSItemProviderReading)]) {
-        return CMPDragItemLoadRequestResultUnsupportedType;
+        @throw [[NSException alloc] initWithName:@"UIDragItemLoadingError" reason:[NSString stringWithFormat:@"%@ doesn't conform to NSItemProviderReading", objectClass] userInfo:nil];
     } else if ([self.itemProvider canLoadObjectOfClass:objectClass]) {
         [self.itemProvider loadObjectOfClass:objectClass completionHandler:completionHandler];
-        return CMPDragItemLoadRequestResultSuccess;
     } else {
-        return CMPDragItemLoadRequestResultWrongType;
+        completionHandler(nil, nil);
     }
 }
 

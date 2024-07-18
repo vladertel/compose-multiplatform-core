@@ -30,9 +30,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.asCGRect
 import androidx.compose.ui.unit.toDpRect
 import androidx.compose.ui.uikit.utils.CMPDragInteractionProxy
-import androidx.compose.ui.uikit.utils.CMPDragItemLoadRequestResult.CMPDragItemLoadRequestResultWrongType
-import androidx.compose.ui.uikit.utils.CMPDragItemLoadRequestResult.CMPDragItemLoadRequestResultUnsupportedType
-import androidx.compose.ui.uikit.utils.CMPDragItemLoadRequestResult.CMPDragItemLoadRequestResultSuccess
 import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.uikit.utils.cmp_itemWithAny
 import androidx.compose.ui.uikit.utils.cmp_itemWithString
@@ -348,16 +345,12 @@ fun <T: NSObject> T.toUIDragItem(objCClass: ObjCClass): UIDragItem =
 @ExperimentalComposeUiApi
 suspend fun UIDragItem.loadString(): String? =
     suspendCoroutine { continuation ->
-        val containsString = cmp_loadString { string, nsError ->
+        cmp_loadString { string, nsError ->
             if (nsError != null) {
                 continuation.resumeWithException(nsError.asThrowable())
             } else {
                 continuation.resume(string)
             }
-        }
-
-        if (!containsString) {
-            continuation.resume(null as String?)
         }
     }
 
@@ -366,9 +359,9 @@ suspend fun UIDragItem.loadString(): String? =
  */
 @OptIn(BetaInteropApi::class)
 @ExperimentalComposeUiApi
-suspend fun <T: NSObject> UIDragItem.loadObject(objCClass: ObjCClass): T? =
+suspend fun <T: NSObject> UIDragItem.load(objCClass: ObjCClass): T? =
     suspendCoroutine { continuation ->
-        val loadRequestResult = cmp_loadAny(objCClass) { obj, nsError ->
+        cmp_loadAny(objCClass) { obj, nsError ->
             if (nsError != null) {
                 continuation.resumeWithException(nsError.asThrowable())
             } else {
@@ -380,23 +373,5 @@ suspend fun <T: NSObject> UIDragItem.loadObject(objCClass: ObjCClass): T? =
                     continuation.resumeWithException(IllegalStateException("Failed to cast $obj to expected type"))
                 }
             }
-        }
-
-        when (loadRequestResult) {
-            CMPDragItemLoadRequestResultSuccess -> {
-                // continuation will be called from cmp_loadAny callback, no-op here
-            }
-
-            CMPDragItemLoadRequestResultWrongType -> {
-                // This item doesn't contain the expected type
-                continuation.resume(null as T?)
-            }
-
-            CMPDragItemLoadRequestResultUnsupportedType -> {
-                continuation.resumeWithException(
-                    IllegalArgumentException("Failed to load object, $objCClass doesn't implement NSItemProviderReadingProtocol")
-                )
-            }
-            else -> continuation.resumeWithException(IllegalStateException("Unexpected load request result: $loadRequestResult"))
         }
     }
