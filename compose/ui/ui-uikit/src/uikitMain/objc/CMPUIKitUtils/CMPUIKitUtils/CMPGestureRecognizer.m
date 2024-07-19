@@ -33,7 +33,7 @@
 }
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
-    return [self gestureRecognizerShouldRequireFailureOfGestureRecognizer:gestureRecognizer otherGestureRecognizer:otherGestureRecognizer];
+    return [self gestureRecognizerShouldRecognizeSimultaneouslyWithGestureRecognizer:gestureRecognizer otherGestureRecognizer:otherGestureRecognizer];
 }
 
 - (BOOL)gestureRecognizerShouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer otherGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {

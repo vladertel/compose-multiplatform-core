@@ -337,7 +337,11 @@ private class ForwardingGestureRecognizer(
 
         // Only allow simultaneous recognition if the other gesture recognizer is attached to the same view
         // or to a view up in the hierarchy
-        return otherView == view || otherIsAscendant
+        val result = otherView == view || otherIsAscendant
+
+        println("${gestureRecognizer.`class`()} should recognize simultaneously with ${otherGestureRecognizer.`class`()}: $result")
+
+        return result
     }
 
     /**
@@ -347,6 +351,7 @@ private class ForwardingGestureRecognizer(
         gestureRecognizer: UIGestureRecognizer,
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
+        println("${gestureRecognizer.`class`()} requires ${otherGestureRecognizer.`class`()} to fail")
         return false
     }
 
@@ -355,7 +360,9 @@ private class ForwardingGestureRecognizer(
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
         // Other gesture recognizer should fail if it's attached to a different view
-        return gestureRecognizer.view != otherGestureRecognizer.view
+        val result = gestureRecognizer.view != otherGestureRecognizer.view
+        println("${gestureRecognizer.`class`()} should be required to fail by ${otherGestureRecognizer.`class`()}: $result")
+        return result
     }
 
     /**
