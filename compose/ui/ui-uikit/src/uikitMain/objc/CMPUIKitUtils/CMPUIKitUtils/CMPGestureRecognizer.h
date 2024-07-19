@@ -13,6 +13,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface CMPGestureRecognizer : UIGestureRecognizer <UIGestureRecognizerDelegate>
 
+- (instancetype)initWithTarget:(id _Nullable)target action:(SEL _Nullable)action NS_DESIGNATED_INITIALIZER;
+
 - (void)handleStateChange CMP_CAN_OVERRIDE;
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event CMP_ABSTRACT_FUNCTION;
@@ -30,6 +32,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)gestureRecognizerShouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer otherGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer CMP_CAN_OVERRIDE;
 
 @end
+
 
 NS_ASSUME_NONNULL_END
  

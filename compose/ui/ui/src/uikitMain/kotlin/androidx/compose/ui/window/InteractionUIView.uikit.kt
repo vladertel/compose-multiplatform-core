@@ -23,7 +23,10 @@ import androidx.compose.ui.uikit.utils.CMPDropInteractionProxy
 import androidx.compose.ui.uikit.utils.CMPGestureRecognizer
 import androidx.compose.ui.viewinterop.InteropView
 import kotlin.coroutines.CoroutineContext
+import kotlin.experimental.ExperimentalObjCName
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.CValue
+import kotlinx.cinterop.ExportObjCClass
 import kotlinx.cinterop.readValue
 import kotlinx.cinterop.useContents
 import kotlinx.coroutines.CoroutineScope
@@ -80,6 +83,8 @@ private val UIGestureRecognizerState.isOngoing: Boolean
  * [UIGestureRecognizer] failure requirements and touches interception, which is an exclusive way
  * to control touches delivery to [UIView]s and their [UIGestureRecognizer]s in a fine-grain manner.
  */
+@OptIn(ExperimentalObjCName::class)
+@ObjCName(name = "ForwardingGestureRecognizer")
 private class ForwardingGestureRecognizer(
     private var onTouchesEvent: (view: UIView, touches: Set<*>, event: UIEvent?, phase: CupertinoTouchesPhase) -> Unit,
     private val onTouchesCountChanged: (by: Int) -> Unit,
@@ -164,11 +169,35 @@ private class ForwardingGestureRecognizer(
 
     init {
         // When is recognized, immediately cancel all touches in the subviews.
-        cancelsTouchesInView = false
+        cancelsTouchesInView = true
 
         // Delays touches reception by underlying views until the gesture recognizer is explicitly
         // stated as failed (aka, the touch sequence is targeted to the interop view).
         delaysTouchesBegan = true
+    }
+
+    override fun handleStateChange() {
+        when (state) {
+            UIGestureRecognizerStateBegan -> {
+                println("UIGestureRecognizerStateBegan")
+            }
+
+            UIGestureRecognizerStateChanged -> {
+                println("UIGestureRecognizerStateChanged")
+            }
+
+            UIGestureRecognizerStateEnded -> {
+                println("UIGestureRecognizerStateEnded")
+            }
+
+            UIGestureRecognizerStateCancelled -> {
+                println("UIGestureRecognizerStateCancelled")
+            }
+
+            UIGestureRecognizerStateFailed -> {
+                println("UIGestureRecognizerStateFailed")
+            }
+        }
     }
 
     /**
@@ -337,11 +366,7 @@ private class ForwardingGestureRecognizer(
 
         // Only allow simultaneous recognition if the other gesture recognizer is attached to the same view
         // or to a view up in the hierarchy
-        val result = otherView == view || otherIsAscendant
-
-        println("${gestureRecognizer.`class`()} should recognize simultaneously with ${otherGestureRecognizer.`class`()}: $result")
-
-        return result
+        return otherView == view || otherIsAscendant
     }
 
     /**
@@ -351,7 +376,6 @@ private class ForwardingGestureRecognizer(
         gestureRecognizer: UIGestureRecognizer,
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
-        println("${gestureRecognizer.`class`()} requires ${otherGestureRecognizer.`class`()} to fail")
         return false
     }
 
@@ -360,9 +384,7 @@ private class ForwardingGestureRecognizer(
         otherGestureRecognizer: UIGestureRecognizer
     ): Boolean {
         // Other gesture recognizer should fail if it's attached to a different view
-        val result = gestureRecognizer.view != otherGestureRecognizer.view
-        println("${gestureRecognizer.`class`()} should be required to fail by ${otherGestureRecognizer.`class`()}: $result")
-        return result
+        return gestureRecognizer.view != otherGestureRecognizer.view
     }
 
     /**
