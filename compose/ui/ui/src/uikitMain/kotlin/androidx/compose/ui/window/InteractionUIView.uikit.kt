@@ -83,7 +83,7 @@ private val UIGestureRecognizerState.isOngoing: Boolean
 private class ForwardingGestureRecognizer(
     private var onTouchesEvent: (view: UIView, touches: Set<*>, event: UIEvent?, phase: CupertinoTouchesPhase) -> Unit,
     private val onTouchesCountChanged: (by: Int) -> Unit,
-): CMPGestureRecognizer() {
+): CMPGestureRecognizer(target = null, action = null) {
     /**
      * The actual view that was hit-tested by the first touch in the sequence.
      * It could be interop view, for example. If there are tracked touches assignment is ignored.
